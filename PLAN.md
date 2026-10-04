@@ -1,0 +1,98 @@
+# Plan: Anatomie-App (3D)
+
+Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html` in diesem Repository) und Nephron (Datei `nephron-3d-modell.html`, noch nicht im Repository).
+
+## Bauplan je Organ
+
+✓ = vorhanden, – = fehlt, (✓) = teilweise
+
+| Baustein | Herz | Nephron |
+|---|---|---|
+| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ |
+| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ |
+| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ |
+| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ |
+| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) |
+| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ |
+| Hilfekarten und Üben (Quiz) | ✓ | (✓) |
+| Krankheitsbilder und Medikamente | – | ✓ (z. B. Torasemid, Hyperglykämie) |
+| Schema (2D-Kreislaufbild) | ✓ | – |
+| Export GLB/STL mit Signatur | ✓ | ✓ |
+| AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | – |
+| Einheitliches Design und Handy-Layout | ✓ | ✓ |
+
+Beide Modelle sind derzeit je eine einzelne HTML-Datei mit eingebettetem three.js (r128); die Geometrie wird per Code erzeugt.
+
+## Ebenen
+
+```
+Körper  →  Organsystem  →  Organ  →  Funktionseinheit  →  Lupe
+Mensch     Harnsystem      Niere     Nephron              Wand des Tubulus
+Mensch     Kreislauf       Herz      (Herzklappe)         Klappe/Erregung
+Mensch     Atmung          Lunge     Alveole              Gasaustausch
+```
+
+## Architektur
+
+- Gemeinsamer Kern für alle Organe: Szene, Licht, Design, Beschriftung, Leiste, Lupe, Quiz, Szenarien, Export, AR.
+- Ein Modul pro Organ: Geometrie, Strukturliste, Simulation, Lupen-Inhalte, Hilfetexte, Krankheitsbilder.
+- Inhalte (Namen, Texte, Quizfragen) als Daten getrennt vom Code.
+- Organe werden erst beim Öffnen geladen.
+- Mögliche Dateistruktur:
+
+```
+index.html                Körper-Atlas (Start)
+core/                     gemeinsamer Kern (JS, CSS)
+vendor/three.min.js       three.js, unverändert
+organe/herz/              Herz-Modul + Inhalte
+organe/niere/             Niere + Nephron
+```
+
+## Phasen
+
+### Phase 0 – Fundament
+
+- [ ] Nephron-Modell ins Repository aufnehmen
+- [ ] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
+- [ ] Gemeinsamen Kern aus Herz und Nephron herauslösen
+- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher)
+- [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
+- [ ] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
+
+### Phase 1 – Körper-Atlas
+
+- [ ] Ganzer Körper mit allen Organen in einfacher Form
+- [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
+- [ ] Klick auf Organ öffnet das Detailmodell; fehlende Organe als „in Arbeit“
+- [ ] AR für den ganzen Körper
+
+### Phase 2 – Niere komplett
+
+- [ ] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße)
+- [ ] Nephron als Zoomstufe innerhalb der Niere
+
+### Phase 3 und weiter – Organ für Organ
+
+- [ ] Lunge mit Alveole
+- [ ] Leber mit Leberläppchen
+- [ ] Magen und Darm mit Dünndarmzotte
+- [ ] Gehirn mit Neuron und Synapse
+- [ ] Muskel mit Sarkomer, Skelett und Gelenk
+- [ ] Auge, Ohr, Haut, Hormondrüsen
+
+### Laufend
+
+- [ ] Schema wächst mit (Herz, Lunge, Niere, Leber im Kreislauf verbunden; Simulationen beeinflussen sich, z. B. Blutdruck und Nierenfunktion)
+- [ ] Krankheitsbilder und Medikamente pro Organ
+
+## Offene Entscheidungen
+
+- [ ] Zielgruppe und Detailtiefe (Schule, Pflegeausbildung, Medizinstudium)
+- [ ] Ganzkörpermodell: selbst gebaut und stilisiert (Vorschlag) oder offene Datensätze (BodyParts3D, Z-Anatomy; Lizenzauflagen CC BY-SA, große Dateien, anderer Stil)
+- [ ] Reihenfolge der Organe bestätigen
+- [ ] Repository später umbenennen (z. B. „Anatomie-3d“)
+
+## Arbeitsweise
+
+- Planung und Prüfung im Hauptgespräch; Umsetzung einzelner Schritte durch den Executor-Subagenten (`.claude/agents/executor.md`, Sonnet). Commit und Push nur durch den Aufrufer.
+- Änderungen über Pull Requests nach `main`; veröffentlicht über GitHub Pages.
