@@ -57,7 +57,7 @@ organe/niere/             Niere + Nephron
 - [x] Gemeinsamen Kern aus Herz und Nephron herauslösen (`core/kern.css`, `core/kern.js`)
   - `vendor/RoomEnvironment.js` war unbenutzt und ist entfernt
   - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Export, Beschriftungs-Layout; dabei Größenangabe, Download und Signatur vereinheitlichen (nur mit vereinbarter Abweichung möglich)
-- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung erledigt)
+- [x] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung und den Kern erledigt)
 - [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
 - [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
 
