@@ -1,6 +1,6 @@
 # Plan: Anatomie-App (3D)
 
-Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html` in diesem Repository) und Nephron (Datei `nephron-3d-modell.html`, noch nicht im Repository).
+Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html`) und Nephron (`nephron.html`).
 
 ## Bauplan je Organ
 
@@ -21,7 +21,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | – |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
 
-Beide Modelle sind derzeit je eine einzelne HTML-Datei mit eingebettetem three.js (r128); die Geometrie wird per Code erzeugt.
+Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
 ## Ebenen
 
@@ -53,11 +53,12 @@ organe/niere/             Niere + Nephron
 ### Phase 0 – Fundament
 
 - [x] Nephron-Modell ins Repository aufnehmen (`nephron.html`)
-- [ ] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
+- [x] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
 - [ ] Gemeinsamen Kern aus Herz und Nephron herauslösen
-- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher)
+  - dabei klären: `vendor/RoomEnvironment.js` wird vom Herz geladen, aber nicht benutzt
+- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`)
 - [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
-- [ ] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
+- [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
 
 ### Phase 1 – Körper-Atlas
 
