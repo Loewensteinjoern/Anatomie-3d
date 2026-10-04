@@ -52,7 +52,7 @@ organe/niere/             Niere + Nephron
 
 ### Phase 0 – Fundament
 
-- [ ] Nephron-Modell ins Repository aufnehmen
+- [x] Nephron-Modell ins Repository aufnehmen (`nephron.html`)
 - [ ] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
 - [ ] Gemeinsamen Kern aus Herz und Nephron herauslösen
 - [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher)
