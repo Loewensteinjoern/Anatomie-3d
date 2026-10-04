@@ -56,7 +56,7 @@ organe/niere/             Niere + Nephron
 - [x] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
 - [ ] Gemeinsamen Kern aus Herz und Nephron herauslösen
   - dabei klären: `vendor/RoomEnvironment.js` wird vom Herz geladen, aber nicht benutzt
-- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`)
+- [ ] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung erledigt)
 - [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
 - [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
 
