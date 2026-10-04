@@ -24,7 +24,7 @@ Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung
 | `organe/herz/herz.css`, `organe/niere/nephron.css` | Gestaltung: `:root`-Variablen (`--brass`, `--ink`, …), Handy-Layout per `@media (max-width:1000px)` | darf geändert werden |
 | `organe/herz/herz.js` | App-Code Herz (~4200 Zeilen): Herz als Signed-Distance-Field (Einheit cm), Szene, Beschriftung, Schema, Lupe, Üben, Export, AR | hier findet die eigentliche Arbeit statt |
 | `organe/niere/nephron.js` | App-Code Nephron (~2250 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export | hier findet die eigentliche Arbeit statt |
-| `vendor/` | three.js r128 (`three.min.js`: Lizenzkopf und eine einzige Zeile mit ~600 KB) und Zusätze (`GLTFExporter.js`, `RoomEnvironment.js`), byte-identisch mit dem npm-Paket `three@0.128.0` | **nicht anfassen, nie lesen** |
+| `vendor/` | three.js r128 (`three.min.js`: Lizenzkopf und eine einzige Zeile mit ~600 KB) und der Zusatz `GLTFExporter.js`, byte-identisch mit dem npm-Paket `three@0.128.0` | **nicht anfassen, nie lesen** |
 | `tools/vergleich.js` | Prüfwerkzeug: Vergleichsaufnahmen vorher/nachher (siehe unten) | nur ändern, wenn die Aufgabe es verlangt |
 
 Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann gezielt mit `Read` (`offset`/`limit`) lesen. Kopfkommentare (`/* ====…`) gliedern den Code in Abschnitte, z. B. `grep -n -A1 '^/\* ====' organe/herz/herz.js`.
@@ -32,7 +32,7 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 ## Regeln für die Dateistruktur
 
 - Nur klassische Skripte (`<script src="…"></script>`), keine ES-Module (`type="module"`, `import`) und kein `fetch` auf lokale Dateien – beides scheitert, wenn die Seite lokal per `file://` geöffnet wird.
-- Reihenfolge der Skripte am Ende von `<body>`: zuerst `vendor/three.min.js`, dann die benötigten Zusätze aus `vendor/` (beim Herz `GLTFExporter.js` und `RoomEnvironment.js`), zuletzt der App-Code. Der App-Code nutzt das globale `THREE`.
+- Reihenfolge der Skripte am Ende von `<body>`: zuerst `vendor/three.min.js`, dann die benötigten Zusätze aus `vendor/` (beim Herz `GLTFExporter.js`), zuletzt der App-Code. Der App-Code nutzt das globale `THREE`.
 - Pfade relativ angeben (`vendor/…`, `organe/…`), nie mit `/` am Anfang – auf GitHub Pages liegt die Seite in einem Unterordner (derzeit `/Herz-3d/`).
 - Neue Dateien nur, wenn die Aufgabe es verlangt: Organ-Code nach `organe/<organ>/`, Fremdbibliotheken unverändert nach `vendor/`.
 
