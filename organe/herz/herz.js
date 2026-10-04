@@ -4006,10 +4006,7 @@ function updatePanel(W) {
 /* =====================================================================
    9. Export, Hinweise
    ===================================================================== */
-function toast(msg) {
-  var t = $('toast'); t.innerHTML = msg; t.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, 5600);
-}
+function toast(msg) { Kern.toast(msg); }
 var exCtx = { backG: backG, lidG: lidG, root: root, setLidPose: setLidPose, toast: toast, wm: WATERMARK,
   exportGroups: function () { return App.openK > 0.5 ? [backG] : [backG, lidG]; } };
 $('bGlbA').onclick = function () { HerzExport.run('glb-anim', App, exCtx); };

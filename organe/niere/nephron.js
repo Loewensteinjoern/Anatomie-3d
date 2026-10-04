@@ -1940,12 +1940,7 @@ function download(blob, name) {
   document.body.appendChild(a); a.click();
   setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
 }
-function toast(msg) {
-  var t = document.getElementById('toast');
-  t.innerHTML = msg; t.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(function () { t.classList.remove('show'); }, 5600);
-}
+function toast(msg) { Kern.toast(msg); }
 function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' kB'; }
 
 function bakeGeo(g, k, mw) {

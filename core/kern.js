@@ -138,4 +138,12 @@ var Kern = window.Kern = window.Kern || {};
     view.target.lerpVectors(anim.f.target, anim.t.target, s);
     return t >= 1 ? null : anim;
   };
+
+  /* Kurzer Hinweis unten (#toast, HTML erlaubt); verschwindet nach 5,6 s. */
+  K.toast = function (msg) {
+    var t = document.getElementById('toast');
+    t.innerHTML = msg; t.classList.add('show');
+    clearTimeout(K.toast._t);
+    K.toast._t = setTimeout(function () { t.classList.remove('show'); }, 5600);
+  };
 })(Kern);
