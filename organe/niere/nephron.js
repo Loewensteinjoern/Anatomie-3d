@@ -250,20 +250,7 @@ var envTex = Kern.umgebung(renderer);
 Kern.licht(scene, envTex);
 
 var srgb = Kern.srgb;
-function mat(hex, o) {
-  o = o || {};
-  var M = o.coat ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  var m = new M({
-    color: srgb(hex), roughness: def(o.rough, 0.6), metalness: 0,
-    side: o.side || THREE.FrontSide, vertexColors: !!o.vc
-  });
-  if (o.coat) { m.clearcoat = o.coat; m.clearcoatRoughness = def(o.coatRough, 0.35); }
-  if (o.vc) m.color.setRGB(1, 1, 1);
-  if (o.opacity !== undefined && o.opacity < 1) { m.transparent = true; m.opacity = o.opacity; m.depthWrite = false; }
-  if (envTex) { m.envMap = envTex; m.envMapIntensity = def(o.env, 0.28); }
-  m.emissive = new THREE.Color(0, 0, 0);
-  return m;
-}
+function mat(hex, o) { return Kern.mat(hex, o || {}, envTex); }
 function conc(m) {
   var t = Math.max(0, Math.min(1, (m - 100) / 1100));
   t = Math.pow(t, 0.78);

@@ -2534,15 +2534,9 @@ Kern.licht(scene, envTex);
 
 var srgb = Kern.srgb;
 function mat(hex, o) {
-  o = o || {};
-  var M = o.coat ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  var m = new M({ color: o.vc ? new THREE.Color(1, 1, 1) : srgb(hex), roughness: o.rough === undefined ? 0.6 : o.rough, metalness: 0,
-    side: o.side || THREE.FrontSide, vertexColors: !!o.vc, morphTargets: o.morph !== false });
-  if (o.coat) { m.clearcoat = o.coat; m.clearcoatRoughness = o.coatRough === undefined ? 0.35 : o.coatRough; }
-  if (envTex) { m.envMap = envTex; m.envMapIntensity = o.env === undefined ? 0.28 : o.env; }
-  m.emissive = new THREE.Color(0, 0, 0);
-  m.userData.baseEmissive = m.emissive.clone();
-  return m;
+  o = Object.assign({}, o);
+  if (o.morph !== false) o.morph = true;
+  return Kern.mat(hex, o, envTex);
 }
 function tissueMats() {
   return [mat(0, { vc: true, rough: 0.55, coat: 0.25, env: 0.3 }), mat(0, { vc: true, rough: 0.34, coat: 0.45, coatRough: 0.25, env: 0.4 }), mat(0, { vc: true, rough: 0.82, env: 0.15 })];

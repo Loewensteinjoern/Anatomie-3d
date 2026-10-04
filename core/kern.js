@@ -38,6 +38,22 @@ var Kern = window.Kern = window.Kern || {};
     return envTex;
   };
 
+  /* Gewebematerial. Optionen o: rough (0.6), coat (Clearcoat, sonst Standard-
+     material), coatRough (0.35), side, vc (Vertexfarben), morph (Morph
+     Targets), opacity (<1: transparent), env (Umgebungsstaerke, 0.28).
+     envTex stammt aus K.umgebung (kann null sein). */
+  K.mat = function (hex, o, envTex) {
+    var M = o.coat ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+    var m = new M({ color: o.vc ? new THREE.Color(1, 1, 1) : K.srgb(hex), roughness: o.rough === undefined ? 0.6 : o.rough, metalness: 0,
+      side: o.side || THREE.FrontSide, vertexColors: !!o.vc, morphTargets: !!o.morph });
+    if (o.coat) { m.clearcoat = o.coat; m.clearcoatRoughness = o.coatRough === undefined ? 0.35 : o.coatRough; }
+    if (o.opacity !== undefined && o.opacity < 1) { m.transparent = true; m.opacity = o.opacity; m.depthWrite = false; }
+    if (envTex) { m.envMap = envTex; m.envMapIntensity = o.env === undefined ? 0.28 : o.env; }
+    m.emissive = new THREE.Color(0, 0, 0);
+    m.userData.baseEmissive = m.emissive.clone();
+    return m;
+  };
+
   /* Hemisphaerenlicht plus Haupt-, Fuell- und Gegenlicht */
   K.licht = function (scene, envTex) {
     scene.add(new THREE.HemisphereLight(0xbcd6e0, 0x2a1d18, envTex ? 0.42 : 0.6));
