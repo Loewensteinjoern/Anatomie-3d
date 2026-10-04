@@ -3760,12 +3760,11 @@ var PRESETS = [
   { theta: -0.28, phi: 1.5, dist: 20, target: V(-2.3, 0.6, -0.8) },
   { theta: 0.3, phi: 1.5, dist: 20, target: V(2.5, 0.2, -1.4) }
 ];
-var camAnim = null;
 function goTo(i) {
   App.preset = i;
   ['cam0', 'cam1', 'cam2', 'cam3'].forEach(function (id, k) { $(id).classList.toggle('on', k === i); });
   var t = PRESETS[i];
-  camAnim = { f: { theta: view.theta, phi: view.phi, dist: view.dist, target: view.target.clone() }, t: { theta: t.theta, phi: t.phi, dist: t.dist * fitDist / 34.5, target: t.target }, t0: performance.now(), d: 700 };
+  orbit.anim = Kern.fahrt(view, { theta: t.theta, phi: t.phi, dist: t.dist * fitDist / 34.5, target: t.target }, 700);
 }
 [0, 1, 2, 3].forEach(function (i) { $('cam' + i).onclick = function () { goTo(i); }; });
 function onOff(id, on) { $(id).classList.toggle('on', on); }
@@ -3927,38 +3926,18 @@ function setLidPose(k) {
 }
 
 /* ---------- Kamera (wie im Nephron-Modell) ---------- */
-var ptrs = new Map(), lastPinch = 0, dragged = false;
+var orbit = Kern.orbit(canvas, view, { minDist: 7, maxDist: 120 });
 var cardK = 1;
 function updateCamera() {
   var goal = (window.innerWidth >= 1000 && cardOpen()) ? 1.12 : 1;
   cardK += (goal - cardK) * 0.2; if (Math.abs(goal - cardK) < 0.002) cardK = goal;
-  var sp = Math.sin(view.phi), dd = view.dist * cardK;
-  camera.position.set(view.target.x + dd * sp * Math.sin(view.theta), view.target.y + dd * Math.cos(view.phi), view.target.z + dd * sp * Math.cos(view.theta));
-  camera.lookAt(view.target);
+  Kern.kamera(camera, view, cardK);
 }
-canvas.addEventListener('pointerdown', function (e) { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragged = false; camAnim = null; });
-canvas.addEventListener('pointermove', function (e) {
-  if (!ptrs.has(e.pointerId)) return;
-  var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
-  p.x = e.clientX; p.y = e.clientY;
-  if (ptrs.size === 1) {
-    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
-    view.theta -= dx * 0.0072; view.phi = clamp(view.phi - dy * 0.0072, 0.1, 3.04);
-  } else if (ptrs.size === 2) {
-    dragged = true;
-    var a = Array.from(ptrs.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
-    if (lastPinch) view.dist = clamp(view.dist * (lastPinch / d), 7, 120);
-    lastPinch = d;
-  }
-});
-function endPtr(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; }
-canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
-canvas.addEventListener('wheel', function (e) { e.preventDefault(); camAnim = null; view.dist = clamp(view.dist * (1 + Math.sign(e.deltaY) * 0.09), 7, 120); }, { passive: false });
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function shown(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 function inLid(o) { while (o) { if (o === lidG) return true; o = o.parent; } return false; }
 canvas.addEventListener('click', function (e) {
-  if (dragged || !App.ready) return;
+  if (orbit.dragged || !App.ready) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1; ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
@@ -4108,14 +4087,7 @@ function loop(now, frame) {
     if (App.openK !== tg) { App.openK = clamp(App.openK + Math.sign(tg - App.openK) * dt / 1.1, 0, 1); setLidPose(App.openK); }
     else if (fch || fokCh) refreshOpacity();
   }
-  if (camAnim) {
-    var t = Math.min(1, (now - camAnim.t0) / camAnim.d), s = t * t * (3 - 2 * t);
-    view.theta = camAnim.f.theta + (camAnim.t.theta - camAnim.f.theta) * s;
-    view.phi = camAnim.f.phi + (camAnim.t.phi - camAnim.f.phi) * s;
-    view.dist = camAnim.f.dist + (camAnim.t.dist - camAnim.f.dist) * s;
-    view.target.lerpVectors(camAnim.f.target, camAnim.t.target, s);
-    if (t >= 1) camAnim = null;
-  }
+  if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   root.updateMatrixWorld();
   CLIP.copy(CLIP0).applyMatrix4(root.matrixWorld); CLIP_PV.copy(CLIP_PV0).applyMatrix4(root.matrixWorld); CLIP_ERL.copy(CLIP_ERL0).applyMatrix4(root.matrixWorld);
   if (App.ar) { if (App.ready) { arlUpdate(); renderer.render(scene, camera); } return; }

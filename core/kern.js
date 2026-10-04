@@ -62,4 +62,63 @@ var Kern = window.Kern = window.Kern || {};
     var rim = new THREE.DirectionalLight(0xffd9a8, 0.45); rim.position.set(-4, -6, -12); scene.add(rim);
     return { key: key, fill: fill, rim: rim };
   };
+
+  /* Kamerasteuerung per Zeiger: Ziehen dreht, zwei Finger zoomen, Mausrad
+     zoomt. view = { theta, phi, dist, target }; o.minDist/o.maxDist begrenzen
+     den Abstand. Rueckgabe ctl: dragged (wurde gezogen, dann kein Klick-Pick)
+     und anim (laufende Kamerafahrt, siehe K.fahrt; jede Eingabe bricht sie ab). */
+  K.orbit = function (canvas, view, o) {
+    var ptrs = new Map(), lastPinch = 0;
+    var ctl = { dragged: false, anim: null };
+    canvas.addEventListener('pointerdown', function (e) {
+      canvas.setPointerCapture(e.pointerId);
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      ctl.dragged = false; ctl.anim = null;
+    });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!ptrs.has(e.pointerId)) return;
+      var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 1) {
+        if (Math.abs(dx) + Math.abs(dy) > 2) ctl.dragged = true;
+        view.theta -= dx * 0.0072;
+        view.phi = Math.max(0.1, Math.min(3.04, view.phi - dy * 0.0072));
+      } else if (ptrs.size === 2) {
+        ctl.dragged = true;
+        var a = Array.from(ptrs.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+        if (lastPinch) view.dist = Math.max(o.minDist, Math.min(o.maxDist, view.dist * (lastPinch / d)));
+        lastPinch = d;
+      }
+    });
+    function endPtr(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; }
+    canvas.addEventListener('pointerup', endPtr);
+    canvas.addEventListener('pointercancel', endPtr);
+    canvas.addEventListener('wheel', function (e) {
+      e.preventDefault(); ctl.anim = null;
+      view.dist = Math.max(o.minDist, Math.min(o.maxDist, view.dist * (1 + Math.sign(e.deltaY) * 0.09)));
+    }, { passive: false });
+    return ctl;
+  };
+
+  /* Kamera aus view (Kugelkoordinaten um view.target) setzen. k skaliert
+     optional den Abstand (Herz: Platz fuer die Info-Karte). */
+  K.kamera = function (camera, view, k) {
+    var sp = Math.sin(view.phi), dd = view.dist * (k === undefined ? 1 : k);
+    camera.position.set(view.target.x + dd * sp * Math.sin(view.theta), view.target.y + dd * Math.cos(view.phi), view.target.z + dd * sp * Math.cos(view.theta));
+    camera.lookAt(view.target);
+  };
+
+  /* Kamerafahrt von der aktuellen Ansicht zu ziel ({ theta, phi, dist,
+     target }) in dauer ms; K.fahrtSchritt wird je Bild aufgerufen. */
+  K.fahrt = function (view, ziel, dauer) {
+    return { f: { theta: view.theta, phi: view.phi, dist: view.dist, target: view.target.clone() }, t: ziel, t0: performance.now(), d: dauer };
+  };
+  K.fahrtSchritt = function (view, anim, now) {
+    var t = Math.min(1, (now - anim.t0) / anim.d), s = t * t * (3 - 2 * t);
+    view.theta = anim.f.theta + (anim.t.theta - anim.f.theta) * s;
+    view.phi = anim.f.phi + (anim.t.phi - anim.f.phi) * s;
+    view.dist = anim.f.dist + (anim.t.dist - anim.f.dist) * s;
+    view.target.lerpVectors(anim.f.target, anim.t.target, s);
+    return t >= 1 ? null : anim;
+  };
 })(Kern);

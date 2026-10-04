@@ -1376,13 +1376,11 @@ var PRESETS = [
   { theta: 0.20, phi: 1.50, dist: 9.5, target: V(1.3, -6.9, -0.3) },
   { theta: 0.55, phi: 1.50, dist: 15, target: V(5.3, -2.5, 0) }
 ];
-var camAnim = null;
 function goTo(i) {
   ['cam0', 'cam1', 'cam2', 'cam3'].forEach(function (id, k) {
     document.getElementById(id).classList.toggle('on', k === i);
   });
-  camAnim = { f: { theta: view.theta, phi: view.phi, dist: view.dist, target: view.target.clone() },
-              t: PRESETS[i], t0: performance.now(), d: 700 };
+  orbit.anim = Kern.fahrt(view, PRESETS[i], 700);
 }
 [0, 1, 2, 3].forEach(function (i) { document.getElementById('cam' + i).onclick = function () { goTo(i); }; });
 
@@ -1415,46 +1413,12 @@ document.getElementById('bLab').onclick = function () {
 /* =====================================================================
    7. Kamera
    ===================================================================== */
-var ptrs = new Map(), lastPinch = 0, dragged = false;
-function updateCamera() {
-  var sp = Math.sin(view.phi);
-  camera.position.set(
-    view.target.x + view.dist * sp * Math.sin(view.theta),
-    view.target.y + view.dist * Math.cos(view.phi),
-    view.target.z + view.dist * sp * Math.cos(view.theta));
-  camera.lookAt(view.target);
-}
-canvas.addEventListener('pointerdown', function (e) {
-  canvas.setPointerCapture(e.pointerId);
-  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  dragged = false; camAnim = null;
-});
-canvas.addEventListener('pointermove', function (e) {
-  if (!ptrs.has(e.pointerId)) return;
-  var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
-  p.x = e.clientX; p.y = e.clientY;
-  if (ptrs.size === 1) {
-    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
-    view.theta -= dx * 0.0072;
-    view.phi = Math.max(0.10, Math.min(3.04, view.phi - dy * 0.0072));
-  } else if (ptrs.size === 2) {
-    dragged = true;
-    var a = Array.from(ptrs.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
-    if (lastPinch) view.dist = Math.max(2.5, Math.min(60, view.dist * (lastPinch / d)));
-    lastPinch = d;
-  }
-});
-function endPtr(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; }
-canvas.addEventListener('pointerup', endPtr);
-canvas.addEventListener('pointercancel', endPtr);
-canvas.addEventListener('wheel', function (e) {
-  e.preventDefault(); camAnim = null;
-  view.dist = Math.max(2.5, Math.min(60, view.dist * (1 + Math.sign(e.deltaY) * 0.09)));
-}, { passive: false });
+var orbit = Kern.orbit(canvas, view, { minDist: 2.5, maxDist: 60 });
+function updateCamera() { Kern.kamera(camera, view); }
 
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 canvas.addEventListener('click', function (e) {
-  if (dragged) return;
+  if (orbit.dragged) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -2186,14 +2150,7 @@ function loop(now) {
   });
   if (scChanged) applyScenarioVisuals();
   updateParticles();
-  if (camAnim) {
-    var t = Math.min(1, (now - camAnim.t0) / camAnim.d), s = t * t * (3 - 2 * t);
-    view.theta = camAnim.f.theta + (camAnim.t.theta - camAnim.f.theta) * s;
-    view.phi = camAnim.f.phi + (camAnim.t.phi - camAnim.f.phi) * s;
-    view.dist = camAnim.f.dist + (camAnim.t.dist - camAnim.f.dist) * s;
-    view.target.lerpVectors(camAnim.f.target, camAnim.t.target, s);
-    if (t >= 1) camAnim = null;
-  }
+  if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   updateCamera();
   renderer.render(scene, camera);
   lupeTick(dt);
