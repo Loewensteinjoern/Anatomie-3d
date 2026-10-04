@@ -27,6 +27,11 @@ function ladePlaywright() {
   process.exit(2);
 }
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
+/* WebGL über SwiftShader; DOM und SVG in Software rastern, ohne Teil-Raster und erst nach allen
+   Compositor-Stufen zeichnen – sonst schwanken einzelne Kantenpixel von Lauf zu Lauf */
+const CHROMIUM_ARGS = ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-rasterization',
+  '--disable-partial-raster', '--run-all-compositor-stages-before-draw', '--disable-checker-imaging',
+  '--disable-threaded-animation', '--disable-threaded-scrolling', '--disable-new-content-rendering-timeout'];
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* =====================================================================
@@ -358,7 +363,7 @@ async function aufnehmen(ziel, wurzel, nur) {
   fs.mkdirSync(path.join(ziel, 'bilder'), { recursive: true });
   fs.mkdirSync(path.join(ziel, 'export'), { recursive: true });
   const srv = await server(wurzel), basis = 'http://127.0.0.1:' + srv.address().port + '/';
-  const browser = await pw.chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await pw.chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: CHROMIUM_ARGS });
   const erg = { quelle: wurzel, browser: browser.version(), modelle: {} };
   const [nurM, nurK] = (nur || '').split(':');
   try {
