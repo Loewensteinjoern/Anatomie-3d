@@ -65,6 +65,7 @@ organe/niere/             Niere + Nephron
 - [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
 - [ ] Klick auf Organ öffnet das Detailmodell; fehlende Organe als „in Arbeit“
 - [ ] AR für den ganzen Körper
+- [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
 
 ### Phase 2 – Niere komplett
 
@@ -85,12 +86,12 @@ organe/niere/             Niere + Nephron
 - [ ] Schema wächst mit (Herz, Lunge, Niere, Leber im Kreislauf verbunden; Simulationen beeinflussen sich, z. B. Blutdruck und Nierenfunktion)
 - [ ] Krankheitsbilder und Medikamente pro Organ
 
-## Offene Entscheidungen
+## Entscheidungen
 
-- [ ] Zielgruppe und Detailtiefe (Schule, Pflegeausbildung, Medizinstudium)
-- [ ] Ganzkörpermodell: selbst gebaut und stilisiert (Vorschlag) oder offene Datensätze (BodyParts3D, Z-Anatomy; Lizenzauflagen CC BY-SA, große Dateien, anderer Stil)
-- [ ] Reihenfolge der Organe bestätigen
-- [ ] Repository später umbenennen (z. B. „Anatomie-3d“)
+- [x] Zielgruppe: Pflege und Gesundheitsberufe – verständliche Funktionen, wichtige Strukturen, Krankheitsbilder und Medikamente (Niveau wie Herz und Nephron)
+- [x] Ganzkörpermodell: selbst gebaut und stilisiert, per Code wie Herz und Nephron (einheitlicher Stil, kleine Dateien, keine Lizenzauflagen)
+- [x] Reihenfolge der Organe wie in Phase 3 vorgeschlagen
+- [x] Repository in „Anatomie-3d“ umbenennen, sobald es mehr als das Herz enthält
 
 ## Arbeitsweise
 
