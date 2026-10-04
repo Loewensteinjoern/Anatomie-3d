@@ -3492,24 +3492,16 @@ function computeAnchors() {
   ORDER.forEach(function (s) {
     s.aOpen = fix(s.open); s.aClosed = fix(s.closed);
     if (!s.has || (!s.aOpen && !s.aClosed)) return;
-    var el = document.createElement('div'); el.className = 'lbl';
-    el.innerHTML = '<b></b><i></i>';
-    el.querySelector('b').textContent = s.de; el.querySelector('i').textContent = s.lat;
+    var b = Kern.beschriftung(labelBox, leaderSvg, s.de, s.lat), el = b.el, ln = b.ln, dot = b.dot;
     el.addEventListener('click', function () { if (!App.quiz) setSelected(s.id); });
-    labelBox.appendChild(el);
-    var ln = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'), dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dot.setAttribute('r', '2'); leaderSvg.appendChild(ln); leaderSvg.appendChild(dot);
     LABELS.push({ s: s, el: el, ln: ln, dot: dot, key: '' });
   });
 }
 function addStationLabels() {
   (App.stations || []).forEach(function (st) {
-    var el = document.createElement('div'); el.className = 'lbl erl';
-    el.innerHTML = '<b></b><i></i>'; el.querySelector('b').textContent = st.de; el.querySelector('i').textContent = st.lat;
+    var b = Kern.beschriftung(labelBox, leaderSvg, st.de, st.lat), el = b.el, ln = b.ln, dot = b.dot;
+    el.className = 'lbl erl';
     el.addEventListener('click', function () { if (!App.quiz) setSelected('erl'); });
-    labelBox.appendChild(el);
-    var ln = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'), dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dot.setAttribute('r', '2'); leaderSvg.appendChild(ln); leaderSvg.appendChild(dot);
     LABELS.push({ s: { id: 'erl', de: st.de, lat: st.lat, aOpen: st.p, aClosed: st.p, on: true, station: true }, el: el, ln: ln, dot: dot, key: '' });
   });
 }
@@ -4055,7 +4047,7 @@ function resize() {
     if (Math.abs(nd - fitDist) > 0.5) { view.dist *= nd / fitDist; fitDist = nd; }
   } else if (fitDist !== 34.5) { view.dist *= 34.5 / fitDist; fitDist = 34.5; }
   fitRail();
-  leaderSvg.setAttribute('width', w); leaderSvg.setAttribute('height', h); leaderSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  Kern.linienFlaeche(leaderSvg, w, h);
   ekgSize();
   LABELS.forEach(function (a) { a.key = ''; });
 }

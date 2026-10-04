@@ -1453,16 +1453,8 @@ var ANCHORS = [
 var TICKS = [{ y: 5.6, t: 'Rinde' }, { y: -6.2, t: 'Mark' }];
 var labelBox = document.getElementById('labels'), leaderSvg = document.getElementById('leaders');
 ANCHORS.forEach(function (a) {
-  var el = document.createElement('div'); el.className = 'lbl';
-  el.innerHTML = '<b></b><i></i>';
-  el.querySelector('b').textContent = STRUCT[a.sid].de;
-  el.querySelector('i').textContent = STRUCT[a.sid].lat;
-  labelBox.appendChild(el); a.el = el;
-  var ln = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-  var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.setAttribute('r', '2');
-  leaderSvg.appendChild(ln); leaderSvg.appendChild(dot);
-  a.ln = ln; a.dot = dot;
+  var b = Kern.beschriftung(labelBox, leaderSvg, STRUCT[a.sid].de, STRUCT[a.sid].lat);
+  a.el = b.el; a.ln = b.ln; a.dot = b.dot;
 });
 TICKS.forEach(function (t) {
   var el = document.createElement('div'); el.className = 'tick';
@@ -2132,8 +2124,7 @@ function resize() {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  leaderSvg.setAttribute('width', w); leaderSvg.setAttribute('height', h);
-  leaderSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  Kern.linienFlaeche(leaderSvg, w, h);
 }
 window.addEventListener('resize', resize);
 resize();

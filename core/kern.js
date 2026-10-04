@@ -100,6 +100,23 @@ var Kern = window.Kern = window.Kern || {};
     return ctl;
   };
 
+  /* Beschriftung anlegen: div.lbl (fett deutsch, kursiv lateinisch) in
+     labelBox sowie Fuehrungslinie (polyline) und Punkt (circle) im SVG. */
+  K.beschriftung = function (labelBox, leaderSvg, de, lat) {
+    var el = document.createElement('div'); el.className = 'lbl';
+    el.innerHTML = '<b></b><i></i>';
+    el.querySelector('b').textContent = de; el.querySelector('i').textContent = lat;
+    labelBox.appendChild(el);
+    var ln = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'), dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('r', '2'); leaderSvg.appendChild(ln); leaderSvg.appendChild(dot);
+    return { el: el, ln: ln, dot: dot };
+  };
+
+  /* Zeichenflaeche der Fuehrungslinien auf Fenstergroesse w x h setzen. */
+  K.linienFlaeche = function (leaderSvg, w, h) {
+    leaderSvg.setAttribute('width', w); leaderSvg.setAttribute('height', h); leaderSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  };
+
   /* Kamera aus view (Kugelkoordinaten um view.target) setzen. k skaliert
      optional den Abstand (Herz: Platz fuer die Info-Karte). */
   K.kamera = function (camera, view, k) {
