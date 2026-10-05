@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Gemeinsamer Kern - AR: USDZ-Erzeugung und AR Quick Look (iPhone/iPad)
+   Gemeinsamer Kern - AR: WebXR-Sitzung (Android), USDZ-Erzeugung und AR Quick Look (iPhone/iPad)
    Klassisches Skript (kein Modul), nutzt das globale THREE und Kern.toast.
    Beim Laden werden nur Funktionen definiert, keine THREE-Objekte erzeugt.
    ========================================================================== */
@@ -7,6 +7,96 @@ var Kern = window.Kern = window.Kern || {};
 (function (K) {
   'use strict';
   var AR = K.AR = {};
+
+  /* WebXR-Sitzung (Android, Chrome mit ARCore): Ring auf der Flaeche, Hinstellen,
+     Groesse, Beenden. Liefert den Steuer-Zustand mit den Methoden
+     check(), start() (async), frame(xrFrame), place(), end().
+     cfg: renderer, scene, camera, root, stufen, skala, fuss (Hoehe des
+     Fusspunkts in Modelleinheiten), hintergrund (Clear-Farbe nach dem Ende),
+     ids { ui, hint, ende, kleiner, groesser, neu }, knoepfe (IDs, die
+     beforexrselect unterdruecken), quickLook() (Rueckfall), beimStart(),
+     beimEnde(). Der Ring entsteht erst beim Start. */
+  AR.xr = function (cfg) {
+    var st = { session: null, hit: null, ref: null, reticle: null, placed: false, scale: cfg.skala, saved: null, xr: false };
+    var renderer = cfg.renderer, root = cfg.root, ids = cfg.ids, aktiv = false;
+    var el = function (id) { return document.getElementById(id); };
+
+    st.check = function () {
+      if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { st.xr = ok; }).catch(function () { st.xr = false; });
+    };
+    function reticle() {
+      if (st.reticle) return;
+      var g = new THREE.RingGeometry(0.06, 0.075, 40).rotateX(-Math.PI / 2);
+      st.reticle = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.9 }));
+      st.reticle.matrixAutoUpdate = false; st.reticle.visible = false; cfg.scene.add(st.reticle);
+    }
+    st.start = async function () {
+      if (st.xr) {
+        var sess;
+        try {
+          sess = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: el(ids.ui) } });
+        } catch (e) {
+          K.toast('AR lässt sich hier nicht starten. Öffne den Link direkt in Chrome (eigener Tab), dann klappt es.');
+          return;
+        }
+        reticle();
+        renderer.xr.enabled = true;
+        renderer.xr.setReferenceSpaceType('local');
+        await renderer.xr.setSession(sess);
+        st.session = sess; st.ref = renderer.xr.getReferenceSpace();
+        try { var vs = await sess.requestReferenceSpace('viewer'); st.hit = await sess.requestHitTestSource({ space: vs }); } catch (e) { st.hit = null; }
+        sess.addEventListener('select', function () { if (!st.placed && st.reticle.visible) st.place(); });
+        sess.addEventListener('end', st.end);
+        st.saved = { p: root.position.clone(), q: root.quaternion.clone(), s: root.scale.clone() };
+        aktiv = true; st.placed = false; root.visible = false;
+        renderer.setClearColor(0x000000, 0);
+        el(ids.ui).style.display = 'block'; el(ids.hint).style.display = '';
+        if (cfg.beimStart) cfg.beimStart();
+        return;
+      }
+      if (AR.quickLookOK() && cfg.quickLook) { cfg.quickLook(); return; }
+      if (navigator.xr) K.toast('Dieses Gerät kann im Browser kein AR. Auf Android: Chrome mit „Google Play-Dienste für AR“, auf iPhone/iPad: Safari.');
+      else K.toast('AR braucht ein Smartphone oder Tablet mit Kamera: Android mit Chrome oder iPhone/iPad mit Safari.');
+    };
+    st.place = function () {
+      var cam = renderer.xr.getCamera(cfg.camera), cp = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
+      var p = new THREE.Vector3().setFromMatrixPosition(st.reticle.matrix);
+      root.position.copy(p);
+      root.rotation.set(0, Math.atan2(cp.x - p.x, cp.z - p.z), 0);
+      root.scale.setScalar(st.scale);
+      root.position.y += cfg.fuss * st.scale;           /* Fusspunkt steht auf der Flaeche */
+      root.visible = true; st.placed = true; st.reticle.visible = false;
+      el(ids.hint).style.display = 'none';
+    };
+    st.frame = function (frame) {
+      if (!frame || !st.hit || st.placed) return;
+      var hits = frame.getHitTestResults(st.hit);
+      if (hits.length) { var pose = hits[0].getPose(st.ref); if (pose) { st.reticle.visible = true; st.reticle.matrix.fromArray(pose.transform.matrix); } }
+      else st.reticle.visible = false;
+    };
+    st.end = function () {
+      if (!aktiv) return;
+      aktiv = false; st.session = null;
+      if (st.hit) { try { st.hit.cancel(); } catch (e) {} st.hit = null; }
+      if (st.reticle) st.reticle.visible = false;
+      if (st.saved) { root.position.copy(st.saved.p); root.quaternion.copy(st.saved.q); root.scale.copy(st.saved.s); }
+      root.visible = true;
+      renderer.setClearColor(cfg.hintergrund, 1);
+      el(ids.ui).style.display = 'none';
+      if (cfg.beimEnde) cfg.beimEnde();
+    };
+
+    cfg.knoepfe.forEach(function (id) { el(id).addEventListener('beforexrselect', function (e) { e.preventDefault(); }); });
+    el(ids.ende).onclick = function () { if (st.session) st.session.end(); };
+    var stufe = function (d) {
+      var S = cfg.stufen, i = S.indexOf(st.scale); i = Math.max(0, Math.min(S.length - 1, (i < 0 ? S.indexOf(cfg.skala) : i) + d)); var alt = st.scale; st.scale = S[i];
+      if (st.placed) { root.position.y += (st.scale - alt) * cfg.fuss; root.scale.setScalar(st.scale); }
+    };
+    el(ids.kleiner).onclick = function () { stufe(-1); };
+    el(ids.groesser).onclick = function () { stufe(1); };
+    el(ids.neu).onclick = function () { st.placed = false; root.visible = false; el(ids.hint).style.display = ''; };
+    return st;
+  };
 
   /* Unterstuetzt der Browser AR Quick Look (<a rel="ar">)? */
   AR.quickLookOK = function () { var a = document.createElement('a'); return !!(a.relList && a.relList.supports && a.relList.supports('ar')); };

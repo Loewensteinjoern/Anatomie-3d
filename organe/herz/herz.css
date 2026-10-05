@@ -97,18 +97,6 @@ body.schema #labels,body.schema #leaders{display:none}
 .lp-text{margin-top:8px;font-size:12px;line-height:1.45;color:var(--ink-dim)}
 .lp-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:10.5px;color:var(--ink-faint)}
 
-/* AR */
-#arUI{position:fixed;inset:0;display:none;z-index:60;pointer-events:none;font-family:var(--sans)}
-#arUI .ar-top{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:10px;pointer-events:none}
-#arUI .ar-title{font-family:var(--serif);font-size:20px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8)}
-#arUI .ar-phase{flex:1;font-size:13px;color:#F2C94C;text-shadow:0 1px 3px rgba(0,0,0,.9)}
-#arUI .ar-hint{position:absolute;left:50%;top:64px;transform:translateX(-50%);max-width:86vw;background:rgba(11,23,28,.82);color:#E7EFF0;
-  border:1px solid #23414D;border-radius:3px;padding:9px 13px;font-size:13px;text-align:center}
-#arUI .ar-bot{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:0 10px}
-#arUI .ar-b{pointer-events:auto;background:rgba(11,23,28,.86);color:#E7EFF0;border:1px solid #9C7530;border-radius:3px;padding:11px 15px;font-size:14px;font-weight:600}
-#arUI .ar-b:active{background:#E0A94A;color:#14222A}
-#arUI .ar-wm{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:10px;color:rgba(255,255,255,.7);text-shadow:0 1px 2px rgba(0,0,0,.9)}
-
 @media (max-width:1000px){
   #scard{top:56px;left:12px;right:12px;width:auto;max-height:36vh;min-height:0}
   #wm{bottom:calc(34vh + 140px);white-space:normal;text-align:center;width:92vw;font-size:9.5px}

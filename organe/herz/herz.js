@@ -2821,85 +2821,28 @@ function lupeTick(dt, Wt) {
    oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei
    ===================================================================== */
 App.ar = false;
-var AR = { session: null, hit: null, ref: null, reticle: null, placed: false, scale: 0.02, saved: null, xr: false };
-var AR_STUFEN = [0.01, 0.015, 0.02, 0.03, 0.045, 0.06];
-function arQuickLookOK() { return Kern.AR.quickLookOK(); }
-function arCheck() {
-  if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { AR.xr = ok; }).catch(function () { AR.xr = false; });
-}
-function arReticle() {
-  if (AR.reticle) return;
-  var g = new THREE.RingGeometry(0.06, 0.075, 40).rotateX(-Math.PI / 2);
-  AR.reticle = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.9 }));
-  AR.reticle.matrixAutoUpdate = false; AR.reticle.visible = false; scene.add(AR.reticle);
-}
-async function startAR() {
-  if (AR.xr) {
-    var sess;
-    try {
-      sess = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: $('arUI') } });
-    } catch (e) {
-      toast('AR lässt sich hier nicht starten. Öffne den Link direkt in Chrome (eigener Tab), dann klappt es.');
-      return;
-    }
-    arReticle();
-    renderer.xr.enabled = true;
-    renderer.xr.setReferenceSpaceType('local');
-    await renderer.xr.setSession(sess);
-    AR.session = sess; AR.ref = renderer.xr.getReferenceSpace();
-    try { var vs = await sess.requestReferenceSpace('viewer'); AR.hit = await sess.requestHitTestSource({ space: vs }); } catch (e) { AR.hit = null; }
-    sess.addEventListener('select', function () { if (!AR.placed && AR.reticle.visible) arPlace(); });
-    sess.addEventListener('end', arEnd);
-    AR.saved = { p: root.position.clone(), q: root.quaternion.clone(), s: root.scale.clone() };
-    App.ar = true; AR.placed = false; root.visible = false;
-    renderer.setClearColor(0x000000, 0);
-    $('arUI').style.display = 'block'; $('arHint').style.display = '';
+var AR = Kern.AR.xr({
+  renderer: renderer, scene: scene, camera: camera, root: root,
+  stufen: [0.01, 0.015, 0.02, 0.03, 0.045, 0.06], skala: 0.02,
+  fuss: 6.9,                                        /* Herzspitze steht auf der Fläche */
+  hintergrund: 0x0b171c,
+  ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+  knoepfe: ['arEnd', 'arOpen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+  quickLook: function () { arQuickLook(); },
+  beimStart: function () {
+    App.ar = true;
     $('arOpen').textContent = App.opened ? 'Geschlossen' : 'Geöffnet';
     $('arLab').textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an';
-    return;
+  },
+  beimEnde: function () {
+    App.ar = false;
+    if (ARL.g) ARL.g.visible = false;
+    resize();
   }
-  if (arQuickLookOK()) { arQuickLook(); return; }
-  if (navigator.xr) toast('Dieses Gerät kann im Browser kein AR. Auf Android: Chrome mit „Google Play-Dienste für AR“, auf iPhone/iPad: Safari.');
-  else toast('AR braucht ein Smartphone oder Tablet mit Kamera: Android mit Chrome oder iPhone/iPad mit Safari.');
-}
-function arPlace() {
-  var cam = renderer.xr.getCamera(camera), cp = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
-  var p = new THREE.Vector3().setFromMatrixPosition(AR.reticle.matrix);
-  root.position.copy(p);
-  root.rotation.set(0, Math.atan2(cp.x - p.x, cp.z - p.z), 0);
-  root.scale.setScalar(AR.scale);
-  root.position.y += 6.9 * AR.scale;                /* Herzspitze steht auf der Fläche */
-  root.visible = true; AR.placed = true; AR.reticle.visible = false;
-  $('arHint').style.display = 'none';
-}
-function arFrame(frame) {
-  if (!frame || !AR.hit || AR.placed) return;
-  var hits = frame.getHitTestResults(AR.hit);
-  if (hits.length) { var pose = hits[0].getPose(AR.ref); if (pose) { AR.reticle.visible = true; AR.reticle.matrix.fromArray(pose.transform.matrix); } }
-  else AR.reticle.visible = false;
-}
-function arEnd() {
-  if (!App.ar) return;
-  App.ar = false; AR.session = null;
-  if (AR.hit) { try { AR.hit.cancel(); } catch (e) {} AR.hit = null; }
-  if (AR.reticle) AR.reticle.visible = false;
-  if (ARL.g) ARL.g.visible = false;
-  if (AR.saved) { root.position.copy(AR.saved.p); root.quaternion.copy(AR.saved.q); root.scale.copy(AR.saved.s); }
-  root.visible = true;
-  renderer.setClearColor(0x0b171c, 1);
-  $('arUI').style.display = 'none';
-  resize();
-}
+});
 function arUIbind() {
-  ['arEnd', 'arOpen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'].forEach(function (id) { $(id).addEventListener('beforexrselect', function (e) { e.preventDefault(); }); });
-  $('arEnd').onclick = function () { if (AR.session) AR.session.end(); };
   $('arOpen').onclick = function () { App.opened = !App.opened; onOff('bOpen', App.opened); onOff('bClosed', !App.opened); this.textContent = App.opened ? 'Geschlossen' : 'Geöffnet'; };
-  var stufe = function (d) { var i = AR_STUFEN.indexOf(AR.scale); i = Math.max(0, Math.min(AR_STUFEN.length - 1, (i < 0 ? 2 : i) + d)); var alt = AR.scale; AR.scale = AR_STUFEN[i];
-    if (AR.placed) { root.position.y += (AR.scale - alt) * 6.9; root.scale.setScalar(AR.scale); } };
   $('arLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); this.textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an'; };
-  $('arSmall').onclick = function () { stufe(-1); };
-  $('arBig').onclick = function () { stufe(1); };
-  $('arPlace').onclick = function () { AR.placed = false; root.visible = false; $('arHint').style.display = ''; };
   $('arPause').onclick = function () { engine.S.laufen = !engine.S.laufen; this.textContent = engine.S.laufen ? 'Pause' : 'Weiter'; onOff('bPlay', engine.S.laufen); $('bPlay').textContent = engine.S.laufen ? 'Pause' : 'Abspielen'; };
 }
 /* ---- Beschriftung im AR: Schilder mit Führungslinien als 3D-Objekte ----
@@ -3399,7 +3342,7 @@ $('bOpen').onclick = function () { App.opened = true; onOff('bOpen', true); onOf
 $('bClosed').onclick = function () { App.opened = false; onOff('bOpen', false); onOff('bClosed', true); };
 $('bLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); };
 $('bSchema').onclick = function () { setSchema(!App.schema); };
-$('bAR').onclick = function () { startAR(); };
+$('bAR').onclick = function () { AR.start(); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 $('bSee').onclick = function () { App.see = !App.see; onOff('bSee', App.see); applySee(); };
 $('bCls').onclick = function () { setSelected(null); };
@@ -3765,7 +3708,7 @@ resize();
 
 var last = performance.now();
 function loop(now, frame) {
-  if (App.ar) arFrame(frame);
+  if (App.ar) AR.frame(frame);
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (App.ready) {
     engine.step(dt);
@@ -3804,7 +3747,7 @@ build().then(function () {
   buildStructList();
   addStationLabels();
   buildLupe();
-  arUIbind(); arCheck();
+  arUIbind(); AR.check();
   applyVisibility();
   setLidPose(App.openK);
   App.ready = true;
