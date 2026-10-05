@@ -12,7 +12,7 @@ var Kern = window.Kern = window.Kern || {};
 
   /* Organ-Modul anmelden. def:
        renderer: { alpha }   Optionen fuer den Renderer des Rahmens
-       aufbauen(umg)         baut das Organ auf (umg: bereich, canvas, renderer, szene, kamera, envTex), gibt ein Promise oder nichts zurueck
+       aufbauen(umg)         baut das Organ auf (umg: bereich (Element #organ, nimmt das Markup der Bedienelemente auf), canvas, renderer, szene, kamera, envTex), gibt ein Promise oder nichts zurueck
        bild(now, frame)      Renderschleife (setzt aufbauen)
        groesse(w, h)         Fenstergroesse geaendert (setzt aufbauen) */
   K.organ = function (name, def) {
@@ -33,7 +33,7 @@ var Kern = window.Kern = window.Kern || {};
     var kamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
     var envTex = K.umgebung(renderer);
     K.licht(szene, envTex);
-    var fertig = o.aufbauen({ bereich: document.body, canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex });
+    var fertig = o.aufbauen({ bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex });
     function groesse() {
       var w = window.innerWidth, h = window.innerHeight;
       renderer.setSize(w, h, false);
