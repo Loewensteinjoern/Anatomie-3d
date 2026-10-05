@@ -3,7 +3,7 @@ Ein 3 D Modell des Herzens dass in AR dargestellt werden soll
 
 ## App
 
-Die App ist eine statische Webanwendung ohne Installation und ohne Build-Schritt. three.js (r128) liegt unverändert in `vendor/`, Gestaltung und App-Code der Modelle unter `organe/`.
+Die App ist eine statische Webanwendung ohne Installation und ohne Build-Schritt. three.js (r128) liegt unverändert in `vendor/`, der gemeinsame Kern in `core/`, Gestaltung und App-Code der Modelle unter `organe/`.
 
 - **Lokal öffnen:** `index.html` im Browser öffnen. Dafür muss der ganze Ordner vorhanden sein (z. B. Repository als ZIP herunterladen und entpacken), nicht nur die HTML-Datei.
 - **Online (GitHub Pages):** In den Repository-Einstellungen unter *Settings → Pages* als Quelle den Branch `main` und den Ordner `/ (root)` wählen. Die App ist dann erreichbar unter
@@ -20,9 +20,10 @@ Das Nephron ist online erreichbar unter `https://loewensteinjoern.github.io/Herz
 
 ```
 index.html, nephron.html   HTML-Gerüst der beiden Modelle
+core/                      kern.css, kern.js, export.js – gemeinsamer Kern beider Modelle (Gestaltung, Licht, Material, Kamera, Beschriftung, Export)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
 organe/niere/              nephron.css, nephron.js – Gestaltung und App-Code des Nephrons
-vendor/                    three.js r128 mit GLTFExporter und RoomEnvironment, unverändert
+vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
 ```
 

@@ -10,8 +10,6 @@ var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
 var DEG = Math.PI / 180;
 var DUR = 12.0;    // Sekunden pro Umlauf
 var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
-var WATERMARK = 'Entwickelt und erstellt von J\u00f6rn L\u00f6wenstein mit Hilfe von k\u00fcnstlicher Intelligenz (Claude)';
-function def(v, d) { return v === undefined ? d : v; }
 
 /* =====================================================================
    1. Geometrie-Werkzeuge
@@ -246,52 +244,11 @@ var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
 var view = { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) };
 
-/* Weiches Umgebungslicht aus einer kleinen Lichtkuppel - gibt feuchten
-   Gewebeglanz statt Plastikoptik. Faellt auf alten Geraeten still weg. */
-var envTex = null;
-(function () {
-  try {
-    var pm = new THREE.PMREMGenerator(renderer);
-    var es = new THREE.Scene();
-    var sg = new THREE.SphereGeometry(20, 32, 16), cols = [], p = sg.attributes.position;
-    for (var i = 0; i < p.count; i++) {
-      var y = p.getY(i) / 20;
-      var c = y > 0 ? new THREE.Color(0x2a3b42).lerp(new THREE.Color(0x9fb4bc), y)
-                    : new THREE.Color(0x2a3b42).lerp(new THREE.Color(0x1a1512), -y);
-      cols.push(c.r, c.g, c.b);
-    }
-    sg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    es.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
-    [[8, 12, 12, 0xfff1dc, 3.0], [-14, 4, 6, 0xbfd8e6, 1.4], [0, -10, -12, 0xffd0a0, 0.9]].forEach(function (L) {
-      var m = new THREE.Mesh(new THREE.PlaneGeometry(9, 6),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(L[3]).multiplyScalar(L[4]), side: THREE.DoubleSide }));
-      m.position.set(L[0], L[1], L[2]); m.lookAt(0, 0, 0); es.add(m);
-    });
-    envTex = pm.fromScene(es, 0.04).texture;
-    pm.dispose();
-  } catch (e) { envTex = null; }
-})();
+var envTex = Kern.umgebung(renderer);
+Kern.licht(scene, envTex);
 
-scene.add(new THREE.HemisphereLight(0xbcd6e0, 0x2a1d18, envTex ? 0.42 : 0.6));
-var key = new THREE.DirectionalLight(0xfff4e2, 0.95); key.position.set(6, 8, 14); scene.add(key);
-var fill = new THREE.DirectionalLight(0x9dc4d8, 0.35); fill.position.set(-12, 3, 8); scene.add(fill);
-var rim = new THREE.DirectionalLight(0xffd9a8, 0.45); rim.position.set(-4, -6, -12); scene.add(rim);
-
-function srgb(hex) { return new THREE.Color(hex).convertSRGBToLinear(); }
-function mat(hex, o) {
-  o = o || {};
-  var M = o.coat ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  var m = new M({
-    color: srgb(hex), roughness: def(o.rough, 0.6), metalness: 0,
-    side: o.side || THREE.FrontSide, vertexColors: !!o.vc
-  });
-  if (o.coat) { m.clearcoat = o.coat; m.clearcoatRoughness = def(o.coatRough, 0.35); }
-  if (o.vc) m.color.setRGB(1, 1, 1);
-  if (o.opacity !== undefined && o.opacity < 1) { m.transparent = true; m.opacity = o.opacity; m.depthWrite = false; }
-  if (envTex) { m.envMap = envTex; m.envMapIntensity = def(o.env, 0.28); }
-  m.emissive = new THREE.Color(0, 0, 0);
-  return m;
-}
+var srgb = Kern.srgb;
+function mat(hex, o) { return Kern.mat(hex, o || {}, envTex); }
 function conc(m) {
   var t = Math.max(0, Math.min(1, (m - 100) / 1100));
   t = Math.pow(t, 0.78);
@@ -1172,7 +1129,7 @@ Object.keys(PSTREAMS).forEach(function (sid) {
   var im = new THREE.InstancedMesh(S.geo, MAT[sid], S.list.length);
   im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   im.frustumCulled = false;
-  im.name = S.name; im.userData.sid = sid; im.userData.part = true;
+  im.name = S.name; im.userData.sid = sid; im.userData.part = true; im.userData.noexport = true;
   root.add(im); STRUCT[sid].meshes.push(im);
   S.mesh = im;
 });
@@ -1417,13 +1374,11 @@ var PRESETS = [
   { theta: 0.20, phi: 1.50, dist: 9.5, target: V(1.3, -6.9, -0.3) },
   { theta: 0.55, phi: 1.50, dist: 15, target: V(5.3, -2.5, 0) }
 ];
-var camAnim = null;
 function goTo(i) {
   ['cam0', 'cam1', 'cam2', 'cam3'].forEach(function (id, k) {
     document.getElementById(id).classList.toggle('on', k === i);
   });
-  camAnim = { f: { theta: view.theta, phi: view.phi, dist: view.dist, target: view.target.clone() },
-              t: PRESETS[i], t0: performance.now(), d: 700 };
+  orbit.anim = Kern.fahrt(view, PRESETS[i], 700);
 }
 [0, 1, 2, 3].forEach(function (i) { document.getElementById('cam' + i).onclick = function () { goTo(i); }; });
 
@@ -1456,46 +1411,12 @@ document.getElementById('bLab').onclick = function () {
 /* =====================================================================
    7. Kamera
    ===================================================================== */
-var ptrs = new Map(), lastPinch = 0, dragged = false;
-function updateCamera() {
-  var sp = Math.sin(view.phi);
-  camera.position.set(
-    view.target.x + view.dist * sp * Math.sin(view.theta),
-    view.target.y + view.dist * Math.cos(view.phi),
-    view.target.z + view.dist * sp * Math.cos(view.theta));
-  camera.lookAt(view.target);
-}
-canvas.addEventListener('pointerdown', function (e) {
-  canvas.setPointerCapture(e.pointerId);
-  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  dragged = false; camAnim = null;
-});
-canvas.addEventListener('pointermove', function (e) {
-  if (!ptrs.has(e.pointerId)) return;
-  var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
-  p.x = e.clientX; p.y = e.clientY;
-  if (ptrs.size === 1) {
-    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
-    view.theta -= dx * 0.0072;
-    view.phi = Math.max(0.10, Math.min(3.04, view.phi - dy * 0.0072));
-  } else if (ptrs.size === 2) {
-    dragged = true;
-    var a = Array.from(ptrs.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
-    if (lastPinch) view.dist = Math.max(2.5, Math.min(60, view.dist * (lastPinch / d)));
-    lastPinch = d;
-  }
-});
-function endPtr(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; }
-canvas.addEventListener('pointerup', endPtr);
-canvas.addEventListener('pointercancel', endPtr);
-canvas.addEventListener('wheel', function (e) {
-  e.preventDefault(); camAnim = null;
-  view.dist = Math.max(2.5, Math.min(60, view.dist * (1 + Math.sign(e.deltaY) * 0.09)));
-}, { passive: false });
+var orbit = Kern.orbit(canvas, view, { minDist: 2.5, maxDist: 60 });
+function updateCamera() { Kern.kamera(camera, view); }
 
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 canvas.addEventListener('click', function (e) {
-  if (dragged) return;
+  if (orbit.dragged) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -1530,16 +1451,8 @@ var ANCHORS = [
 var TICKS = [{ y: 5.6, t: 'Rinde' }, { y: -6.2, t: 'Mark' }];
 var labelBox = document.getElementById('labels'), leaderSvg = document.getElementById('leaders');
 ANCHORS.forEach(function (a) {
-  var el = document.createElement('div'); el.className = 'lbl';
-  el.innerHTML = '<b></b><i></i>';
-  el.querySelector('b').textContent = STRUCT[a.sid].de;
-  el.querySelector('i').textContent = STRUCT[a.sid].lat;
-  labelBox.appendChild(el); a.el = el;
-  var ln = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-  var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.setAttribute('r', '2');
-  leaderSvg.appendChild(ln); leaderSvg.appendChild(dot);
-  a.ln = ln; a.dot = dot;
+  var b = Kern.beschriftung(labelBox, leaderSvg, STRUCT[a.sid].de, STRUCT[a.sid].lat);
+  a.el = b.el; a.ln = b.ln; a.dot = b.dot;
 });
 TICKS.forEach(function (t) {
   var el = document.createElement('div'); el.className = 'tick';
@@ -2010,197 +1923,79 @@ function lupeTick(dt) {
 /* =====================================================================
    9. Export
    ===================================================================== */
-function staticMeshes() {
-  var out = [];
-  root.traverse(function (o) {
-    if (!o.isMesh || o.isInstancedMesh || !o.visible || o.userData.noexport) return;
-    if (o.material.transparent && o.material.opacity < 0.05) return;      /* gerade ausgeblendet */
-    out.push(o);
-  });
-  return out;
-}
-function download(blob, name) {
-  var url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = name; a.rel = 'noopener';
-  document.body.appendChild(a); a.click();
-  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 2000);
-}
-function toast(msg) {
-  var t = document.getElementById('toast');
-  t.innerHTML = msg; t.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(function () { t.classList.remove('show'); }, 5600);
-}
-function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' kB'; }
-
-function bakeGeo(g, k, mw) {
-  var nm = mw ? new THREE.Matrix3().getNormalMatrix(mw) : null;
-  var pa = g.attributes.position, na = g.attributes.normal, ca = g.attributes.color;
-  var n = pa.count, i, v = new THREE.Vector3();
-  var P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = ca ? new Float32Array(n * 4) : null;
-  for (i = 0; i < n; i++) {
-    v.fromBufferAttribute(pa, i); if (mw) v.applyMatrix4(mw);
-    P[i * 3] = v.x * k; P[i * 3 + 1] = v.y * k; P[i * 3 + 2] = v.z * k;
-    if (na) { v.fromBufferAttribute(na, i); if (nm) v.applyMatrix3(nm); v.normalize(); N[i * 3] = v.x; N[i * 3 + 1] = v.y; N[i * 3 + 2] = v.z; }
-    else N[i * 3 + 1] = 1;
-    if (C) { C[i * 4] = ca.getX(i); C[i * 4 + 1] = ca.getY(i); C[i * 4 + 2] = ca.getZ(i); C[i * 4 + 3] = 1; }
-  }
-  var I;
-  if (g.index) { I = new Uint32Array(g.index.count); for (i = 0; i < I.length; i++) I[i] = g.index.getX(i); }
-  else { I = new Uint32Array(n); for (i = 0; i < n; i++) I[i] = i; }
-  return { P: P, N: N, C: C, I: I, count: n };
-}
-
-function exportSTL() {
-  var meshes = staticMeshes(), tris = 0, parts = [];
-  meshes.forEach(function (m) { m.updateWorldMatrix(true, false); var b = bakeGeo(m.geometry, 10, m.matrixWorld); parts.push(b); tris += b.I.length / 3; });
-  var buf = new ArrayBuffer(84 + 50 * tris), dv = new DataView(buf);
-  var head = 'Nephron - Joern Loewenstein mit Hilfe von KI (Claude) - Einheit mm';
-  for (var i = 0; i < 80; i++) dv.setUint8(i, i < head.length ? head.charCodeAt(i) : 32);
-  dv.setUint32(80, tris, true);
-  var o = 84;
-  parts.forEach(function (b) {
-    for (var t = 0; t < b.I.length; t += 3) {
-      var i0 = b.I[t] * 3, i1 = b.I[t + 1] * 3, i2 = b.I[t + 2] * 3;
-      var ax = b.P[i0], ay = b.P[i0 + 1], az = b.P[i0 + 2], bx = b.P[i1], by = b.P[i1 + 1], bz = b.P[i1 + 2];
-      var cx = b.P[i2], cy = b.P[i2 + 1], cz = b.P[i2 + 2];
-      var ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
-      var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1;
-      dv.setFloat32(o, nx / l, true); dv.setFloat32(o + 4, ny / l, true); dv.setFloat32(o + 8, nz / l, true);
-      dv.setFloat32(o + 12, ax, true); dv.setFloat32(o + 16, ay, true); dv.setFloat32(o + 20, az, true);
-      dv.setFloat32(o + 24, bx, true); dv.setFloat32(o + 28, by, true); dv.setFloat32(o + 32, bz, true);
-      dv.setFloat32(o + 36, cx, true); dv.setFloat32(o + 40, cy, true); dv.setFloat32(o + 44, cz, true);
-      dv.setUint16(o + 48, 0, true); o += 50;
-    }
-  });
-  download(new Blob([buf], { type: 'model/stl' }), 'nephron-modell.stl');
-  toast('STL gespeichert &middot; <span class="em">' + tris.toLocaleString('de-DE') + ' Dreiecke, ' + kb(buf.byteLength) +
-    ', Einheit mm</span><br>Ohne Str\u00f6mung \u2013 STL kennt weder Farbe noch Bewegung.');
-}
-
-function exportGLB(withAnim) {
-  var K = 0.01;                                     /* cm -> m */
-  var json = {
-    asset: { version: '2.0', generator: 'Nephron-Lernmodell / three.js r128', copyright: WATERMARK },
-    scene: 0, scenes: [{ nodes: [] }], nodes: [], meshes: [], materials: [],
-    accessors: [], bufferViews: [], buffers: [{ byteLength: 0 }]
-  };
-  var chunks = [], off = 0, matMap = new Map(), animNodes = [], usesCoat = false, usesUnlit = false;
-  function pad4() { var p = (4 - (off % 4)) % 4; if (p) { chunks.push(new Uint8Array(p)); off += p; } }
-  function bview(arr, target) {
-    pad4(); chunks.push(new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength));
-    var bv = { buffer: 0, byteOffset: off, byteLength: arr.byteLength }; if (target) bv.target = target;
-    off += arr.byteLength; json.bufferViews.push(bv); return json.bufferViews.length - 1;
-  }
-  function accessor(arr, type, comp, count, mm, target) {
-    var a = { bufferView: bview(arr, target), componentType: comp, count: count, type: type };
-    if (mm) { a.min = mm[0]; a.max = mm[1]; }
-    json.accessors.push(a); return json.accessors.length - 1;
-  }
-  function material(m) {
-    if (matMap.has(m.uuid)) return matMap.get(m.uuid);
-    var c = m.color, g = {
-      name: m.name || 'material',
-      pbrMetallicRoughness: { baseColorFactor: [c.r, c.g, c.b, m.transparent ? m.opacity : 1], metallicFactor: 0, roughnessFactor: def(m.roughness, 0.6) },
-      doubleSided: m.side === THREE.DoubleSide
+function toast(msg) { Kern.toast(msg); }
+var exCfg = {
+  titel: 'Nephron', praefix: 'nephron', wurzelName: 'Nephron',
+  /* Schild unter dem Modell: Bounding-Box der exportierten Teile (ohne Teilchen) x -5,48 bis 7,10, y -9,10 bis 8,09, z bis 1,19
+     -> x Mitte 0,8; y 1,5 cm unter der Unterkante (-10,6); z vorn (max z) */
+  schild: [0.8, -10.6, 1.2],
+  bereit: function () { return true; },
+  gruppen: function () { return [root]; },
+  toast: toast,
+  transparenz: true,
+  unlit: true,
+  /* Szenario zur Laufzeit: Namensteil auch im statischen Export (z. B. nephron_statisch_torasemid.glb) */
+  get zusatzStatisch() { return SW.hg > 0.5 ? 'hyperglykaemie' : (SW.lt > 0.5 ? 'torasemid' : ''); },
+  /* Strömung backen: je Teilchen ein Knoten (Größe 0 = unsichtbar), Position und Größe als Spuren */
+  animation: function (rootE) {
+    var times = new Float32Array(NKEY + 1), i, tracks = [], nPart = 0;
+    for (i = 0; i <= NKEY; i++) times[i] = i * DUR / NKEY;
+    /* Unsichtbare Keyframes: Das Teilchen parkt dort, wo es gerade verschwunden ist
+       oder gleich auftaucht - bei Etappen sogar genau auf dem Weg der Nachbaretappe.
+       So fliegt beim Interpolieren nichts quer durchs Modell. */
+    var keyPos = function (p, u) {
+      var r = sample(p, u);
+      if (r) return r;
+      var after = u - p.span, before = 1 - u, tau;
+      if (p.lane) {
+        tau = after <= before ? p.t1 + after * DUR / p.T : p.t0 - before * DUR / p.T;
+        return { pos: p.curve.getPointAt(arcAt(p, Math.max(0, Math.min(1, tau)))), s: 0 };
+      }
+      return { pos: p.curve.getPointAt(arcAt(p, after <= before ? 1 : 0)), s: 0 };
     };
-    if (m.transparent && m.opacity < 1) g.alphaMode = 'BLEND';
-    if (m.isMeshBasicMaterial) { g.extensions = g.extensions || {}; g.extensions.KHR_materials_unlit = {}; usesUnlit = true; }
-    if (m.clearcoat) { g.extensions = { KHR_materials_clearcoat: { clearcoatFactor: m.clearcoat, clearcoatRoughnessFactor: m.clearcoatRoughness } }; usesCoat = true; }
-    json.materials.push(g); matMap.set(m.uuid, json.materials.length - 1);
-    return json.materials.length - 1;
-  }
-  function addMesh(name, b, material_) {
-    var mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity], i, k;
-    for (i = 0; i < b.count; i++) for (k = 0; k < 3; k++) { var v = b.P[i * 3 + k]; if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v; }
-    var attrs = { POSITION: accessor(b.P, 'VEC3', 5126, b.count, [mn, mx], 34962), NORMAL: accessor(b.N, 'VEC3', 5126, b.count, null, 34962) };
-    if (b.C) attrs.COLOR_0 = accessor(b.C, 'VEC4', 5126, b.count, null, 34962);
-    json.meshes.push({ name: name, primitives: [{ attributes: attrs, indices: accessor(b.I, 'SCALAR', 5125, b.I.length, null, 34963), material: material(material_) }] });
-    return json.meshes.length - 1;
-  }
-
-  staticMeshes().forEach(function (mesh) {
-    mesh.updateWorldMatrix(true, false);
-    var mi = addMesh(mesh.name, bakeGeo(mesh.geometry, K, mesh.matrixWorld), mesh.material);
-    json.nodes.push({ mesh: mi, name: mesh.name });
-    json.scenes[0].nodes.push(json.nodes.length - 1);
-  });
-
-  var nPart = 0;
-  if (withAnim) {
     Object.keys(PSTREAMS).forEach(function (sid) {
       var S = PSTREAMS[sid];
       if (!S.mesh.visible) return;
-      var mi = -1;                                                   /* eine Form, viele Knoten */
-      S.list.forEach(function (p, i) {
+      S.list.forEach(function (p, n) {
         var mu = scenMul(p);
         if (mu < 0.002) return;                                      /* im aktuellen Zustand unsichtbar */
-        if (mi < 0) mi = addMesh(S.name, bakeGeo(S.geo, K, null), MAT[sid]);
-        json.nodes.push({ mesh: mi, name: S.name + '_' + (i + 1), translation: [0, 0, 0],
-                          rotation: [p.rot.x, p.rot.y, p.rot.z, p.rot.w], scale: [0, 0, 0] });
-        json.scenes[0].nodes.push(json.nodes.length - 1);
-        animNodes.push({ idx: json.nodes.length - 1, p: p, mu: mu });
-      });
-    });
-    if (animNodes.length) {
-      var times = new Float32Array(NKEY + 1), i;
-      for (i = 0; i <= NKEY; i++) times[i] = i * DUR / NKEY;
-      var tAcc = accessor(times, 'SCALAR', 5126, NKEY + 1, [[0], [DUR]]);
-      var channels = [], samplers = [];
-      /* Unsichtbare Keyframes: Das Teilchen parkt dort, wo es gerade verschwunden ist
-         oder gleich auftaucht - bei Etappen sogar genau auf dem Weg der Nachbaretappe.
-         So fliegt beim Interpolieren nichts quer durchs Modell. */
-      var keyPos = function (p, u) {
-        var r = sample(p, u);
-        if (r) return r;
-        var after = u - p.span, before = 1 - u, tau;
-        if (p.lane) {
-          tau = after <= before ? p.t1 + after * DUR / p.T : p.t0 - before * DUR / p.T;
-          return { pos: p.curve.getPointAt(arcAt(p, Math.max(0, Math.min(1, tau)))), s: 0 };
-        }
-        return { pos: p.curve.getPointAt(arcAt(p, after <= before ? 1 : 0)), s: 0 };
-      };
-      animNodes.forEach(function (an) {
-        var T = new Float32Array((NKEY + 1) * 3), Sc = new Float32Array((NKEY + 1) * 3);
+        var node = new THREE.Mesh(S.geo, MAT[sid]); node.name = S.name + '_' + (n + 1);
+        node.quaternion.copy(p.rot);
+        var P = new Float32Array((NKEY + 1) * 3), Sc = new Float32Array((NKEY + 1) * 3);
         for (i = 0; i <= NKEY; i++) {
-          var uu = (i / NKEY + an.p.off) % 1, r = keyPos(an.p, uu), pt = r.pos, e = r.s * (an.mu || 1);
-          T[i * 3] = pt.x * K; T[i * 3 + 1] = pt.y * K; T[i * 3 + 2] = pt.z * K;
+          var r = keyPos(p, (i / NKEY + p.off) % 1), pt = r.pos, e = r.s * mu;
+          P[i * 3] = pt.x; P[i * 3 + 1] = pt.y; P[i * 3 + 2] = pt.z;
           Sc[i * 3] = e; Sc[i * 3 + 1] = e; Sc[i * 3 + 2] = e;
         }
-        samplers.push({ input: tAcc, output: accessor(T, 'VEC3', 5126, NKEY + 1), interpolation: 'LINEAR' });
-        channels.push({ sampler: samplers.length - 1, target: { node: an.idx, path: 'translation' } });
-        samplers.push({ input: tAcc, output: accessor(Sc, 'VEC3', 5126, NKEY + 1), interpolation: 'LINEAR' });
-        channels.push({ sampler: samplers.length - 1, target: { node: an.idx, path: 'scale' } });
+        node.position.set(P[0], P[1], P[2]); node.scale.set(Sc[0], Sc[1], Sc[2]);
+        rootE.add(node);
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc));
+        nPart++;
       });
-      json.animations = [{ name: 'Nephron_Stroemung', channels: channels, samplers: samplers }];
-      nPart = animNodes.length;
+    });
+    return { clips: [new THREE.AnimationClip('Nephron_Stroemung', DUR, tracks)], zusatz: SW.hg > 0.5 ? 'hyperglykaemie' : (SW.lt > 0.5 ? 'torasemid' : 'normal'), nPart: nPart };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben):', '- nephron_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt weder Farbe noch Bewegung – dafür gibt es die GLB-Dateien.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Ohne Strömung – STL kennt weder Farbe noch Bewegung.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': die Strömung (' + i.a.nPart + ' Teilchen, ' + DUR + ' s) als Animation, läuft in Schleife.' : i.name + ': farbiges 3D-Modell in der Ansicht beim Export, ohne Strömung.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter dem Nephron.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span>' +
+        (i.anim ? '<br>' + i.a.nPart + ' Teilchen mit ' + (NKEY + 1) + ' Keyframes, ' + DUR + ' s Schleife. Im Viewer die Wiedergabe starten.' : '<br>Nur Geometrie, mit Farben, ohne Strömung.');
     }
   }
-  var ext = []; if (usesCoat) ext.push('KHR_materials_clearcoat'); if (usesUnlit) ext.push('KHR_materials_unlit');
-  if (ext.length) json.extensionsUsed = ext;
-
-  json.buffers[0].byteLength = off;
-  var jb = new TextEncoder().encode(JSON.stringify(json));
-  var jpad = (4 - (jb.length % 4)) % 4;
-  if (jpad) { var t2 = new Uint8Array(jb.length + jpad); t2.set(jb); t2.fill(0x20, jb.length); jb = t2; }
-  var bpad = (4 - (off % 4)) % 4, total = 12 + 8 + jb.length + 8 + off + bpad;
-  var out = new ArrayBuffer(total), dv = new DataView(out), u8 = new Uint8Array(out);
-  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
-  dv.setUint32(12, jb.length, true); dv.setUint32(16, 0x4E4F534A, true); u8.set(jb, 20);
-  var p = 20 + jb.length;
-  dv.setUint32(p, off + bpad, true); dv.setUint32(p + 4, 0x004E4942, true); p += 8;
-  chunks.forEach(function (c) { u8.set(c, p); p += c.length; });
-  var sfx = SW.hg > 0.5 ? '-hyperglykaemie' : (SW.lt > 0.5 ? '-torasemid' : '');
-  download(new Blob([out], { type: 'model/gltf-binary' }), withAnim ? 'nephron-modell' + sfx + '-animiert.glb' : 'nephron-modell' + sfx + '.glb');
-  toast('GLB gespeichert &middot; <span class="em">' + json.meshes.length + ' Objekte, ' + kb(total) + ', Einheit Meter</span>' +
-    (withAnim ? '<br>' + nPart + ' Teilchen mit ' + (NKEY + 1) + ' Keyframes, ' + DUR + ' s Schleife. Im Viewer die Wiedergabe starten.'
-              : '<br>Nur Geometrie, mit Farben, ohne Str\u00f6mung.'));
-  return out;
-}
-
-document.getElementById('bGlbA').onclick = function () { try { exportGLB(true); } catch (e) { toast('Export fehlgeschlagen: ' + e.message); } };
-document.getElementById('bGlbS').onclick = function () { try { exportGLB(false); } catch (e) { toast('Export fehlgeschlagen: ' + e.message); } };
-document.getElementById('bStl').onclick = function () { try { exportSTL(); } catch (e) { toast('Export fehlgeschlagen: ' + e.message); } };
+};
+document.getElementById('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
+document.getElementById('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
+document.getElementById('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
 
 /* =====================================================================
    10. Renderschleife
@@ -2209,8 +2004,7 @@ function resize() {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  leaderSvg.setAttribute('width', w); leaderSvg.setAttribute('height', h);
-  leaderSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  Kern.linienFlaeche(leaderSvg, w, h);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -2227,14 +2021,7 @@ function loop(now) {
   });
   if (scChanged) applyScenarioVisuals();
   updateParticles();
-  if (camAnim) {
-    var t = Math.min(1, (now - camAnim.t0) / camAnim.d), s = t * t * (3 - 2 * t);
-    view.theta = camAnim.f.theta + (camAnim.t.theta - camAnim.f.theta) * s;
-    view.phi = camAnim.f.phi + (camAnim.t.phi - camAnim.f.phi) * s;
-    view.dist = camAnim.f.dist + (camAnim.t.dist - camAnim.f.dist) * s;
-    view.target.lerpVectors(camAnim.f.target, camAnim.t.target, s);
-    if (t >= 1) camAnim = null;
-  }
+  if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   updateCamera();
   renderer.render(scene, camera);
   lupeTick(dt);
@@ -2244,6 +2031,6 @@ function loop(now) {
 applyVisibility();
 setSelected(null);
 requestAnimationFrame(loop);
-setTimeout(function () { document.getElementById('boot').classList.add('gone'); }, 240);
+setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); }, 240);
 
 })();
