@@ -1329,7 +1329,7 @@ const HerzZyklus = (function () {
   function Engine(wege) {
     this.wege = wege;
     /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1 } };
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1 } };
     this.reset();
   }
   const P = Engine.prototype;
@@ -1388,7 +1388,9 @@ const HerzZyklus = (function () {
       const zu = !this.klappeFrei(name);
       for (let k = 0; k < liste.length; k++) {
         const t = liste[k];
-        let neu = t.d + w.tempo * (w.jet && t.d < w.jet ? 2.2 : 1) * dt;
+        // Aortenstenose: hinter der engen Klappe schießt das Blut schneller (nur Körperwege)
+        const jetF = this.S.par.avOeffnung < 1 && name.startsWith('koerper') ? Math.min(2.2 / Math.max(this.S.par.avOeffnung, 0.01), 6) : 2.2;
+        let neu = t.d + w.tempo * (w.jet && t.d < w.jet ? jetF : 1) * dt;
         if (k > 0) neu = Math.min(neu, liste[k - 1].d - w.abstand);          // niemand überholt
         if (zu && t.d <= w.klappeBei) neu = Math.min(neu, w.klappeBei - 0.22);
         if (neu > t.d) t.d = neu;
@@ -1445,7 +1447,9 @@ const HerzZyklus = (function () {
     if (this.klappeFrei('koerperOben')) {
       this.wechsel.koerper ^= 1;
       const a = this.wechsel.koerper ? 'koerperOben' : 'koerperUnten', b = this.wechsel.koerper ? 'koerperUnten' : 'koerperOben';
-      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk * S.par.kraftL, dt);
+      // Aortenstenose: enge Klappe, weniger Auswurf (Faktor nur bei Verengung, sonst unverändert)
+      const avF = S.par.avOeffnung < 1 ? 0.35 + 0.65 * S.par.avOeffnung : 1;
+      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk * S.par.kraftL * avF, dt);
     }
     // aus der Lunge fließt es gleichmäßig in die Lungenvenen
     // (bei geschwächter linker Kammer fließt das Lungenblut langsamer ab: Rückstau in der Lunge)
@@ -1555,11 +1559,11 @@ const HerzZyklus = (function () {
     const pvOffen = this.klappeOffen('lungeLinks');
     return {
       // geschwächte Kammer: bleibt weit (Gewicht schrumpft mit der Kraft; kam() normiert sonst die Schwäche weg)
-      VR: kam(v.rv, 'rv') * this.S.par.kraftR, VL: kam(v.lv, 'lv') * this.S.par.kraftL,
+      VR: kam(v.rv, 'rv') * this.S.par.kraftR, VL: kam(v.lv, 'lv') * this.S.par.kraftL * (this.S.par.avOeffnung < 1 ? 0.5 + 0.5 * this.S.par.avOeffnung : 1),
       A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2), -0.3, 1.1),
       Ao: this.S.windkessel ? 1.8 * this.dehnung : 0,
       PT: 0.9 * pvOffen * K.rk,
-      tv: this.klappeOffen('rechtsRein'), mv: this.klappeOffen('linksRein'), pv: pvOffen, av: this.klappeOffen('koerperOben'),
+      tv: this.klappeOffen('rechtsRein'), mv: this.klappeOffen('linksRein'), pv: pvOffen, av: this.klappeOffen('koerperOben') * this.S.par.avOeffnung,
       pos: this.pos || 0
     };
   };
@@ -3130,7 +3134,13 @@ var SZENARIEN = [
     values: [['Auswurffraktion', 'deutlich vermindert'], ['Rückstau', 'in Lunge und Körpervenen'], ['Herzfrequenz', 'erhöht (Ausgleich)'], ['Einteilung', 'NYHA I–IV nach Belastbarkeit']],
     steps: [['Beide Kammern drücken schwächer.', 'Links und rechts bleibt viel Blut in den Kammern, beide sind erweitert.'], ['Stau auf beiden Seiten.', 'Vor dem linken Herzen staut es sich in die Lunge, vor dem rechten in die Hohlvenen.'], ['Der Körper gleicht aus.', 'Weil zu wenig Blut ankommt, schlägt das Herz schneller, und die Niere hält Salz und Wasser zurück – das verstärkt den Stau zusätzlich.'], ['Behandlung.', 'Typisch sind ACE-Hemmer oder Sartane, Betablocker wie Metoprolol, Aldosteron-Antagonisten, SGLT2-Hemmer und bei Ödemen Diuretika wie Torasemid (siehe Nephron).']],
     after: [['NYHA-Stadien', 'I keine Beschwerden bei Alltagsbelastung · II Beschwerden bei stärkerer Belastung · III Beschwerden schon bei leichter Belastung · IV Beschwerden in Ruhe.'], ['Pflege beobachtet', 'Atmung und Ödeme, täglich wiegen (mehr als 1 kg an einem Tag oder 2 kg in drei Tagen melden), Vitalzeichen, Ein- und Ausfuhr, Medikamenteneinnahme; Beratung zu Salz und Trinkmenge.']],
-    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.55, kraftR: 0.55, tempoFaktor: 1.15 } }
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.55, kraftR: 0.55, tempoFaktor: 1.15 } },
+  { id: 'aks', kind: 'disease', datei: 'aortenklappenstenose', name: 'Aortenklappenstenose', short: 'Die Aortenklappe öffnet nur einen Spalt – die linke Kammer pumpt gegen einen Widerstand', kicker: 'Krankheitsbild · Herzklappenfehler',
+    lead: 'Die Taschen der Aortenklappe sind verkalkt und steif. Sie öffnen nur noch einen engen Spalt, und die linke Kammer muss viel mehr Druck aufbauen, um das Blut hindurchzupressen.',
+    values: [['Häufigkeit', 'häufigster Klappenfehler im Alter'], ['Ursache', 'meist Verkalkung'], ['Klappenöffnung', 'schwer: unter 1 cm² (normal 3–4 cm²)'], ['Abhören', 'raues Geräusch in der Systole, 2. ICR rechts']],
+    steps: [['Die Klappe öffnet nur einen Spalt.', 'Im Modell gehen die Taschen kaum auf – vergleiche mit der Pulmonalklappe daneben.'], ['Ein scharfer Strahl.', 'Das Blut schießt schnell durch die Enge und verwirbelt. Die Wirbel hört man als raues Herzgeräusch in der Systole.'], ['Die Kammer leert sich schlechter.', 'Pro Schlag gelangt weniger Blut in die Aorta, die linke Kammer bleibt voller.'], ['Die Wand wird dick.', 'Auf Dauer verdickt sich der Herzmuskel (Hypertrophie), braucht mehr Sauerstoff und wird steif – bis er schließlich nachlässt (Linksherzinsuffizienz).']],
+    after: [['Warnzeichen', 'Schwindel und kurze Bewusstlosigkeit (Synkope) bei Belastung, Brustenge (Angina pectoris), Atemnot. Treten sie auf, ist die Stenose meist schon schwer.'], ['Behandlung', 'Klappenersatz – offen operiert oder per Katheter über die Leistenarterie (TAVI).'], ['Pflege beobachtet', 'Puls und Blutdruck, Schwindel und Sturzgefahr, Belastung langsam steigern; nach TAVI die Punktionsstelle in der Leiste (Blutung, Bluterguss) und die Fußpulse kontrollieren.']],
+    note: 'Die Verdickung der Wand zeigt das Modell nicht.', wirkung: { avOeffnung: 0.3 } }
 ];
 var SZ = Kern.Szenarien({
   daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
@@ -3153,7 +3163,7 @@ var SZ = Kern.Szenarien({
   }
 });
 /* Wirkung auf das Herz: Wirkgrößen = 1 + Summe anteil · (Zielwert - 1), weich nach SZ.anteil gemischt; neutral = 1 */
-var WIRKFELDER = ['kraftL', 'kraftR', 'tempoFaktor'];
+var WIRKFELDER = ['kraftL', 'kraftR', 'tempoFaktor', 'avOeffnung'];
 function szenarioWirkung() {
   if (!engine) return;
   var par = engine.S.par;
@@ -3528,7 +3538,7 @@ function updatePanel(W) {
   var ph = engine.phase();
   if (ph !== lastPh) { lastPh = ph; $('phT').textContent = INFO.phases[ph].t; $('phX').textContent = INFO.phases[ph].x; $('arPhase').textContent = INFO.phases[ph].t; }
   var two = function (r, l) { return r === l ? (r ? 'offen' : 'zu') : (r ? 'rechts offen, links zu' : 'rechts zu, links offen'); };
-  var seg = two(W.tv > 0.5, W.mv > 0.5), tas = two(W.pv > 0.5, W.av > 0.5);
+  var seg = two(W.tv > 0.5, W.mv > 0.5), tas = two(W.pv > 0.5, W.av > 0.5 * engine.S.par.avOeffnung);   // (enge Aortenklappe: Gewicht ist skaliert, Schwelle auch)
   var wk = engine.S.windkessel ? engine.imWK + (engine.imWK === 1 ? ' Portion' : ' Portionen') : 'starr \u2013 speichert nichts';
   var lv = Math.round(engine.speicher.lv) + ' Portionen';
   var key = seg + '|' + tas + '|' + wk + '|' + lv;

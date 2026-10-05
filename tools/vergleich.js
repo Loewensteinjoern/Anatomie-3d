@@ -226,6 +226,10 @@ const MODELLE = {
         await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
         await t.export('#bGlbA', 'glb-animiert-lhi');
         await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
+        /* Aortenklappenstenose: Ausschnitt Klappen in der Systole (Zeit fest) */
+        await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(4000);
+        await t.klick('#cam1'); await t.weiter(2900); await t.bild('aortenklappenstenose-klappen');
+        await t.klick('#cam0'); await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(1500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
