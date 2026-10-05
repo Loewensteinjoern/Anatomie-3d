@@ -21,6 +21,7 @@ Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung
 | Pfad | Inhalt | Regel |
 |---|---|---|
 | `index.html`, `nephron.html` | HTML-Gerüst: nur Rahmen-Elemente (stage, leaders, labels, arQL, wm, toast, boot) und `<div id="organ">`; die Bedienelemente liegen als `MARKUP` in der Organ-Datei und werden von `aufbauen` in `#organ` eingesetzt; binden CSS und Skripte ein | darf geändert werden |
+| `atlas.html`, `core/atlas.js`, `core/atlas.css` | Rahmenseite des Anatomie-Atlas: gleiche Rahmen-Elemente wie `index.html` plus Startauswahl, Fehleranzeige und Zurück-Knopf; `atlas.js` liest die Adresse (`#herz`, `#nephron`), lädt das Organ über `Kern.ORGANE`/`Kern.organLaden` nach, startet es im Rahmen und baut es beim Wechsel ab. `atlas.html` bindet **keine** Organ-Skripte ein | darf geändert werden |
 | `organe/herz/herz.css`, `organe/niere/nephron.css` | Gestaltung: `:root`-Variablen (`--brass`, `--ink`, …), Handy-Layout per `@media (max-width:1000px)` | darf geändert werden |
 | `organe/herz/herz.js` | App-Code Herz (~3900 Zeilen): Herz als Signed-Distance-Field (Einheit cm), Szene, Beschriftung, Schema, Lupe, Üben, Krankheitsbilder und Medikamente (Wirkfaktoren in der Herzzyklus-Physik), Export, AR | hier findet die eigentliche Arbeit statt |
 | `organe/niere/nephron.js` | App-Code Nephron (~2300 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export-Konfiguration, AR | hier findet die eigentliche Arbeit statt |

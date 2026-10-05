@@ -33,7 +33,7 @@ var Kern = window.Kern = window.Kern || {};
      fuer alle Organe wiederverwendet; aktives Organ und Groessen-Listener */
   var R = null, aktiv = null, groesseFn = null;
 
-  function rahmenAnlegen(ro) {
+  function rahmenAnlegen(ro) {   /* auch oeffentlich: Kern.rahmenAnlegen (Atlas) */
     if (R) return;
     var canvas = document.getElementById('cv');
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: !!ro.alpha });
@@ -47,6 +47,8 @@ var Kern = window.Kern = window.Kern || {};
     R = { bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex };
     K.Rahmen = { renderer: renderer, szene: szene, kamera: kamera };   /* Ablage fuer Pruefungen */
   }
+
+  K.rahmenAnlegen = rahmenAnlegen;
 
   /* Organ im Rahmen starten; ein schon aktives Organ wird vorher beendet. */
   K.organStarten = function (name) {
