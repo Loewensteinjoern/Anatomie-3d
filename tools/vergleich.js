@@ -697,7 +697,7 @@ async function vergleichen(va, vb) {
     const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
     for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
     vgl('Seitentext', a.text, textB);
-    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) if (!(k in a.konsole)) { const z = (b.konsole[k] || []); if (z.length) probleme.push(m + ' Konsole ' + k + ' (neu): ' + z.join(' | ')); else ok.push(m + ' Konsole ' + k + ': neu (keine Referenz), ohne Meldungen'); } else vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
+    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) if (!(k in a.konsole)) { const z = (b.konsole[k] || []); if (((MODELLE[m] || { kontexte: {} }).kontexte[k] || {}).gegen) ok.push(m + ' Konsole ' + k + ': neu, Gegenstück wird gesondert geprüft'); else if (z.length) probleme.push(m + ' Konsole ' + k + ' (neu): ' + z.join(' | ')); else ok.push(m + ' Konsole ' + k + ': neu (keine Referenz), ohne Meldungen'); } else vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
     for (const k of Object.keys(b.erwartet || {})) ok.push(m + ' Konsole ' + k + ': ' + b.erwartet[k] + ' erwartete Fehlermeldungen (nicht verglichen)');
     /* Gegenstück: Atlas-Kontexte wiederholen die Einzelseiten-Abläufe und müssen innerhalb von <nachher> bytegleich sein */
     for (const [kn, K] of Object.entries((MODELLE[m] || { kontexte: {} }).kontexte)) {

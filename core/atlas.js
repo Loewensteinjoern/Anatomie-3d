@@ -58,7 +58,6 @@
     aktuell = name;
     K.organLaden(name).then(function () {
       if (nr !== zaehler) return;
-      K.rahmenAnlegen({ alpha: true });
       $('organ').className = 'organ-' + name;
       document.title = e.seitentitel;
       zeige($('atlasZurueck'), true);

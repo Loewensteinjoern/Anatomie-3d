@@ -44,17 +44,34 @@ var Kern = window.Kern = window.Kern || {};
     var kamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
     var envTex = K.umgebung(renderer);
     K.licht(szene, envTex);
-    R = { bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex };
+    R = { bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex, alpha: !!ro.alpha };
     K.Rahmen = { renderer: renderer, szene: szene, kamera: kamera };   /* Ablage fuer Pruefungen */
   }
 
   K.rahmenAnlegen = rahmenAnlegen;
 
+  /* Rahmen freigeben und Canvas durch ein neues (gleiche Attribute, gleiche Stelle) ersetzen:
+     ein WebGL-Kontext laesst sich auf demselben Canvas nicht mit anderen Optionen neu holen. */
+  function rahmenErneuern() {
+    var alt = R.canvas;
+    R.renderer.setAnimationLoop(null);
+    R.envTex.dispose();
+    R.renderer.dispose();
+    R.renderer.forceContextLoss();
+    var neu = document.createElement('canvas');
+    for (var i = 0; i < alt.attributes.length; i++) neu.setAttribute(alt.attributes[i].name, alt.attributes[i].value);
+    alt.parentNode.replaceChild(neu, alt);
+    R = null;
+    K.Rahmen = null;
+  }
+
   /* Organ im Rahmen starten; ein schon aktives Organ wird vorher beendet. */
   K.organStarten = function (name) {
     if (aktiv) K.organBeenden();
     var o = K.Organe[name];
-    rahmenAnlegen(o.renderer || {});
+    var ro = o.renderer || {};
+    if (R && R.alpha !== !!ro.alpha) rahmenErneuern();   /* Renderer-Optionen des Organs weichen ab */
+    rahmenAnlegen(ro);
     var fertig = o.aufbauen(R);
     groesseFn = function () {
       var w = window.innerWidth, h = window.innerHeight;
