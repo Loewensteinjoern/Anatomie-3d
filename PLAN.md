@@ -15,13 +15,13 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) |
 | Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ |
 | Hilfekarten und Üben (Quiz) | ✓ | (✓) |
-| Krankheitsbilder und Medikamente | – | ✓ (z. B. Torasemid, Hyperglykämie) |
+| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) |
 | Schema (2D-Kreislaufbild) | ✓ | – |
 | Export GLB/STL mit Signatur | ✓ | ✓ |
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
 
-Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `export.js`, `ar.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
 ## Ebenen
 
@@ -59,9 +59,9 @@ organe/niere/             Niere + Nephron
   - Export ist vereinheitlicht (`core/export.js`, `Kern.Export`): eine Signatur (`Kern.WM`), ein GLB-Weg über GLTFExporter, gleiche Dateinamen (`<organ>_statisch.glb`, `<organ>_animiert_<zusatz>.glb`, `<organ>_stl_3d-druck.zip`); das Organ liefert nur die Konfiguration
   - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Beschriftungs-Layout
 - [x] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung und den Kern erledigt)
-- [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
+- [x] Nephron bekommt AR, Herz bekommt Krankheitsbilder
   - [x] AR im gemeinsamen Kern (`core/ar.js`, `Kern.AR`): WebXR-Sitzung, AR-Schilder, USDZ für AR Quick Look; Herz umgestellt (bytegleich), Nephron mit AR (Durchsicht, Beschriftung, Größe, Pause; Quick Look ohne Teilchen); `tools/vergleich.js` nimmt AR bei beiden Modellen auf
-  - [ ] Herz: Krankheitsbilder (Vorhofflimmern, Aortenklappenstenose, Herzinfarkt Vorderwand, Links-, Rechts- und Globalinsuffizienz) und Medikamente (Metoprolol, Glyceroltrinitrat) in zwei Reitern wie beim Nephron; Szenario-Baustein dafür in den Kern
+  - [x] Herz: Krankheitsbilder (Links-, Rechts- und Globalinsuffizienz, Aortenklappenstenose, Vorhofflimmern, Herzinfarkt Vorderwand) und Medikamente (Metoprolol, Glyceroltrinitrat) in zwei Reitern wie beim Nephron; gemeinsamer Szenario-Baustein `core/szenarien.js` (`Kern.Szenarien`: Reiterliste, Erklärkarte, Überblenden), Wirkung über Faktoren in der Herzzyklus-Physik (Kammerkraft, Frequenz, Klappenöffnung, Vorhofschub, Rhythmus, Vorlast, Infarkt); `tools/vergleich.js` nimmt sie im Herz-Kontext `szenarien` auf
 - [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
 
 ### Phase 1 – Körper-Atlas

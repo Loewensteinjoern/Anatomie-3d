@@ -11,7 +11,7 @@ Die App ist eine statische Webanwendung ohne Installation und ohne Build-Schritt
 
 Das Repository enthält zwei Modelle:
 
-- `index.html` – Herz (Herzhöhlen, Klappen, Windkessel, AR)
+- `index.html` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
 - `nephron.html` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
 Das Nephron ist online erreichbar unter `https://loewensteinjoern.github.io/Herz-3d/nephron.html`.
