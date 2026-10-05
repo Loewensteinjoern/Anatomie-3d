@@ -1323,16 +1323,27 @@ const HerzZyklus = (function () {
   const grenz = (v, a, b) => v < a ? a : (v > b ? b : v);
   const puls = (x, a, b) => (x < a || x > b) ? 0 : Math.sin(Math.PI * (x - a) / (b - a));
   const REST = 2, MAXT = 160, ZYKLUS = 3.2;
+  const STAU_BASIS = 3, STAU_SPANNE = 6;   // Vorhof-Aufnahmegrenze (Portionen) bei geschwächter Kammer: Basis + Spanne · Kraft
 
   // wege: { name: { len, klappeBei, tempo, abstand, ziel, ein?, tor? } }
   function Engine(wege) {
     this.wege = wege;
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false } };
+    /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0, vorlast: 1 } };
+    this.rs = 20240607;                // Saat des eigenen Zufalls (Rhythmus); Math.random bleibt unberührt
     this.reset();
   }
   const P = Engine.prototype;
+  // eigener, fest initialisierter Pseudozufall (mulberry32), Zustand in this.rs
+  P.rnd = function () {
+    let t = this.rs = (this.rs + 0x6D2B79F5) | 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 
   P.reset = function () {
+    this.beatD = 1; this.flimT = 0;
     this.K = { vorhof: 0, rk: 0, lk: 0 };
     this.speicher = { ra: 3, rv: 10, la: 3, lv: 10 };
     this.teilchen = []; this.konto = {};
@@ -1386,7 +1397,9 @@ const HerzZyklus = (function () {
       const zu = !this.klappeFrei(name);
       for (let k = 0; k < liste.length; k++) {
         const t = liste[k];
-        let neu = t.d + w.tempo * (w.jet && t.d < w.jet ? 2.2 : 1) * dt;
+        // Aortenstenose: hinter der engen Klappe schießt das Blut schneller (nur Körperwege)
+        const jetF = this.S.par.avOeffnung < 1 && name.startsWith('koerper') ? Math.min(2.2 / Math.max(this.S.par.avOeffnung, 0.01), 6) : 2.2;
+        let neu = t.d + w.tempo * (w.jet && t.d < w.jet ? jetF : 1) * dt;
         if (k > 0) neu = Math.min(neu, liste[k - 1].d - w.abstand);          // niemand überholt
         if (zu && t.d <= w.klappeBei) neu = Math.min(neu, w.klappeBei - 0.22);
         if (neu > t.d) t.d = neu;
@@ -1394,7 +1407,12 @@ const HerzZyklus = (function () {
         if (w.luEin !== undefined && t.d >= w.luEin && t.d < w.luTor) { this.imLu++; weg.push(t); continue; }
         // Windkessel: im dehnbaren Abschnitt sammelt sich das Blut in der Aorta selbst
         if (w.ein !== undefined && this.S.windkessel && t.d >= w.ein && t.d < w.tor) { this.imWK++; weg.push(t); continue; }
-        if (t.d >= w.len) { this.speicher[w.ziel] += 1; weg.push(t); continue; }
+        if (t.d >= w.len) {
+          // Rückstau: ein geschwächtes Herz nimmt nur begrenzt Blut auf – die Portionen warten am Ende der Vene
+          const kraft = w.ziel === 'la' ? this.S.par.kraftL : (w.ziel === 'ra' ? this.S.par.kraftR : 1);
+          if (kraft < 1 && this.speicher[w.ziel] >= STAU_BASIS + STAU_SPANNE * kraft) { t.d = w.len - 0.001; continue; }
+          this.speicher[w.ziel] += 1; weg.push(t); continue;
+        }
       }
     }
     if (weg.length) this.teilchen = this.teilchen.filter(t => !weg.includes(t));
@@ -1405,14 +1423,19 @@ const HerzZyklus = (function () {
     if (!S.laufen) { this.pos = S.modus === 'auto' ? this.u : this.handU; return; }
     let pos;
     if (S.modus === 'auto') {
-      this.u = (this.u + dt / (ZYKLUS / S.tempo)) % 1;
-      K.vorhof = puls(this.u, 0.03, 0.16);
+      const nu = this.u + dt / ((ZYKLUS * this.beatD) / (S.tempo * S.par.tempoFaktor));
+      this.u = nu % 1;
+      if (nu >= 1) {   // neuer Herzschlag: bei Rhythmusstörung zufällige Dauer (Faktor 0,6 bis 1,5, gemischt mit rhythmus)
+        const rh = S.par.rhythmus;
+        this.beatD = rh > 0 ? 1 + rh * (0.6 + 0.9 * this.rnd() - 1) : 1;
+      }
+      K.vorhof = puls(this.u, 0.03, 0.16) * S.par.vorhofSchub;
       const kammer = puls(this.u, 0.19, 0.52);
       K.rk = kammer; K.lk = kammer;
       pos = this.u;
     } else {
       const g = Math.min(1, 7 * dt);
-      K.vorhof += ((S.hand.vorhof ? 1 : 0) - K.vorhof) * g;
+      K.vorhof += ((S.hand.vorhof ? 1 : 0) * S.par.vorhofSchub - K.vorhof) * g;
       K.rk += ((S.hand.rk ? 1 : 0) - K.rk) * g;
       K.lk += ((S.hand.lk ? 1 : 0) - K.lk) * g;
       const ziel = S.hand.vorhof ? 0.08 : ((S.hand.rk || S.hand.lk) ? 0.30 : 0.78);
@@ -1420,9 +1443,10 @@ const HerzZyklus = (function () {
       pos = this.handU;
     }
     this.pos = pos;
+    if (S.par.vorhofSchub < 1) this.flimT += dt;   // Zeit für das Zittern/Flackern (nur bei Flimmern)
     // Füllung: passiv, solange die Segelklappe offen ist, dazu der Schub der Vorhöfe
     const sp = this.speicher;
-    const passiv = (vh, k) => 3 * Math.max(0, (vh - REST) - 0.32 * Math.max(0, k - 5));
+    const passiv = (vh, k) => 3 * this.S.par.vorlast * Math.max(0, (vh - REST) - 0.32 * Math.max(0, k - 5));
     if (this.klappeFrei('rechtsRein')) this.pumpe('ra', 'rechtsRein', passiv(sp.ra, sp.rv) + 30 * K.vorhof, dt);
     if (this.klappeFrei('linksRein')) this.pumpe('la', 'linksRein', passiv(sp.la, sp.lv) + 30 * K.vorhof, dt);
     // Auswurf
@@ -1433,15 +1457,18 @@ const HerzZyklus = (function () {
     if (this.klappeFrei('lungeLinks')) {
       this.wechsel.lunge ^= 1;
       const a = this.wechsel.lunge ? 'lungeLinks' : 'lungeRechts', b = this.wechsel.lunge ? 'lungeRechts' : 'lungeLinks';
-      this.pumpe('rv', this.eingangBesetzt(a) ? b : a, 24 * K.rk, dt);
+      this.pumpe('rv', this.eingangBesetzt(a) ? b : a, 24 * K.rk * S.par.kraftR, dt);
     }
     if (this.klappeFrei('koerperOben')) {
       this.wechsel.koerper ^= 1;
       const a = this.wechsel.koerper ? 'koerperOben' : 'koerperUnten', b = this.wechsel.koerper ? 'koerperUnten' : 'koerperOben';
-      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk, dt);
+      // Aortenstenose: enge Klappe, weniger Auswurf (Faktor nur bei Verengung, sonst unverändert)
+      const avF = S.par.avOeffnung < 1 ? 0.35 + 0.65 * S.par.avOeffnung : 1;
+      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk * S.par.kraftL * avF, dt);
     }
     // aus der Lunge fließt es gleichmäßig in die Lungenvenen
-    this.luKonto = Math.min((this.luKonto || 0) + Math.max(0.6, 0.55 * this.imLu) * dt, 1);
+    // (bei geschwächter linker Kammer fließt das Lungenblut langsamer ab: Rückstau in der Lunge)
+    this.luKonto = Math.min((this.luKonto || 0) + Math.max(0.6, 0.55 * this.imLu) * dt * S.par.kraftL, 1);
     if (this.luKonto >= 1 && this.imLu > 0) {
       const pref = (this.nextId & 1) ? 'lungeLinks' : 'lungeRechts', alt = pref === 'lungeLinks' ? 'lungeRechts' : 'lungeLinks';
       const w = this.platzFrei(pref, this.wege[pref].luTor) ? pref : (this.platzFrei(alt, this.wege[alt].luTor) ? alt : null);
@@ -1509,19 +1536,23 @@ const HerzZyklus = (function () {
     return 'diastole';
   };
   // EKG-Kurve wie im 2D-Modell
-  function ekgKurve(x) {
-    let y = 0.13 * Math.exp(-Math.pow((x - 0.06) / 0.028, 2));
+  // fl = Flimmer-Anteil (0 = normal): P-Welle verschwindet, feine Flimmerwellen (t = Zeit); ohne fl exakt die bisherige Kurve
+  // st = Infarkt-Anteil (0 = normal): ST-Strecke nach dem QRS angehoben, geht weich in die T-Welle \u00fcber; ohne st exakt die bisherige Kurve
+  function ekgKurve(x, fl, t, st) {
+    let y = 0.13 * (fl ? 1 - fl : 1) * Math.exp(-Math.pow((x - 0.06) / 0.028, 2));
     const q = [[0.160, 0], [0.172, -0.09], [0.188, 0.95], [0.204, -0.24], [0.222, 0]];
     for (let i = 0; i < q.length - 1; i++) if (x >= q[i][0] && x <= q[i + 1][0]) { const f = (x - q[i][0]) / (q[i + 1][0] - q[i][0]); y += q[i][1] + f * (q[i + 1][1] - q[i][1]); }
     y += 0.27 * Math.exp(-Math.pow((x - 0.40) / 0.045, 2));
+    if (st) { const ss = (a, b, v) => { const u = Math.min(1, Math.max(0, (v - a) / (b - a))); return u * u * (3 - 2 * u); }; y += st * 0.25 * ss(0.208, 0.238, x) * (1 - ss(0.40, 0.50, x)); }
+    if (fl) y += fl * 0.045 * (Math.sin(x * 138 + t * 31) + 0.7 * Math.sin(x * 233 - t * 47 + 1.3) + 0.5 * Math.sin(x * 87 + t * 19 + 2.1)) / 2.2;
     return y;
   }
   const FELDER = [{ von: 0.00, bis: 0.18, name: 'Vorhöfe drücken' }, { von: 0.18, bis: 0.53, name: 'Kammern drücken' }, { von: 0.53, bis: 1.00, name: 'Herz füllt sich' }];
   // Einen Zyklus im Automatikbetrieb aufzeichnen (für die GLB-Animation)
   P.bake = function (fps, onFrame) {
-    const save = JSON.stringify({ S: this.S, K: this.K, sp: this.speicher, imWK: this.imWK, tk: this.torKonto, de: this.dehnung, u: this.u, hu: this.handU, t: this.teilchen, id: this.nextId, k: this.konto, vol: this.vol, ref: this.ref, cyc: this.cyc, up: this.uPrev, lu: this.imLu, lk: this.luKonto });
-    this.S.modus = 'auto'; this.S.laufen = true;
-    const T = ZYKLUS / this.S.tempo, h = 1 / 240;
+    const save = JSON.stringify({ S: this.S, K: this.K, sp: this.speicher, imWK: this.imWK, tk: this.torKonto, de: this.dehnung, u: this.u, hu: this.handU, t: this.teilchen, id: this.nextId, k: this.konto, vol: this.vol, ref: this.ref, cyc: this.cyc, up: this.uPrev, lu: this.imLu, lk: this.luKonto, rs: this.rs, bd: this.beatD, ft: this.flimT });
+    this.S.modus = 'auto'; this.S.laufen = true; this.S.par.rhythmus = 0; this.beatD = 1;   // Animation: gleichmäßiger Schlag
+    const T = ZYKLUS / (this.S.tempo * this.S.par.tempoFaktor), h = 1 / 240;
     for (let i = 0; i < Math.round(2 * T / h); i++) this.step(h);            // einschwingen
     while (this.u > 0.004) this.step(h);
     const n = Math.max(12, Math.round(T * fps)), frames = [];
@@ -1533,10 +1564,12 @@ const HerzZyklus = (function () {
     }
     const o = JSON.parse(save);
     Object.assign(this.S, o.S); this.K = o.K; this.speicher = o.sp; this.imWK = o.imWK; this.torKonto = o.tk; this.dehnung = o.de; this.u = o.u; this.handU = o.hu; this.teilchen = o.t; this.nextId = o.id; this.konto = o.k;
-    this.vol = o.vol; this.ref = o.ref; this.cyc = o.cyc; this.uPrev = o.up; this.imLu = o.lu; this.luKonto = o.lk;
+    this.vol = o.vol; this.ref = o.ref; this.cyc = o.cyc; this.uPrev = o.up; this.imLu = o.lu; this.luKonto = o.lk; this.rs = o.rs; this.beatD = o.bd; this.flimT = o.ft;
     this.events.length = 0;
     return { T, frames, dt: T / n };
   };
+  // Flimmer-Anteil der Vorhöfe (0 = normal, 1 = Vorhofschub fehlt ganz)
+  P.flimmern = function () { return Math.min(1, Math.max(0, 1 - this.S.par.vorhofSchub)); };
   // Gewichte für die 3D-Verformung
   P.weights = function () {
     const K = this.K, v = this.vol || this.speicher;
@@ -1544,13 +1577,14 @@ const HerzZyklus = (function () {
     const R = this.ref;
     const kam = (n, x) => grenz((R[x + 'Max'] - n) / Math.max(2, R[x + 'Max'] - R[x + 'Min']), -0.25, 1.15);
     const vorh = (n) => grenz((R.aMax - n) / Math.max(1.5, R.aMax - R.aMin), -0.3, 1);
-    const pvOffen = this.klappeOffen('lungeLinks');
+    const pvOffen = this.klappeOffen('lungeLinks'), fl = this.flimmern();
     return {
-      VR: kam(v.rv, 'rv'), VL: kam(v.lv, 'lv'),
-      A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2), -0.3, 1.1),
+      // geschwächte Kammer: bleibt weit (Gewicht schrumpft mit der Kraft; kam() normiert sonst die Schwäche weg)
+      VR: kam(v.rv, 'rv') * this.S.par.kraftR, VL: kam(v.lv, 'lv') * this.S.par.kraftL * (this.S.par.avOeffnung < 1 ? 0.5 + 0.5 * this.S.par.avOeffnung : 1),
+      A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2) + fl * 0.07 * (Math.sin(this.flimT * 53) + 0.8 * Math.sin(this.flimT * 89 + 1.7) + 0.6 * Math.sin(this.flimT * 131 + 0.4)) / 2.4, -0.3, 1.1),
       Ao: this.S.windkessel ? 1.8 * this.dehnung : 0,
       PT: 0.9 * pvOffen * K.rk,
-      tv: this.klappeOffen('rechtsRein'), mv: this.klappeOffen('linksRein'), pv: pvOffen, av: this.klappeOffen('koerperOben'),
+      tv: this.klappeOffen('rechtsRein'), mv: this.klappeOffen('linksRein'), pv: pvOffen, av: this.klappeOffen('koerperOben') * this.S.par.avOeffnung,
       pos: this.pos || 0
     };
   };
@@ -2417,6 +2451,61 @@ function splitRuns(pts) {
   if (cur && cur.pts.length > 1) runs.push(cur);
   return runs;
 }
+/* Herzinfarkt: RIVA ab der Engstelle dunkel, Versorgungsgebiet blass (Vertexfarben); beides erst beim ersten Einschalten angelegt, bei 0 exakt die Originalfarben */
+var INF = { a: 0, pts: null, rohre: [], meshes: null, an: false };
+function infarktSetzen(a) {
+  a = a || 0;
+  if (!App.ready || a === INF.a || !INF.pts) return;
+  var ENG = 0.3, MAXW = 0.7, ZIEL = [0.402, 0.305, 0.392];   /* Engstelle bei 30 % des RIVA; blasser grau-violetter Ton (linear) */
+  if (!INF.meshes) {
+    if (a <= 0) return;
+    var n = INF.pts.length, i0 = Math.floor(ENG * (n - 1)), sh = [0.9, 0, -0.6];
+    var P = INF.pts.slice(i0).map(function (p) { return [p[0] + sh[0], p[1] + sh[1], p[2] + sh[2]]; });
+    var sst = function (e0, e1, x) { var u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u); };
+    INF.meshes = [];
+    backG.children.concat(lidG.children).forEach(function (m) {
+      var rg = m.userData.region;
+      if (!m.userData.tissue || (rg !== R.LV && rg !== R.IVS)) return;
+      var pos = m.geometry.attributes.position, col = m.geometry.attributes.color, nv = pos.count, w = new Float32Array(nv), any = false;
+      for (var v = 0; v < nv; v++) {
+        var x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v), d2 = 1e9;
+        for (var k = 0; k < P.length - 1; k++) {
+          var ax = P[k][0], ay = P[k][1], az = P[k][2], bx = P[k + 1][0] - ax, by = P[k + 1][1] - ay, bz = P[k + 1][2] - az;
+          var t = Math.min(1, Math.max(0, ((x - ax) * bx + (y - ay) * by + (z - az) * bz) / (bx * bx + by * by + bz * bz || 1)));
+          var dx = x - ax - bx * t, dy = y - ay - by * t, dz = z - az - bz * t, dd = dx * dx + dy * dy + dz * dz;
+          if (dd < d2) d2 = dd;
+        }
+        w[v] = 1 - sst(1.3, 2.9, Math.sqrt(d2)); if (w[v] > 0) any = true;
+      }
+      if (any) INF.meshes.push({ col: col, orig: new Float32Array(col.array), w: w });
+    });
+  }
+  INF.a = a;
+  INF.meshes.forEach(function (e) {
+    var c = e.col.array, o = e.orig, w = e.w;
+    if (a <= 0) c.set(o);
+    else for (var v = 0, nv = w.length; v < nv; v++) {
+      var k = MAXW * a * w[v];
+      for (var j = 0; j < 3; j++) c[v * 3 + j] = o[v * 3 + j] + (ZIEL[j] - o[v * 3 + j]) * k;
+    }
+    e.col.needsUpdate = true;
+  });
+  /* Gef\u00e4\u00df: Vertexfarben (wei\u00df = unver\u00e4ndert) ab der Engstelle zu dunklem Graurot */
+  var an = a > 0;
+  INF.rohre.forEach(function (r) {
+    var g = r.m.geometry, pos = g.attributes.position, nv = pos.count, rs = 7 + 1, segs = nv / rs - 1;
+    /* aus: Ausgangszustand ohne Farbattribut, damit auch der Export wieder gleich ist */
+    if (!an) { if (g.attributes.color) g.deleteAttribute('color'); if (r.m.material.vertexColors) { r.m.material.vertexColors = false; r.m.material.needsUpdate = true; } return; }
+    if (!g.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(nv * 3).fill(1), 3));
+    var vc = g.attributes.color.array;
+    for (var v2 = 0; v2 < nv; v2++) {
+      var f2 = r.f0 + (r.f1 - r.f0) * Math.floor(v2 / rs) / segs, s2 = Math.min(1, Math.max(0, (f2 - ENG) / 0.05)); s2 = s2 * s2 * (3 - 2 * s2) * a;
+      vc[v2 * 3] = 1 - 0.9 * s2; vc[v2 * 3 + 1] = 1 + 0.1 * s2; vc[v2 * 3 + 2] = 1 + 0.4 * s2;
+    }
+    g.attributes.color.needsUpdate = true;
+    if (r.m.material.vertexColors !== an) { r.m.material.vertexColors = an; r.m.material.needsUpdate = true; }
+  });
+}
 async function build() {
   var t0 = performance.now();
   var small = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
@@ -2460,12 +2549,14 @@ async function build() {
   await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe');
   App.corPts = { front: [], back: [] };
   HeartExtras.coronaries().forEach(function (c) {
+    if (c.name === 'RIVA') INF.pts = c.pts;
     var runs = splitRuns(c.pts), done = 0, total = c.pts.length;
     runs.forEach(function (run) {
       var f0 = done / total, f1 = (done + run.pts.length) / total; done += run.pts.length - 1;
       var m = tubeMesh(run.pts, c.r0 + (c.r1 - c.r0) * f0, c.r0 + (c.r1 - c.r0) * f1, mat(0xB02A22, { rough: 0.45, coat: 0.4, env: 0.3 }), 7);
       m.name = 'Koronar_' + c.name + (run.front ? '_vorn' : '_hinten');
       if (!run.front) { clipMats.push(m.material); corBack.push(m); } else glassify(m.material);
+      if (c.name === 'RIVA') INF.rohre.push({ m: m, f0: f0, f1: f1 });
       addMotionMorphs(m); (run.front ? lidG : backG).add(m); register('cor', m, [m.material]);
       Array.prototype.push.apply(run.front ? App.corPts.front : App.corPts.back, run.pts);
     });
@@ -2635,9 +2726,20 @@ function placeSpark(sp, p, sc, W) {
 }
 function updateSparks(pos, W, now) {
   var k = 0;
+  var fl = engine ? engine.flimmern() : 0, tz = engine ? engine.flimT : 0;
   if (App.impulse && STRUCT.erl.on && App.erlCurves) {
-    if (pos < 0.04) { _sv.set(App.con.sa[0], App.con.sa[1], App.con.sa[2]); placeSpark(SPARKS[k++], _sv, 1.5 + 0.4 * Math.sin(now / 60), W); }
+    if (fl > 0.5) {   /* Vorhofflimmern: statt geordneter Welle unruhige Funken in den Vorh\u00f6fen */
+      App.erlCurves.forEach(function (c, ci) {
+        if (c.a1 > 0.08) return;
+        for (var j = 0; j < 3 && k < SPARKS.length; j++) {
+          var f = 0.5 + 0.5 * Math.sin(tz * (9 + 5 * j + ci) + 2.4 * j + ci * 1.9) * Math.cos(tz * (6.3 + 2 * j) + ci);
+          placeSpark(SPARKS[k++], c.curve.getPointAt(f), 0.8 + 0.5 * Math.abs(Math.sin(tz * (17 + 7 * j) + ci)), W);
+        }
+      });
+    }
+    else if (pos < 0.04) { _sv.set(App.con.sa[0], App.con.sa[1], App.con.sa[2]); placeSpark(SPARKS[k++], _sv, 1.5 + 0.4 * Math.sin(now / 60), W); }
     App.erlCurves.forEach(function (c) {
+      if (fl > 0.5 && c.a1 <= 0.08) return;
       var f = (pos - c.a0) / (c.a1 - c.a0);
       if (f >= 0 && f <= 1 && k < SPARKS.length) placeSpark(SPARKS[k++], c.curve.getPointAt(f), 1.15, W);
     });
@@ -2660,6 +2762,7 @@ function updateErr(pos) {
   if (!App.impulse) return;
   var t = ERR_TXT.filter(function (e) { return pos >= e[0] && pos < e[1]; })[0];
   var txt = t ? t[2] : '';
+  if (t && t === ERR_TXT[0] && engine && engine.flimmern() > 0.5) txt = 'Die Vorh\u00f6fe flimmern: ungeordnete Erregung, keine P-Welle';
   if (txt !== lastErr) { lastErr = txt; $('kErr').textContent = txt; $('kErrN').textContent = txt; }
 }
 function setErlOverlay(on) {
@@ -2746,7 +2849,7 @@ function lupeOpen(scene, variant, point) {
   Array.prototype.forEach.call(document.querySelectorAll('#lpChips button'), function (b) { b.classList.toggle('on', b.getAttribute('data-sc') === scene); });
   if (point) LUPE.point = point; else LUPE.point = lupePoint(scene, v);
   closeCard(); $('info').classList.remove('show');
-  $('lupe').classList.add('show'); document.body.classList.add('card');
+  $('lupe').classList.add('show'); document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function lupePoint(scene, v) {
@@ -2763,7 +2866,7 @@ function lupeClose() {
   LUPE.open = false; LUPE.mode = false; $('lupe').classList.remove('show'); onOff('bLupe', false);
   if (LUPE.ring) LUPE.ring.visible = false; if (LUPE.line) LUPE.line.style.display = 'none';
   canvas.style.cursor = '';
-  document.body.classList.toggle('card', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  kartenLage();
 }
 function lupeFromStruct(sid, point) {
   if (!sid) return;
@@ -2965,7 +3068,7 @@ function heartScreenBox(w, h) {
   var cx = (x0 + x1) / 2, hw = (x1 - x0) / 2 * 0.82;
   return { x0: cx - hw, x1: cx + hw, y0: y0, y1: y1 };
 }
-function cardOpen() { return $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'); }
+function cardOpen() { return $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show') || !!(SZ.aktiv && SZ.offen); }
 function layoutLabels(w, h) {
   var narrow = w < 1000, dist = view.dist, hb = heartScreenBox(w, h);
   var zykTop = narrow ? 0 : $('zyk').getBoundingClientRect().top;
@@ -3020,7 +3123,7 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
-   6. Leiste: Strukturen, Hilfekarten, \u00dcben
+   6. Leiste: Strukturen, Krankheiten, Medikamente, Hilfekarten, \u00dcben
    ===================================================================== */
 function applyVisibility() {
   ORDER.forEach(function (s) {
@@ -3034,13 +3137,18 @@ App.hl = {};
 var BRASS = null, EXC = null;
 function updateEmissive(pos) {
   if (!BRASS) { BRASS = srgb(0xE0A94A); EXC = new THREE.Color(1.0, 0.72, 0.18); }
-  var exA = 0, exV = 0;
+  var exA = 0, exV = 0, exA0 = 0, fl = engine ? engine.flimmern() : 0, tz = engine ? engine.flimT : 0;
   if (App.impulse && pos !== undefined) {
     exA = sstep(0.02, 0.06, pos) * (1 - sstep(0.15, 0.21, pos));
+    exA0 = exA;
     exV = sstep(0.17, 0.21, pos) * (1 - sstep(0.37, 0.47, pos));
   }
   ORDER.forEach(function (s) {
     var sel = (s.id === App.sel ? 0.28 : 0) + (App.hl[s.id] ? 0.35 : 0);
+    if (fl > 0 && App.impulse && (s.id === 'ra' || s.id === 'la')) {   /* Vorhofflimmern: unruhiges Flackern statt geordneter Welle */
+      var ph = s.id === 'ra' ? 0 : 2.1, fk = 0.5 + 0.5 * (0.6 * Math.sin(tz * 23 + ph) + 0.4 * Math.sin(tz * 37.3 + 2 * ph + 1));
+      exA = exA0 * (1 - fl) + fl * (0.25 + 0.75 * fk);
+    }
     var ex = (s.id === 'ra' || s.id === 'la') ? exA : ((s.id === 'lv' || s.id === 'rv' || s.id === 'ivs' || s.id === 'pap') ? exV : 0);
     s.mats.forEach(function (m) {
       if (!m.emissive || m.userData.erl) return;
@@ -3055,7 +3163,7 @@ function setSelected(id) {
   updateEmissive(App.W ? App.W.pos : undefined);
   ORDER.forEach(function (s) { var row = $('row-' + s.id); if (row) row.classList.toggle('sel', s.id === id); });
   var box = $('info');
-  if (!id) { box.classList.remove('show'); document.body.classList.toggle('card', $('scard').classList.contains('show')); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   var s = STRUCT[id];
   if (!s.on) { s.on = true; var rw = $('row-' + id); if (rw) rw.classList.remove('off'); applyVisibility(); }
   $('iLat').textContent = s.lat; $('iDe').textContent = s.de; $('iTx').textContent = s.txt; $('iCare').textContent = s.care;
@@ -3064,7 +3172,7 @@ function setSelected(id) {
   if (LUPE.open) lupeClose();
   box.classList.add('show');
   if (!App.quiz) closeCard();
-  document.body.classList.add('card');
+  document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function showCard(kick, title, lead, after, quiz) {
@@ -3079,7 +3187,7 @@ function showCard(kick, title, lead, after, quiz) {
   if (App.sel && !quiz) clearSel();
   $('scard').classList.add('show');
   $('info').classList.remove('show');
-  document.body.classList.add('card');
+  document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function clearSel() {
@@ -3089,20 +3197,129 @@ function clearSel() {
 }
 function closeCard() {
   $('scard').classList.remove('show');
-  document.querySelectorAll('.dis').forEach(function (d) { d.classList.remove('on'); });
-  document.body.classList.toggle('card', $('info').classList.contains('show') || $('lupe').classList.contains('show'));
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
 }
 function openHelp(key) {
   var c = INFO.cards.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
   showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
 }
+/* =====================================================================
+   Krankheitsbilder und Medikamente – Daten für Reiter und Erklärkarte
+   Format wie im Nephron (SCENARIOS): id, kind ('disease' | 'drug'), name,
+   short, kicker, lead, values, steps, after, note; dazu wirkung (Zielwerte
+   der Wirkgrößen in engine.S.par, neutral = 1) und datei (Namensteil im Export).
+   ===================================================================== */
+var SZENARIEN = [
+  { id: 'lhi', kind: 'disease', datei: 'linksherzinsuffizienz', name: 'Linksherzinsuffizienz', short: 'Die linke Kammer pumpt zu schwach – Rückstau in die Lunge', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Die linke Kammer ist geschwächt, z. B. nach einem Herzinfarkt oder durch langjährigen Bluthochdruck. Sie wirft bei jedem Schlag weniger Blut aus – der Rest staut sich zurück in die Lunge.',
+    values: [['Auswurffraktion', 'unter 40 % (normal über 55 %)'], ['Linke Kammer', 'erweitert, pumpt schwach'], ['Rückstau', 'in die Lunge'], ['Leitsymptom', 'Atemnot (Dyspnoe)']],
+    steps: [['Die Kammer drückt schwächer.', 'Sie zieht sich nur wenig zusammen – im Modell bleibt die linke Kammer weit.'], ['Weniger Auswurf.', 'Pro Schlag fließen weniger Portionen in die Aorta; der Körper wird schlechter versorgt.'], ['Das Blut staut sich zurück.', 'Der linke Vorhof bleibt voll, das Blut aus der Lunge kommt nicht richtig nach – in den Lungenvenen und im Schema in der Lunge staut es sich.'], ['Wasser tritt in die Lunge.', 'Steigt der Druck in den Lungengefäßen, wird Flüssigkeit ins Gewebe gepresst: Atemnot, erst bei Belastung, später in Ruhe und im Liegen – im Extremfall Lungenödem.']],
+    after: [['Folgen', 'Atemnot, nächtlicher Husten, Rasselgeräusche über der Lunge, Leistungsschwäche, schnelle Ermüdung; Lungenödem als Notfall (schwerste Atemnot, schaumiger Auswurf).'], ['Pflege beobachtet', 'Atmung, Atemfrequenz und Sauerstoffsättigung, Oberkörper hoch lagern (Herzbettlage), täglich wiegen, Ein- und Ausfuhr bilanzieren, Vitalzeichen; Belastung dosieren.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.45 } },
+  { id: 'rhi', kind: 'disease', datei: 'rechtsherzinsuffizienz', name: 'Rechtsherzinsuffizienz', short: 'Die rechte Kammer pumpt zu schwach – Rückstau in die Körpervenen', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Die rechte Kammer schafft das Blut nicht mehr in die Lunge – oft als Folge einer Linksherzinsuffizienz, einer Lungenerkrankung (COPD) oder einer Lungenembolie. Das Blut staut sich in die Körpervenen.',
+    values: [['Häufige Ursachen', 'Linksherzschwäche, COPD, Lungenembolie'], ['Rechte Kammer', 'erweitert, pumpt schwach'], ['Rückstau', 'in die Hohlvenen und Körpervenen'], ['Leitsymptom', 'Ödeme, gestaute Halsvenen']],
+    steps: [['Die rechte Kammer drückt schwächer.', 'Sie bleibt weit und wirft weniger Blut in die Lungenarterien.'], ['Der rechte Vorhof bleibt voll.', 'Das Blut aus dem Körper kann nicht mehr ungehindert nachfließen.'], ['Stau vor dem Herzen.', 'In der oberen und unteren Hohlvene drängen sich die Portionen – am Hals sieht man gestaute Venen.'], ['Wasser im Gewebe.', 'Der hohe Venendruck presst Flüssigkeit ins Gewebe: Ödeme an Knöcheln und Unterschenkeln, bei Bettlägerigen am Kreuzbein; dazu Stauungsleber und Appetitlosigkeit.']],
+    after: [['Folgen', 'Beinödeme, Gewichtszunahme durch eingelagertes Wasser, nächtliches Wasserlassen (Nykturie), Appetitlosigkeit, Druckgefühl unter dem rechten Rippenbogen.'], ['Pflege beobachtet', 'Täglich wiegen (gleiche Bedingungen), Ödeme und Haut beobachten (Dekubitusgefahr), Beine hoch lagern, sofern keine Atemnot besteht, Ein- und Ausfuhr bilanzieren, Trinkmenge nach ärztlicher Anordnung.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftR: 0.45 } },
+  { id: 'ghi', kind: 'disease', datei: 'globalinsuffizienz', name: 'Globalinsuffizienz', short: 'Beide Kammern pumpen zu schwach – Rückstau in Lunge und Körper', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Beide Herzhälften sind geschwächt. Meist beginnt es links; die rechte Kammer folgt, weil sie gegen den Stau in der Lunge anpumpen muss.',
+    values: [['Auswurffraktion', 'deutlich vermindert'], ['Rückstau', 'in Lunge und Körpervenen'], ['Herzfrequenz', 'erhöht (Ausgleich)'], ['Einteilung', 'NYHA I–IV nach Belastbarkeit']],
+    steps: [['Beide Kammern drücken schwächer.', 'Links und rechts bleibt viel Blut in den Kammern, beide sind erweitert.'], ['Stau auf beiden Seiten.', 'Vor dem linken Herzen staut es sich in die Lunge, vor dem rechten in die Hohlvenen.'], ['Der Körper gleicht aus.', 'Weil zu wenig Blut ankommt, schlägt das Herz schneller, und die Niere hält Salz und Wasser zurück – das verstärkt den Stau zusätzlich.'], ['Behandlung.', 'Typisch sind ACE-Hemmer oder Sartane, Betablocker wie Metoprolol, Aldosteron-Antagonisten, SGLT2-Hemmer und bei Ödemen Diuretika wie Torasemid (siehe Nephron).']],
+    after: [['NYHA-Stadien', 'I keine Beschwerden bei Alltagsbelastung · II Beschwerden bei stärkerer Belastung · III Beschwerden schon bei leichter Belastung · IV Beschwerden in Ruhe.'], ['Pflege beobachtet', 'Atmung und Ödeme, täglich wiegen (mehr als 1 kg an einem Tag oder 2 kg in drei Tagen melden), Vitalzeichen, Ein- und Ausfuhr, Medikamenteneinnahme; Beratung zu Salz und Trinkmenge.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.55, kraftR: 0.55, tempoFaktor: 1.15 } },
+  { id: 'aks', kind: 'disease', datei: 'aortenklappenstenose', name: 'Aortenklappenstenose', short: 'Die Aortenklappe öffnet nur einen Spalt – die linke Kammer pumpt gegen einen Widerstand', kicker: 'Krankheitsbild · Herzklappenfehler',
+    lead: 'Die Taschen der Aortenklappe sind verkalkt und steif. Sie öffnen nur noch einen engen Spalt, und die linke Kammer muss viel mehr Druck aufbauen, um das Blut hindurchzupressen.',
+    values: [['Häufigkeit', 'häufigster Klappenfehler im Alter'], ['Ursache', 'meist Verkalkung'], ['Klappenöffnung', 'schwer: unter 1 cm² (normal 3–4 cm²)'], ['Abhören', 'raues Geräusch in der Systole, 2. ICR rechts']],
+    steps: [['Die Klappe öffnet nur einen Spalt.', 'Im Modell gehen die Taschen kaum auf – vergleiche mit der Pulmonalklappe daneben.'], ['Ein scharfer Strahl.', 'Das Blut schießt schnell durch die Enge und verwirbelt. Die Wirbel hört man als raues Herzgeräusch in der Systole.'], ['Die Kammer leert sich schlechter.', 'Pro Schlag gelangt weniger Blut in die Aorta, die linke Kammer bleibt voller.'], ['Die Wand wird dick.', 'Auf Dauer verdickt sich der Herzmuskel (Hypertrophie), braucht mehr Sauerstoff und wird steif – bis er schließlich nachlässt (Linksherzinsuffizienz).']],
+    after: [['Warnzeichen', 'Schwindel und kurze Bewusstlosigkeit (Synkope) bei Belastung, Brustenge (Angina pectoris), Atemnot. Treten sie auf, ist die Stenose meist schon schwer.'], ['Behandlung', 'Klappenersatz – offen operiert oder per Katheter über die Leistenarterie (TAVI).'], ['Pflege beobachtet', 'Puls und Blutdruck, Schwindel und Sturzgefahr, Belastung langsam steigern; nach TAVI die Punktionsstelle in der Leiste (Blutung, Bluterguss) und die Fußpulse kontrollieren.']],
+    note: 'Die Verdickung der Wand zeigt das Modell nicht.', wirkung: { avOeffnung: 0.3 } },
+  { id: 'vhf', kind: 'disease', name: 'Vorhofflimmern', short: 'Die Vorhöfe flimmern statt zu schlagen – der Puls wird unregelmäßig', kicker: 'Krankheitsbild · Herzrhythmusstörung',
+    lead: 'In den Vorhöfen kreisen ungeordnete elektrische Erregungen, 350 bis 600 pro Minute. Die Vorhöfe ziehen sich nicht mehr zusammen, sie zittern nur. Der AV-Knoten lässt die Impulse unregelmäßig zu den Kammern durch.',
+    values: [['Häufigkeit', 'häufigste Rhythmusstörung, vor allem im Alter'], ['Vorhöfe', '350–600 Erregungen/min, kein Schlag'], ['Puls', 'unregelmäßig, oft zu schnell'], ['EKG', 'keine P-Welle, unregelmäßige Abstände']],
+    steps: [['Die Vorhöfe flimmern.', 'Statt eines geordneten Impulses vom Sinusknoten kreisen viele kleine Erregungen durch die Vorhöfe. Im Modell fehlt der Schub der Vorhöfe.'], ['Der AV-Knoten filtert.', 'Nur ein Teil der Impulse erreicht die Kammern – zufällig verteilt. Die Schläge kommen unregelmäßig und oft zu schnell.'], ['Weniger Füllung.', 'Ohne den letzten Schub der Vorhöfe füllen sich die Kammern schlechter; bei schnellen Schlägen bleibt kaum Zeit dafür. Die Pumpleistung sinkt.'], ['Gefahr Gerinnsel.', 'Im langsam fließenden Blut des linken Herzohrs können sich Gerinnsel bilden. Gelangen sie ins Gehirn, entsteht ein Schlaganfall.']],
+    after: [['Folgen', 'Herzstolpern, Herzrasen, Schwindel, Leistungsschwäche, Atemnot; das Schlaganfallrisiko ist etwa fünfmal höher.'], ['Behandlung', 'Gerinnungshemmer (z. B. Apixaban, Rivaroxaban, Phenprocoumon), Frequenzkontrolle mit Betablockern wie Metoprolol, ggf. Rückführung in den Sinusrhythmus (Kardioversion, Ablation).'], ['Pflege beobachtet', 'Puls immer eine volle Minute zählen und mit der Herzfrequenz am Monitor oder beim Abhören vergleichen (Pulsdefizit), Blutdruck, Schwindel und Sturzgefahr, Blutungszeichen unter Gerinnungshemmern, Zeichen eines Schlaganfalls (Gesicht, Arme, Sprache) sofort melden.']],
+    note: 'Das Flimmern der Vorhöfe ist im Modell als feines Zittern angedeutet.', wirkung: { vorhofSchub: 0, rhythmus: 1, tempoFaktor: 1.35 }, datei: 'vorhofflimmern' },
+  { id: 'mi', kind: 'disease', name: 'Herzinfarkt (Vorderwand)', short: 'Der RIVA ist verschlossen \u2013 ein Teil der Vorderwand stirbt ab', kicker: 'Krankheitsbild \u00b7 akutes Koronarsyndrom',
+    lead: 'Ein Blutgerinnsel auf einer aufgebrochenen Ablagerung (Plaque) verschlie\u00dft den vorderen Ast der linken Herzkranzarterie (RIVA). Der Herzmuskel dahinter bekommt keinen Sauerstoff mehr und beginnt nach 20 bis 30 Minuten abzusterben.',
+    values: [['Verschluss', 'RIVA, vorderer Ast der linken Koronararterie'], ['Betroffen', 'Vorderwand der linken Kammer, Herzspitze, vordere Scheidewand'], ['EKG', 'ST-Hebung (STEMI)'], ['Labor', 'Troponin erh\u00f6ht']],
+    steps: [['Das Gef\u00e4\u00df ist verschlossen.', 'Im Modell ist der RIVA ab der Engstelle dunkel \u2013 dahinter kommt kein Blut mehr an.'], ['Der Muskel leidet.', 'Das Versorgungsgebiet \u2013 Vorderwand und Herzspitze \u2013 wird blass. Ohne Sauerstoff zieht sich der Muskel dort nicht mehr zusammen.'], ['Die Pumpleistung sinkt.', 'Die linke Kammer arbeitet nur noch mit dem gesunden Teil ihrer Wand; es drohen R\u00fcckstau in die Lunge und Schock.'], ['Zeit ist Muskel.', 'Je schneller das Gef\u00e4\u00df wieder ge\u00f6ffnet wird \u2013 meist mit Herzkatheter und Stent \u2013, desto mehr Muskel bleibt erhalten.']],
+    after: [['Warnzeichen', 'Starker Brustschmerz oder Druck, oft mit Ausstrahlung in linken Arm, Hals, Kiefer oder Oberbauch, Atemnot, Kaltschwei\u00dfigkeit, \u00dcbelkeit, Todesangst. Bei Frauen, \u00e4lteren Menschen und Menschen mit Diabetes oft untypisch und weniger schmerzhaft.'], ['Sofortma\u00dfnahmen', 'Notruf 112, Oberk\u00f6rper hoch lagern, enge Kleidung \u00f6ffnen, nicht allein lassen, keine Anstrengung; Vitalzeichen und 12-Kanal-EKG, Sauerstoff nur bei niedriger S\u00e4ttigung.'], ['Pflege beobachtet', 'Schmerz, Vitalzeichen und Herzrhythmus am Monitor (gef\u00e4hrliche Rhythmusst\u00f6rungen in den ersten Stunden), Punktionsstelle nach Herzkatheter, Bettruhe nach Anordnung, Ausscheidung; Angst ernst nehmen.']],
+    note: 'Die Grenzen des Infarktgebiets sind im Modell vereinfacht.', wirkung: { infarkt: 1, kraftL: 0.6 }, datei: 'vorderwandinfarkt' },
+  { id: 'meto', kind: 'drug', name: 'Beloc-Zok® (Metoprolol)', short: 'Betablocker – bremst den Herzschlag und senkt den Sauerstoffbedarf', kicker: 'Medikament · Betablocker',
+    lead: 'Metoprolol blockiert die Beta-1-Rezeptoren am Herzen. Die Stresshormone Adrenalin und Noradrenalin wirken dort schwächer: Das Herz schlägt langsamer und etwas weniger kräftig – und braucht weniger Sauerstoff.',
+    values: [['Wirkstoff', 'Metoprolol'], ['Wirkort', 'Beta-1-Rezeptoren am Herzen'], ['Wirkung', 'Herzfrequenz, Blutdruck und Sauerstoffbedarf sinken'], ['Einnahme', 'meist ein- bis zweimal täglich']],
+    steps: [['Der Taktgeber wird gebremst.', 'Am Sinusknoten verlangsamt Metoprolol die Impulsbildung – im Modell schlägt das Herz langsamer.'], ['Der AV-Knoten leitet langsamer.', 'Bei Vorhofflimmern kommen dadurch weniger Impulse zu den Kammern: Der Puls wird langsamer (Frequenzkontrolle).'], ['Mehr Zeit zum Füllen.', 'Die Diastole wird länger. Die Kammern füllen sich besser, und die Herzkranzgefäße, die vor allem in der Diastole durchblutet werden, bekommen mehr Blut.'], ['Das Herz wird geschont.', 'Weniger Schläge und etwas weniger Kraft senken den Sauerstoffbedarf. Bei Herzinsuffizienz verbessert das langfristig die Prognose, nach einem Herzinfarkt senkt es das Risiko eines neuen.']],
+    after: [['Einsatz', 'Bluthochdruck, koronare Herzkrankheit und nach Herzinfarkt, Herzinsuffizienz, Vorhofflimmern (Frequenzkontrolle), zu schneller Herzschlag.'], ['Nebenwirkungen', 'Langsamer Puls, Blutdruckabfall, Schwindel, Müdigkeit, kalte Hände und Füße, Verengung der Bronchien bei Asthma; Zeichen einer Unterzuckerung können verdeckt werden.'], ['Pflege beobachtet', 'Puls und Blutdruck vor der Gabe (bei Puls unter 50–55/min oder niedrigem Blutdruck Rücksprache mit dem Arzt), Schwindel und Sturzgefahr, Atmung bei Asthma oder COPD; nie plötzlich absetzen – Gefahr von Herzrasen und Angina pectoris.']],
+    note: 'Das Modell zeigt nur die Wirkung am Herzen; der Blutdruck ist nicht eigens dargestellt.', wirkung: { tempoFaktor: 0.75, kraftL: 0.9, kraftR: 0.9 }, datei: 'metoprolol' },
+  { id: 'gtn', kind: 'drug', name: 'Nitrolingual® (Glyceroltrinitrat)', short: 'Nitrat – weitet die Gefäße, entlastet das Herz und lindert Angina pectoris', kicker: 'Medikament · Nitrat',
+    lead: 'Glyceroltrinitrat setzt in der Gefäßwand Stickstoffmonoxid frei. Die Gefäßmuskulatur entspannt sich, vor allem die Venen werden weit. Es fließt weniger Blut zum Herzen zurück – das Herz muss weniger bewältigen und braucht weniger Sauerstoff.',
+    values: [['Wirkstoff', 'Glyceroltrinitrat (Nitroglycerin)'], ['Form', 'Spray oder Zerbeißkapsel unter die Zunge'], ['Wirkung', 'nach 1–2 Minuten, etwa 20–30 Minuten lang'], ['Angriff', 'vor allem Venen, auch Herzkranzgefäße']],
+    steps: [['Die Venen werden weit.', 'In den weiten Venen sammelt sich ein Teil des Blutes. Im Modell fließt weniger Blut zum Herzen zurück.'], ['Weniger Füllung, weniger Arbeit.', 'Die Kammern füllen sich weniger prall (die Vorlast sinkt). Die Wand ist weniger gespannt und braucht weniger Sauerstoff.'], ['Der Stau in der Lunge nimmt ab.', 'Bei Linksherzinsuffizienz und Lungenödem entlastet das die Lunge – die Atemnot lässt nach.'], ['Die Herzkranzgefäße weiten sich.', 'Verengte Koronararterien werden etwas weiter; der Schmerz der Angina pectoris lässt meist binnen Minuten nach.']],
+    after: [['Einsatz', 'Anfall von Angina pectoris, akutes Koronarsyndrom bei ausreichendem Blutdruck, Lungenödem bei Linksherzinsuffizienz, hypertensive Krise.'], ['Nebenwirkungen', 'Kopfschmerz, Gesichtsrötung, Blutdruckabfall, Schwindel bis zum Kollaps, Herzrasen als Gegenreaktion.'], ['Pflege beobachtet', 'Blutdruck vor und nach der Gabe (systolisch nicht unter 90–100 mmHg), Gabe im Sitzen oder Liegen (Kollapsgefahr), Schmerzverlauf dokumentieren; nicht zusammen mit Potenzmitteln wie Sildenafil – lebensgefährlicher Blutdruckabfall. Bessert sich der Schmerz nicht, an einen Herzinfarkt denken.']],
+    note: 'Die Weitung der Venen zeigt das Modell an der geringeren Füllung des Herzens; die Gefäße selbst verändern sich nicht.', wirkung: { vorlast: 0.6, tempoFaktor: 1.1 }, datei: 'glyceroltrinitrat' }
+];
+var SZ = Kern.Szenarien({
+  daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info, Lupe und Üben weichen der Szenariokarte */
+      if (App.quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    kartenLage();
+    szenarioWirkung();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) {                                    /* wieder aufgeklappt: die anderen Karten weichen */
+      if (App.quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    kartenLage();
+  }
+});
+/* Wirkung auf das Herz: Wirkgrößen = neutral + Summe anteil · (Zielwert - neutral), weich nach SZ.anteil gemischt; neutral = 1 */
+var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0, vorlast: 1 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig; infarkt: 0 = kein Infarkt; vorlast: passive F\u00fcllung der Kammern) */
+var WIRKFELDER = Object.keys(WIRKNEUTRAL);
+function szenarioWirkung() {
+  if (!engine) return;
+  var par = engine.S.par;
+  WIRKFELDER.forEach(function (f) {
+    var n = WIRKNEUTRAL[f], v = n;
+    SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - n); });
+    par[f] = v;
+  });
+  infarktSetzen(par.infarkt);
+}
+/* aktives Szenario (Anteil > 0,5) f\u00fcr den Export, sonst null */
+function szenarioExport() {
+  var r = null;
+  SZENARIEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+/* Szenariokarte klappt ein, wenn Hilfekarte, Info, Lupe oder Üben rechts aufgehen; das Szenario bleibt aktiv */
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+  kartenLage();
+}
+/* Karte „weg“, solange eine andere Karte rechts offen ist; Platz für die Beschriftung */
+function kartenLage() {
+  var andere = $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show');
+  SZ.el.classList.toggle('weg', andere && !SZ.offen);
+  document.body.classList.toggle('card', andere || !!(SZ.aktiv && SZ.offen));
+}
 (function buildRail() {
   var railRoot = $('rail');
   var tabs = document.createElement('div'); tabs.className = 'tabs';
-  var paneS = document.createElement('div'), paneH = document.createElement('div'), paneU = document.createElement('div');
-  var panes = [paneS, paneH, paneU];
-  [['Strukturen', paneS], ['Hilfekarten', paneH], ['\u00dcben', paneU]].forEach(function (t, k) {
+  var paneS = document.createElement('div'), paneD = document.createElement('div'), paneM = document.createElement('div'), paneH = document.createElement('div'), paneU = document.createElement('div');
+  var panes = [paneS, paneD, paneM, paneH, paneU];
+  [['Strukturen', paneS], ['Krankheiten', paneD], ['Medikamente', paneM], ['Hilfekarten', paneH], ['\u00dcben', paneU]].forEach(function (t, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = t[0];
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -3111,6 +3328,9 @@ function openHelp(key) {
     tabs.appendChild(b);
   });
   railRoot.appendChild(tabs); panes.forEach(function (p, k) { if (k) p.style.display = 'none'; railRoot.appendChild(p); });
+  /* Krankheiten, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Das Herz ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'Schalte ein Medikament ein: Das Herz zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
   /* Hilfekarten */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint rechts.'; paneH.appendChild(ih);
   INFO.cards.forEach(function (c) {
@@ -3403,7 +3623,7 @@ var ekg = $('ekg'), ectx = ekg.getContext('2d');
 function ekgSize() { var d = Math.min(window.devicePixelRatio || 1, 2); ekg.width = Math.round((ekg.clientWidth || 400) * d); ekg.height = Math.round((ekg.clientHeight || 92) * d); ectx.setTransform(d, 0, 0, d, 0, 0); }
 function drawEKG(pos) {
   var b = ekg.clientWidth, h = ekg.clientHeight; if (!b || !h) return;
-  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70;
+  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70, fl = engine.flimmern(), tz = engine.flimT, st = engine.S.par.infarkt;
   ectx.clearRect(0, 0, b, h);
   HerzZyklus.FELDER.forEach(function (f) {
     var on = pos >= f.von && pos < f.bis;
@@ -3420,16 +3640,18 @@ function drawEKG(pos) {
   });
   ectx.strokeStyle = '#23414D'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(L, base); ectx.lineTo(L + br, base); ectx.stroke();
   ectx.strokeStyle = '#E7EFF0'; ectx.lineWidth = 1.8; ectx.lineJoin = 'round'; ectx.beginPath();
-  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
+  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x, fl, tz, st) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
   ectx.stroke();
   if (App.impulse && !small) {
     ectx.fillStyle = '#F2C94C'; ectx.font = '600 11px ui-monospace, Menlo, Consolas, monospace'; ectx.textAlign = 'center';
-    [[0.06, 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]].forEach(function (w) {
-      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0]) * amp - 7;
+    var wl = [[0.06, fl > 0.5 ? 'f' : 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]];
+    if (st > 0.5) wl.push([0.30, 'ST', 0, 0]);
+    wl.forEach(function (w) {
+      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0], fl, tz, st) * amp - 7;
       ectx.fillText(w[1], L + w[0] * br + w[2], yy);
     });
   }
-  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos) * amp;
+  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos, fl, tz, st) * amp;
   ectx.strokeStyle = 'rgba(224,169,74,0.55)'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(dx, 3); ectx.lineTo(dx, h - (small ? 3 : 18)); ectx.stroke();
   ectx.fillStyle = '#C8342F'; ectx.beginPath(); ectx.arc(dx, dy, 5.5, 0, Math.PI * 2); ectx.fill();
   ectx.strokeStyle = '#FFFFFF'; ectx.lineWidth = 1.6; ectx.stroke();
@@ -3439,7 +3661,7 @@ function updatePanel(W) {
   var ph = engine.phase();
   if (ph !== lastPh) { lastPh = ph; $('phT').textContent = INFO.phases[ph].t; $('phX').textContent = INFO.phases[ph].x; $('arPhase').textContent = INFO.phases[ph].t; }
   var two = function (r, l) { return r === l ? (r ? 'offen' : 'zu') : (r ? 'rechts offen, links zu' : 'rechts zu, links offen'); };
-  var seg = two(W.tv > 0.5, W.mv > 0.5), tas = two(W.pv > 0.5, W.av > 0.5);
+  var seg = two(W.tv > 0.5, W.mv > 0.5), tas = two(W.pv > 0.5, W.av > 0.5 * engine.S.par.avOeffnung);   // (enge Aortenklappe: Gewicht ist skaliert, Schwelle auch)
   var wk = engine.S.windkessel ? engine.imWK + (engine.imWK === 1 ? ' Portion' : ' Portionen') : 'starr \u2013 speichert nichts';
   var lv = Math.round(engine.speicher.lv) + ' Portionen';
   var key = seg + '|' + tas + '|' + wk + '|' + lv;
@@ -3458,6 +3680,7 @@ var exCfg = {
   titel: '3D-Herz', praefix: 'herz', wurzelName: 'Herz', schild: [0.3, -7.4, 1.2],
   bereit: function () { return App.ready; },
   gruppen: function () { return App.openK > 0.5 ? [backG] : [backG, lidG]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },
   toast: toast,
   /* beide Herzhälften als eigene STL-Dateien (Ausgangslage, ohne Morph/Ausblendung) */
   stlTeile: function () {
@@ -3479,6 +3702,7 @@ var exCfg = {
   animation: function (rootE, clones) {
     var eng = App.engine;
     var tempo = TEMPO_NAME[eng.S.tempo] || 'normal';
+    var sz = szenarioExport();
     var snaps = [], tracks = [], nPort = 0;
     var bake = eng.bake(30, function (i, w) { snaps.push(App.portionsNow ? App.portionsNow(w) : []); });
     var T = bake.T;
@@ -3513,7 +3737,7 @@ var exCfg = {
       });
       nPort = n;
     }
-    return { clips: [new THREE.AnimationClip('Herzschlag_' + tempo, bake.T, tracks)], zusatz: tempo, tempo: tempo, T: T, nPort: nPort };
+    return { clips: [new THREE.AnimationClip('Herzschlag_' + (sz ? sz.datei : tempo), bake.T, tracks)], zusatz: sz ? sz.datei : tempo, tempo: tempo, T: T, nPort: nPort };
   },
   texte: {
     stlStart: 'STL wird erzeugt …',
@@ -3578,6 +3802,7 @@ var last = performance.now();
 function loop(now, frame) {
   if (App.ar) AR.frame(frame);
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (SZ.schritt(dt)) szenarioWirkung();                   /* Anteile weich \u00fcberblenden */
   if (App.ready) {
     engine.step(dt);
     if (engine.events.length) { if (App.sound) engine.events.forEach(function (ev) { if (ev === 'S1') thump(48, 0.16, 0.9); else thump(74, 0.11, 0.7); }); engine.events.length = 0; }

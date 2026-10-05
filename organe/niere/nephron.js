@@ -1236,78 +1236,21 @@ var SCENARIOS = [{
   ],
   note: 'Kalium ist im Modell nicht eigens dargestellt. Die Harnmenge ist \u00fcberzeichnet, damit man den Effekt gut sieht.'
 }];
-var SCEN = { active: null, cardOpen: true };
-var cardEl = null, disRows = {};
-function buildCard() {
-  cardEl = document.createElement('div');
-  cardEl.className = 'panel'; cardEl.id = 'scard';
-  document.body.appendChild(cardEl);
-}
-function fillCard(sc) {
-  var h = '<button class="gh hbtn" id="bCardMin" title="Einklappen" style="right:44px">\u2013</button>' +
-          '<button class="gh hbtn" id="bCardOff" title="Krankheitsbild ausschalten" style="right:8px">\u00d7</button>' +
-          '<div class="kick"></div><h3></h3><div class="body"><p class="lead"></p><dl class="vals"></dl><ol></ol><div class="after"></div><p class="note"></p></div>';
-  cardEl.innerHTML = h;
-  cardEl.querySelector('.kick').textContent = sc.kicker;
-  cardEl.querySelector('h3').textContent = sc.name;
-  cardEl.querySelector('.lead').textContent = sc.lead;
-  var dl = cardEl.querySelector('.vals'), ol = cardEl.querySelector('ol'), af = cardEl.querySelector('.after');
-  sc.values.forEach(function (v) {
-    var dt = document.createElement('dt'); dt.textContent = v[0];
-    var dd = document.createElement('dd'); dd.textContent = v[1];
-    dl.appendChild(dt); dl.appendChild(dd);
-  });
-  sc.steps.forEach(function (s) {
-    var li = document.createElement('li'), b = document.createElement('b');
-    b.textContent = s[0] + ' '; li.appendChild(b); li.appendChild(document.createTextNode(s[1])); ol.appendChild(li);
-  });
-  sc.after.forEach(function (a) {
-    var h5 = document.createElement('h5'); h5.textContent = a[0];
-    var p = document.createElement('p'); p.textContent = a[1];
-    af.appendChild(h5); af.appendChild(p);
-  });
-  cardEl.querySelector('.note').textContent = sc.note;
-  var bMin = cardEl.querySelector('#bCardMin'), bOff = cardEl.querySelector('#bCardOff');
-  if (bMin) bMin.addEventListener('click', function () {
-    SCEN.cardOpen = !SCEN.cardOpen; cardEl.classList.toggle('min', !SCEN.cardOpen);
-    bMin.textContent = SCEN.cardOpen ? '\u2013' : '+'; visVersion++;
-  });
-  if (bOff) bOff.addEventListener('click', function () { setScenario(null); });
-}
-function setScenario(id) {
-  SCEN.active = id;
-  Object.keys(disRows).forEach(function (k) { disRows[k].classList.toggle('on', k === id); });
-  SCENARIOS.forEach(function (s) {
-    var leg = document.getElementById(s.leg);
-    if (leg) leg.style.display = id === s.id ? '' : 'none';
-  });
-  if (id) {
-    fillCard(SCENARIOS.filter(function (s) { return s.id === id; })[0]);
-    SCEN.cardOpen = true; cardEl.classList.remove('min'); cardEl.classList.add('show');
-  } else cardEl.classList.remove('show');
-  visVersion++;
-}
-function buildScenarioPane(pane, kind, head, introText) {
-  var intro = document.createElement('p'); intro.className = 'dis-intro';
-  intro.textContent = introText;
-  pane.appendChild(intro);
-  var h = document.createElement('h2'); h.className = 'dis-h'; h.textContent = head; pane.appendChild(h);
-  SCENARIOS.filter(function (sc) { return sc.kind === kind; }).forEach(function (sc) {
-    var row = document.createElement('div'); row.className = 'dis'; row.tabIndex = 0;
-    row.innerHTML = '<span class="knob"></span><span><b></b><i></i></span>';
-    row.querySelector('b').textContent = sc.name; row.querySelector('i').textContent = sc.short;
-    function flip() { setScenario(SCEN.active === sc.id ? null : sc.id); }
-    row.addEventListener('click', flip);
-    row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
-    disRows[sc.id] = row; pane.appendChild(row);
-  });
-}
-buildCard();
+var SZ = Kern.Szenarien({
+  daten: SCENARIOS, karte: 'scard', dauer: 1.2, anteil: SW,
+  beimWechsel: function () {
+    SCENARIOS.forEach(function (s) {
+      var leg = document.getElementById(s.leg);
+      if (leg) leg.style.display = SZ.aktiv === s.id ? '' : 'none';
+    });
+    visVersion++;
+  },
+  beimEinklappen: function () { visVersion++; }
+});
 /* fuer die Pruefung ohne Bildschirm: Zustand sofort setzen */
 function setScenarioDirect(id) {
   if (id === true) id = 'hg';
-  setScenario(id || null);
-  Object.keys(SW).forEach(function (k) { SW[k] = (k === id) ? 1 : 0; });
+  SZ.direkt(id);
   applyScenarioVisuals();
 }
 /* alles, was vom Anteil der Zustaende abhaengt, ausser den Teilchen */
@@ -1336,8 +1279,8 @@ function applyScenarioVisuals() {
     tabs.appendChild(b);
   });
   railRoot.appendChild(tabs); railRoot.appendChild(rail); railRoot.appendChild(paneD); railRoot.appendChild(paneM);
-  buildScenarioPane(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Das Modell ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
-  buildScenarioPane(paneM, 'drug', 'Diuretika', 'Schalte ein Medikament ein: Das Modell zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Das Modell ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
+  SZ.liste(paneM, 'drug', 'Diuretika', 'Schalte ein Medikament ein: Das Modell zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
   ORDER.forEach(function (s) { if (groups.indexOf(s.grp) < 0) groups.push(s.grp); });
   groups.forEach(function (g) {
     var wrap = document.createElement('div'); wrap.className = 'grp';
@@ -1467,7 +1410,7 @@ function layoutLabels(w, h) {
   if (key === lastLabelKey) return;
   lastLabelKey = key;
   var narrow = w < 1000;
-  var cardW = (SCEN.active && SCEN.cardOpen && !narrow) ? 352 : 0;
+  var cardW = (SZ.aktiv && SZ.offen && !narrow) ? 352 : 0;
   var colL = narrow ? 14 : 282, colR = narrow ? w - 14 : w - 214 - cardW;
   var topLim = narrow ? 84 : 152;
   var botL = narrow ? h * 0.55 : h - 216, botR = narrow ? h * 0.55 : h - 118;
@@ -1830,7 +1773,7 @@ function lupeSetSection(sec, depth, point) {
   Array.prototype.forEach.call(document.querySelectorAll('#lpChips button'), function (b) { b.classList.toggle('on', b.getAttribute('data-sec') === sec); });
   LUPE.ring.position.copy(LUPE.point); LUPE.ring.visible = true;
   LUPE.open = true; LUPE.box.classList.add('show');
-  if (window.innerWidth < 1000 && SCEN.active && SCEN.cardOpen) { SCEN.cardOpen = false; cardEl.classList.add('min'); }
+  if (window.innerWidth < 1000 && SZ.aktiv && SZ.offen) SZ.zuklappen();
   setSelected(null); visVersion++;
 }
 function lupeRepPoint(sec) {                       /* typische Stelle je Abschnitt */
@@ -2076,11 +2019,7 @@ function loop(now, frame) {
   if (inAR) AR.frame(frame);
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (playing) clock += dt * speed;
-  var scChanged = false;
-  Object.keys(SW).forEach(function (k) {                    /* weich ein- und ausblenden, auch in der Pause */
-    var tg = SCEN.active === k ? 1 : 0;
-    if (SW[k] !== tg) { SW[k] += Math.max(-dt / 1.2, Math.min(dt / 1.2, tg - SW[k])); scChanged = true; }
-  });
+  var scChanged = SZ.schritt(dt);                           /* weich ein- und ausblenden, auch in der Pause */
   if (scChanged) applyScenarioVisuals();
   updateParticles();
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);

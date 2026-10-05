@@ -14,7 +14,7 @@
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
-   AR Quick Look (USDZ).
+   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -203,9 +203,9 @@ const MODELLE = {
         await t.klick('#fAll'); await t.klick('#bHand'); await t.klick('#hV'); await t.weiter(900); await t.bild('handbetrieb');
         await t.klick('#bAuto'); await t.klick('#wkS'); await t.weiter(900); await t.bild('aorta-starr');
         await t.klick('#wkE'); await t.taste('Escape');
-        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#rail .dis[data-card] >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
-        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
-        await t.klick('#qStop'); await t.klick('#rail .tabs .tab >> nth=0');
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#rail .dis[data-card] >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#qStop'); await t.klick('#rail .tabs .tab:text-is("Strukturen")');
         await t.klick('#bAR'); await t.weiter(300); await t.bild('ar-ohne-geraet');
       } },
       handy: { opt: HANDY, async ablauf(t) {          /* ohne Ausschnitt-Knöpfe: die blendet das Handy-Layout aus */
@@ -214,6 +214,42 @@ const MODELLE = {
         await t.klick('#bOpen'); await t.klick('#bSchema'); await t.weiter(1400); await t.bild('schema');
         await t.klick('#bSchemaX'); await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
         await t.klick('#bLupeX'); await t.klick('#row-lv'); await t.weiter(900); await t.bild('info-linke-kammer');
+      } },
+      szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder: 3D und Schema je Eintrag, dazu animierter GLB-Export (Linksherzinsuffizienz) */
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        for (const [name, datei] of [['Linksherzinsuffizienz', 'linksherzinsuffizienz'], ['Rechtsherzinsuffizienz', 'rechtsherzinsuffizienz'], ['Globalinsuffizienz', 'globalinsuffizienz']]) {
+          const zeile = '#rail .dis:has(b:text-is("' + name + '"))';
+          await t.klick(zeile); await t.weiter(4000); await t.bild(datei);
+          await t.klick('#bSchema'); await t.weiter(900); await t.bild(datei + '-schema'); await t.klick('#bSchemaX');
+          await t.klick(zeile); await t.weiter(1500);
+        }
+        await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
+        await t.export('#bGlbA', 'glb-animiert-lhi');
+        await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
+        /* Aortenklappenstenose: Ausschnitt Klappen in der Systole (Zeit fest) */
+        await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(4000);
+        await t.klick('#cam1'); await t.weiter(2900); await t.bild('aortenklappenstenose-klappen');
+        await t.klick('#cam0'); await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(1500);
+        /* Vorhofflimmern: 3D und Erregung */
+        await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(4000); await t.bild('vorhofflimmern');
+        await t.klick('#bErr'); await t.weiter(900); await t.bild('vorhofflimmern-erregung'); await t.klick('#bErr');
+        await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(1500);
+        /* Herzinfarkt: geschlossen, geöffnet, EKG mit ST-Hebung; danach Rückkehr zu den Originalfarben */
+        const mi = '#rail .dis:has(b:text-is("Herzinfarkt (Vorderwand)"))';
+        await t.klick(mi); await t.klick('#bClosed'); await t.weiter(4000); await t.bild('vorderwandinfarkt');
+        await t.klick('#bOpen'); await t.weiter(1400); await t.bild('vorderwandinfarkt-offen');
+        await t.klick('#bErr'); await t.weiter(900); await t.bild('vorderwandinfarkt-ekg'); await t.klick('#bErr');
+        await t.klick(mi); await t.weiter(1500);
+        await t.klick('#bClosed'); await t.weiter(1400); await t.bild('nach-infarkt-geschlossen');
+        await t.klick('#bOpen'); await t.weiter(1400);
+        /* Medikamente: Metoprolol und Glyceroltrinitrat, danach zurück zu den Krankheiten */
+        await t.klick('#rail .tabs .tab:text-is("Medikamente")');
+        for (const [name, datei] of [['Beloc-Zok® (Metoprolol)', 'metoprolol'], ['Nitrolingual® (Glyceroltrinitrat)', 'glyceroltrinitrat']]) {
+          const zeile = '#rail .dis:has(b:text-is("' + name + '"))';
+          await t.klick(zeile); await t.weiter(4000); await t.bild(datei);
+          await t.klick(zeile); await t.weiter(1500);
+        }
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

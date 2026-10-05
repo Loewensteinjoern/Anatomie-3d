@@ -6,6 +6,9 @@ canvas#cv{display:block;width:100%;height:100%;touch-action:none}
 
 #rail{top:124px;left:22px;width:244px;max-height:calc(100vh - 400px);overflow-y:auto;
   padding:14px 4px 12px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+/* fünf Reiter: zwei Zeilen (3 + 2), damit alle Namen lesbar bleiben */
+#rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
+#rail .tab{flex:1 1 calc(33.3% - 3px);font-size:10px;padding:6px 0}
 
 .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--ink-faint);padding:0 6px 0 7px;min-width:88px}
@@ -60,6 +63,19 @@ body.erreg #zyk .erz{display:block}
 #scard .ok{color:#7CD69B}
 #scard .no{color:#F08A7E}
 
+/* Szenariokarte (Krankheiten, Medikamente): Lage wie #scard, Aussehen: core/kern.css, .szkarte */
+#kcard{top:214px;right:22px;width:330px;max-height:calc(100vh - 306px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#kcard.show{display:block}
+#kcard.show.weg{display:none}
+#kcard .kick,#kcard h3{padding-right:70px}
+#kcard.min{padding-bottom:6px}
+#kcard .lead{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--ink-dim)}
+#kcard .after{margin:4px 0 0;padding-top:9px;border-top:1px solid var(--line)}
+#kcard .after:empty{display:none}
+#kcard .after h5{margin:0 0 3px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+#kcard .after p{margin:0 0 8px;font-size:12px;line-height:1.5;color:var(--ink-dim)}
+
 #boot{position:fixed;inset:0;z-index:50;background:var(--bg-deep);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:14px;font-family:var(--mono);font-size:11px;
   letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);transition:opacity .45s}
@@ -98,7 +114,9 @@ body.schema #labels,body.schema #leaders{display:none}
 .lp-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:10.5px;color:var(--ink-faint)}
 
 @media (max-width:1000px){
-  #scard{top:56px;left:12px;right:12px;width:auto;max-height:36vh;min-height:0}
+  #scard,#kcard{top:56px;left:12px;right:12px;width:auto;max-height:36vh;min-height:0}
+  #rail .tabs{flex-wrap:nowrap}
+  #rail .tab{flex:1 1 0;font-size:10px;padding:6px 0}
   #wm{bottom:calc(34vh + 140px);white-space:normal;text-align:center;width:92vw;font-size:9.5px}
   #title .sub,#title .kicker{display:none}
   #rail{top:auto;bottom:0;left:0;right:0;width:100%;max-height:34vh;padding-top:10px;
@@ -124,5 +142,5 @@ body.schema #labels,body.schema #leaders{display:none}
   #lupe{left:12px;right:12px;width:auto;top:56px;max-height:calc(66vh - 220px)}
   #lpCv{width:100%;max-width:420px;margin:0 auto}
   #info{left:12px;right:12px;width:auto;top:56px;bottom:auto;max-height:36vh}
-  #scard,#info{max-height:calc(66vh - 220px)}
+  #scard,#kcard,#info{max-height:calc(66vh - 220px)}
 }
