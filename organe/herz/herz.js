@@ -1701,292 +1701,6 @@ const HeartInfo = (function () {
 })();
 
 /* =====================================================================
-   EXPORT: STL (3D-Druck), GLB (statisch), GLB mit Herzschlag
-   Immer mit Signatur „erstellt von Jörn Löwenstein mithilfe von Claude
-   (Künstliche Intelligenz)“.
-   ===================================================================== */
-const HerzExport = (function () {
-  'use strict';
-  const WM = Kern.WM;
-  const WM_ASCII = Kern.WM_ASCII;
-
-  /* ---------- ZIP (ohne Fremdbibliothek) ---------- */
-  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-  function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
-  async function deflateRaw(u8) {
-    if (typeof CompressionStream === 'undefined') return null;
-    try { const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw')); return new Uint8Array(await new Response(s).arrayBuffer()); } catch (e) { return null; }
-  }
-  async function makeZip(files, comment) {
-    const enc = new TextEncoder(); const parts = [], central = []; let offset = 0;
-    const d = new Date();
-    const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
-    const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
-    for (const f of files) {
-      const name = enc.encode(f.name); const crc = crc32(f.data);
-      let comp = await deflateRaw(f.data), method = 8;
-      if (!comp || comp.length >= f.data.length) { comp = f.data; method = 0; }
-      const lh = new DataView(new ArrayBuffer(30));
-      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
-      lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true); lh.setUint32(18, comp.length, true); lh.setUint32(22, f.data.length, true);
-      lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
-      parts.push(new Uint8Array(lh.buffer), name, comp);
-      const ch = new DataView(new ArrayBuffer(46));
-      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, method, true);
-      ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, comp.length, true); ch.setUint32(24, f.data.length, true);
-      ch.setUint16(28, name.length, true); ch.setUint32(38, 0, true); ch.setUint32(42, offset, true);
-      central.push(new Uint8Array(ch.buffer), name);
-      offset += 30 + name.length + comp.length;
-    }
-    const cdSize = central.reduce((a, b) => a + b.length, 0);
-    const cm = enc.encode(comment || '');
-    const end = new DataView(new ArrayBuffer(22));
-    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
-    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true); end.setUint16(20, cm.length, true);
-    return new Blob(parts.concat(central, [new Uint8Array(end.buffer), cm]), { type: 'application/zip' });
-  }
-
-  /* ---------- Auslieferung ---------- */
-  // In Claude: Fähigkeit „downloads“ (nur ZIP u. a. erlaubt). Außerhalb: klassischer Download.
-  async function getDL() {
-    if (!(window.claude && typeof window.claude.use === 'function')) return null;
-    try { return await window.claude.use('downloads'); } catch (e) { return null; }
-  }
-  async function deliver(filename, blob, dl) {
-    if (dl) { await dl.save({ filename, data: blob }); return; }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
-  }
-
-  /* ---------- Sammeln + Backen ---------- */
-  function shown(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
-  function collect(groups, opts) {
-    const out = [];
-    for (const g of groups) g.traverse((m) => {
-      if (!m.isMesh || !shown(m) || m.userData.noexport) return;
-      const mats = Array.isArray(m.material) ? m.material : [m.material];
-      if (mats.every(x => !x.visible || x.opacity < 0.05)) return;
-      out.push(m);
-    });
-    return out;
-  }
-  function baked(mesh, useWorld) {
-    const g = mesh.geometry, p = g.attributes.position, n = p.count;
-    const ma = (g.morphAttributes && g.morphAttributes.position) || [], inf = mesh.morphTargetInfluences || [];
-    const out = new Float32Array(n * 3); const v = new THREE.Vector3();
-    mesh.updateWorldMatrix(true, false);
-    for (let i = 0; i < n; i++) {
-      let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      for (let k = 0; k < ma.length; k++) { const w = inf[k] || 0; if (!w) continue; x += ma[k].getX(i) * w; y += ma[k].getY(i) * w; z += ma[k].getZ(i) * w; }
-      if (useWorld) { v.set(x, y, z).applyMatrix4(mesh.matrixWorld); x = v.x; y = v.y; z = v.z; }
-      out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z;
-    }
-    return out;
-  }
-  function triList(mesh) {
-    const g = mesh.geometry; const idx = g.index ? g.index.array : null; const cnt = idx ? idx.length : g.attributes.position.count;
-    const mats = Array.isArray(mesh.material) ? mesh.material : null;
-    const tris = [];
-    const groups = mats && g.groups.length ? g.groups : [{ start: 0, count: cnt, materialIndex: 0 }];
-    for (const gr of groups) {
-      const mat = mats ? mats[gr.materialIndex] : mesh.material;
-      if (!mat || !mat.visible || mat.opacity < 0.05) continue;
-      for (let i = gr.start; i < gr.start + gr.count; i++) tris.push(idx ? idx[i] : i);
-    }
-    return tris;
-  }
-
-  /* ---------- STL ---------- */
-  function stl(meshes, useWorld) {
-    const items = meshes.map(m => ({ pos: baked(m, useWorld), tris: triList(m) }));
-    const nt = items.reduce((a, it) => a + it.tris.length / 3, 0);
-    const buf = new ArrayBuffer(84 + nt * 50), dv = new DataView(buf);
-    const head = (WM_ASCII + ' | 3D-Herz').slice(0, 80);
-    for (let i = 0; i < 80; i++) dv.setUint8(i, i < head.length ? head.charCodeAt(i) : 32);
-    dv.setUint32(80, nt, true);
-    let o = 84;
-    const S = 10; // cm -> mm
-    for (const it of items) {
-      const P = it.pos, T = it.tris;
-      for (let t = 0; t < T.length; t += 3) {
-        const a = T[t] * 3, b = T[t + 1] * 3, c = T[t + 2] * 3;
-        // Y-oben -> Z-oben (Druckbett)
-        const ax = P[a] * S, ay = -P[a + 2] * S, az = P[a + 1] * S;
-        const bx = P[b] * S, by = -P[b + 2] * S, bz = P[b + 1] * S;
-        const cx = P[c] * S, cy = -P[c + 2] * S, cz = P[c + 1] * S;
-        const ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
-        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const nl = Math.hypot(nx, ny, nz) || 1;
-        dv.setFloat32(o, nx / nl, true); dv.setFloat32(o + 4, ny / nl, true); dv.setFloat32(o + 8, nz / nl, true);
-        dv.setFloat32(o + 12, ax, true); dv.setFloat32(o + 16, ay, true); dv.setFloat32(o + 20, az, true);
-        dv.setFloat32(o + 24, bx, true); dv.setFloat32(o + 28, by, true); dv.setFloat32(o + 32, bz, true);
-        dv.setFloat32(o + 36, cx, true); dv.setFloat32(o + 40, cy, true); dv.setFloat32(o + 44, cz, true);
-        dv.setUint16(o + 48, 0, true); o += 50;
-      }
-    }
-    return new Uint8Array(buf);
-  }
-
-  /* ---------- Signaturschild für GLB ---------- */
-  function signPlate() {
-    const c = document.createElement('canvas'); c.width = 2048; c.height = 256; const x = c.getContext('2d');
-    x.fillStyle = '#122229'; x.fillRect(0, 0, c.width, c.height);
-    x.strokeStyle = '#E0A94A'; x.lineWidth = 6; x.strokeRect(10, 10, c.width - 20, c.height - 20);
-    x.fillStyle = '#E7EFF0'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.font = 'italic 400 66px Georgia, "Times New Roman", serif';
-    x.fillText('erstellt von Jörn Löwenstein', c.width / 2, 92);
-    x.font = '400 52px "Segoe UI", Roboto, Arial, sans-serif';
-    x.fillText('mithilfe von Claude (Künstliche Intelligenz)', c.width / 2, 170);
-    const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 1.2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, metalness: 0 }));
-    m.position.set(0.3, -7.4, 1.2); m.name = 'Signatur';
-    return m;
-  }
-
-  function cleanMaterial(mat) {
-    const m = new THREE.MeshStandardMaterial({
-      color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff), roughness: mat.roughness, metalness: 0,
-      vertexColors: !!mat.vertexColors, side: mat.side, transparent: false, opacity: 1
-    });
-    if (mat.name) m.name = mat.name;
-    m.emissive.setHex(0x000000);
-    return m;
-  }
-  const matNames = ['Aussen', 'Innen', 'Schnitt'];
-  function exportClone(mesh, i, keepMorph) {
-    const src = mesh.geometry, g = new THREE.BufferGeometry();
-    if (keepMorph) {
-      mesh.updateWorldMatrix(true, false);
-      g.setAttribute('position', src.attributes.position.clone());
-      if (src.morphAttributes.position) { g.morphAttributes.position = src.morphAttributes.position.map(a => a.clone()); g.morphTargetsRelative = true; }
-    } else g.setAttribute('position', new THREE.BufferAttribute(baked(mesh, false), 3));
-    if (src.attributes.normal) g.setAttribute('normal', src.attributes.normal.clone());
-    if (src.attributes.color) g.setAttribute('color', src.attributes.color.clone());
-    if (src.index) g.setIndex(src.index.clone());
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const outMats = mats.map((m, k) => { const c = cleanMaterial(m); c.name = (mesh.userData.sid || 'teil') + (mats.length > 1 ? '_' + matNames[k] : ''); c.visible = m.visible; return c; });
-    if (Array.isArray(mesh.material)) {
-      for (const gr of src.groups) if (mats[gr.materialIndex].visible && mats[gr.materialIndex].opacity > 0.05) g.addGroup(gr.start, gr.count, gr.materialIndex);
-    }
-    if (!g.attributes.normal) g.computeVertexNormals();
-    const m = new THREE.Mesh(g, Array.isArray(mesh.material) ? outMats : outMats[0]);
-    m.name = (mesh.name || 'Teil').replace(/[^A-Za-z0-9_]/g, '_') + '_' + i;
-    // Lage (Vorderwand-Drehung) übernehmen
-    mesh.updateWorldMatrix(true, false);
-    m.applyMatrix4(mesh.matrixWorld);
-    if (keepMorph) m.updateMorphTargets();
-    m.userData = { struktur: mesh.userData.sid || '' };
-    return m;
-  }
-  function glb(scene, animations) {
-    return new Promise((resolve, reject) => {
-      const ex = new THREE.GLTFExporter();
-      ex.register((writer) => ({ afterParse() { writer.json.asset.copyright = WM; writer.json.asset.generator = '3D-Herz (three.js GLTFExporter)'; writer.json.asset.extras = { signatur: WM }; } }));
-      try { ex.parse(scene, (res) => resolve(new Uint8Array(res)), { binary: true, onlyVisible: true, animations: animations || [], truncateDrawRange: true }); } catch (e) { reject(e); }
-    });
-  }
-  function readme(extra) {
-    return new TextEncoder().encode(['3D-Herz – Export', WM, '', ...extra, '', 'Erstellt am ' + new Date().toLocaleString('de-DE')].join('\r\n'));
-  }
-
-  /* ---------- Ablauf ---------- */
-  const TEMPO = { 0.6: 'langsam', 1: 'normal', 1.6: 'schnell' };
-  const kb = (n) => n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.round(n / 1024) + ' kB';
-  let busy = false;
-  async function run(kind, App, ctx) {
-    if (busy || !App.ready) return;
-    busy = true;
-    const say = ctx.toast;
-    const btns = document.querySelectorAll('#bGlbA,#bGlbS,#bStl'); btns.forEach(b => b.disabled = true);
-    await new Promise(r => setTimeout(r, 30));
-    try {
-      const dl = await getDL();
-      const eng = App.engine;
-      const tempo = TEMPO[eng.S.tempo] || 'normal';
-      if (kind === 'stl') {
-        say('STL wird erzeugt …'); await new Promise(r => setTimeout(r, 30));
-        const view = collect(ctx.exportGroups ? ctx.exportGroups() : [ctx.backG, ctx.lidG]);
-        const files = [{ name: 'herz_ansicht.stl', data: stl(view, true) }];
-        const tis = (g) => { const a = []; g.traverse(m => { if (m.isMesh && m.userData.tissue) a.push(m); }); return a; };
-        const tb = tis(ctx.backG), tl = tis(ctx.lidG), all = tb.concat(tl);
-        const inf0 = all.map(m => (m.morphTargetInfluences || []).slice());
-        all.forEach(m => { if (m.morphTargetInfluences) m.morphTargetInfluences.fill(0); });
-        const vis0 = all.map(m => m.visible), mv0 = [];
-        all.forEach(m => { m.visible = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach(x => { mv0.push([x, x.visible, x.opacity]); x.visible = true; x.opacity = 1; }); });
-        files.push({ name: 'herz_teil1_hinten.stl', data: stl(tb, false) });
-        files.push({ name: 'herz_teil2_vorderwand.stl', data: stl(tl, false) });
-        all.forEach((m, i) => { m.visible = vis0[i]; if (m.morphTargetInfluences) inf0[i].forEach((w, k) => { m.morphTargetInfluences[k] = w; }); });
-        mv0.forEach(([x, v, o]) => { x.visible = v; x.opacity = o; });
-        ctx.setLidPose(App.openK);
-        const tris = files.reduce((a, f) => a + (f.data.length - 84) / 50, 0);
-        files.push({ name: 'LIESMICH.txt', data: readme(['Dateien (Maßstab Millimeter, Z-Achse nach oben):', '- herz_ansicht.stl: alles, was beim Export sichtbar war', '- herz_teil1_hinten.stl und herz_teil2_vorderwand.stl: die beiden Herzhälften zum getrennten Drucken und Zusammensetzen', 'Klappen, Sehnenfäden und Leitungsbahnen sind sehr dünn und für den 3D-Druck nur bedingt geeignet.', 'STL kennt weder Farbe noch Bewegung – dafür gibt es die GLB-Dateien.']) });
-        const zip = await makeZip(files, WM_ASCII);
-        await deliver('herz_stl_3d-druck.zip', zip, dl);
-        say('STL gespeichert &middot; <span class="em">3 Dateien, ' + Math.round(tris).toLocaleString('de-DE') + ' Dreiecke, ' + kb(zip.size) + ', Einheit mm</span><br>Beide Herzhälften liegen einzeln bei – zum Drucken und Zusammensetzen.');
-      } else {
-        const anim = kind === 'glb-anim';
-        say(anim ? 'Herzzyklus wird aufgezeichnet …' : 'GLB wird erzeugt …'); await new Promise(r => setTimeout(r, 30));
-        const scene = new THREE.Scene(); const rootE = new THREE.Group(); rootE.name = 'Herz'; rootE.scale.setScalar(0.01); scene.add(rootE);
-        rootE.userData = { signatur: WM, einheit: 'Meter' };
-        const src = collect(ctx.exportGroups ? ctx.exportGroups() : [ctx.backG, ctx.lidG]);
-        const clones = src.map((m, i) => { const c = exportClone(m, i, anim); rootE.add(c); return { c, m }; });
-        rootE.add(signPlate());
-        const clips = []; let T = 0, nPort = 0;
-        if (anim) {
-          const snaps = [];
-          const bake = eng.bake(30, (i, w) => { snaps.push(App.portionsNow ? App.portionsNow(w) : []); }); T = bake.T;
-          const times = new Float32Array(bake.frames.length); bake.frames.forEach((f, i) => { times[i] = i * bake.dt; });
-          const tracks = [];
-          for (const { c, m } of clones) {
-            const d = m.userData.drivers; if (!d || !c.morphTargetInfluences || !c.morphTargetInfluences.length) continue;
-            const vals = new Float32Array(bake.frames.length * d.length);
-            bake.frames.forEach((f, i) => { d.forEach((k, j) => { vals[i * d.length + j] = f[k] || 0; }); });
-            tracks.push(new THREE.NumberKeyframeTrack(c.name + '.morphTargetInfluences', times, vals));
-            d.forEach((k, j) => { c.morphTargetInfluences[j] = vals[j]; });
-          }
-          // Blutportionen: je Portion ein Knoten, unsichtbar = Größe 0
-          const keys = new Map();
-          snaps.forEach((list, i) => list.forEach((o) => { if (!keys.has(o.key)) keys.set(o.key, { red: o.red, f: new Array(snaps.length).fill(null) }); keys.get(o.key).f[i] = o.p; }));
-          if (keys.size) {
-            const geo = new THREE.SphereGeometry(0.27, 12, 8);
-            const matR = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xC8342F).convertSRGBToLinear(), roughness: 0.35, metalness: 0 }); matR.name = 'Blut_sauerstoffreich';
-            const matB = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x2F6FB5).convertSRGBToLinear(), roughness: 0.35, metalness: 0 }); matB.name = 'Blut_sauerstoffarm';
-            let n = 0;
-            keys.forEach((v, key) => {
-              const f = v.f.slice();
-              // unsichtbare Schlüsselbilder an die nächste sichtbare Stelle legen (nichts fliegt quer durchs Bild)
-              for (let i = 0; i < f.length; i++) if (!f[i]) { let a = i - 1; while (a >= 0 && !v.f[a]) a--; let b = i + 1; while (b < f.length && !v.f[b]) b++; f[i] = (b < f.length ? v.f[b] : (a >= 0 ? v.f[a] : [0, 0, 0])); }
-              const node = new THREE.Mesh(geo, v.red ? matR : matB); node.name = 'Blutportion_' + (++n);
-              node.position.set(f[0][0], f[0][1], f[0][2]); node.scale.setScalar(v.f[0] ? 1 : 0);
-              rootE.add(node);
-              const P = new Float32Array(f.length * 3), Sc = new Float32Array(f.length * 3);
-              f.forEach((q, i) => { P[i * 3] = q[0]; P[i * 3 + 1] = q[1]; P[i * 3 + 2] = q[2]; const e = v.f[i] ? 1 : 0; Sc[i * 3] = e; Sc[i * 3 + 1] = e; Sc[i * 3 + 2] = e; });
-              tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
-              tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc, THREE.InterpolateDiscrete));
-            });
-            nPort = n;
-          }
-          clips.push(new THREE.AnimationClip('Herzschlag_' + tempo, bake.T, tracks));
-        }
-        const data = await glb(scene, clips);
-        const base = anim ? 'herz_animiert_' + tempo : 'herz_statisch';
-        if (dl) {
-          const zip = await makeZip([{ name: base + '.glb', data }, { name: 'LIESMICH.txt', data: readme([anim ? base + '.glb: ein kompletter Herzzyklus (Tempo ' + tempo + ', ' + T.toFixed(1).replace('.', ',') + ' s) als Animation, läuft in Schleife.' : base + '.glb: farbiges 3D-Modell in der Ansicht beim Export.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter dem Herzen.']) }], WM_ASCII);
-          await deliver(base + '_glb.zip', zip, dl);
-        } else await deliver(base + '.glb', new Blob([data], { type: 'model/gltf-binary' }), null);
-        say('GLB gespeichert &middot; <span class="em">' + clones.length + ' Objekte, ' + kb(data.length) + ', Einheit Meter</span>' +
-          (anim ? '<br>Ein Herzzyklus mit Klappen, Windkessel und ' + nPort + ' Blutportionen, ' + T.toFixed(1).replace('.', ',') + ' s Schleife. Im Viewer die Wiedergabe starten.' : '<br>Nur Geometrie, mit Farben, ohne Bewegung.'));
-      }
-    } catch (e) {
-      console.error(e);
-      const code = e && e.code;
-      say(code === 'declined' ? 'Speichern abgebrochen.' : code === 'rate_limited' ? 'Es ist noch ein Speichern-Dialog offen – bitte kurz warten.' : code === 'too_large' ? 'Die Datei ist für dieses Ziel zu groß.' : 'Export fehlgeschlagen: ' + ((e && e.message) || e));
-    } finally { btns.forEach(b => { b.disabled = false; }); busy = false; }
-  }
-  return { run, stl, makeZip, glb, WM };
-})();
-
-/* =====================================================================
    SCHEMA – Herz, Lunge und Körper als Kreislaufbild
    Zeichnung aus dem Windkessel-Modell (Herz und Kreislauf), dunkel
    gestaltet. Angetrieben von derselben Physik wie das 3D-Herz: dieselben
@@ -4007,11 +3721,88 @@ function updatePanel(W) {
    9. Export, Hinweise
    ===================================================================== */
 function toast(msg) { Kern.toast(msg); }
-var exCtx = { backG: backG, lidG: lidG, root: root, setLidPose: setLidPose, toast: toast, wm: WATERMARK,
-  exportGroups: function () { return App.openK > 0.5 ? [backG] : [backG, lidG]; } };
-$('bGlbA').onclick = function () { HerzExport.run('glb-anim', App, exCtx); };
-$('bGlbS').onclick = function () { HerzExport.run('glb', App, exCtx); };
-$('bStl').onclick = function () { HerzExport.run('stl', App, exCtx); };
+var TEMPO_NAME = { 0.6: 'langsam', 1: 'normal', 1.6: 'schnell' };
+var exCfg = {
+  titel: '3D-Herz', praefix: 'herz', wurzelName: 'Herz', schild: [0.3, -7.4, 1.2],
+  bereit: function () { return App.ready; },
+  gruppen: function () { return App.openK > 0.5 ? [backG] : [backG, lidG]; },
+  toast: toast,
+  /* beide Herzhälften als eigene STL-Dateien (Ausgangslage, ohne Morph/Ausblendung) */
+  stlTeile: function () {
+    var files = [];
+    var tis = function (g) { var a = []; g.traverse(function (m) { if (m.isMesh && m.userData.tissue) a.push(m); }); return a; };
+    var tb = tis(backG), tl = tis(lidG), all = tb.concat(tl);
+    var inf0 = all.map(function (m) { return (m.morphTargetInfluences || []).slice(); });
+    all.forEach(function (m) { if (m.morphTargetInfluences) m.morphTargetInfluences.fill(0); });
+    var vis0 = all.map(function (m) { return m.visible; }), mv0 = [];
+    all.forEach(function (m) { m.visible = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach(function (x) { mv0.push([x, x.visible, x.opacity]); x.visible = true; x.opacity = 1; }); });
+    files.push({ name: 'herz_teil1_hinten.stl', data: Kern.Export.stl(tb, false, '3D-Herz') });
+    files.push({ name: 'herz_teil2_vorderwand.stl', data: Kern.Export.stl(tl, false, '3D-Herz') });
+    all.forEach(function (m, i) { m.visible = vis0[i]; if (m.morphTargetInfluences) inf0[i].forEach(function (w, k) { m.morphTargetInfluences[k] = w; }); });
+    mv0.forEach(function (e) { e[0].visible = e[1]; e[0].opacity = e[2]; });
+    setLidPose(App.openK);
+    return files;
+  },
+  /* Herzzyklus backen: Morph-Spuren der Klone, Blutportionen als Knoten */
+  animation: function (rootE, clones) {
+    var eng = App.engine;
+    var tempo = TEMPO_NAME[eng.S.tempo] || 'normal';
+    var snaps = [], tracks = [], nPort = 0;
+    var bake = eng.bake(30, function (i, w) { snaps.push(App.portionsNow ? App.portionsNow(w) : []); });
+    var T = bake.T;
+    var times = new Float32Array(bake.frames.length); bake.frames.forEach(function (f, i) { times[i] = i * bake.dt; });
+    for (var q = 0; q < clones.length; q++) {
+      var c = clones[q].c, m = clones[q].m;
+      var d = m.userData.drivers; if (!d || !c.morphTargetInfluences || !c.morphTargetInfluences.length) continue;
+      var vals = new Float32Array(bake.frames.length * d.length);
+      bake.frames.forEach(function (f, i) { d.forEach(function (k, j) { vals[i * d.length + j] = f[k] || 0; }); });
+      tracks.push(new THREE.NumberKeyframeTrack(c.name + '.morphTargetInfluences', times, vals));
+      d.forEach(function (k, j) { c.morphTargetInfluences[j] = vals[j]; });
+    }
+    // Blutportionen: je Portion ein Knoten, unsichtbar = Größe 0
+    var keys = new Map();
+    snaps.forEach(function (list, i) { list.forEach(function (o) { if (!keys.has(o.key)) keys.set(o.key, { red: o.red, f: new Array(snaps.length).fill(null) }); keys.get(o.key).f[i] = o.p; }); });
+    if (keys.size) {
+      var geo = new THREE.SphereGeometry(0.27, 12, 8);
+      var matR = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xC8342F).convertSRGBToLinear(), roughness: 0.35, metalness: 0 }); matR.name = 'Blut_sauerstoffreich';
+      var matB = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x2F6FB5).convertSRGBToLinear(), roughness: 0.35, metalness: 0 }); matB.name = 'Blut_sauerstoffarm';
+      var n = 0;
+      keys.forEach(function (v, key) {
+        var f = v.f.slice();
+        // unsichtbare Schlüsselbilder an die nächste sichtbare Stelle legen (nichts fliegt quer durchs Bild)
+        for (var i = 0; i < f.length; i++) if (!f[i]) { var a = i - 1; while (a >= 0 && !v.f[a]) a--; var b = i + 1; while (b < f.length && !v.f[b]) b++; f[i] = (b < f.length ? v.f[b] : (a >= 0 ? v.f[a] : [0, 0, 0])); }
+        var node = new THREE.Mesh(geo, v.red ? matR : matB); node.name = 'Blutportion_' + (++n);
+        node.position.set(f[0][0], f[0][1], f[0][2]); node.scale.setScalar(v.f[0] ? 1 : 0);
+        rootE.add(node);
+        var P = new Float32Array(f.length * 3), Sc = new Float32Array(f.length * 3);
+        f.forEach(function (qq, i) { P[i * 3] = qq[0]; P[i * 3 + 1] = qq[1]; P[i * 3 + 2] = qq[2]; var e = v.f[i] ? 1 : 0; Sc[i * 3] = e; Sc[i * 3 + 1] = e; Sc[i * 3 + 2] = e; });
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc, THREE.InterpolateDiscrete));
+      });
+      nPort = n;
+    }
+    return { clips: [new THREE.AnimationClip('Herzschlag_' + tempo, bake.T, tracks)], zusatz: tempo, tempo: tempo, T: T, nPort: nPort };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Herzzyklus wird aufgezeichnet …',
+    stlLiesmich: ['Dateien (Maßstab Millimeter, Z-Achse nach oben):', '- herz_ansicht.stl: alles, was beim Export sichtbar war', '- herz_teil1_hinten.stl und herz_teil2_vorderwand.stl: die beiden Herzhälften zum getrennten Drucken und Zusammensetzen', 'Klappen, Sehnenfäden und Leitungsbahnen sind sehr dünn und für den 3D-Druck nur bedingt geeignet.', 'STL kennt weder Farbe noch Bewegung – dafür gibt es die GLB-Dateien.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Dateien, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Beide Herzhälften liegen einzeln bei – zum Drucken und Zusammensetzen.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': ein kompletter Herzzyklus (Tempo ' + i.a.tempo + ', ' + i.a.T.toFixed(1).replace('.', ',') + ' s) als Animation, läuft in Schleife.' : i.name + ': farbiges 3D-Modell in der Ansicht beim Export.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter dem Herzen.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span>' +
+        (i.anim ? '<br>Ein Herzzyklus mit Klappen, Windkessel und ' + i.a.nPort + ' Blutportionen, ' + i.a.T.toFixed(1).replace('.', ',') + ' s Schleife. Im Viewer die Wiedergabe starten.' : '<br>Nur Geometrie, mit Farben, ohne Bewegung.');
+    }
+  }
+};
+$('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
+$('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
+$('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
 
 /* =====================================================================
    10. Renderschleife
@@ -4096,12 +3887,7 @@ build().then(function () {
   applyVisibility();
   setLidPose(App.openK);
   App.ready = true;
-  if (window.claude && typeof window.claude.use === 'function') {
-    window.claude.use('downloads').then(function (dl) {
-      var framed = true; try { framed = window.top !== window.self; } catch (e) { framed = true; }
-      if (!dl && framed) $('exp').style.display = 'none';
-    }).catch(function () {});
-  }
+  Kern.Export.pruefeZiel('exp');
   $('boot').classList.add('gone');
 }).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 })();
