@@ -38,10 +38,13 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
 - Ein Modul pro Organ: Geometrie, Strukturliste, Simulation, Lupen-Inhalte, Hilfetexte, Krankheitsbilder.
 - Inhalte (Namen, Texte, Quizfragen) als Daten getrennt vom Code.
 - Organe werden erst beim Öffnen geladen.
-- Mögliche Dateistruktur:
+- Eine einzige Seite: Körper und Organe teilen sich eine 3D-Szene (Renderer, Licht, Kamera, Kern). Beim Antippen eines Organs fliegt die Kamera hin, die Organdatei wird per eingefügtem `<script>` nachgeladen (funktioniert auch per `file://`), das Organ wird an seiner Stelle im Körper eingesetzt und der Körper ausgeblendet; „Zurück“ baut es wieder ab. Ebenso eine Ebene tiefer (Niere → Nephron).
+- Jedes Organ-Modul hat feste Andockpunkte, z. B. `aufbauen(szene, bereich)`, `abbauen()`, Bedienelemente, Beschriftung, Kamera-Ansichten; der Rahmen ruft sie auf.
+- Jede Ansicht hat eine eigene Adresse (`#herz`, `#niere/nephron`): Zurück-Knopf des Browsers, Lesezeichen und Links direkt auf ein Organ funktionieren.
+- Dateistruktur (Ziel):
 
 ```
-index.html                Körper-Atlas (Start)
+index.html                Körper-Atlas (Start); alte Adressen leiten weiter
 core/                     gemeinsamer Kern (JS, CSS)
 vendor/three.min.js       three.js, unverändert
 organe/herz/              Herz-Modul + Inhalte
@@ -66,9 +69,12 @@ organe/niere/             Niere + Nephron
 
 ### Phase 1 – Körper-Atlas
 
+- [ ] Herz und Nephron bekommen die Andockpunkte (`aufbauen`/`abbauen`, Bedienelemente), bleiben aber zunächst eigene Seiten (Prüfung: bytegleich)
+- [ ] Rahmenseite, die Organe per Adresse lädt (`#herz`, `#nephron`) und wieder abbaut
+- [ ] `index.html` wird der Atlas; das Herz zieht um, die bisherigen Adressen (`index.html` als Herz, `nephron.html`) leiten weiter
 - [ ] Ganzer Körper mit allen Organen in einfacher Form
 - [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
-- [ ] Klick auf Organ öffnet das Detailmodell; fehlende Organe als „in Arbeit“
+- [ ] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
 - [ ] AR für den ganzen Körper
 - [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
 
@@ -97,6 +103,7 @@ organe/niere/             Niere + Nephron
 - [x] Ganzkörpermodell: selbst gebaut und stilisiert, per Code wie Herz und Nephron (einheitlicher Stil, kleine Dateien, keine Lizenzauflagen)
 - [x] Reihenfolge der Organe wie in Phase 3 vorgeschlagen
 - [x] Repository in „Anatomie-3d“ umbenennen, sobald es mehr als das Herz enthält
+- [x] Zusammenhängende App: eine Seite, Organe werden in dieselbe 3D-Szene nachgeladen (statt getrennter Seiten mit Seitenwechsel); jede Ansicht mit eigener Adresse
 
 ## Arbeitsweise
 
