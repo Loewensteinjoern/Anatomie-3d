@@ -1323,11 +1323,13 @@ const HerzZyklus = (function () {
   const grenz = (v, a, b) => v < a ? a : (v > b ? b : v);
   const puls = (x, a, b) => (x < a || x > b) ? 0 : Math.sin(Math.PI * (x - a) / (b - a));
   const REST = 2, MAXT = 160, ZYKLUS = 3.2;
+  const STAU_BASIS = 3, STAU_SPANNE = 6;   // Vorhof-Aufnahmegrenze (Portionen) bei geschwächter Kammer: Basis + Spanne · Kraft
 
   // wege: { name: { len, klappeBei, tempo, abstand, ziel, ein?, tor? } }
   function Engine(wege) {
     this.wege = wege;
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false } };
+    /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1 } };
     this.reset();
   }
   const P = Engine.prototype;
@@ -1394,7 +1396,12 @@ const HerzZyklus = (function () {
         if (w.luEin !== undefined && t.d >= w.luEin && t.d < w.luTor) { this.imLu++; weg.push(t); continue; }
         // Windkessel: im dehnbaren Abschnitt sammelt sich das Blut in der Aorta selbst
         if (w.ein !== undefined && this.S.windkessel && t.d >= w.ein && t.d < w.tor) { this.imWK++; weg.push(t); continue; }
-        if (t.d >= w.len) { this.speicher[w.ziel] += 1; weg.push(t); continue; }
+        if (t.d >= w.len) {
+          // Rückstau: ein geschwächtes Herz nimmt nur begrenzt Blut auf – die Portionen warten am Ende der Vene
+          const kraft = w.ziel === 'la' ? this.S.par.kraftL : (w.ziel === 'ra' ? this.S.par.kraftR : 1);
+          if (kraft < 1 && this.speicher[w.ziel] >= STAU_BASIS + STAU_SPANNE * kraft) { t.d = w.len - 0.001; continue; }
+          this.speicher[w.ziel] += 1; weg.push(t); continue;
+        }
       }
     }
     if (weg.length) this.teilchen = this.teilchen.filter(t => !weg.includes(t));
@@ -1405,7 +1412,7 @@ const HerzZyklus = (function () {
     if (!S.laufen) { this.pos = S.modus === 'auto' ? this.u : this.handU; return; }
     let pos;
     if (S.modus === 'auto') {
-      this.u = (this.u + dt / (ZYKLUS / S.tempo)) % 1;
+      this.u = (this.u + dt / (ZYKLUS / (S.tempo * S.par.tempoFaktor))) % 1;
       K.vorhof = puls(this.u, 0.03, 0.16);
       const kammer = puls(this.u, 0.19, 0.52);
       K.rk = kammer; K.lk = kammer;
@@ -1433,15 +1440,16 @@ const HerzZyklus = (function () {
     if (this.klappeFrei('lungeLinks')) {
       this.wechsel.lunge ^= 1;
       const a = this.wechsel.lunge ? 'lungeLinks' : 'lungeRechts', b = this.wechsel.lunge ? 'lungeRechts' : 'lungeLinks';
-      this.pumpe('rv', this.eingangBesetzt(a) ? b : a, 24 * K.rk, dt);
+      this.pumpe('rv', this.eingangBesetzt(a) ? b : a, 24 * K.rk * S.par.kraftR, dt);
     }
     if (this.klappeFrei('koerperOben')) {
       this.wechsel.koerper ^= 1;
       const a = this.wechsel.koerper ? 'koerperOben' : 'koerperUnten', b = this.wechsel.koerper ? 'koerperUnten' : 'koerperOben';
-      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk, dt);
+      this.pumpe('lv', this.eingangBesetzt(a) ? b : a, 24 * K.lk * S.par.kraftL, dt);
     }
     // aus der Lunge fließt es gleichmäßig in die Lungenvenen
-    this.luKonto = Math.min((this.luKonto || 0) + Math.max(0.6, 0.55 * this.imLu) * dt, 1);
+    // (bei geschwächter linker Kammer fließt das Lungenblut langsamer ab: Rückstau in der Lunge)
+    this.luKonto = Math.min((this.luKonto || 0) + Math.max(0.6, 0.55 * this.imLu) * dt * S.par.kraftL, 1);
     if (this.luKonto >= 1 && this.imLu > 0) {
       const pref = (this.nextId & 1) ? 'lungeLinks' : 'lungeRechts', alt = pref === 'lungeLinks' ? 'lungeRechts' : 'lungeLinks';
       const w = this.platzFrei(pref, this.wege[pref].luTor) ? pref : (this.platzFrei(alt, this.wege[alt].luTor) ? alt : null);
@@ -1521,7 +1529,7 @@ const HerzZyklus = (function () {
   P.bake = function (fps, onFrame) {
     const save = JSON.stringify({ S: this.S, K: this.K, sp: this.speicher, imWK: this.imWK, tk: this.torKonto, de: this.dehnung, u: this.u, hu: this.handU, t: this.teilchen, id: this.nextId, k: this.konto, vol: this.vol, ref: this.ref, cyc: this.cyc, up: this.uPrev, lu: this.imLu, lk: this.luKonto });
     this.S.modus = 'auto'; this.S.laufen = true;
-    const T = ZYKLUS / this.S.tempo, h = 1 / 240;
+    const T = ZYKLUS / (this.S.tempo * this.S.par.tempoFaktor), h = 1 / 240;
     for (let i = 0; i < Math.round(2 * T / h); i++) this.step(h);            // einschwingen
     while (this.u > 0.004) this.step(h);
     const n = Math.max(12, Math.round(T * fps)), frames = [];
@@ -1546,7 +1554,8 @@ const HerzZyklus = (function () {
     const vorh = (n) => grenz((R.aMax - n) / Math.max(1.5, R.aMax - R.aMin), -0.3, 1);
     const pvOffen = this.klappeOffen('lungeLinks');
     return {
-      VR: kam(v.rv, 'rv'), VL: kam(v.lv, 'lv'),
+      // geschwächte Kammer: bleibt weit (Gewicht schrumpft mit der Kraft; kam() normiert sonst die Schwäche weg)
+      VR: kam(v.rv, 'rv') * this.S.par.kraftR, VL: kam(v.lv, 'lv') * this.S.par.kraftL,
       A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2), -0.3, 1.1),
       Ao: this.S.windkessel ? 1.8 * this.dehnung : 0,
       PT: 0.9 * pvOffen * K.rk,
@@ -3100,10 +3109,29 @@ function openHelp(key) {
 /* =====================================================================
    Krankheitsbilder und Medikamente – Daten für Reiter und Erklärkarte
    Format wie im Nephron (SCENARIOS): id, kind ('disease' | 'drug'), name,
-   short, kicker, lead, values, steps, after, note. Die Einträge folgen
-   in den nächsten Schritten.
+   short, kicker, lead, values, steps, after, note; dazu wirkung (Zielwerte
+   der Wirkgrößen in engine.S.par, neutral = 1) und datei (Namensteil im Export).
    ===================================================================== */
-var SZENARIEN = [];
+var SZENARIEN = [
+  { id: 'lhi', kind: 'disease', datei: 'linksherzinsuffizienz', name: 'Linksherzinsuffizienz', short: 'Die linke Kammer pumpt zu schwach – Rückstau in die Lunge', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Die linke Kammer ist geschwächt, z. B. nach einem Herzinfarkt oder durch langjährigen Bluthochdruck. Sie wirft bei jedem Schlag weniger Blut aus – der Rest staut sich zurück in die Lunge.',
+    values: [['Auswurffraktion', 'unter 40 % (normal über 55 %)'], ['Linke Kammer', 'erweitert, pumpt schwach'], ['Rückstau', 'in die Lunge'], ['Leitsymptom', 'Atemnot (Dyspnoe)']],
+    steps: [['Die Kammer drückt schwächer.', 'Sie zieht sich nur wenig zusammen – im Modell bleibt die linke Kammer weit.'], ['Weniger Auswurf.', 'Pro Schlag fließen weniger Portionen in die Aorta; der Körper wird schlechter versorgt.'], ['Das Blut staut sich zurück.', 'Der linke Vorhof bleibt voll, das Blut aus der Lunge kommt nicht richtig nach – in den Lungenvenen und im Schema in der Lunge staut es sich.'], ['Wasser tritt in die Lunge.', 'Steigt der Druck in den Lungengefäßen, wird Flüssigkeit ins Gewebe gepresst: Atemnot, erst bei Belastung, später in Ruhe und im Liegen – im Extremfall Lungenödem.']],
+    after: [['Folgen', 'Atemnot, nächtlicher Husten, Rasselgeräusche über der Lunge, Leistungsschwäche, schnelle Ermüdung; Lungenödem als Notfall (schwerste Atemnot, schaumiger Auswurf).'], ['Pflege beobachtet', 'Atmung, Atemfrequenz und Sauerstoffsättigung, Oberkörper hoch lagern (Herzbettlage), täglich wiegen, Ein- und Ausfuhr bilanzieren, Vitalzeichen; Belastung dosieren.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.45 } },
+  { id: 'rhi', kind: 'disease', datei: 'rechtsherzinsuffizienz', name: 'Rechtsherzinsuffizienz', short: 'Die rechte Kammer pumpt zu schwach – Rückstau in die Körpervenen', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Die rechte Kammer schafft das Blut nicht mehr in die Lunge – oft als Folge einer Linksherzinsuffizienz, einer Lungenerkrankung (COPD) oder einer Lungenembolie. Das Blut staut sich in die Körpervenen.',
+    values: [['Häufige Ursachen', 'Linksherzschwäche, COPD, Lungenembolie'], ['Rechte Kammer', 'erweitert, pumpt schwach'], ['Rückstau', 'in die Hohlvenen und Körpervenen'], ['Leitsymptom', 'Ödeme, gestaute Halsvenen']],
+    steps: [['Die rechte Kammer drückt schwächer.', 'Sie bleibt weit und wirft weniger Blut in die Lungenarterien.'], ['Der rechte Vorhof bleibt voll.', 'Das Blut aus dem Körper kann nicht mehr ungehindert nachfließen.'], ['Stau vor dem Herzen.', 'In der oberen und unteren Hohlvene drängen sich die Portionen – am Hals sieht man gestaute Venen.'], ['Wasser im Gewebe.', 'Der hohe Venendruck presst Flüssigkeit ins Gewebe: Ödeme an Knöcheln und Unterschenkeln, bei Bettlägerigen am Kreuzbein; dazu Stauungsleber und Appetitlosigkeit.']],
+    after: [['Folgen', 'Beinödeme, Gewichtszunahme durch eingelagertes Wasser, nächtliches Wasserlassen (Nykturie), Appetitlosigkeit, Druckgefühl unter dem rechten Rippenbogen.'], ['Pflege beobachtet', 'Täglich wiegen (gleiche Bedingungen), Ödeme und Haut beobachten (Dekubitusgefahr), Beine hoch lagern, sofern keine Atemnot besteht, Ein- und Ausfuhr bilanzieren, Trinkmenge nach ärztlicher Anordnung.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftR: 0.45 } },
+  { id: 'ghi', kind: 'disease', datei: 'globalinsuffizienz', name: 'Globalinsuffizienz', short: 'Beide Kammern pumpen zu schwach – Rückstau in Lunge und Körper', kicker: 'Krankheitsbild · Herzinsuffizienz',
+    lead: 'Beide Herzhälften sind geschwächt. Meist beginnt es links; die rechte Kammer folgt, weil sie gegen den Stau in der Lunge anpumpen muss.',
+    values: [['Auswurffraktion', 'deutlich vermindert'], ['Rückstau', 'in Lunge und Körpervenen'], ['Herzfrequenz', 'erhöht (Ausgleich)'], ['Einteilung', 'NYHA I–IV nach Belastbarkeit']],
+    steps: [['Beide Kammern drücken schwächer.', 'Links und rechts bleibt viel Blut in den Kammern, beide sind erweitert.'], ['Stau auf beiden Seiten.', 'Vor dem linken Herzen staut es sich in die Lunge, vor dem rechten in die Hohlvenen.'], ['Der Körper gleicht aus.', 'Weil zu wenig Blut ankommt, schlägt das Herz schneller, und die Niere hält Salz und Wasser zurück – das verstärkt den Stau zusätzlich.'], ['Behandlung.', 'Typisch sind ACE-Hemmer oder Sartane, Betablocker wie Metoprolol, Aldosteron-Antagonisten, SGLT2-Hemmer und bei Ödemen Diuretika wie Torasemid (siehe Nephron).']],
+    after: [['NYHA-Stadien', 'I keine Beschwerden bei Alltagsbelastung · II Beschwerden bei stärkerer Belastung · III Beschwerden schon bei leichter Belastung · IV Beschwerden in Ruhe.'], ['Pflege beobachtet', 'Atmung und Ödeme, täglich wiegen (mehr als 1 kg an einem Tag oder 2 kg in drei Tagen melden), Vitalzeichen, Ein- und Ausfuhr, Medikamenteneinnahme; Beratung zu Salz und Trinkmenge.']],
+    note: 'Im Modell ist die Schwäche übertrieben, damit man den Rückstau gut sieht.', wirkung: { kraftL: 0.55, kraftR: 0.55, tempoFaktor: 1.15 } }
+];
 var SZ = Kern.Szenarien({
   daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
   beimWechsel: function (id) {
@@ -3124,8 +3152,23 @@ var SZ = Kern.Szenarien({
     kartenLage();
   }
 });
-/* Platzhalter: Wirkung auf das Herz (Anteile in SZ.anteil), wird in den nächsten Schritten gefüllt */
-function szenarioWirkung() {}
+/* Wirkung auf das Herz: Wirkgrößen = 1 + Summe anteil · (Zielwert - 1), weich nach SZ.anteil gemischt; neutral = 1 */
+var WIRKFELDER = ['kraftL', 'kraftR', 'tempoFaktor'];
+function szenarioWirkung() {
+  if (!engine) return;
+  var par = engine.S.par;
+  WIRKFELDER.forEach(function (f) {
+    var v = 1;
+    SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - 1); });
+    par[f] = v;
+  });
+}
+/* aktives Szenario (Anteil > 0,5) f\u00fcr den Export, sonst null */
+function szenarioExport() {
+  var r = null;
+  SZENARIEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
 /* Szenariokarte klappt ein, wenn Hilfekarte, Info, Lupe oder Üben rechts aufgehen; das Szenario bleibt aktiv */
 function szWeichen() {
   if (SZ.aktiv && SZ.offen) {
@@ -3504,6 +3547,7 @@ var exCfg = {
   titel: '3D-Herz', praefix: 'herz', wurzelName: 'Herz', schild: [0.3, -7.4, 1.2],
   bereit: function () { return App.ready; },
   gruppen: function () { return App.openK > 0.5 ? [backG] : [backG, lidG]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },
   toast: toast,
   /* beide Herzhälften als eigene STL-Dateien (Ausgangslage, ohne Morph/Ausblendung) */
   stlTeile: function () {
@@ -3525,6 +3569,7 @@ var exCfg = {
   animation: function (rootE, clones) {
     var eng = App.engine;
     var tempo = TEMPO_NAME[eng.S.tempo] || 'normal';
+    var sz = szenarioExport();
     var snaps = [], tracks = [], nPort = 0;
     var bake = eng.bake(30, function (i, w) { snaps.push(App.portionsNow ? App.portionsNow(w) : []); });
     var T = bake.T;
@@ -3559,7 +3604,7 @@ var exCfg = {
       });
       nPort = n;
     }
-    return { clips: [new THREE.AnimationClip('Herzschlag_' + tempo, bake.T, tracks)], zusatz: tempo, tempo: tempo, T: T, nPort: nPort };
+    return { clips: [new THREE.AnimationClip('Herzschlag_' + (sz ? sz.datei : tempo), bake.T, tracks)], zusatz: sz ? sz.datei : tempo, tempo: tempo, T: T, nPort: nPort };
   },
   texte: {
     stlStart: 'STL wird erzeugt …',

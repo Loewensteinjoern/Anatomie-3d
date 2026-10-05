@@ -14,7 +14,7 @@
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
-   AR Quick Look (USDZ).
+   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -214,6 +214,18 @@ const MODELLE = {
         await t.klick('#bOpen'); await t.klick('#bSchema'); await t.weiter(1400); await t.bild('schema');
         await t.klick('#bSchemaX'); await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
         await t.klick('#bLupeX'); await t.klick('#row-lv'); await t.weiter(900); await t.bild('info-linke-kammer');
+      } },
+      szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder: 3D und Schema je Eintrag, dazu animierter GLB-Export (Linksherzinsuffizienz) */
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        for (const [name, datei] of [['Linksherzinsuffizienz', 'linksherzinsuffizienz'], ['Rechtsherzinsuffizienz', 'rechtsherzinsuffizienz'], ['Globalinsuffizienz', 'globalinsuffizienz']]) {
+          const zeile = '#rail .dis:has(b:text-is("' + name + '"))';
+          await t.klick(zeile); await t.weiter(4000); await t.bild(datei);
+          await t.klick('#bSchema'); await t.weiter(900); await t.bild(datei + '-schema'); await t.klick('#bSchemaX');
+          await t.klick(zeile); await t.weiter(1500);
+        }
+        await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
+        await t.export('#bGlbA', 'glb-animiert-lhi');
+        await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

@@ -64,7 +64,7 @@ body.erreg #zyk .erz{display:block}
 #scard .no{color:#F08A7E}
 
 /* Szenariokarte (Krankheiten, Medikamente): Lage wie #scard, Aussehen: core/kern.css, .szkarte */
-#kcard{top:214px;right:22px;width:330px;max-height:calc(100vh - 262px);overflow-y:auto;padding:14px 16px;display:none;
+#kcard{top:214px;right:22px;width:330px;max-height:calc(100vh - 306px);overflow-y:auto;padding:14px 16px;display:none;
   scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 #kcard.show{display:block}
 #kcard.show.weg{display:none}
