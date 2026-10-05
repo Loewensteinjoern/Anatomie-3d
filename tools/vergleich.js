@@ -242,6 +242,14 @@ const MODELLE = {
         await t.klick(mi); await t.weiter(1500);
         await t.klick('#bClosed'); await t.weiter(1400); await t.bild('nach-infarkt-geschlossen');
         await t.klick('#bOpen'); await t.weiter(1400);
+        /* Medikamente: Metoprolol und Glyceroltrinitrat, danach zurück zu den Krankheiten */
+        await t.klick('#rail .tabs .tab:text-is("Medikamente")');
+        for (const [name, datei] of [['Beloc-Zok® (Metoprolol)', 'metoprolol'], ['Nitrolingual® (Glyceroltrinitrat)', 'glyceroltrinitrat']]) {
+          const zeile = '#rail .dis:has(b:text-is("' + name + '"))';
+          await t.klick(zeile); await t.weiter(4000); await t.bild(datei);
+          await t.klick(zeile); await t.weiter(1500);
+        }
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

@@ -1329,7 +1329,7 @@ const HerzZyklus = (function () {
   function Engine(wege) {
     this.wege = wege;
     /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0 } };
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0, vorlast: 1 } };
     this.rs = 20240607;                // Saat des eigenen Zufalls (Rhythmus); Math.random bleibt unberührt
     this.reset();
   }
@@ -1446,7 +1446,7 @@ const HerzZyklus = (function () {
     if (S.par.vorhofSchub < 1) this.flimT += dt;   // Zeit für das Zittern/Flackern (nur bei Flimmern)
     // Füllung: passiv, solange die Segelklappe offen ist, dazu der Schub der Vorhöfe
     const sp = this.speicher;
-    const passiv = (vh, k) => 3 * Math.max(0, (vh - REST) - 0.32 * Math.max(0, k - 5));
+    const passiv = (vh, k) => 3 * this.S.par.vorlast * Math.max(0, (vh - REST) - 0.32 * Math.max(0, k - 5));
     if (this.klappeFrei('rechtsRein')) this.pumpe('ra', 'rechtsRein', passiv(sp.ra, sp.rv) + 30 * K.vorhof, dt);
     if (this.klappeFrei('linksRein')) this.pumpe('la', 'linksRein', passiv(sp.la, sp.lv) + 30 * K.vorhof, dt);
     // Auswurf
@@ -3247,7 +3247,19 @@ var SZENARIEN = [
     values: [['Verschluss', 'RIVA, vorderer Ast der linken Koronararterie'], ['Betroffen', 'Vorderwand der linken Kammer, Herzspitze, vordere Scheidewand'], ['EKG', 'ST-Hebung (STEMI)'], ['Labor', 'Troponin erh\u00f6ht']],
     steps: [['Das Gef\u00e4\u00df ist verschlossen.', 'Im Modell ist der RIVA ab der Engstelle dunkel \u2013 dahinter kommt kein Blut mehr an.'], ['Der Muskel leidet.', 'Das Versorgungsgebiet \u2013 Vorderwand und Herzspitze \u2013 wird blass. Ohne Sauerstoff zieht sich der Muskel dort nicht mehr zusammen.'], ['Die Pumpleistung sinkt.', 'Die linke Kammer arbeitet nur noch mit dem gesunden Teil ihrer Wand; es drohen R\u00fcckstau in die Lunge und Schock.'], ['Zeit ist Muskel.', 'Je schneller das Gef\u00e4\u00df wieder ge\u00f6ffnet wird \u2013 meist mit Herzkatheter und Stent \u2013, desto mehr Muskel bleibt erhalten.']],
     after: [['Warnzeichen', 'Starker Brustschmerz oder Druck, oft mit Ausstrahlung in linken Arm, Hals, Kiefer oder Oberbauch, Atemnot, Kaltschwei\u00dfigkeit, \u00dcbelkeit, Todesangst. Bei Frauen, \u00e4lteren Menschen und Menschen mit Diabetes oft untypisch und weniger schmerzhaft.'], ['Sofortma\u00dfnahmen', 'Notruf 112, Oberk\u00f6rper hoch lagern, enge Kleidung \u00f6ffnen, nicht allein lassen, keine Anstrengung; Vitalzeichen und 12-Kanal-EKG, Sauerstoff nur bei niedriger S\u00e4ttigung.'], ['Pflege beobachtet', 'Schmerz, Vitalzeichen und Herzrhythmus am Monitor (gef\u00e4hrliche Rhythmusst\u00f6rungen in den ersten Stunden), Punktionsstelle nach Herzkatheter, Bettruhe nach Anordnung, Ausscheidung; Angst ernst nehmen.']],
-    note: 'Die Grenzen des Infarktgebiets sind im Modell vereinfacht.', wirkung: { infarkt: 1, kraftL: 0.6 }, datei: 'vorderwandinfarkt' }
+    note: 'Die Grenzen des Infarktgebiets sind im Modell vereinfacht.', wirkung: { infarkt: 1, kraftL: 0.6 }, datei: 'vorderwandinfarkt' },
+  { id: 'meto', kind: 'drug', name: 'Beloc-Zok® (Metoprolol)', short: 'Betablocker – bremst den Herzschlag und senkt den Sauerstoffbedarf', kicker: 'Medikament · Betablocker',
+    lead: 'Metoprolol blockiert die Beta-1-Rezeptoren am Herzen. Die Stresshormone Adrenalin und Noradrenalin wirken dort schwächer: Das Herz schlägt langsamer und etwas weniger kräftig – und braucht weniger Sauerstoff.',
+    values: [['Wirkstoff', 'Metoprolol'], ['Wirkort', 'Beta-1-Rezeptoren am Herzen'], ['Wirkung', 'Herzfrequenz, Blutdruck und Sauerstoffbedarf sinken'], ['Einnahme', 'meist ein- bis zweimal täglich']],
+    steps: [['Der Taktgeber wird gebremst.', 'Am Sinusknoten verlangsamt Metoprolol die Impulsbildung – im Modell schlägt das Herz langsamer.'], ['Der AV-Knoten leitet langsamer.', 'Bei Vorhofflimmern kommen dadurch weniger Impulse zu den Kammern: Der Puls wird langsamer (Frequenzkontrolle).'], ['Mehr Zeit zum Füllen.', 'Die Diastole wird länger. Die Kammern füllen sich besser, und die Herzkranzgefäße, die vor allem in der Diastole durchblutet werden, bekommen mehr Blut.'], ['Das Herz wird geschont.', 'Weniger Schläge und etwas weniger Kraft senken den Sauerstoffbedarf. Bei Herzinsuffizienz verbessert das langfristig die Prognose, nach einem Herzinfarkt senkt es das Risiko eines neuen.']],
+    after: [['Einsatz', 'Bluthochdruck, koronare Herzkrankheit und nach Herzinfarkt, Herzinsuffizienz, Vorhofflimmern (Frequenzkontrolle), zu schneller Herzschlag.'], ['Nebenwirkungen', 'Langsamer Puls, Blutdruckabfall, Schwindel, Müdigkeit, kalte Hände und Füße, Verengung der Bronchien bei Asthma; Zeichen einer Unterzuckerung können verdeckt werden.'], ['Pflege beobachtet', 'Puls und Blutdruck vor der Gabe (bei Puls unter 50–55/min oder niedrigem Blutdruck Rücksprache mit dem Arzt), Schwindel und Sturzgefahr, Atmung bei Asthma oder COPD; nie plötzlich absetzen – Gefahr von Herzrasen und Angina pectoris.']],
+    note: 'Das Modell zeigt nur die Wirkung am Herzen; der Blutdruck ist nicht eigens dargestellt.', wirkung: { tempoFaktor: 0.75, kraftL: 0.9, kraftR: 0.9 }, datei: 'metoprolol' },
+  { id: 'gtn', kind: 'drug', name: 'Nitrolingual® (Glyceroltrinitrat)', short: 'Nitrat – weitet die Gefäße, entlastet das Herz und lindert Angina pectoris', kicker: 'Medikament · Nitrat',
+    lead: 'Glyceroltrinitrat setzt in der Gefäßwand Stickstoffmonoxid frei. Die Gefäßmuskulatur entspannt sich, vor allem die Venen werden weit. Es fließt weniger Blut zum Herzen zurück – das Herz muss weniger bewältigen und braucht weniger Sauerstoff.',
+    values: [['Wirkstoff', 'Glyceroltrinitrat (Nitroglycerin)'], ['Form', 'Spray oder Zerbeißkapsel unter die Zunge'], ['Wirkung', 'nach 1–2 Minuten, etwa 20–30 Minuten lang'], ['Angriff', 'vor allem Venen, auch Herzkranzgefäße']],
+    steps: [['Die Venen werden weit.', 'In den weiten Venen sammelt sich ein Teil des Blutes. Im Modell fließt weniger Blut zum Herzen zurück.'], ['Weniger Füllung, weniger Arbeit.', 'Die Kammern füllen sich weniger prall (die Vorlast sinkt). Die Wand ist weniger gespannt und braucht weniger Sauerstoff.'], ['Der Stau in der Lunge nimmt ab.', 'Bei Linksherzinsuffizienz und Lungenödem entlastet das die Lunge – die Atemnot lässt nach.'], ['Die Herzkranzgefäße weiten sich.', 'Verengte Koronararterien werden etwas weiter; der Schmerz der Angina pectoris lässt meist binnen Minuten nach.']],
+    after: [['Einsatz', 'Anfall von Angina pectoris, akutes Koronarsyndrom bei ausreichendem Blutdruck, Lungenödem bei Linksherzinsuffizienz, hypertensive Krise.'], ['Nebenwirkungen', 'Kopfschmerz, Gesichtsrötung, Blutdruckabfall, Schwindel bis zum Kollaps, Herzrasen als Gegenreaktion.'], ['Pflege beobachtet', 'Blutdruck vor und nach der Gabe (systolisch nicht unter 90–100 mmHg), Gabe im Sitzen oder Liegen (Kollapsgefahr), Schmerzverlauf dokumentieren; nicht zusammen mit Potenzmitteln wie Sildenafil – lebensgefährlicher Blutdruckabfall. Bessert sich der Schmerz nicht, an einen Herzinfarkt denken.']],
+    note: 'Die Weitung der Venen zeigt das Modell an der geringeren Füllung des Herzens; die Gefäße selbst verändern sich nicht.', wirkung: { vorlast: 0.6, tempoFaktor: 1.1 }, datei: 'glyceroltrinitrat' }
 ];
 var SZ = Kern.Szenarien({
   daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
@@ -3270,7 +3282,7 @@ var SZ = Kern.Szenarien({
   }
 });
 /* Wirkung auf das Herz: Wirkgrößen = neutral + Summe anteil · (Zielwert - neutral), weich nach SZ.anteil gemischt; neutral = 1 */
-var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig; infarkt: 0 = kein Infarkt) */
+var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0, vorlast: 1 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig; infarkt: 0 = kein Infarkt; vorlast: passive F\u00fcllung der Kammern) */
 var WIRKFELDER = Object.keys(WIRKNEUTRAL);
 function szenarioWirkung() {
   if (!engine) return;
