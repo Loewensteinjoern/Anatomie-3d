@@ -230,6 +230,10 @@ const MODELLE = {
         await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(4000);
         await t.klick('#cam1'); await t.weiter(2900); await t.bild('aortenklappenstenose-klappen');
         await t.klick('#cam0'); await t.klick('#rail .dis:has(b:text-is("Aortenklappenstenose"))'); await t.weiter(1500);
+        /* Vorhofflimmern: 3D und Erregung */
+        await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(4000); await t.bild('vorhofflimmern');
+        await t.klick('#bErr'); await t.weiter(900); await t.bild('vorhofflimmern-erregung'); await t.klick('#bErr');
+        await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(1500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

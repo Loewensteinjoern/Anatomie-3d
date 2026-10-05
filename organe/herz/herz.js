@@ -1329,12 +1329,21 @@ const HerzZyklus = (function () {
   function Engine(wege) {
     this.wege = wege;
     /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1 } };
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0 } };
+    this.rs = 20240607;                // Saat des eigenen Zufalls (Rhythmus); Math.random bleibt unberührt
     this.reset();
   }
   const P = Engine.prototype;
+  // eigener, fest initialisierter Pseudozufall (mulberry32), Zustand in this.rs
+  P.rnd = function () {
+    let t = this.rs = (this.rs + 0x6D2B79F5) | 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 
   P.reset = function () {
+    this.beatD = 1; this.flimT = 0;
     this.K = { vorhof: 0, rk: 0, lk: 0 };
     this.speicher = { ra: 3, rv: 10, la: 3, lv: 10 };
     this.teilchen = []; this.konto = {};
@@ -1414,14 +1423,19 @@ const HerzZyklus = (function () {
     if (!S.laufen) { this.pos = S.modus === 'auto' ? this.u : this.handU; return; }
     let pos;
     if (S.modus === 'auto') {
-      this.u = (this.u + dt / (ZYKLUS / (S.tempo * S.par.tempoFaktor))) % 1;
-      K.vorhof = puls(this.u, 0.03, 0.16);
+      const nu = this.u + dt / ((ZYKLUS * this.beatD) / (S.tempo * S.par.tempoFaktor));
+      this.u = nu % 1;
+      if (nu >= 1) {   // neuer Herzschlag: bei Rhythmusstörung zufällige Dauer (Faktor 0,6 bis 1,5, gemischt mit rhythmus)
+        const rh = S.par.rhythmus;
+        this.beatD = rh > 0 ? 1 + rh * (0.6 + 0.9 * this.rnd() - 1) : 1;
+      }
+      K.vorhof = puls(this.u, 0.03, 0.16) * S.par.vorhofSchub;
       const kammer = puls(this.u, 0.19, 0.52);
       K.rk = kammer; K.lk = kammer;
       pos = this.u;
     } else {
       const g = Math.min(1, 7 * dt);
-      K.vorhof += ((S.hand.vorhof ? 1 : 0) - K.vorhof) * g;
+      K.vorhof += ((S.hand.vorhof ? 1 : 0) * S.par.vorhofSchub - K.vorhof) * g;
       K.rk += ((S.hand.rk ? 1 : 0) - K.rk) * g;
       K.lk += ((S.hand.lk ? 1 : 0) - K.lk) * g;
       const ziel = S.hand.vorhof ? 0.08 : ((S.hand.rk || S.hand.lk) ? 0.30 : 0.78);
@@ -1429,6 +1443,7 @@ const HerzZyklus = (function () {
       pos = this.handU;
     }
     this.pos = pos;
+    if (S.par.vorhofSchub < 1) this.flimT += dt;   // Zeit für das Zittern/Flackern (nur bei Flimmern)
     // Füllung: passiv, solange die Segelklappe offen ist, dazu der Schub der Vorhöfe
     const sp = this.speicher;
     const passiv = (vh, k) => 3 * Math.max(0, (vh - REST) - 0.32 * Math.max(0, k - 5));
@@ -1521,18 +1536,20 @@ const HerzZyklus = (function () {
     return 'diastole';
   };
   // EKG-Kurve wie im 2D-Modell
-  function ekgKurve(x) {
-    let y = 0.13 * Math.exp(-Math.pow((x - 0.06) / 0.028, 2));
+  // fl = Flimmer-Anteil (0 = normal): P-Welle verschwindet, feine Flimmerwellen (t = Zeit); ohne fl exakt die bisherige Kurve
+  function ekgKurve(x, fl, t) {
+    let y = 0.13 * (fl ? 1 - fl : 1) * Math.exp(-Math.pow((x - 0.06) / 0.028, 2));
     const q = [[0.160, 0], [0.172, -0.09], [0.188, 0.95], [0.204, -0.24], [0.222, 0]];
     for (let i = 0; i < q.length - 1; i++) if (x >= q[i][0] && x <= q[i + 1][0]) { const f = (x - q[i][0]) / (q[i + 1][0] - q[i][0]); y += q[i][1] + f * (q[i + 1][1] - q[i][1]); }
     y += 0.27 * Math.exp(-Math.pow((x - 0.40) / 0.045, 2));
+    if (fl) y += fl * 0.045 * (Math.sin(x * 138 + t * 31) + 0.7 * Math.sin(x * 233 - t * 47 + 1.3) + 0.5 * Math.sin(x * 87 + t * 19 + 2.1)) / 2.2;
     return y;
   }
   const FELDER = [{ von: 0.00, bis: 0.18, name: 'Vorhöfe drücken' }, { von: 0.18, bis: 0.53, name: 'Kammern drücken' }, { von: 0.53, bis: 1.00, name: 'Herz füllt sich' }];
   // Einen Zyklus im Automatikbetrieb aufzeichnen (für die GLB-Animation)
   P.bake = function (fps, onFrame) {
-    const save = JSON.stringify({ S: this.S, K: this.K, sp: this.speicher, imWK: this.imWK, tk: this.torKonto, de: this.dehnung, u: this.u, hu: this.handU, t: this.teilchen, id: this.nextId, k: this.konto, vol: this.vol, ref: this.ref, cyc: this.cyc, up: this.uPrev, lu: this.imLu, lk: this.luKonto });
-    this.S.modus = 'auto'; this.S.laufen = true;
+    const save = JSON.stringify({ S: this.S, K: this.K, sp: this.speicher, imWK: this.imWK, tk: this.torKonto, de: this.dehnung, u: this.u, hu: this.handU, t: this.teilchen, id: this.nextId, k: this.konto, vol: this.vol, ref: this.ref, cyc: this.cyc, up: this.uPrev, lu: this.imLu, lk: this.luKonto, rs: this.rs, bd: this.beatD, ft: this.flimT });
+    this.S.modus = 'auto'; this.S.laufen = true; this.S.par.rhythmus = 0; this.beatD = 1;   // Animation: gleichmäßiger Schlag
     const T = ZYKLUS / (this.S.tempo * this.S.par.tempoFaktor), h = 1 / 240;
     for (let i = 0; i < Math.round(2 * T / h); i++) this.step(h);            // einschwingen
     while (this.u > 0.004) this.step(h);
@@ -1545,10 +1562,12 @@ const HerzZyklus = (function () {
     }
     const o = JSON.parse(save);
     Object.assign(this.S, o.S); this.K = o.K; this.speicher = o.sp; this.imWK = o.imWK; this.torKonto = o.tk; this.dehnung = o.de; this.u = o.u; this.handU = o.hu; this.teilchen = o.t; this.nextId = o.id; this.konto = o.k;
-    this.vol = o.vol; this.ref = o.ref; this.cyc = o.cyc; this.uPrev = o.up; this.imLu = o.lu; this.luKonto = o.lk;
+    this.vol = o.vol; this.ref = o.ref; this.cyc = o.cyc; this.uPrev = o.up; this.imLu = o.lu; this.luKonto = o.lk; this.rs = o.rs; this.beatD = o.bd; this.flimT = o.ft;
     this.events.length = 0;
     return { T, frames, dt: T / n };
   };
+  // Flimmer-Anteil der Vorhöfe (0 = normal, 1 = Vorhofschub fehlt ganz)
+  P.flimmern = function () { return Math.min(1, Math.max(0, 1 - this.S.par.vorhofSchub)); };
   // Gewichte für die 3D-Verformung
   P.weights = function () {
     const K = this.K, v = this.vol || this.speicher;
@@ -1556,11 +1575,11 @@ const HerzZyklus = (function () {
     const R = this.ref;
     const kam = (n, x) => grenz((R[x + 'Max'] - n) / Math.max(2, R[x + 'Max'] - R[x + 'Min']), -0.25, 1.15);
     const vorh = (n) => grenz((R.aMax - n) / Math.max(1.5, R.aMax - R.aMin), -0.3, 1);
-    const pvOffen = this.klappeOffen('lungeLinks');
+    const pvOffen = this.klappeOffen('lungeLinks'), fl = this.flimmern();
     return {
       // geschwächte Kammer: bleibt weit (Gewicht schrumpft mit der Kraft; kam() normiert sonst die Schwäche weg)
       VR: kam(v.rv, 'rv') * this.S.par.kraftR, VL: kam(v.lv, 'lv') * this.S.par.kraftL * (this.S.par.avOeffnung < 1 ? 0.5 + 0.5 * this.S.par.avOeffnung : 1),
-      A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2), -0.3, 1.1),
+      A: grenz(0.55 * K.vorhof + 0.45 * vorh((v.ra + v.la) / 2) + fl * 0.07 * (Math.sin(this.flimT * 53) + 0.8 * Math.sin(this.flimT * 89 + 1.7) + 0.6 * Math.sin(this.flimT * 131 + 0.4)) / 2.4, -0.3, 1.1),
       Ao: this.S.windkessel ? 1.8 * this.dehnung : 0,
       PT: 0.9 * pvOffen * K.rk,
       tv: this.klappeOffen('rechtsRein'), mv: this.klappeOffen('linksRein'), pv: pvOffen, av: this.klappeOffen('koerperOben') * this.S.par.avOeffnung,
@@ -2648,9 +2667,20 @@ function placeSpark(sp, p, sc, W) {
 }
 function updateSparks(pos, W, now) {
   var k = 0;
+  var fl = engine ? engine.flimmern() : 0, tz = engine ? engine.flimT : 0;
   if (App.impulse && STRUCT.erl.on && App.erlCurves) {
-    if (pos < 0.04) { _sv.set(App.con.sa[0], App.con.sa[1], App.con.sa[2]); placeSpark(SPARKS[k++], _sv, 1.5 + 0.4 * Math.sin(now / 60), W); }
+    if (fl > 0.5) {   /* Vorhofflimmern: statt geordneter Welle unruhige Funken in den Vorh\u00f6fen */
+      App.erlCurves.forEach(function (c, ci) {
+        if (c.a1 > 0.08) return;
+        for (var j = 0; j < 3 && k < SPARKS.length; j++) {
+          var f = 0.5 + 0.5 * Math.sin(tz * (9 + 5 * j + ci) + 2.4 * j + ci * 1.9) * Math.cos(tz * (6.3 + 2 * j) + ci);
+          placeSpark(SPARKS[k++], c.curve.getPointAt(f), 0.8 + 0.5 * Math.abs(Math.sin(tz * (17 + 7 * j) + ci)), W);
+        }
+      });
+    }
+    else if (pos < 0.04) { _sv.set(App.con.sa[0], App.con.sa[1], App.con.sa[2]); placeSpark(SPARKS[k++], _sv, 1.5 + 0.4 * Math.sin(now / 60), W); }
     App.erlCurves.forEach(function (c) {
+      if (fl > 0.5 && c.a1 <= 0.08) return;
       var f = (pos - c.a0) / (c.a1 - c.a0);
       if (f >= 0 && f <= 1 && k < SPARKS.length) placeSpark(SPARKS[k++], c.curve.getPointAt(f), 1.15, W);
     });
@@ -2673,6 +2703,7 @@ function updateErr(pos) {
   if (!App.impulse) return;
   var t = ERR_TXT.filter(function (e) { return pos >= e[0] && pos < e[1]; })[0];
   var txt = t ? t[2] : '';
+  if (t && t === ERR_TXT[0] && engine && engine.flimmern() > 0.5) txt = 'Die Vorh\u00f6fe flimmern: ungeordnete Erregung, keine P-Welle';
   if (txt !== lastErr) { lastErr = txt; $('kErr').textContent = txt; $('kErrN').textContent = txt; }
 }
 function setErlOverlay(on) {
@@ -3047,13 +3078,18 @@ App.hl = {};
 var BRASS = null, EXC = null;
 function updateEmissive(pos) {
   if (!BRASS) { BRASS = srgb(0xE0A94A); EXC = new THREE.Color(1.0, 0.72, 0.18); }
-  var exA = 0, exV = 0;
+  var exA = 0, exV = 0, exA0 = 0, fl = engine ? engine.flimmern() : 0, tz = engine ? engine.flimT : 0;
   if (App.impulse && pos !== undefined) {
     exA = sstep(0.02, 0.06, pos) * (1 - sstep(0.15, 0.21, pos));
+    exA0 = exA;
     exV = sstep(0.17, 0.21, pos) * (1 - sstep(0.37, 0.47, pos));
   }
   ORDER.forEach(function (s) {
     var sel = (s.id === App.sel ? 0.28 : 0) + (App.hl[s.id] ? 0.35 : 0);
+    if (fl > 0 && App.impulse && (s.id === 'ra' || s.id === 'la')) {   /* Vorhofflimmern: unruhiges Flackern statt geordneter Welle */
+      var ph = s.id === 'ra' ? 0 : 2.1, fk = 0.5 + 0.5 * (0.6 * Math.sin(tz * 23 + ph) + 0.4 * Math.sin(tz * 37.3 + 2 * ph + 1));
+      exA = exA0 * (1 - fl) + fl * (0.25 + 0.75 * fk);
+    }
     var ex = (s.id === 'ra' || s.id === 'la') ? exA : ((s.id === 'lv' || s.id === 'rv' || s.id === 'ivs' || s.id === 'pap') ? exV : 0);
     s.mats.forEach(function (m) {
       if (!m.emissive || m.userData.erl) return;
@@ -3140,7 +3176,13 @@ var SZENARIEN = [
     values: [['Häufigkeit', 'häufigster Klappenfehler im Alter'], ['Ursache', 'meist Verkalkung'], ['Klappenöffnung', 'schwer: unter 1 cm² (normal 3–4 cm²)'], ['Abhören', 'raues Geräusch in der Systole, 2. ICR rechts']],
     steps: [['Die Klappe öffnet nur einen Spalt.', 'Im Modell gehen die Taschen kaum auf – vergleiche mit der Pulmonalklappe daneben.'], ['Ein scharfer Strahl.', 'Das Blut schießt schnell durch die Enge und verwirbelt. Die Wirbel hört man als raues Herzgeräusch in der Systole.'], ['Die Kammer leert sich schlechter.', 'Pro Schlag gelangt weniger Blut in die Aorta, die linke Kammer bleibt voller.'], ['Die Wand wird dick.', 'Auf Dauer verdickt sich der Herzmuskel (Hypertrophie), braucht mehr Sauerstoff und wird steif – bis er schließlich nachlässt (Linksherzinsuffizienz).']],
     after: [['Warnzeichen', 'Schwindel und kurze Bewusstlosigkeit (Synkope) bei Belastung, Brustenge (Angina pectoris), Atemnot. Treten sie auf, ist die Stenose meist schon schwer.'], ['Behandlung', 'Klappenersatz – offen operiert oder per Katheter über die Leistenarterie (TAVI).'], ['Pflege beobachtet', 'Puls und Blutdruck, Schwindel und Sturzgefahr, Belastung langsam steigern; nach TAVI die Punktionsstelle in der Leiste (Blutung, Bluterguss) und die Fußpulse kontrollieren.']],
-    note: 'Die Verdickung der Wand zeigt das Modell nicht.', wirkung: { avOeffnung: 0.3 } }
+    note: 'Die Verdickung der Wand zeigt das Modell nicht.', wirkung: { avOeffnung: 0.3 } },
+  { id: 'vhf', kind: 'disease', name: 'Vorhofflimmern', short: 'Die Vorhöfe flimmern statt zu schlagen – der Puls wird unregelmäßig', kicker: 'Krankheitsbild · Herzrhythmusstörung',
+    lead: 'In den Vorhöfen kreisen ungeordnete elektrische Erregungen, 350 bis 600 pro Minute. Die Vorhöfe ziehen sich nicht mehr zusammen, sie zittern nur. Der AV-Knoten lässt die Impulse unregelmäßig zu den Kammern durch.',
+    values: [['Häufigkeit', 'häufigste Rhythmusstörung, vor allem im Alter'], ['Vorhöfe', '350–600 Erregungen/min, kein Schlag'], ['Puls', 'unregelmäßig, oft zu schnell'], ['EKG', 'keine P-Welle, unregelmäßige Abstände']],
+    steps: [['Die Vorhöfe flimmern.', 'Statt eines geordneten Impulses vom Sinusknoten kreisen viele kleine Erregungen durch die Vorhöfe. Im Modell fehlt der Schub der Vorhöfe.'], ['Der AV-Knoten filtert.', 'Nur ein Teil der Impulse erreicht die Kammern – zufällig verteilt. Die Schläge kommen unregelmäßig und oft zu schnell.'], ['Weniger Füllung.', 'Ohne den letzten Schub der Vorhöfe füllen sich die Kammern schlechter; bei schnellen Schlägen bleibt kaum Zeit dafür. Die Pumpleistung sinkt.'], ['Gefahr Gerinnsel.', 'Im langsam fließenden Blut des linken Herzohrs können sich Gerinnsel bilden. Gelangen sie ins Gehirn, entsteht ein Schlaganfall.']],
+    after: [['Folgen', 'Herzstolpern, Herzrasen, Schwindel, Leistungsschwäche, Atemnot; das Schlaganfallrisiko ist etwa fünfmal höher.'], ['Behandlung', 'Gerinnungshemmer (z. B. Apixaban, Rivaroxaban, Phenprocoumon), Frequenzkontrolle mit Betablockern wie Metoprolol, ggf. Rückführung in den Sinusrhythmus (Kardioversion, Ablation).'], ['Pflege beobachtet', 'Puls immer eine volle Minute zählen und mit der Herzfrequenz am Monitor oder beim Abhören vergleichen (Pulsdefizit), Blutdruck, Schwindel und Sturzgefahr, Blutungszeichen unter Gerinnungshemmern, Zeichen eines Schlaganfalls (Gesicht, Arme, Sprache) sofort melden.']],
+    note: 'Das Flimmern der Vorhöfe ist im Modell als feines Zittern angedeutet.', wirkung: { vorhofSchub: 0, rhythmus: 1, tempoFaktor: 1.35 }, datei: 'vorhofflimmern' }
 ];
 var SZ = Kern.Szenarien({
   daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
@@ -3162,14 +3204,15 @@ var SZ = Kern.Szenarien({
     kartenLage();
   }
 });
-/* Wirkung auf das Herz: Wirkgrößen = 1 + Summe anteil · (Zielwert - 1), weich nach SZ.anteil gemischt; neutral = 1 */
-var WIRKFELDER = ['kraftL', 'kraftR', 'tempoFaktor', 'avOeffnung'];
+/* Wirkung auf das Herz: Wirkgrößen = neutral + Summe anteil · (Zielwert - neutral), weich nach SZ.anteil gemischt; neutral = 1 */
+var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig) */
+var WIRKFELDER = Object.keys(WIRKNEUTRAL);
 function szenarioWirkung() {
   if (!engine) return;
   var par = engine.S.par;
   WIRKFELDER.forEach(function (f) {
-    var v = 1;
-    SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - 1); });
+    var n = WIRKNEUTRAL[f], v = n;
+    SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - n); });
     par[f] = v;
   });
 }
@@ -3502,7 +3545,7 @@ var ekg = $('ekg'), ectx = ekg.getContext('2d');
 function ekgSize() { var d = Math.min(window.devicePixelRatio || 1, 2); ekg.width = Math.round((ekg.clientWidth || 400) * d); ekg.height = Math.round((ekg.clientHeight || 92) * d); ectx.setTransform(d, 0, 0, d, 0, 0); }
 function drawEKG(pos) {
   var b = ekg.clientWidth, h = ekg.clientHeight; if (!b || !h) return;
-  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70;
+  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70, fl = engine.flimmern(), tz = engine.flimT;
   ectx.clearRect(0, 0, b, h);
   HerzZyklus.FELDER.forEach(function (f) {
     var on = pos >= f.von && pos < f.bis;
@@ -3519,16 +3562,16 @@ function drawEKG(pos) {
   });
   ectx.strokeStyle = '#23414D'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(L, base); ectx.lineTo(L + br, base); ectx.stroke();
   ectx.strokeStyle = '#E7EFF0'; ectx.lineWidth = 1.8; ectx.lineJoin = 'round'; ectx.beginPath();
-  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
+  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x, fl, tz) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
   ectx.stroke();
   if (App.impulse && !small) {
     ectx.fillStyle = '#F2C94C'; ectx.font = '600 11px ui-monospace, Menlo, Consolas, monospace'; ectx.textAlign = 'center';
-    [[0.06, 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]].forEach(function (w) {
-      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0]) * amp - 7;
+    [[0.06, fl > 0.5 ? 'f' : 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]].forEach(function (w) {
+      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0], fl, tz) * amp - 7;
       ectx.fillText(w[1], L + w[0] * br + w[2], yy);
     });
   }
-  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos) * amp;
+  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos, fl, tz) * amp;
   ectx.strokeStyle = 'rgba(224,169,74,0.55)'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(dx, 3); ectx.lineTo(dx, h - (small ? 3 : 18)); ectx.stroke();
   ectx.fillStyle = '#C8342F'; ectx.beginPath(); ectx.arc(dx, dy, 5.5, 0, Math.PI * 2); ectx.fill();
   ectx.strokeStyle = '#FFFFFF'; ectx.lineWidth = 1.6; ectx.stroke();
