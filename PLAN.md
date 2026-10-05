@@ -60,6 +60,7 @@ organe/niere/             Niere + Nephron
   - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Beschriftungs-Layout
 - [x] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung und den Kern erledigt)
 - [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
+  - dabei `tools/vergleich.js` um den AR-Ablauf des Nephrons erweitern (bisher nur beim Herz)
 - [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
 
 ### Phase 1 – Körper-Atlas

@@ -41,13 +41,15 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 
 - Syntax jeder geänderten JS-Datei, z. B. `node --check organe/herz/herz.js`.
 - Bei Änderungen an Darstellung oder Bedienung, wenn sinnvoll: Seite mit Playwright/Chromium headless laden (`executablePath: '/opt/pw-browsers/chromium'`, **kein** `playwright install`) und auf Konsolenfehler und nicht geladene Dateien prüfen.
-- Soll sich nichts Sichtbares ändern (Umbau, Aufräumen) und verlangt die Aufgabe den Vergleich: `tools/vergleich.js` nimmt beide Modelle in festen Ansichten auf (Desktop, Handy, `file://`, AR, Exporte) und vergleicht bytegenau. Ordner außerhalb des Repositorys anlegen; ein Durchlauf dauert etwa 20 Minuten.
+- Soll sich nichts Sichtbares ändern (Umbau, Aufräumen) und verlangt die Aufgabe den Vergleich: `tools/vergleich.js` nimmt beide Modelle in festen Ansichten auf (Desktop, Handy, `file://`, AR, Exporte) und vergleicht bytegenau. AR wird bisher nur beim Herz aufgenommen; bekommt ein weiteres Organ AR, muss `tools/vergleich.js` um dessen AR-Ablauf erweitert werden (in `MODELLE`, wie beim Herz `webxr`/`quicklook`). Ordner außerhalb des Repositorys anlegen; ein Durchlauf dauert etwa 20 Minuten.
   ```bash
   mkdir -p <stand> && git archive HEAD | tar -x -C <stand>   # Stand vor der Änderung
   node tools/vergleich.js aufnehmen <vorher> --quelle <stand>
   node tools/vergleich.js aufnehmen <nachher>                 # aktueller Arbeitsstand
   node tools/vergleich.js vergleichen <vorher> <nachher>      # Diff-Bilder in <nachher>/diff/
   ```
+- Mehrere Vergleichsläufe gleichzeitig (oder Läufe neben anderer schwerer Last) können einzelne Aufnahmen mit Zeitüberschreitung abbrechen lassen (`ABBRUCH … Timeout`). Dann nur die betroffene Aufnahme einzeln wiederholen: `node tools/vergleich.js aufnehmen <ziel> --quelle <stand> --nur <modell>:<kontext>` (z. B. `nephron:datei`) und deren Bilder/Werte gegen die Referenz prüfen. Ein Abbruch ist kein Unterschied, aber auch kein Bestanden – erst die Wiederholung zählt.
+- Zufall und Reihenfolge: `Math.random` ist fest initialisiert und läuft pro Seite durch. Erzeugt eine Änderung mehr oder weniger three.js-Objekte (jede ID verbraucht Zufallszahlen) – z. B. im Export, der im Desktop-Ablauf vor der Lupe läuft –, verschieben sich später zufällig platzierte Elemente (Lupen-Teilchen). Solche Abweichungen erklären und mit einem Ablauf ohne die Änderung davor gegenprüfen (z. B. Handy-Lupe ohne Export).
 - `git diff --stat` ansehen: Nur erwartete Dateien und Zeilen dürfen geändert sein.
 
 ## Grenzen
