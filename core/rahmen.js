@@ -10,15 +10,39 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis der Organ-Module (Name -> Definition) */
   K.Organe = {};
 
-  /* Organ-Modul anmelden; def hat (vorerst) aufbauen(umg) */
+  /* Organ-Modul anmelden. def:
+       renderer: { alpha }   Optionen fuer den Renderer des Rahmens
+       aufbauen(umg)         baut das Organ auf (umg: bereich, canvas, renderer, szene, kamera, envTex), gibt ein Promise oder nichts zurueck
+       bild(now, frame)      Renderschleife (setzt aufbauen)
+       groesse(w, h)         Fenstergroesse geaendert (setzt aufbauen) */
   K.organ = function (name, def) {
     K.Organe[name] = def;
     return def;
   };
 
-  /* Start einer Einzelseite. In spaeteren Schritten uebernimmt der Rahmen
-     hier Renderer, Szene, Kamera, Licht und Renderschleife. */
+  /* Start einer Einzelseite: Renderer, Szene, Kamera, Umgebung/Licht,
+     Groessenanpassung und Renderschleife gehoeren dem Rahmen. */
   K.einzelseite = function (name) {
-    return K.Organe[name].aufbauen({ bereich: document.body });
+    var o = K.Organe[name], ro = o.renderer || {};
+    var canvas = document.getElementById('cv');
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: !!ro.alpha });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.setClearColor(0x0b171c, 1);
+    var szene = new THREE.Scene();
+    var kamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
+    var envTex = K.umgebung(renderer);
+    K.licht(szene, envTex);
+    var fertig = o.aufbauen({ bereich: document.body, canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex });
+    function groesse() {
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      kamera.aspect = w / h;
+      o.groesse(w, h);
+    }
+    window.addEventListener('resize', groesse);
+    groesse();
+    renderer.setAnimationLoop(o.bild);
+    return fertig;
   };
 })(Kern);

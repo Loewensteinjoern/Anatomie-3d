@@ -5,6 +5,7 @@
    ===================================================================== */
 (function () {
 'use strict';
+var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
 
 var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
@@ -235,18 +236,14 @@ function dotCloud(pts, r) {
 /* =====================================================================
    2. Szene, Licht, Material
    ===================================================================== */
-var canvas = document.getElementById('cv');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.setClearColor(0x0b171c, 1);
+var canvas = umg.canvas;
+var renderer = umg.renderer;
 
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
+var scene = umg.szene;
+var camera = umg.kamera;
 var view = { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) };
 
-var envTex = Kern.umgebung(renderer);
-Kern.licht(scene, envTex);
+var envTex = umg.envTex;
 
 var srgb = Kern.srgb;
 function mat(hex, o) { return Kern.mat(hex, o || {}, envTex); }
@@ -2006,14 +2003,17 @@ function arQuickLook() {
 /* =====================================================================
    10. Renderschleife
    ===================================================================== */
+function groesse(w, h) {
+  camera.updateProjectionMatrix();
+  Kern.linienFlaeche(leaderSvg, w, h);
+}
+/* volle Anpassung (Renderer, Kamera, Organ) für den Aufruf aus dem Organ, z. B. nach dem AR-Ende */
 function resize() {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
-  Kern.linienFlaeche(leaderSvg, w, h);
+  camera.aspect = w / h;
+  groesse(w, h);
 }
-window.addEventListener('resize', resize);
-resize();
 
 var last = performance.now();
 function loop(now, frame) {
@@ -2033,9 +2033,9 @@ function loop(now, frame) {
 
 applyVisibility();
 setSelected(null);
-renderer.setAnimationLoop(loop);
-setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); }, 240);
+organ.bild = loop; organ.groesse = groesse;
+return new Promise(function (ok) { setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); ok(); }, 240); });
 
 }
-Kern.organ('nephron', { aufbauen: aufbauen });
+Kern.organ('nephron', organ);
 })();

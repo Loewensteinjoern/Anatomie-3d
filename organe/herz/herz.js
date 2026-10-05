@@ -2249,6 +2249,7 @@ const HerzLupe = (function () {
    HERZ – 3D-Anatomie
    Gestaltung wie das Nephron-Modell, Physik aus dem Windkessel-Modell.
    ===================================================================== */
+var organ = { renderer: { alpha: true }, aufbauen: aufbauen };
 function aufbauen(umg) {
 'use strict';
 var S = HeartSDF, R = S.R, INFO = HeartInfo;
@@ -2264,22 +2265,18 @@ var App = window.HerzApp = { ready: false, sel: null, opened: true, openK: 1, la
 /* =====================================================================
    1. Szene, Licht, Material (wie im Nephron-Modell)
    ===================================================================== */
-var canvas = $('cv');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.setClearColor(0x0b171c, 1);
+var canvas = umg.canvas;
+var renderer = umg.renderer;
 renderer.localClippingEnabled = true;
 /* Schnittebene: in der geöffneten Ansicht werden Klappen, Fäden und Gefäßbahnen genau an der Ebene abgeschnitten */
 var CLIP = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.14), CLIP_PV = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1.2);
 var clipMats = [], clipMatsPv = [], clipMatsErl = [], CLIP_ERL = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.34), corBack = [];
 var CLIP0 = CLIP.clone(), CLIP_PV0 = CLIP_PV.clone(), CLIP_ERL0 = CLIP_ERL.clone();
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
+var scene = umg.szene;
+var camera = umg.kamera;
 var view = { theta: 0.0, phi: 1.52, dist: 34.5, target: V(0.4, 1.0, -1.2) };
 
-var envTex = Kern.umgebung(renderer);
-Kern.licht(scene, envTex);
+var envTex = umg.envTex;
 
 var srgb = Kern.srgb;
 function mat(hex, o) {
@@ -3780,10 +3777,7 @@ function applyOffset() {
 function fitRail() {
   if (window.innerWidth >= 1000) { var zt = $('zyk').getBoundingClientRect().top; $('rail').style.maxHeight = Math.max(160, zt - 12 - 124) + 'px'; } else $('rail').style.maxHeight = '';
 }
-function resize() {
-  var w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+function groesse(w, h) {
   focusX = focusOffset(w, h).x; applyOffset();
   if (w < 1000) {
     var free = Math.max(160, (h - h * 0.34 - 150) - 170), pxcm = free / 17.5, fd = h / (2 * Math.tan(19 * Math.PI / 180) * pxcm);
@@ -3796,8 +3790,13 @@ function resize() {
   ekgSize();
   LABELS.forEach(function (a) { a.key = ''; });
 }
-window.addEventListener('resize', resize);
-resize();
+/* volle Anpassung (Renderer, Kamera, Organ) für den Aufruf aus dem Organ, z. B. nach dem AR-Ende */
+function resize() {
+  var w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  groesse(w, h);
+}
 
 var last = performance.now();
 function loop(now, frame) {
@@ -3836,8 +3835,8 @@ App.dbgFade = function (v) { vesFade = v; applyBackOpacity(App.openK); LABELS.fo
 App.dbg = function () { return { vesFade: vesFade, preset: App.preset, openK: App.openK }; };
 App.dbgFocusNow = function () { [backG, lidG].forEach(function (G) { G.traverse(function (m) { if (m.isMesh) m.userData.fk = focusTarget(m); }); }); refreshOpacity(); };
 App.api = { setSelected: setSelected, goTo: goTo, setLidPose: setLidPose, openHelp: openHelp, quizStart: quizStart, quizEnd: quizEnd, setHand: setHand, setWK: setWK, view: view, camera: camera, scene: scene, backG: backG, lidG: lidG };
-renderer.setAnimationLoop(loop);
-build().then(function () {
+organ.bild = loop; organ.groesse = groesse;
+return build().then(function () {
   buildStructList();
   addStationLabels();
   buildLupe();
@@ -3849,5 +3848,5 @@ build().then(function () {
   $('boot').classList.add('gone');
 }).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
-Kern.organ('herz', { aufbauen: aufbauen });
+Kern.organ('herz', organ);
 })();
