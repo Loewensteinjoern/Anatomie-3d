@@ -41,6 +41,14 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
 - Eine einzige Seite: Körper und Organe teilen sich eine 3D-Szene (Renderer, Licht, Kamera, Kern). Beim Antippen eines Organs fliegt die Kamera hin, die Organdatei wird per eingefügtem `<script>` nachgeladen (funktioniert auch per `file://`), das Organ wird an seiner Stelle im Körper eingesetzt und der Körper ausgeblendet; „Zurück“ baut es wieder ab. Ebenso eine Ebene tiefer (Niere → Nephron).
 - Jedes Organ-Modul hat feste Andockpunkte, z. B. `aufbauen(szene, bereich)`, `abbauen()`, Bedienelemente, Beschriftung, Kamera-Ansichten; der Rahmen ruft sie auf.
 - Jede Ansicht hat eine eigene Adresse (`#herz`, `#niere/nephron`): Zurück-Knopf des Browsers, Lesezeichen und Links direkt auf ein Organ funktionieren.
+- Regeln gegen die Nachteile einer einzigen Seite:
+  - Speicher: `abbauen()` räumt das Organ vollständig weg (Geometrien, Materialien, Texturen, Bedienelemente); es ist immer nur ein Detail-Organ geladen.
+  - Keine gegenseitige Störung: jedes Organ in eigenem Namensraum im Code; sein CSS gilt nur in seinem Bereich (z. B. unter einer Organ-Klasse am Rahmen).
+  - Fehler abfangen: scheitert das Laden oder Aufbauen eines Organs, erscheint „Organ konnte nicht geladen werden“, Körper und Rahmen bleiben bedienbar.
+  - Wartezeit: Laden und Aufbau starten schon während der Kamerafahrt, mit Fortschrittsanzeige; erneutes Öffnen in derselben Sitzung nutzt die bereits geladene Datei.
+  - Umbau in kleinen Schritten mit Vergleichsbildern (`tools/vergleich.js`), wie in Phase 0.
+  - Prüfung der Übergänge: `tools/vergleich.js` bekommt Abläufe wie Körper → Organ → zurück.
+- Offline: Die App läuft weiterhin ohne Server und ohne Build-Schritt (Ordner/ZIP, `index.html` doppelklicken). Zusätzlich wird sie eine installierbare Web-App (PWA: Manifest mit Name und Symbol, Service Worker als Offline-Speicher): einmal über GitHub Pages öffnen, „Zum Startbildschirm hinzufügen“, danach ohne Internet nutzbar – auch mit AR. Der Service Worker speichert alle Organdateien vorab, damit auch noch nicht geöffnete Organe offline funktionieren.
 - Dateistruktur (Ziel):
 
 ```
@@ -76,6 +84,7 @@ organe/niere/             Niere + Nephron
 - [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
 - [ ] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
 - [ ] AR für den ganzen Körper
+- [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
 - [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
 
 ### Phase 2 – Niere komplett
@@ -104,6 +113,7 @@ organe/niere/             Niere + Nephron
 - [x] Reihenfolge der Organe wie in Phase 3 vorgeschlagen
 - [x] Repository in „Anatomie-3d“ umbenennen, sobald es mehr als das Herz enthält
 - [x] Zusammenhängende App: eine Seite, Organe werden in dieselbe 3D-Szene nachgeladen (statt getrennter Seiten mit Seitenwechsel); jede Ansicht mit eigener Adresse
+- [x] Offline: installierbare Web-App (PWA) als Hauptweg; Ordner/ZIP ohne Server bleibt möglich; eine Einzeldatei nur bei Bedarf als zusätzliches Werkzeug
 
 ## Arbeitsweise
 
