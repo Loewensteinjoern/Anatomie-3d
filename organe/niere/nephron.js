@@ -1429,7 +1429,7 @@ var orbit = Kern.orbit(canvas, view, { minDist: 2.5, maxDist: 60 });
 function updateCamera() { Kern.kamera(camera, view); }
 
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-canvas.addEventListener('click', function (e) {
+function canvasKlick(e) {
   if (orbit.dragged) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
@@ -1440,7 +1440,8 @@ canvas.addEventListener('click', function (e) {
     return h.object.visible && h.object.userData.sid !== 'grad';
   });
   setSelected(hits.length ? hits[0].object.userData.sid : null);
-});
+}
+canvas.addEventListener('click', canvasKlick);
 
 /* =====================================================================
    8. Beschriftung - wird nur neu gesetzt, wenn sich die Ansicht aendert
@@ -2106,8 +2107,27 @@ function loop(now, frame) {
 
 applyVisibility();
 setSelected(null);
+var bereitT = null, bereitOk = null;
 organ.bild = loop; organ.groesse = groesse;
-return new Promise(function (ok) { setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); ok(); }, 240); });
+/* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
+organ.abbauen = function () {
+  if (bereitT !== null) { clearTimeout(bereitT); bereitT = null; bereitOk(); }
+  clearTimeout(Kern.toast._t);
+  AR.abbauen(); ARL.abbauen();
+  canvas.removeEventListener('click', canvasKlick);
+  orbit.loesen();
+  SZ.abbauen();
+  /* three.js: alles bis auf die Lichter des Rahmens freigeben */
+  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  canvas.style.cursor = '';
+  /* DOM */
+  if (LUPE.box.parentNode) LUPE.box.parentNode.removeChild(LUPE.box);
+  umg.bereich.innerHTML = '';
+  labelBox.innerHTML = ''; leaderSvg.innerHTML = '';
+  var tt = document.getElementById('toast'); tt.classList.remove('show'); tt.innerHTML = '';
+  document.getElementById('boot').classList.remove('gone');
+};
+return new Promise(function (ok) { bereitOk = ok; bereitT = setTimeout(function () { bereitT = null; Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); ok(); }, 240); });
 
 }
 Kern.organ('nephron', organ);

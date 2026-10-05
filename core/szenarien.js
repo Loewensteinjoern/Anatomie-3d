@@ -4,7 +4,7 @@
    Kern.Szenarien(cfg) liefert den Zustand:
      aktiv (ID oder null), offen (Karte aufgeklappt), anteil (ID -> 0..1),
      setzen(id), liste(pane, kind, ueberschrift, einleitung), schritt(dt),
-     direkt(id), zuklappen().
+     direkt(id), zuklappen(), abbauen() (entfernt die Karte aus dem body).
    cfg: daten (Array: id, kind, name, short, kicker, lead, values, steps,
         after, note), karte (ID des Karten-Elements), dauer (Ueberblendzeit
         in s), anteil (optional: vorhandenes Objekt), beimWechsel(id),
@@ -102,6 +102,8 @@ var Kern = window.Kern = window.Kern || {};
     };
     /* Karte einklappen, ohne Rueckruf */
     Z.zuklappen = function () { Z.offen = false; Z.el.classList.add('min'); };
+
+    Z.abbauen = function () { if (Z.el && Z.el.parentNode) Z.el.parentNode.removeChild(Z.el); Z.el = null; zeilen = {}; };
 
     karteBauen();
     return Z;

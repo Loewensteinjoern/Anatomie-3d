@@ -71,16 +71,19 @@ var Kern = window.Kern = window.Kern || {};
   /* Kamerasteuerung per Zeiger: Ziehen dreht, zwei Finger zoomen, Mausrad
      zoomt. view = { theta, phi, dist, target }; o.minDist/o.maxDist begrenzen
      den Abstand. Rueckgabe ctl: dragged (wurde gezogen, dann kein Klick-Pick)
-     und anim (laufende Kamerafahrt, siehe K.fahrt; jede Eingabe bricht sie ab). */
+     und anim (laufende Kamerafahrt, siehe K.fahrt; jede Eingabe bricht sie ab);
+     loesen() meldet alle Listener wieder ab. */
   K.orbit = function (canvas, view, o) {
     var ptrs = new Map(), lastPinch = 0;
     var ctl = { dragged: false, anim: null };
-    canvas.addEventListener('pointerdown', function (e) {
+    var hoerer = [];
+    function an(art, f, opt) { canvas.addEventListener(art, f, opt); hoerer.push([art, f, opt]); }
+    an('pointerdown', function (e) {
       canvas.setPointerCapture(e.pointerId);
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
       ctl.dragged = false; ctl.anim = null;
     });
-    canvas.addEventListener('pointermove', function (e) {
+    an('pointermove', function (e) {
       if (!ptrs.has(e.pointerId)) return;
       var p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
       p.x = e.clientX; p.y = e.clientY;
@@ -96,12 +99,17 @@ var Kern = window.Kern = window.Kern || {};
       }
     });
     function endPtr(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) lastPinch = 0; }
-    canvas.addEventListener('pointerup', endPtr);
-    canvas.addEventListener('pointercancel', endPtr);
-    canvas.addEventListener('wheel', function (e) {
+    an('pointerup', endPtr);
+    an('pointercancel', endPtr);
+    an('wheel', function (e) {
       e.preventDefault(); ctl.anim = null;
       view.dist = Math.max(o.minDist, Math.min(o.maxDist, view.dist * (1 + Math.sign(e.deltaY) * 0.09)));
     }, { passive: false });
+    /* alle angemeldeten Listener wieder abmelden */
+    ctl.loesen = function () {
+      hoerer.forEach(function (h) { canvas.removeEventListener(h[0], h[1], h[2]); });
+      hoerer = []; ptrs.clear(); ctl.anim = null;
+    };
     return ctl;
   };
 
@@ -142,6 +150,23 @@ var Kern = window.Kern = window.Kern || {};
     view.dist = anim.f.dist + (anim.t.dist - anim.f.dist) * s;
     view.target.lerpVectors(anim.f.target, anim.t.target, s);
     return t >= 1 ? null : anim;
+  };
+
+  /* Objektbaum freigeben (beim Abbauen eines Organs): Geometrien, Materialien
+     (auch Arrays) und deren Texturen, InstancedMesh. behalten (optional) ist
+     eine Textur, die dem Rahmen gehoert (Umgebung) und bleibt. Haengt das
+     Objekt noch in einer Szene, wird es dort entfernt. */
+  K.entsorgen = function (obj, behalten) {
+    function material(m) {
+      for (var k in m) { var t = m[k]; if (t && t.isTexture && t !== behalten) t.dispose(); }
+      m.dispose();
+    }
+    obj.traverse(function (o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(material);
+      if (o.isInstancedMesh && o.dispose) o.dispose();
+    });
+    if (obj.parent) obj.parent.remove(obj);
   };
 
   /* Kurzer Hinweis unten (#toast, HTML erlaubt); verschwindet nach 5,6 s. */

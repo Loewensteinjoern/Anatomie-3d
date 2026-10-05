@@ -14,16 +14,19 @@ var Kern = window.Kern = window.Kern || {};
        renderer: { alpha }   Optionen fuer den Renderer des Rahmens
        aufbauen(umg)         baut das Organ auf (umg: bereich (Element #organ, nimmt das Markup der Bedienelemente auf), canvas, renderer, szene, kamera, envTex), gibt ein Promise oder nichts zurueck
        bild(now, frame)      Renderschleife (setzt aufbauen)
-       groesse(w, h)         Fenstergroesse geaendert (setzt aufbauen) */
+       groesse(w, h)         Fenstergroesse geaendert (setzt aufbauen)
+       abbauen()             raeumt das Organ vollstaendig weg (setzt aufbauen): Sitzungen, Listener, Timer, three.js-Objekte, DOM; Rahmen-Objekte bleiben */
   K.organ = function (name, def) {
     K.Organe[name] = def;
     return def;
   };
 
-  /* Start einer Einzelseite: Renderer, Szene, Kamera, Umgebung/Licht,
-     Groessenanpassung und Renderschleife gehoeren dem Rahmen. */
-  K.einzelseite = function (name) {
-    var o = K.Organe[name], ro = o.renderer || {};
+  /* Rahmen (Renderer, Szene, Kamera, Umgebung/Licht) - einmalig angelegt und
+     fuer alle Organe wiederverwendet; aktives Organ und Groessen-Listener */
+  var R = null, aktiv = null, groesseFn = null;
+
+  function rahmenAnlegen(ro) {
+    if (R) return;
     var canvas = document.getElementById('cv');
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: !!ro.alpha });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
@@ -33,16 +36,43 @@ var Kern = window.Kern = window.Kern || {};
     var kamera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
     var envTex = K.umgebung(renderer);
     K.licht(szene, envTex);
-    var fertig = o.aufbauen({ bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex });
-    function groesse() {
+    R = { bereich: document.getElementById('organ'), canvas: canvas, renderer: renderer, szene: szene, kamera: kamera, envTex: envTex };
+    K.Rahmen = { renderer: renderer, szene: szene, kamera: kamera };   /* Ablage fuer Pruefungen */
+  }
+
+  /* Organ im Rahmen starten; ein schon aktives Organ wird vorher beendet. */
+  K.organStarten = function (name) {
+    if (aktiv) K.organBeenden();
+    var o = K.Organe[name];
+    rahmenAnlegen(o.renderer || {});
+    var fertig = o.aufbauen(R);
+    groesseFn = function () {
       var w = window.innerWidth, h = window.innerHeight;
-      renderer.setSize(w, h, false);
-      kamera.aspect = w / h;
+      R.renderer.setSize(w, h, false);
+      R.kamera.aspect = w / h;
       o.groesse(w, h);
-    }
-    window.addEventListener('resize', groesse);
-    groesse();
-    renderer.setAnimationLoop(o.bild);
-    return fertig;
+    };
+    window.addEventListener('resize', groesseFn);
+    groesseFn();
+    R.renderer.setAnimationLoop(o.bild);
+    aktiv = o;
+    return fertig === undefined ? Promise.resolve() : fertig;
+  };
+
+  /* Aktives Organ beenden und vollstaendig wegraeumen. */
+  K.organBeenden = function () {
+    if (!aktiv) return;
+    var o = aktiv;
+    aktiv = null;
+    R.renderer.setAnimationLoop(null);
+    window.removeEventListener('resize', groesseFn);
+    groesseFn = null;
+    try { if (o.abbauen) o.abbauen(); } catch (e) { console.error('Fehler beim Abbauen:', e); }
+  };
+
+  /* Start einer Einzelseite: Rahmen anlegen und das Organ starten. */
+  K.einzelseite = function (name) {
+    rahmenAnlegen(K.Organe[name].renderer || {});
+    return K.organStarten(name);
   };
 })(Kern);

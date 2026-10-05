@@ -1981,7 +1981,13 @@ const HerzSchema = (function () {
       });
     }
   }
-  return { build, update };
+  // Zustand zuruecksetzen (das SVG liegt im Organ-Bereich und wird mit ihm entfernt)
+  function abbauen() {
+    svg = null; built = false; lastFocus = 'x';
+    for (const k in W2) delete W2[k];
+    [R, BL, LU, KL, POOL].forEach((a) => { a.length = 0; });
+  }
+  return { build, update, abbauen };
 })();
 
 /* =====================================================================
@@ -2242,7 +2248,8 @@ const HerzLupe = (function () {
     else if (scene === 'koronar') drawKoronar(S, dt);
     else drawAustausch(S, dt);
   }
-  return { SCENES, set, draw, setCanvas, get scene() { return scene; }, get variant() { return variant; } };
+  function abbauen() { ctx = null; P = []; tAcc = 0; }
+  return { SCENES, set, draw, setCanvas, abbauen, get scene() { return scene; }, get variant() { return variant; } };
 })();
 
 /* =====================================================================
@@ -2397,6 +2404,7 @@ var sstep = function (a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return 
 var WATERMARK = Kern.WM;
 if (!window.THREE) { $('bootSt').textContent = 'Die 3D-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung pr\u00fcfen und neu laden.'; return; }
 
+var abgebaut = false, fitT = null, quizT = null;
 var App = window.HerzApp = { ready: false, sel: null, opened: true, openK: 1, labels: true, see: false, sound: false, quiz: null, morph: [], pick: [] };
 
 /* =====================================================================
@@ -2646,16 +2654,16 @@ async function build() {
   var small = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
   var h = small ? 0.145 : 0.13;
   var G = HeartMesher.makeGrid([[-6.4, -6.6, -7.0], [6.6, 9.9, 3.7]], h);
-  await setLoad(0.02, 'Herzmuskel wird geformt');
-  var T = await HeartMesher.evalTissue(G, S.tissue, function (f) { return setLoad(0.02 + f * 0.5); });
-  await setLoad(0.53, 'Schnittfl\u00e4che wird gelegt');
+  await setLoad(0.02, 'Herzmuskel wird geformt'); if (abgebaut) return;
+  var T = await HeartMesher.evalTissue(G, S.tissue, function (f) { return setLoad(0.02 + f * 0.5); }); if (abgebaut) return;
+  await setLoad(0.53, 'Schnittfl\u00e4che wird gelegt'); if (abgebaut) return;
   var P = HeartMesher.pieceFields(G, T, S.cutF, S.keepSDF);
   var back = HeartMesher.surfaceNets(G, P.back), front = HeartMesher.surfaceNets(G, P.front);
   var smp = HeartAssemble.makeSampler(G, T);
-  await setLoad(0.58, 'Herzh\u00f6hlen werden eingef\u00e4rbt');
-  var outB = await HeartAssemble.buildPiece(back, 1, h, smp, function (f) { return setLoad(0.58 + f * 0.2); });
-  await setLoad(0.78, 'Vorderwand wird gebaut');
-  var outF = await HeartAssemble.buildPiece(front, -1, h, smp, function (f) { return setLoad(0.78 + f * 0.1); });
+  await setLoad(0.58, 'Herzh\u00f6hlen werden eingef\u00e4rbt'); if (abgebaut) return;
+  var outB = await HeartAssemble.buildPiece(back, 1, h, smp, function (f) { return setLoad(0.58 + f * 0.2); }); if (abgebaut) return;
+  await setLoad(0.78, 'Vorderwand wird gebaut'); if (abgebaut) return;
+  var outF = await HeartAssemble.buildPiece(front, -1, h, smp, function (f) { return setLoad(0.78 + f * 0.1); }); if (abgebaut) return;
   var r;
   for (r in outB) { var mb = regionMesh(outB[r], +r, false); backG.add(mb); register(regionSid[r], mb, mb.material); var ol = outlineFor(mb); if (ol) { mb.add(ol); mb.userData.outline = ol; } }
   for (r in outF) { var mf = regionMesh(outF[r], +r, true); glassify(mf.material[0], 0.05, 0.5); glassify(mf.material[1], 0.17, 0.72); mf.material[2].userData.lidCut = true; lidG.add(mf); register(regionSid[r], mf, mf.material); }
@@ -2666,7 +2674,7 @@ async function build() {
     if (!m.userData.lid && (rg === R.AO || rg === R.PT || rg === R.SVC || rg === R.IVC || rg === R.PV)) { m.userData.vessel = true; (App.vesMats = App.vesMats || []).push.apply(App.vesMats, m.material); }
   });
   STRUCT.myo.has = true;
-  await setLoad(0.9, 'Klappen und Sehnenf\u00e4den');
+  await setLoad(0.9, 'Klappen und Sehnenf\u00e4den'); if (abgebaut) return;
   var VA = HeartValves.build(); App.V = VA;
   /* Klappen in der Farbe ihrer Herzseite, heller als die Wand (wie im Lehrbuchbild) */
   var VCOL = { mitral: 0xE2B3A8, aortic: 0xD9A596, tricus: 0xB2BFDC, pulm: 0xBAC6E2 };
@@ -2681,7 +2689,7 @@ async function build() {
     var m = new THREE.Mesh(VA[d[0]].geo, mat(d[0] === 'chordM' ? 0xEAD3CC : 0xD3DAEC, { rough: 0.55, env: 0.2 })); m.name = 'Sehnenfaeden_' + d[0]; clipMats.push(m.material);
     addMorph(m, VA[d[0]].drivers.map(function (x) { return x === 'O' ? d[1] : x; })); backG.add(m); register('chord', m, [m.material]);
   });
-  await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe');
+  await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe'); if (abgebaut) return;
   App.corPts = { front: [], back: [] };
   HeartExtras.coronaries().forEach(function (c) {
     if (c.name === 'RIVA') INF.pts = c.pts;
@@ -2696,7 +2704,7 @@ async function build() {
       Array.prototype.push.apply(run.front ? App.corPts.front : App.corPts.back, run.pts);
     });
   });
-  await setLoad(0.96, 'Erregungsleitung');
+  await setLoad(0.96, 'Erregungsleitung'); if (abgebaut) return;
   var con = HeartExtras.conduction(); App.con = con;
   var cm = condMat(); clipMatsErl.push(cm); cm.userData.erl = true; App.condMat = cm;
   var addCond = function (pts, a0, a1, rad) {
@@ -2733,11 +2741,11 @@ async function build() {
     g.setAttribute('act', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(d[1]), 1));
     var m = new THREE.Mesh(g, cm); m.name = 'Knoten'; addMotionMorphs(m, d[0]); backG.add(m); register('erl', m, [cm]);
   });
-  await setLoad(0.98, 'Blutportionen');
+  await setLoad(0.98, 'Blutportionen'); if (abgebaut) return;
   buildBlood();
   computeAnchors();
   buildSparks();
-  await setLoad(1, 'Fertig');
+  await setLoad(1, 'Fertig'); if (abgebaut) return;
   App.buildMs = Math.round(performance.now() - t0);
 }
 
@@ -3541,7 +3549,7 @@ function quizAnswer(sid) {
   $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
   highlight(Q.target, true);
   var tg = Q.target;
-  setTimeout(function () { highlight(tg, false); if (App.quiz) quizNext(); }, ok ? 1200 : 2400);
+  quizT = setTimeout(function () { highlight(tg, false); if (App.quiz) quizNext(); }, ok ? 1200 : 2400);
 }
 
 /* =====================================================================
@@ -3607,7 +3615,7 @@ $('bErr').onclick = function () {
   document.body.classList.toggle('erreg', App.impulse);
   if (App.impulse && !STRUCT.erl.on) { STRUCT.erl.on = true; var rw = $('row-erl'); if (rw) rw.classList.remove('off'); applyVisibility(); }
   setErlOverlay(App.impulse);
-  setTimeout(fitRail, 30);
+  fitT = setTimeout(fitRail, 30);
   if (!App.impulse) { updateEmissive(); updateSparks(0, App.W, 0); }
   else { lastErr = ''; if (window.innerWidth >= 1000) openHelp('ekg'); else closeCard(); }
   refreshOpacity();
@@ -3729,7 +3737,7 @@ function updateCamera() {
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function shown(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 function inLid(o) { while (o) { if (o === lidG) return true; o = o.parent; } return false; }
-canvas.addEventListener('click', function (e) {
+function canvasKlick(e) {
   if (orbit.dragged || !App.ready) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1; ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -3748,8 +3756,10 @@ canvas.addEventListener('click', function (e) {
   if (App.quiz) { quizAnswer(sid); return; }
   if (LUPE.mode || LUPE.open) { var hp = hits.length ? hits[0].point.clone() : null; if (sid) lupeFromStruct(sid, hp); return; }
   setSelected(sid);
-});
-window.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (App.quiz) quizEnd(); else { setSelected(null); closeCard(); } } });
+}
+canvas.addEventListener('click', canvasKlick);
+function escTaste(e) { if (e.key === 'Escape') { if (App.quiz) quizEnd(); else { setSelected(null); closeCard(); } } }
+window.addEventListener('keydown', escTaste);
 
 /* =====================================================================
    8. Herzzyklus: EKG und Anzeige
@@ -3973,7 +3983,33 @@ App.dbg = function () { return { vesFade: vesFade, preset: App.preset, openK: Ap
 App.dbgFocusNow = function () { [backG, lidG].forEach(function (G) { G.traverse(function (m) { if (m.isMesh) m.userData.fk = focusTarget(m); }); }); refreshOpacity(); };
 App.api = { setSelected: setSelected, goTo: goTo, setLidPose: setLidPose, openHelp: openHelp, quizStart: quizStart, quizEnd: quizEnd, setHand: setHand, setWK: setWK, view: view, camera: camera, scene: scene, backG: backG, lidG: lidG };
 organ.bild = loop; organ.groesse = groesse;
+/* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
+organ.abbauen = function () {
+  abgebaut = true;
+  clearTimeout(fitT); clearTimeout(quizT); clearTimeout(Kern.toast._t);
+  if (AR) AR.abbauen();
+  if (actx) { try { actx.close(); } catch (e) {} actx = null; }
+  canvas.removeEventListener('click', canvasKlick);
+  window.removeEventListener('keydown', escTaste);
+  orbit.loesen();
+  HerzSchema.abbauen(); HerzLupe.abbauen();
+  ARL.abbauen();
+  SZ.abbauen();
+  /* three.js: alles bis auf die Lichter des Rahmens freigeben */
+  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  renderer.localClippingEnabled = false;
+  camera.clearViewOffset(); camera.updateProjectionMatrix();
+  canvas.style.cursor = ''; canvas.style.visibility = '';
+  /* DOM */
+  umg.bereich.innerHTML = '';
+  labelBox.innerHTML = ''; leaderSvg.innerHTML = '';
+  ['card', 'schema', 'erreg'].forEach(function (c) { document.body.classList.remove(c); });
+  $('toast').classList.remove('show'); $('toast').innerHTML = '';
+  $('boot').classList.remove('gone'); $('bootBar').style.width = ''; $('bootSt').textContent = '';
+  delete window.HerzApp;
+};
 return build().then(function () {
+  if (abgebaut) return;
   buildStructList();
   addStationLabels();
   buildLupe();
@@ -3983,7 +4019,7 @@ return build().then(function () {
   App.ready = true;
   Kern.Export.pruefeZiel('exp');
   $('boot').classList.add('gone');
-}).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
+}).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
 Kern.organ('herz', organ);
 })();
