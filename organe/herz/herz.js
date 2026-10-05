@@ -2821,108 +2821,38 @@ function lupeTick(dt, Wt) {
    oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei
    ===================================================================== */
 App.ar = false;
-var AR = { session: null, hit: null, ref: null, reticle: null, placed: false, scale: 0.02, saved: null, xr: false };
-var AR_STUFEN = [0.01, 0.015, 0.02, 0.03, 0.045, 0.06];
-function arQuickLookOK() { var a = document.createElement('a'); return !!(a.relList && a.relList.supports && a.relList.supports('ar')); }
-function arCheck() {
-  if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { AR.xr = ok; }).catch(function () { AR.xr = false; });
-}
-function arReticle() {
-  if (AR.reticle) return;
-  var g = new THREE.RingGeometry(0.06, 0.075, 40).rotateX(-Math.PI / 2);
-  AR.reticle = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.9 }));
-  AR.reticle.matrixAutoUpdate = false; AR.reticle.visible = false; scene.add(AR.reticle);
-}
-async function startAR() {
-  if (AR.xr) {
-    var sess;
-    try {
-      sess = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: $('arUI') } });
-    } catch (e) {
-      toast('AR lässt sich hier nicht starten. Öffne den Link direkt in Chrome (eigener Tab), dann klappt es.');
-      return;
-    }
-    arReticle();
-    renderer.xr.enabled = true;
-    renderer.xr.setReferenceSpaceType('local');
-    await renderer.xr.setSession(sess);
-    AR.session = sess; AR.ref = renderer.xr.getReferenceSpace();
-    try { var vs = await sess.requestReferenceSpace('viewer'); AR.hit = await sess.requestHitTestSource({ space: vs }); } catch (e) { AR.hit = null; }
-    sess.addEventListener('select', function () { if (!AR.placed && AR.reticle.visible) arPlace(); });
-    sess.addEventListener('end', arEnd);
-    AR.saved = { p: root.position.clone(), q: root.quaternion.clone(), s: root.scale.clone() };
-    App.ar = true; AR.placed = false; root.visible = false;
-    renderer.setClearColor(0x000000, 0);
-    $('arUI').style.display = 'block'; $('arHint').style.display = '';
+var AR = Kern.AR.xr({
+  renderer: renderer, scene: scene, camera: camera, root: root,
+  stufen: [0.01, 0.015, 0.02, 0.03, 0.045, 0.06], skala: 0.02,
+  fuss: 6.9,                                        /* Herzspitze steht auf der Fläche */
+  hintergrund: 0x0b171c,
+  ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+  knoepfe: ['arEnd', 'arOpen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+  quickLook: function () { arQuickLook(); },
+  beimStart: function () {
+    App.ar = true;
     $('arOpen').textContent = App.opened ? 'Geschlossen' : 'Geöffnet';
     $('arLab').textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an';
-    return;
+  },
+  beimEnde: function () {
+    App.ar = false;
+    ARL.ausblenden();
+    resize();
   }
-  if (arQuickLookOK()) { arQuickLook(); return; }
-  if (navigator.xr) toast('Dieses Gerät kann im Browser kein AR. Auf Android: Chrome mit „Google Play-Dienste für AR“, auf iPhone/iPad: Safari.');
-  else toast('AR braucht ein Smartphone oder Tablet mit Kamera: Android mit Chrome oder iPhone/iPad mit Safari.');
-}
-function arPlace() {
-  var cam = renderer.xr.getCamera(camera), cp = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
-  var p = new THREE.Vector3().setFromMatrixPosition(AR.reticle.matrix);
-  root.position.copy(p);
-  root.rotation.set(0, Math.atan2(cp.x - p.x, cp.z - p.z), 0);
-  root.scale.setScalar(AR.scale);
-  root.position.y += 6.9 * AR.scale;                /* Herzspitze steht auf der Fläche */
-  root.visible = true; AR.placed = true; AR.reticle.visible = false;
-  $('arHint').style.display = 'none';
-}
-function arFrame(frame) {
-  if (!frame || !AR.hit || AR.placed) return;
-  var hits = frame.getHitTestResults(AR.hit);
-  if (hits.length) { var pose = hits[0].getPose(AR.ref); if (pose) { AR.reticle.visible = true; AR.reticle.matrix.fromArray(pose.transform.matrix); } }
-  else AR.reticle.visible = false;
-}
-function arEnd() {
-  if (!App.ar) return;
-  App.ar = false; AR.session = null;
-  if (AR.hit) { try { AR.hit.cancel(); } catch (e) {} AR.hit = null; }
-  if (AR.reticle) AR.reticle.visible = false;
-  if (ARL.g) ARL.g.visible = false;
-  if (AR.saved) { root.position.copy(AR.saved.p); root.quaternion.copy(AR.saved.q); root.scale.copy(AR.saved.s); }
-  root.visible = true;
-  renderer.setClearColor(0x0b171c, 1);
-  $('arUI').style.display = 'none';
-  resize();
-}
+});
 function arUIbind() {
-  ['arEnd', 'arOpen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'].forEach(function (id) { $(id).addEventListener('beforexrselect', function (e) { e.preventDefault(); }); });
-  $('arEnd').onclick = function () { if (AR.session) AR.session.end(); };
   $('arOpen').onclick = function () { App.opened = !App.opened; onOff('bOpen', App.opened); onOff('bClosed', !App.opened); this.textContent = App.opened ? 'Geschlossen' : 'Geöffnet'; };
-  var stufe = function (d) { var i = AR_STUFEN.indexOf(AR.scale); i = Math.max(0, Math.min(AR_STUFEN.length - 1, (i < 0 ? 2 : i) + d)); var alt = AR.scale; AR.scale = AR_STUFEN[i];
-    if (AR.placed) { root.position.y += (AR.scale - alt) * 6.9; root.scale.setScalar(AR.scale); } };
   $('arLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); this.textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an'; };
-  $('arSmall').onclick = function () { stufe(-1); };
-  $('arBig').onclick = function () { stufe(1); };
-  $('arPlace').onclick = function () { AR.placed = false; root.visible = false; $('arHint').style.display = ''; };
   $('arPause').onclick = function () { engine.S.laufen = !engine.S.laufen; this.textContent = engine.S.laufen ? 'Pause' : 'Weiter'; onOff('bPlay', engine.S.laufen); $('bPlay').textContent = engine.S.laufen ? 'Pause' : 'Abspielen'; };
 }
-/* ---- Beschriftung im AR: Schilder mit Führungslinien als 3D-Objekte ----
-   Im AR gibt es keine HTML-Ebene über dem Bild. Die Schilder stehen deshalb
-   in Herz-Koordinaten in zwei Spalten links und rechts neben dem Herzen und
-   drehen sich (WebXR) mit, sodass sie immer zum Betrachter zeigen. */
-var ARL = { g: null, lines: null, side: {} };
-var ARL_COL = 7.4, ARL_H = 1.15, ARL_GAP = 1.4, ARL_Z = 3.2, ARL_TOP = 8.8, ARL_BOT = -7.2, ARL_PX = 128;
-function arlCanvas(a) {
-  if (a.arC) return a.arC;
-  var px = ARL_PX, c = document.createElement('canvas'), x = c.getContext('2d');
-  var f1 = '600 ' + Math.round(px * 0.34) + 'px "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
-  var f2 = 'italic ' + Math.round(px * 0.28) + 'px Georgia, "Times New Roman", serif';
-  x.font = f1; var w1 = x.measureText(a.s.de).width; x.font = f2; var w2 = x.measureText(a.s.lat).width;
-  var pad = px * 0.15, W = Math.ceil(Math.max(w1, w2) + 2 * pad);
-  c.width = W; c.height = px;
-  x.fillStyle = 'rgba(11,23,28,0.84)'; x.fillRect(0, 0, W, px);
-  x.strokeStyle = '#9C7530'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, W - 3, px - 3);
-  x.font = f1; x.fillStyle = '#E7EFF0'; x.fillText(a.s.de, pad, px * 0.46);
-  x.font = f2; x.fillStyle = '#E0A94A'; x.fillText(a.s.lat, pad, px * 0.82);
-  a.arC = c;
-  return c;
-}
+/* ---- Beschriftung im AR: Schilder mit Führungslinien (Kern.AR.schilder) ---- */
+var ARL = Kern.AR.schilder({
+  root: root, renderer: renderer, camera: camera, xr: AR,
+  name: 'Herz', anzahl: function () { return LABELS.length; },
+  masse: { spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128 },
+  liste: function () { return arlWanted(); },
+  auswahl: function () { return App.sel; }
+});
 /* dieselben Regeln wie bei der Bildschirm-Beschriftung, nur ohne Bildschirmplatz */
 function arlWanted() {
   var out = [];
@@ -2939,218 +2869,20 @@ function arlWanted() {
   });
   return out;
 }
-/* Anordnung in einem um die Hochachse gedrehten Rahmen (Blick des Betrachters = +z),
-   Ergebnis in Herz-Koordinaten: Ankerpunkt, Knick, Linienende und Schildmitte */
-function arlLayout(list, yaw, sides) {
-  var c = Math.cos(yaw), sn = Math.sin(yaw);
-  var back = function (x, y, z) { return [x * c + z * sn, y, -x * sn + z * c]; };
-  list.forEach(function (it) {
-    var p = it.p, xr = p[0] * c - p[2] * sn, prev = sides[it.a.s.id + it.a.s.de];
-    it.side = xr < -0.4 ? 'l' : (xr > 0.4 ? 'r' : (prev || (xr < 0 ? 'l' : 'r')));
-    sides[it.a.s.id + it.a.s.de] = it.side;
-    var cv = arlCanvas(it.a); it.w = ARL_H * cv.width / cv.height;
-  });
-  ['l', 'r'].forEach(function (side) {
-    var g = list.filter(function (it) { return it.side === side; }).sort(function (p, q) { return q.p[1] - p.p[1]; });
-    var gap = ARL_GAP, y = ARL_TOP;
-    if (g.length > 1 && (g.length - 1) * gap > ARL_TOP - ARL_BOT) gap = Math.max(ARL_H * 1.02, (ARL_TOP - ARL_BOT) / (g.length - 1));
-    g.forEach(function (it) { it.ly = Math.min(y, Math.max(ARL_BOT, it.p[1])); y = it.ly - gap; });
-    var over = ARL_BOT - (y + gap);
-    if (over > 0) g.forEach(function (it) { it.ly = Math.min(ARL_TOP, it.ly + over); });
-  });
-  list.forEach(function (it) {
-    var sg = it.side === 'l' ? -1 : 1, ex = sg * ARL_COL;
-    it.k = back(ex - sg * 0.9, it.ly, ARL_Z);
-    it.e = back(ex, it.ly, ARL_Z);
-    it.m = back(ex + sg * (0.12 + it.w / 2), it.ly, ARL_Z + 0.01);
-  });
-  return list;
-}
-function arlInit() {
-  ARL.g = new THREE.Group(); ARL.g.visible = false; root.add(ARL.g);
-  var n = LABELS.length * 4, geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-  ARL.lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true }));
-  ARL.lines.renderOrder = 998; ARL.lines.frustumCulled = false; ARL.g.add(ARL.lines);
-  ARL.dotGeo = new THREE.SphereGeometry(0.14, 10, 8);
-  ARL.dotMat = new THREE.MeshBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true });
-}
-function arlItem(a) {
-  if (a.ar) return a.ar;
-  var cv = arlCanvas(a), tex = new THREE.CanvasTexture(cv);
-  tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
-  var mesh = new THREE.Mesh(new THREE.PlaneGeometry(ARL_H * cv.width / cv.height, ARL_H),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-  mesh.renderOrder = 1000;
-  var dot = new THREE.Mesh(ARL.dotGeo, ARL.dotMat); dot.renderOrder = 999;
-  ARL.g.add(mesh); ARL.g.add(dot);
-  a.ar = { mesh: mesh, dot: dot };
-  return a.ar;
-}
-var _arlV = new THREE.Vector3();
-function arlUpdate() {
-  if (!ARL.g) arlInit();
-  var list = AR.placed ? arlWanted() : [];
-  ARL.g.visible = list.length > 0;
-  LABELS.forEach(function (a) { if (a.ar) { a.ar.mesh.visible = false; a.ar.dot.visible = false; } });
-  if (!list.length) return;
-  _arlV.setFromMatrixPosition(renderer.xr.getCamera(camera).matrixWorld); root.worldToLocal(_arlV);
-  var yaw = Math.atan2(_arlV.x, _arlV.z);
-  arlLayout(list, yaw, ARL.side);
-  var pos = ARL.lines.geometry.attributes.position, k = 0;
-  list.forEach(function (it) {
-    var o = arlItem(it.a), dim = App.sel && it.a.s.id !== App.sel ? 0.4 : 1;
-    o.mesh.visible = true; o.mesh.position.set(it.m[0], it.m[1], it.m[2]); o.mesh.rotation.set(0, yaw, 0);
-    o.mesh.material.opacity = dim;
-    o.dot.visible = true; o.dot.position.set(it.p[0], it.p[1], it.p[2]);
-    [it.p, it.k, it.k, it.e].forEach(function (q) { pos.setXYZ(k++, q[0], q[1], q[2]); });
-  });
-  for (var i = k; i < pos.count; i++) pos.setXYZ(i, 0, 0, 0);
-  pos.needsUpdate = true;
-  ARL.lines.geometry.setDrawRange(0, k);
-}
-/* Beschriftung für die USDZ-Datei: ein Bild mit allen Schildern (Atlas),
-   je Schild ein Rechteck, Führungslinien als schmale Bänder */
-function arlUsd(f4, xf) {
-  var list = arlWanted();
-  if (!list.length) return null;
-  arlLayout(list, 0, {});
-  var AW = 0, AH = 0;
-  list.forEach(function (it) { var cv = arlCanvas(it.a); it.ay = AH; AH += cv.height; AW = Math.max(AW, cv.width); });
-  var atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
-  var ax = atlas.getContext('2d');
-  list.forEach(function (it) { ax.drawImage(arlCanvas(it.a), 0, it.ay); });
-  var bin = atob(atlas.toDataURL('image/png').split(',')[1]), png = new Uint8Array(bin.length);
-  for (var i = 0; i < bin.length; i++) png[i] = bin.charCodeAt(i);
-  var pt = function (q) { var v = xf(q[0], q[1], q[2]); return '(' + f4(v[0]) + ', ' + f4(v[1]) + ', ' + f4(v[2]) + ')'; };
-  var P = [], ST = [], I = [], LP = [], LI = [];
-  list.forEach(function (it) {
-    var cv = arlCanvas(it.a), hw = it.w / 2, hh = ARL_H / 2, m = it.m, b = P.length;
-    P.push(pt([m[0] - hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] + hh, m[2]]), pt([m[0] - hw, m[1] + hh, m[2]]));
-    var u1 = cv.width / AW, v0 = 1 - (it.ay + cv.height) / AH, v1 = 1 - it.ay / AH;
-    ST.push('(0, ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v1) + ')', '(0, ' + f4(v1) + ')');
-    I.push(b, b + 1, b + 2, b, b + 2, b + 3);
-    /* Linien als Bänder, Punkt am Anker als kleines Quadrat */
-    var band = function (a, c, w) {
-      var dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w, o = LP.length;
-      LP.push(pt([a[0] - nx, a[1] - ny, a[2]]), pt([a[0] + nx, a[1] + ny, a[2]]), pt([c[0] + nx, c[1] + ny, c[2]]), pt([c[0] - nx, c[1] - ny, c[2]]));
-      LI.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    };
-    var an = [it.p[0], it.p[1], it.p[2] + 0.05];
-    band(an, it.k, 0.035); band(it.k, it.e, 0.035);
-    band([an[0] - 0.13, an[1], an[2]], [an[0] + 0.13, an[1], an[2]], 0.13);
-  });
-  var mesh = function (name, Pt, Ix, mat, st) {
-    var t = '    def Mesh "' + name + '"\n    {\n        uniform bool doubleSided = 1\n        int[] faceVertexCounts = [' + new Array(Ix.length / 3).fill(3).join(', ') + ']\n        int[] faceVertexIndices = [' + Ix.join(', ') + ']\n        point3f[] points = [' + Pt.join(', ') + ']\n';
-    if (st) t += '        texCoord2f[] primvars:st = [' + st.join(', ') + '] (\n            interpolation = "vertex"\n        )\n';
-    return t + '        uniform token subdivisionScheme = "none"\n        rel material:binding = </Herz/Materialien/' + mat + '>\n    }\n';
-  };
-  var M = '/Herz/Materialien/';
-  var mats = '        def Material "Schild"\n        {\n            token outputs:surface.connect = <' + M + 'Schild/Oberflaeche.outputs:surface>\n' +
-    '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0, 0, 0)\n' +
-    '                color3f inputs:emissiveColor.connect = <' + M + 'Schild/Bild.outputs:rgb>\n                float inputs:opacity.connect = <' + M + 'Schild/Bild.outputs:a>\n' +
-    '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n' +
-    '            def Shader "Uv"\n            {\n                uniform token info:id = "UsdPrimvarReader_float2"\n                token inputs:varname = "st"\n                float2 inputs:fallback = (0, 0)\n                float2 outputs:result\n            }\n' +
-    '            def Shader "Bild"\n            {\n                uniform token info:id = "UsdUVTexture"\n                asset inputs:file = @beschriftung.png@\n                float2 inputs:st.connect = <' + M + 'Schild/Uv.outputs:result>\n' +
-    '                token inputs:sourceColorSpace = "sRGB"\n                token inputs:wrapS = "clamp"\n                token inputs:wrapT = "clamp"\n                float3 outputs:rgb\n                float outputs:a\n            }\n        }\n' +
-    '        def Material "Linie"\n        {\n            token outputs:surface.connect = <' + M + 'Linie/Oberflaeche.outputs:surface>\n' +
-    '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0.878, 0.663, 0.290)\n                color3f inputs:emissiveColor = (0.6, 0.45, 0.2)\n' +
-    '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n        }\n';
-  return { mats: mats, meshes: mesh('Schilder', P, I, 'Schild', ST) + mesh('Linien', LP, LI, 'Linie'), png: png };
-}
 /* ---- USDZ für AR Quick Look: Momentaufnahme der aktuellen Ansicht ---- */
 function usdzBuild() {
-  var groups = App.openK > 0.5 ? [backG] : [backG, lidG];
-  var meshes = [], mats = [], txt = [];
-  var f4 = function (v) { return (Math.round(v * 10000) / 10000).toString(); };
-  var v = new THREE.Vector3(), nm = new THREE.Vector3(), nmat = new THREE.Matrix3();
-  groups.forEach(function (G) {
-    G.traverse(function (m) {
-      if (!m.isMesh || !shown(m) || m.userData.noexport) return;
-      var g = m.geometry, pos = g.attributes.position, nor = g.attributes.normal, col = g.attributes.color, idx = g.index ? g.index.array : null;
-      var ma = (g.morphAttributes && g.morphAttributes.position) || [], inf = m.morphTargetInfluences || [];
-      var list = Array.isArray(m.material) ? m.material : [m.material];
-      var grs = Array.isArray(m.material) && g.groups.length ? g.groups : [{ start: 0, count: idx ? idx.length : pos.count, materialIndex: 0 }];
-      m.updateWorldMatrix(true, false); nmat.getNormalMatrix(m.matrixWorld);
-      grs.forEach(function (gr) {
-        var mt = list[gr.materialIndex]; if (!mt || !mt.visible || mt.opacity < 0.3) return;
-        var map = new Map(), P = [], N = [], I = [], cr = 0, cg = 0, cb = 0, cn = 0;
-        for (var t = gr.start; t < gr.start + gr.count; t++) {
-          var vi = idx ? idx[t] : t, ni = map.get(vi);
-          if (ni === undefined) {
-            ni = map.size; map.set(vi, ni);
-            var x = pos.getX(vi), y = pos.getY(vi), z = pos.getZ(vi);
-            for (var k = 0; k < ma.length; k++) { var w = inf[k] || 0; if (w) { x += ma[k].getX(vi) * w; y += ma[k].getY(vi) * w; z += ma[k].getZ(vi) * w; } }
-            v.set(x, y, z).applyMatrix4(m.matrixWorld);
-            P.push('(' + f4(v.x * 0.01) + ', ' + f4(v.y * 0.01) + ', ' + f4(v.z * 0.01) + ')');
-            if (nor) { nm.set(nor.getX(vi), nor.getY(vi), nor.getZ(vi)).applyMatrix3(nmat).normalize(); N.push('(' + f4(nm.x) + ', ' + f4(nm.y) + ', ' + f4(nm.z) + ')'); }
-            if (col && mt.vertexColors) { cr += col.getX(vi); cg += col.getY(vi); cb += col.getZ(vi); cn++; }
-          }
-          I.push(ni);
-        }
-        if (I.length < 3) return;
-        var c = cn ? [cr / cn, cg / cn, cb / cn] : [mt.color.r, mt.color.g, mt.color.b];
-        var mi = mats.length; mats.push({ c: c, r: mt.roughness === undefined ? 0.6 : mt.roughness, op: mt.userData.glass ? 1 : Math.min(1, mt.opacity) });
-        meshes.push({ P: P, N: N, I: I, m: mi, ds: mt.side === THREE.DoubleSide });
-      });
-    });
+  return Kern.AR.usdz({
+    name: 'Herz', creator: 'Herz 3D - ' + WATERMARK, datei: 'herz.usda', skala: 0.01,
+    gruppen: App.openK > 0.5 ? [backG] : [backG, lidG],
+    beschriftung: function (f4) {
+      var v = new THREE.Vector3();
+      root.updateWorldMatrix(true, false);
+      return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.01, v.y * 0.01, v.z * 0.01]; });
+    }
   });
-  txt.push('#usda 1.0\n(\n    customLayerData = { string creator = "Herz 3D - ' + WATERMARK + '" }\n    defaultPrim = "Herz"\n    metersPerUnit = 1\n    upAxis = "Y"\n)\n\ndef Xform "Herz" (\n    assetInfo = { string name = "Herz" }\n    kind = "component"\n)\n{\n');
-  root.updateWorldMatrix(true, false);
-  var lab = arlUsd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.01, v.y * 0.01, v.z * 0.01]; });
-  txt.push('    def Scope "Materialien"\n    {\n');
-  if (lab) txt.push(lab.mats);
-  mats.forEach(function (M, i) {
-    var c = M.c.map(function (x) { return Math.max(0, Math.min(1, x)).toFixed(4); }).join(', ');
-    txt.push('        def Material "M' + i + '"\n        {\n            token outputs:surface.connect = </Herz/Materialien/M' + i + '/Oberflaeche.outputs:surface>\n            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (' + c + ')\n                float inputs:roughness = ' + M.r.toFixed(2) + '\n                float inputs:metallic = 0\n                float inputs:opacity = ' + M.op.toFixed(2) + '\n                token outputs:surface\n            }\n        }\n');
-  });
-  txt.push('    }\n');
-  meshes.forEach(function (o, i) {
-    var cnt = new Array(o.I.length / 3).fill(3).join(', ');
-    txt.push('    def Mesh "Teil' + i + '"\n    {\n        uniform bool doubleSided = ' + (o.ds ? 1 : 0) + '\n        int[] faceVertexCounts = [' + cnt + ']\n        int[] faceVertexIndices = [' + o.I.join(', ') + ']\n        point3f[] points = [' + o.P.join(', ') + ']\n');
-    if (o.N.length) txt.push('        normal3f[] normals = [' + o.N.join(', ') + '] (\n            interpolation = "vertex"\n        )\n');
-    txt.push('        uniform token subdivisionScheme = "none"\n        rel material:binding = </Herz/Materialien/M' + o.m + '>\n    }\n');
-  });
-  if (lab) txt.push(lab.meshes);
-  txt.push('}\n');
-  var files = [{ name: 'herz.usda', data: new TextEncoder().encode(txt.join('')) }];
-  if (lab) files.push({ name: 'beschriftung.png', data: lab.png });
-  return usdzZip(files);
-}
-var CRCT = null;
-function crc32b(u) { if (!CRCT) { CRCT = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRCT[n] = c >>> 0; } } var c2 = 0xFFFFFFFF; for (var i = 0; i < u.length; i++) c2 = CRCT[(c2 ^ u[i]) & 255] ^ (c2 >>> 8); return (c2 ^ 0xFFFFFFFF) >>> 0; }
-/* USDZ = ZIP ohne Kompression, Dateidaten auf 64 Byte ausgerichtet */
-function usdzZip(files) {
-  var parts = [], cds = [], off = 0, cdLen = 0;
-  files.forEach(function (f) {
-    var nb = new TextEncoder().encode(f.name), data = f.data, crc = crc32b(data);
-    var base = off + 30 + nb.length, pad = (64 - ((base + 4) % 64)) % 64, extra = 4 + pad;
-    var lh = new DataView(new ArrayBuffer(30 + nb.length + extra));
-    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0, true); lh.setUint16(8, 0, true);
-    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
-    lh.setUint16(26, nb.length, true); lh.setUint16(28, extra, true);
-    new Uint8Array(lh.buffer).set(nb, 30); lh.setUint16(30 + nb.length, 0x1986, true); lh.setUint16(32 + nb.length, pad, true);
-    var ch = new DataView(new ArrayBuffer(46 + nb.length));
-    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
-    ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true); new Uint8Array(ch.buffer).set(nb, 46);
-    parts.push(lh.buffer, data); cds.push(ch.buffer); cdLen += ch.byteLength;
-    off += lh.byteLength + data.length;
-  });
-  var end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cdLen, true); end.setUint32(16, off, true);
-  return new Blob(parts.concat(cds, [end.buffer]), { type: 'model/vnd.usdz+zip' });
 }
 function arQuickLook() {
-  toast('AR wird vorbereitet …');
-  setTimeout(function () {
-    try {
-      var blob = usdzBuild(), url = URL.createObjectURL(blob), a = $('arQL');
-      a.setAttribute('href', url + '#allowsContentScaling=1');
-      a.click();
-      toast('Das Herz öffnet sich in AR Quick Look. Mit zwei Fingern lässt es sich vergrößern und drehen.');
-      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-    } catch (e) { toast('AR konnte nicht vorbereitet werden: ' + e.message); }
-  }, 60);
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Das Herz öffnet sich in AR Quick Look. Mit zwei Fingern lässt es sich vergrößern und drehen.' });
 }
 App.usdzBuild = usdzBuild;
 
@@ -3478,7 +3210,7 @@ $('bOpen').onclick = function () { App.opened = true; onOff('bOpen', true); onOf
 $('bClosed').onclick = function () { App.opened = false; onOff('bOpen', false); onOff('bClosed', true); };
 $('bLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); };
 $('bSchema').onclick = function () { setSchema(!App.schema); };
-$('bAR').onclick = function () { startAR(); };
+$('bAR').onclick = function () { AR.start(); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 $('bSee').onclick = function () { App.see = !App.see; onOff('bSee', App.see); applySee(); };
 $('bCls').onclick = function () { setSelected(null); };
@@ -3844,7 +3576,7 @@ resize();
 
 var last = performance.now();
 function loop(now, frame) {
-  if (App.ar) arFrame(frame);
+  if (App.ar) AR.frame(frame);
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (App.ready) {
     engine.step(dt);
@@ -3870,7 +3602,7 @@ function loop(now, frame) {
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   root.updateMatrixWorld();
   CLIP.copy(CLIP0).applyMatrix4(root.matrixWorld); CLIP_PV.copy(CLIP_PV0).applyMatrix4(root.matrixWorld); CLIP_ERL.copy(CLIP_ERL0).applyMatrix4(root.matrixWorld);
-  if (App.ar) { if (App.ready) { arlUpdate(); renderer.render(scene, camera); } return; }
+  if (App.ar) { if (App.ready) { ARL.update(); renderer.render(scene, camera); } return; }
   updateCamera();
   if (App.ready && !App.schema) { applyOffset(); renderer.render(scene, camera); layoutLabels(window.innerWidth, window.innerHeight); }
 }
@@ -3883,7 +3615,7 @@ build().then(function () {
   buildStructList();
   addStationLabels();
   buildLupe();
-  arUIbind(); arCheck();
+  arUIbind(); AR.check();
   applyVisibility();
   setLidPose(App.openK);
   App.ready = true;
