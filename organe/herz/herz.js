@@ -2836,7 +2836,7 @@ var AR = Kern.AR.xr({
   },
   beimEnde: function () {
     App.ar = false;
-    if (ARL.g) ARL.g.visible = false;
+    ARL.ausblenden();
     resize();
   }
 });
@@ -2845,27 +2845,14 @@ function arUIbind() {
   $('arLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); this.textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an'; };
   $('arPause').onclick = function () { engine.S.laufen = !engine.S.laufen; this.textContent = engine.S.laufen ? 'Pause' : 'Weiter'; onOff('bPlay', engine.S.laufen); $('bPlay').textContent = engine.S.laufen ? 'Pause' : 'Abspielen'; };
 }
-/* ---- Beschriftung im AR: Schilder mit Führungslinien als 3D-Objekte ----
-   Im AR gibt es keine HTML-Ebene über dem Bild. Die Schilder stehen deshalb
-   in Herz-Koordinaten in zwei Spalten links und rechts neben dem Herzen und
-   drehen sich (WebXR) mit, sodass sie immer zum Betrachter zeigen. */
-var ARL = { g: null, lines: null, side: {} };
-var ARL_COL = 7.4, ARL_H = 1.15, ARL_GAP = 1.4, ARL_Z = 3.2, ARL_TOP = 8.8, ARL_BOT = -7.2, ARL_PX = 128;
-function arlCanvas(a) {
-  if (a.arC) return a.arC;
-  var px = ARL_PX, c = document.createElement('canvas'), x = c.getContext('2d');
-  var f1 = '600 ' + Math.round(px * 0.34) + 'px "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
-  var f2 = 'italic ' + Math.round(px * 0.28) + 'px Georgia, "Times New Roman", serif';
-  x.font = f1; var w1 = x.measureText(a.s.de).width; x.font = f2; var w2 = x.measureText(a.s.lat).width;
-  var pad = px * 0.15, W = Math.ceil(Math.max(w1, w2) + 2 * pad);
-  c.width = W; c.height = px;
-  x.fillStyle = 'rgba(11,23,28,0.84)'; x.fillRect(0, 0, W, px);
-  x.strokeStyle = '#9C7530'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, W - 3, px - 3);
-  x.font = f1; x.fillStyle = '#E7EFF0'; x.fillText(a.s.de, pad, px * 0.46);
-  x.font = f2; x.fillStyle = '#E0A94A'; x.fillText(a.s.lat, pad, px * 0.82);
-  a.arC = c;
-  return c;
-}
+/* ---- Beschriftung im AR: Schilder mit Führungslinien (Kern.AR.schilder) ---- */
+var ARL = Kern.AR.schilder({
+  root: root, renderer: renderer, camera: camera, xr: AR,
+  name: 'Herz', anzahl: function () { return LABELS.length; },
+  masse: { spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128 },
+  liste: function () { return arlWanted(); },
+  auswahl: function () { return App.sel; }
+});
 /* dieselben Regeln wie bei der Bildschirm-Beschriftung, nur ohne Bildschirmplatz */
 function arlWanted() {
   var out = [];
@@ -2882,125 +2869,6 @@ function arlWanted() {
   });
   return out;
 }
-/* Anordnung in einem um die Hochachse gedrehten Rahmen (Blick des Betrachters = +z),
-   Ergebnis in Herz-Koordinaten: Ankerpunkt, Knick, Linienende und Schildmitte */
-function arlLayout(list, yaw, sides) {
-  var c = Math.cos(yaw), sn = Math.sin(yaw);
-  var back = function (x, y, z) { return [x * c + z * sn, y, -x * sn + z * c]; };
-  list.forEach(function (it) {
-    var p = it.p, xr = p[0] * c - p[2] * sn, prev = sides[it.a.s.id + it.a.s.de];
-    it.side = xr < -0.4 ? 'l' : (xr > 0.4 ? 'r' : (prev || (xr < 0 ? 'l' : 'r')));
-    sides[it.a.s.id + it.a.s.de] = it.side;
-    var cv = arlCanvas(it.a); it.w = ARL_H * cv.width / cv.height;
-  });
-  ['l', 'r'].forEach(function (side) {
-    var g = list.filter(function (it) { return it.side === side; }).sort(function (p, q) { return q.p[1] - p.p[1]; });
-    var gap = ARL_GAP, y = ARL_TOP;
-    if (g.length > 1 && (g.length - 1) * gap > ARL_TOP - ARL_BOT) gap = Math.max(ARL_H * 1.02, (ARL_TOP - ARL_BOT) / (g.length - 1));
-    g.forEach(function (it) { it.ly = Math.min(y, Math.max(ARL_BOT, it.p[1])); y = it.ly - gap; });
-    var over = ARL_BOT - (y + gap);
-    if (over > 0) g.forEach(function (it) { it.ly = Math.min(ARL_TOP, it.ly + over); });
-  });
-  list.forEach(function (it) {
-    var sg = it.side === 'l' ? -1 : 1, ex = sg * ARL_COL;
-    it.k = back(ex - sg * 0.9, it.ly, ARL_Z);
-    it.e = back(ex, it.ly, ARL_Z);
-    it.m = back(ex + sg * (0.12 + it.w / 2), it.ly, ARL_Z + 0.01);
-  });
-  return list;
-}
-function arlInit() {
-  ARL.g = new THREE.Group(); ARL.g.visible = false; root.add(ARL.g);
-  var n = LABELS.length * 4, geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-  ARL.lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true }));
-  ARL.lines.renderOrder = 998; ARL.lines.frustumCulled = false; ARL.g.add(ARL.lines);
-  ARL.dotGeo = new THREE.SphereGeometry(0.14, 10, 8);
-  ARL.dotMat = new THREE.MeshBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true });
-}
-function arlItem(a) {
-  if (a.ar) return a.ar;
-  var cv = arlCanvas(a), tex = new THREE.CanvasTexture(cv);
-  tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
-  var mesh = new THREE.Mesh(new THREE.PlaneGeometry(ARL_H * cv.width / cv.height, ARL_H),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-  mesh.renderOrder = 1000;
-  var dot = new THREE.Mesh(ARL.dotGeo, ARL.dotMat); dot.renderOrder = 999;
-  ARL.g.add(mesh); ARL.g.add(dot);
-  a.ar = { mesh: mesh, dot: dot };
-  return a.ar;
-}
-var _arlV = new THREE.Vector3();
-function arlUpdate() {
-  if (!ARL.g) arlInit();
-  var list = AR.placed ? arlWanted() : [];
-  ARL.g.visible = list.length > 0;
-  LABELS.forEach(function (a) { if (a.ar) { a.ar.mesh.visible = false; a.ar.dot.visible = false; } });
-  if (!list.length) return;
-  _arlV.setFromMatrixPosition(renderer.xr.getCamera(camera).matrixWorld); root.worldToLocal(_arlV);
-  var yaw = Math.atan2(_arlV.x, _arlV.z);
-  arlLayout(list, yaw, ARL.side);
-  var pos = ARL.lines.geometry.attributes.position, k = 0;
-  list.forEach(function (it) {
-    var o = arlItem(it.a), dim = App.sel && it.a.s.id !== App.sel ? 0.4 : 1;
-    o.mesh.visible = true; o.mesh.position.set(it.m[0], it.m[1], it.m[2]); o.mesh.rotation.set(0, yaw, 0);
-    o.mesh.material.opacity = dim;
-    o.dot.visible = true; o.dot.position.set(it.p[0], it.p[1], it.p[2]);
-    [it.p, it.k, it.k, it.e].forEach(function (q) { pos.setXYZ(k++, q[0], q[1], q[2]); });
-  });
-  for (var i = k; i < pos.count; i++) pos.setXYZ(i, 0, 0, 0);
-  pos.needsUpdate = true;
-  ARL.lines.geometry.setDrawRange(0, k);
-}
-/* Beschriftung für die USDZ-Datei: ein Bild mit allen Schildern (Atlas),
-   je Schild ein Rechteck, Führungslinien als schmale Bänder */
-function arlUsd(f4, xf) {
-  var list = arlWanted();
-  if (!list.length) return null;
-  arlLayout(list, 0, {});
-  var AW = 0, AH = 0;
-  list.forEach(function (it) { var cv = arlCanvas(it.a); it.ay = AH; AH += cv.height; AW = Math.max(AW, cv.width); });
-  var atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
-  var ax = atlas.getContext('2d');
-  list.forEach(function (it) { ax.drawImage(arlCanvas(it.a), 0, it.ay); });
-  var bin = atob(atlas.toDataURL('image/png').split(',')[1]), png = new Uint8Array(bin.length);
-  for (var i = 0; i < bin.length; i++) png[i] = bin.charCodeAt(i);
-  var pt = function (q) { var v = xf(q[0], q[1], q[2]); return '(' + f4(v[0]) + ', ' + f4(v[1]) + ', ' + f4(v[2]) + ')'; };
-  var P = [], ST = [], I = [], LP = [], LI = [];
-  list.forEach(function (it) {
-    var cv = arlCanvas(it.a), hw = it.w / 2, hh = ARL_H / 2, m = it.m, b = P.length;
-    P.push(pt([m[0] - hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] + hh, m[2]]), pt([m[0] - hw, m[1] + hh, m[2]]));
-    var u1 = cv.width / AW, v0 = 1 - (it.ay + cv.height) / AH, v1 = 1 - it.ay / AH;
-    ST.push('(0, ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v1) + ')', '(0, ' + f4(v1) + ')');
-    I.push(b, b + 1, b + 2, b, b + 2, b + 3);
-    /* Linien als Bänder, Punkt am Anker als kleines Quadrat */
-    var band = function (a, c, w) {
-      var dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w, o = LP.length;
-      LP.push(pt([a[0] - nx, a[1] - ny, a[2]]), pt([a[0] + nx, a[1] + ny, a[2]]), pt([c[0] + nx, c[1] + ny, c[2]]), pt([c[0] - nx, c[1] - ny, c[2]]));
-      LI.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    };
-    var an = [it.p[0], it.p[1], it.p[2] + 0.05];
-    band(an, it.k, 0.035); band(it.k, it.e, 0.035);
-    band([an[0] - 0.13, an[1], an[2]], [an[0] + 0.13, an[1], an[2]], 0.13);
-  });
-  var mesh = function (name, Pt, Ix, mat, st) {
-    var t = '    def Mesh "' + name + '"\n    {\n        uniform bool doubleSided = 1\n        int[] faceVertexCounts = [' + new Array(Ix.length / 3).fill(3).join(', ') + ']\n        int[] faceVertexIndices = [' + Ix.join(', ') + ']\n        point3f[] points = [' + Pt.join(', ') + ']\n';
-    if (st) t += '        texCoord2f[] primvars:st = [' + st.join(', ') + '] (\n            interpolation = "vertex"\n        )\n';
-    return t + '        uniform token subdivisionScheme = "none"\n        rel material:binding = </Herz/Materialien/' + mat + '>\n    }\n';
-  };
-  var M = '/Herz/Materialien/';
-  var mats = '        def Material "Schild"\n        {\n            token outputs:surface.connect = <' + M + 'Schild/Oberflaeche.outputs:surface>\n' +
-    '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0, 0, 0)\n' +
-    '                color3f inputs:emissiveColor.connect = <' + M + 'Schild/Bild.outputs:rgb>\n                float inputs:opacity.connect = <' + M + 'Schild/Bild.outputs:a>\n' +
-    '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n' +
-    '            def Shader "Uv"\n            {\n                uniform token info:id = "UsdPrimvarReader_float2"\n                token inputs:varname = "st"\n                float2 inputs:fallback = (0, 0)\n                float2 outputs:result\n            }\n' +
-    '            def Shader "Bild"\n            {\n                uniform token info:id = "UsdUVTexture"\n                asset inputs:file = @beschriftung.png@\n                float2 inputs:st.connect = <' + M + 'Schild/Uv.outputs:result>\n' +
-    '                token inputs:sourceColorSpace = "sRGB"\n                token inputs:wrapS = "clamp"\n                token inputs:wrapT = "clamp"\n                float3 outputs:rgb\n                float outputs:a\n            }\n        }\n' +
-    '        def Material "Linie"\n        {\n            token outputs:surface.connect = <' + M + 'Linie/Oberflaeche.outputs:surface>\n' +
-    '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0.878, 0.663, 0.290)\n                color3f inputs:emissiveColor = (0.6, 0.45, 0.2)\n' +
-    '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n        }\n';
-  return { mats: mats, meshes: mesh('Schilder', P, I, 'Schild', ST) + mesh('Linien', LP, LI, 'Linie'), png: png };
-}
 /* ---- USDZ für AR Quick Look: Momentaufnahme der aktuellen Ansicht ---- */
 function usdzBuild() {
   return Kern.AR.usdz({
@@ -3009,7 +2877,7 @@ function usdzBuild() {
     beschriftung: function (f4) {
       var v = new THREE.Vector3();
       root.updateWorldMatrix(true, false);
-      return arlUsd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.01, v.y * 0.01, v.z * 0.01]; });
+      return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.01, v.y * 0.01, v.z * 0.01]; });
     }
   });
 }
@@ -3734,7 +3602,7 @@ function loop(now, frame) {
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   root.updateMatrixWorld();
   CLIP.copy(CLIP0).applyMatrix4(root.matrixWorld); CLIP_PV.copy(CLIP_PV0).applyMatrix4(root.matrixWorld); CLIP_ERL.copy(CLIP_ERL0).applyMatrix4(root.matrixWorld);
-  if (App.ar) { if (App.ready) { arlUpdate(); renderer.render(scene, camera); } return; }
+  if (App.ar) { if (App.ready) { ARL.update(); renderer.render(scene, camera); } return; }
   updateCamera();
   if (App.ready && !App.schema) { applyOffset(); renderer.render(scene, camera); layoutLabels(window.innerWidth, window.innerHeight); }
 }
