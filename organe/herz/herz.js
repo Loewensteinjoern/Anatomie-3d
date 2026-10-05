@@ -3,6 +3,7 @@
    Koordinaten (Ansicht von vorn): x = linke Körperseite (Betrachter rechts),
    y = oben, z = vorn (zum Betrachter).
    ===================================================================== */
+(function () {
 const HeartSDF = (function () {
   'use strict';
   const nrm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -1980,7 +1981,13 @@ const HerzSchema = (function () {
       });
     }
   }
-  return { build, update };
+  // Zustand zuruecksetzen (das SVG liegt im Organ-Bereich und wird mit ihm entfernt)
+  function abbauen() {
+    svg = null; built = false; lastFocus = 'x';
+    for (const k in W2) delete W2[k];
+    [R, BL, LU, KL, POOL].forEach((a) => { a.length = 0; });
+  }
+  return { build, update, abbauen };
 })();
 
 /* =====================================================================
@@ -2241,15 +2248,154 @@ const HerzLupe = (function () {
     else if (scene === 'koronar') drawKoronar(S, dt);
     else drawAustausch(S, dt);
   }
-  return { SCENES, set, draw, setCanvas, get scene() { return scene; }, get variant() { return variant; } };
+  function abbauen() { ctx = null; P = []; tAcc = 0; }
+  return { SCENES, set, draw, setCanvas, abbauen, get scene() { return scene; }, get variant() { return variant; } };
 })();
 
 /* =====================================================================
    HERZ – 3D-Anatomie
    Gestaltung wie das Nephron-Modell, Physik aus dem Windkessel-Modell.
    ===================================================================== */
-(function () {
+/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
+var MARKUP = `<div id="title">
+  <div class="kicker">Herz &middot; Pumpe des Kreislaufs</div>
+  <h1>Herzh&ouml;hlen &amp; <em>Klappen</em></h1>
+  <div class="sub">Vier R&auml;ume, vier Ventile &ndash; und eine elastische Aorta, die den Blutstrom gleichm&auml;&szlig;ig macht.</div>
+</div>
+
+<div class="panel" id="tools">
+  <div class="trow">
+    <span class="cap">Ansicht</span>
+    <button id="bOpen" class="gh on">Ge&ouml;ffnet</button>
+    <button id="bClosed" class="gh">Geschlossen</button>
+    <span class="sep"></span>
+    <button id="bSchema" class="gh" title="Kreislauf als Schema: Herz, Lunge und Körper">Schema</button>
+    <button id="bAR" class="gh" title="Das Herz mit der Kamera in den Raum stellen">AR</button>
+    <span class="sep"></span>
+    <button id="bSee" class="gh" title="Herzwand durchsichtig zeigen">Durchsicht</button>
+    <button id="bLab" class="gh on">Beschriftung</button>
+  </div>
+  <div class="trow cam">
+    <span class="cap">Ausschnitt</span>
+    <button id="cam0" class="gh on">&Uuml;bersicht</button>
+    <button id="cam1" class="gh">Klappen</button>
+    <button id="cam2" class="gh">Rechtes Herz</button>
+    <button id="cam3" class="gh">Linkes Herz</button>
+  </div>
+  <div class="trow" id="autoRow">
+    <span class="cap">Herzschlag</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bS0" class="gh">langsam</button>
+    <button id="bS1" class="gh on">normal</button>
+    <button id="bS2" class="gh">schnell</button>
+    <span class="sep"></span>
+    <button id="bHand" class="gh" title="Selbst bestimmen, wer dr&uuml;ckt">Handbetrieb</button>
+  </div>
+  <div class="trow" id="handRow" style="display:none">
+    <span class="cap">Dr&uuml;cken</span>
+    <button id="hV" class="gh">Vorh&ouml;fe</button>
+    <button id="hR" class="gh">rechte Kammer</button>
+    <button id="hL" class="gh">linke Kammer</button>
+    <button id="hX" class="gh">entspannen</button>
+    <span class="sep"></span>
+    <button id="bAuto" class="gh">Automatik</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Zeigen</span>
+    <button id="fAll" class="gh on">Alle</button>
+    <button id="fLu" class="gh" title="Rechter Vorhof, rechte Kammer, Hohlvenen und Lungenarterien">Lungenkreislauf</button>
+    <button id="fKo" class="gh" title="Linker Vorhof, linke Kammer, Lungenvenen und Aorta">K&ouml;rperkreislauf</button>
+    <span class="sep"></span>
+    <button id="bErr" class="gh" title="Elektrische Impulse im Takt des EKGs zeigen">Erregung</button>
+    <button id="bLupe" class="gh" title="Nahansicht: Was passiert in einer Struktur?">Lupe</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Aorta</span>
+    <button id="wkE" class="gh on">elastisch</button>
+    <button id="wkS" class="gh">starr</button>
+    <span class="sep"></span>
+    <button id="bSnd" class="gh" title="Herzt&ouml;ne einschalten">Herzt&ouml;ne</button>
+  </div>
+</div>
+
+<div class="panel" id="rail"></div>
+
+
+
+<div class="panel" id="zyk" aria-live="polite">
+  <span class="kick">Herzzyklus</span>
+  <h3 id="phT">Diastole &ndash; das Herz f&uuml;llt sich</h3>
+  <p id="phX"></p>
+  <canvas id="ekg" aria-label="EKG: Der Punkt zeigt, wo das Herz gerade im Schlag steht."></canvas>
+  <dl>
+    <dt>Segelklappen</dt><dd id="kSeg">offen</dd>
+    <dt>Taschenklappen</dt><dd id="kTas">zu</dd>
+    <dt>Windkessel</dt><dd id="kWk">&ndash;</dd>
+    <dt>Linke Kammer</dt><dd id="kLv">&ndash;</dd>
+    <dt class="erz">Erregung</dt><dd class="erz" id="kErr" style="grid-column:2 / span 3">&ndash;</dd>
+  </dl>
+  <div class="erz-n" id="kErrN"></div>
+  <div class="leg"><span><i style="background:#2F6FB5"></i>wenig Sauerstoff</span><span><i style="background:#C8342F"></i>viel Sauerstoff</span><span><i style="background:#E8B830"></i>Erregungsleitung</span></div>
+</div>
+
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB<span class="lg"> &middot; animiert</span><span class="sm"> animiert</span></button>
+  <button id="bGlbS" class="gh">GLB<span class="lg"> &middot; statisch</span></button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
+<div class="panel" id="info">
+  <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
+  <span class="lat" id="iLat"></span>
+  <h3 id="iDe"></h3>
+  <p id="iTx"></p>
+  <dl id="iDl"></dl>
+  <div class="care"><h5>F&uuml;r die Pflege</h5><p id="iCare"></p></div>
+</div>
+
+<div class="panel" id="scard">
+  <button class="hbtn" id="sClose" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="sKick"></div>
+  <h3 id="sTitle"></h3>
+  <div class="lead" id="sLead"></div>
+  <div class="after" id="sAfter"></div>
+  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div class="panel" id="schema" aria-label="Schema des Kreislaufs">
+  <div class="sch-head"><span class="kick">Schema &middot; Kreislauf</span><span class="sch-hint">Gleiches Blut, gleicher Herzschlag wie im 3D-Herz &ndash; hier mit Lunge und K&ouml;rper.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
+  <div id="schemaBox"></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Nahansicht</div>
+  <h3 id="lpTitle"></h3>
+  <div class="lp-chips" id="lpChips"></div>
+  <canvas id="lpCv"></canvas>
+  <div class="lp-text" id="lpText"></div>
+  <div class="lp-leg" id="lpLeg"></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Herz in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Herz hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arOpen">Geschlossen</button>
+    <button class="ar-b" id="arLab">Beschriftung aus</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
+</div>`;
+var organ = { renderer: { alpha: true }, aufbauen: aufbauen };
+function aufbauen(umg) {
 'use strict';
+umg.bereich.innerHTML = MARKUP;
 var S = HeartSDF, R = S.R, INFO = HeartInfo;
 var $ = function (id) { return document.getElementById(id); };
 var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
@@ -2258,27 +2404,24 @@ var sstep = function (a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return 
 var WATERMARK = Kern.WM;
 if (!window.THREE) { $('bootSt').textContent = 'Die 3D-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung pr\u00fcfen und neu laden.'; return; }
 
+var abgebaut = false, fitT = null, quizT = null;
 var App = window.HerzApp = { ready: false, sel: null, opened: true, openK: 1, labels: true, see: false, sound: false, quiz: null, morph: [], pick: [] };
 
 /* =====================================================================
    1. Szene, Licht, Material (wie im Nephron-Modell)
    ===================================================================== */
-var canvas = $('cv');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.setClearColor(0x0b171c, 1);
+var canvas = umg.canvas;
+var renderer = umg.renderer;
 renderer.localClippingEnabled = true;
 /* Schnittebene: in der geöffneten Ansicht werden Klappen, Fäden und Gefäßbahnen genau an der Ebene abgeschnitten */
 var CLIP = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.14), CLIP_PV = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1.2);
 var clipMats = [], clipMatsPv = [], clipMatsErl = [], CLIP_ERL = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.34), corBack = [];
 var CLIP0 = CLIP.clone(), CLIP_PV0 = CLIP_PV.clone(), CLIP_ERL0 = CLIP_ERL.clone();
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
+var scene = umg.szene;
+var camera = umg.kamera;
 var view = { theta: 0.0, phi: 1.52, dist: 34.5, target: V(0.4, 1.0, -1.2) };
 
-var envTex = Kern.umgebung(renderer);
-Kern.licht(scene, envTex);
+var envTex = umg.envTex;
 
 var srgb = Kern.srgb;
 function mat(hex, o) {
@@ -2511,16 +2654,16 @@ async function build() {
   var small = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
   var h = small ? 0.145 : 0.13;
   var G = HeartMesher.makeGrid([[-6.4, -6.6, -7.0], [6.6, 9.9, 3.7]], h);
-  await setLoad(0.02, 'Herzmuskel wird geformt');
-  var T = await HeartMesher.evalTissue(G, S.tissue, function (f) { return setLoad(0.02 + f * 0.5); });
-  await setLoad(0.53, 'Schnittfl\u00e4che wird gelegt');
+  await setLoad(0.02, 'Herzmuskel wird geformt'); if (abgebaut) return;
+  var T = await HeartMesher.evalTissue(G, S.tissue, function (f) { return setLoad(0.02 + f * 0.5); }); if (abgebaut) return;
+  await setLoad(0.53, 'Schnittfl\u00e4che wird gelegt'); if (abgebaut) return;
   var P = HeartMesher.pieceFields(G, T, S.cutF, S.keepSDF);
   var back = HeartMesher.surfaceNets(G, P.back), front = HeartMesher.surfaceNets(G, P.front);
   var smp = HeartAssemble.makeSampler(G, T);
-  await setLoad(0.58, 'Herzh\u00f6hlen werden eingef\u00e4rbt');
-  var outB = await HeartAssemble.buildPiece(back, 1, h, smp, function (f) { return setLoad(0.58 + f * 0.2); });
-  await setLoad(0.78, 'Vorderwand wird gebaut');
-  var outF = await HeartAssemble.buildPiece(front, -1, h, smp, function (f) { return setLoad(0.78 + f * 0.1); });
+  await setLoad(0.58, 'Herzh\u00f6hlen werden eingef\u00e4rbt'); if (abgebaut) return;
+  var outB = await HeartAssemble.buildPiece(back, 1, h, smp, function (f) { return setLoad(0.58 + f * 0.2); }); if (abgebaut) return;
+  await setLoad(0.78, 'Vorderwand wird gebaut'); if (abgebaut) return;
+  var outF = await HeartAssemble.buildPiece(front, -1, h, smp, function (f) { return setLoad(0.78 + f * 0.1); }); if (abgebaut) return;
   var r;
   for (r in outB) { var mb = regionMesh(outB[r], +r, false); backG.add(mb); register(regionSid[r], mb, mb.material); var ol = outlineFor(mb); if (ol) { mb.add(ol); mb.userData.outline = ol; } }
   for (r in outF) { var mf = regionMesh(outF[r], +r, true); glassify(mf.material[0], 0.05, 0.5); glassify(mf.material[1], 0.17, 0.72); mf.material[2].userData.lidCut = true; lidG.add(mf); register(regionSid[r], mf, mf.material); }
@@ -2531,7 +2674,7 @@ async function build() {
     if (!m.userData.lid && (rg === R.AO || rg === R.PT || rg === R.SVC || rg === R.IVC || rg === R.PV)) { m.userData.vessel = true; (App.vesMats = App.vesMats || []).push.apply(App.vesMats, m.material); }
   });
   STRUCT.myo.has = true;
-  await setLoad(0.9, 'Klappen und Sehnenf\u00e4den');
+  await setLoad(0.9, 'Klappen und Sehnenf\u00e4den'); if (abgebaut) return;
   var VA = HeartValves.build(); App.V = VA;
   /* Klappen in der Farbe ihrer Herzseite, heller als die Wand (wie im Lehrbuchbild) */
   var VCOL = { mitral: 0xE2B3A8, aortic: 0xD9A596, tricus: 0xB2BFDC, pulm: 0xBAC6E2 };
@@ -2546,7 +2689,7 @@ async function build() {
     var m = new THREE.Mesh(VA[d[0]].geo, mat(d[0] === 'chordM' ? 0xEAD3CC : 0xD3DAEC, { rough: 0.55, env: 0.2 })); m.name = 'Sehnenfaeden_' + d[0]; clipMats.push(m.material);
     addMorph(m, VA[d[0]].drivers.map(function (x) { return x === 'O' ? d[1] : x; })); backG.add(m); register('chord', m, [m.material]);
   });
-  await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe');
+  await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe'); if (abgebaut) return;
   App.corPts = { front: [], back: [] };
   HeartExtras.coronaries().forEach(function (c) {
     if (c.name === 'RIVA') INF.pts = c.pts;
@@ -2561,7 +2704,7 @@ async function build() {
       Array.prototype.push.apply(run.front ? App.corPts.front : App.corPts.back, run.pts);
     });
   });
-  await setLoad(0.96, 'Erregungsleitung');
+  await setLoad(0.96, 'Erregungsleitung'); if (abgebaut) return;
   var con = HeartExtras.conduction(); App.con = con;
   var cm = condMat(); clipMatsErl.push(cm); cm.userData.erl = true; App.condMat = cm;
   var addCond = function (pts, a0, a1, rad) {
@@ -2598,11 +2741,11 @@ async function build() {
     g.setAttribute('act', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(d[1]), 1));
     var m = new THREE.Mesh(g, cm); m.name = 'Knoten'; addMotionMorphs(m, d[0]); backG.add(m); register('erl', m, [cm]);
   });
-  await setLoad(0.98, 'Blutportionen');
+  await setLoad(0.98, 'Blutportionen'); if (abgebaut) return;
   buildBlood();
   computeAnchors();
   buildSparks();
-  await setLoad(1, 'Fertig');
+  await setLoad(1, 'Fertig'); if (abgebaut) return;
   App.buildMs = Math.round(performance.now() - t0);
 }
 
@@ -3406,7 +3549,7 @@ function quizAnswer(sid) {
   $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
   highlight(Q.target, true);
   var tg = Q.target;
-  setTimeout(function () { highlight(tg, false); if (App.quiz) quizNext(); }, ok ? 1200 : 2400);
+  quizT = setTimeout(function () { highlight(tg, false); if (App.quiz) quizNext(); }, ok ? 1200 : 2400);
 }
 
 /* =====================================================================
@@ -3472,7 +3615,7 @@ $('bErr').onclick = function () {
   document.body.classList.toggle('erreg', App.impulse);
   if (App.impulse && !STRUCT.erl.on) { STRUCT.erl.on = true; var rw = $('row-erl'); if (rw) rw.classList.remove('off'); applyVisibility(); }
   setErlOverlay(App.impulse);
-  setTimeout(fitRail, 30);
+  fitT = setTimeout(fitRail, 30);
   if (!App.impulse) { updateEmissive(); updateSparks(0, App.W, 0); }
   else { lastErr = ''; if (window.innerWidth >= 1000) openHelp('ekg'); else closeCard(); }
   refreshOpacity();
@@ -3594,7 +3737,7 @@ function updateCamera() {
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function shown(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 function inLid(o) { while (o) { if (o === lidG) return true; o = o.parent; } return false; }
-canvas.addEventListener('click', function (e) {
+function canvasKlick(e) {
   if (orbit.dragged || !App.ready) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1; ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -3613,8 +3756,10 @@ canvas.addEventListener('click', function (e) {
   if (App.quiz) { quizAnswer(sid); return; }
   if (LUPE.mode || LUPE.open) { var hp = hits.length ? hits[0].point.clone() : null; if (sid) lupeFromStruct(sid, hp); return; }
   setSelected(sid);
-});
-window.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (App.quiz) quizEnd(); else { setSelected(null); closeCard(); } } });
+}
+canvas.addEventListener('click', canvasKlick);
+function escTaste(e) { if (e.key === 'Escape') { if (App.quiz) quizEnd(); else { setSelected(null); closeCard(); } } }
+window.addEventListener('keydown', escTaste);
 
 /* =====================================================================
    8. Herzzyklus: EKG und Anzeige
@@ -3779,10 +3924,7 @@ function applyOffset() {
 function fitRail() {
   if (window.innerWidth >= 1000) { var zt = $('zyk').getBoundingClientRect().top; $('rail').style.maxHeight = Math.max(160, zt - 12 - 124) + 'px'; } else $('rail').style.maxHeight = '';
 }
-function resize() {
-  var w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+function groesse(w, h) {
   focusX = focusOffset(w, h).x; applyOffset();
   if (w < 1000) {
     var free = Math.max(160, (h - h * 0.34 - 150) - 170), pxcm = free / 17.5, fd = h / (2 * Math.tan(19 * Math.PI / 180) * pxcm);
@@ -3795,8 +3937,13 @@ function resize() {
   ekgSize();
   LABELS.forEach(function (a) { a.key = ''; });
 }
-window.addEventListener('resize', resize);
-resize();
+/* volle Anpassung (Renderer, Kamera, Organ) für den Aufruf aus dem Organ, z. B. nach dem AR-Ende */
+function resize() {
+  var w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  groesse(w, h);
+}
 
 var last = performance.now();
 function loop(now, frame) {
@@ -3835,8 +3982,34 @@ App.dbgFade = function (v) { vesFade = v; applyBackOpacity(App.openK); LABELS.fo
 App.dbg = function () { return { vesFade: vesFade, preset: App.preset, openK: App.openK }; };
 App.dbgFocusNow = function () { [backG, lidG].forEach(function (G) { G.traverse(function (m) { if (m.isMesh) m.userData.fk = focusTarget(m); }); }); refreshOpacity(); };
 App.api = { setSelected: setSelected, goTo: goTo, setLidPose: setLidPose, openHelp: openHelp, quizStart: quizStart, quizEnd: quizEnd, setHand: setHand, setWK: setWK, view: view, camera: camera, scene: scene, backG: backG, lidG: lidG };
-renderer.setAnimationLoop(loop);
-build().then(function () {
+organ.bild = loop; organ.groesse = groesse;
+/* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
+organ.abbauen = function () {
+  abgebaut = true;
+  clearTimeout(fitT); clearTimeout(quizT); clearTimeout(Kern.toast._t);
+  if (AR) AR.abbauen();
+  if (actx) { try { actx.close(); } catch (e) {} actx = null; }
+  canvas.removeEventListener('click', canvasKlick);
+  window.removeEventListener('keydown', escTaste);
+  orbit.loesen();
+  HerzSchema.abbauen(); HerzLupe.abbauen();
+  ARL.abbauen();
+  SZ.abbauen();
+  /* three.js: alles bis auf die Lichter des Rahmens freigeben */
+  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  renderer.localClippingEnabled = false;
+  camera.clearViewOffset(); camera.updateProjectionMatrix();
+  canvas.style.cursor = ''; canvas.style.visibility = '';
+  /* DOM */
+  umg.bereich.innerHTML = '';
+  labelBox.innerHTML = ''; leaderSvg.innerHTML = '';
+  ['card', 'schema', 'erreg'].forEach(function (c) { document.body.classList.remove(c); });
+  $('toast').classList.remove('show'); $('toast').innerHTML = '';
+  $('boot').classList.remove('gone'); $('bootBar').style.width = ''; $('bootSt').textContent = '';
+  delete window.HerzApp;
+};
+return build().then(function () {
+  if (abgebaut) return;
   buildStructList();
   addStationLabels();
   buildLupe();
@@ -3846,5 +4019,7 @@ build().then(function () {
   App.ready = true;
   Kern.Export.pruefeZiel('exp');
   $('boot').classList.add('gone');
-}).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
+}).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
+}
+Kern.organ('herz', organ);
 })();

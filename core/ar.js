@@ -15,7 +15,8 @@ var Kern = window.Kern = window.Kern || {};
      Fusspunkts in Modelleinheiten), hintergrund (Clear-Farbe nach dem Ende),
      ids { ui, hint, ende, kleiner, groesser, neu }, knoepfe (IDs, die
      beforexrselect unterdruecken), quickLook() (Rueckfall), beimStart(),
-     beimEnde(). Der Ring entsteht erst beim Start. */
+     beimEnde(). Der Ring entsteht erst beim Start. abbauen() beendet eine
+     laufende Sitzung (ohne beimEnde) und gibt den Ring frei. */
   AR.xr = function (cfg) {
     var st = { session: null, hit: null, ref: null, reticle: null, placed: false, scale: cfg.skala, saved: null, xr: false };
     var renderer = cfg.renderer, root = cfg.root, ids = cfg.ids, aktiv = false;
@@ -84,6 +85,19 @@ var Kern = window.Kern = window.Kern || {};
       renderer.setClearColor(cfg.hintergrund, 1);
       el(ids.ui).style.display = 'none';
       if (cfg.beimEnde) cfg.beimEnde();
+    };
+
+    /* Organ wegraeumen: Sitzung ohne Rueckrufe beenden, Ring freigeben */
+    st.abbauen = function () {
+      var sess = st.session;
+      aktiv = false; st.session = null;
+      if (st.hit) { try { st.hit.cancel(); } catch (e) {} st.hit = null; }
+      if (sess) { try { sess.end(); } catch (e) {} }
+      if (renderer.xr.enabled) { renderer.xr.enabled = false; renderer.setClearColor(cfg.hintergrund, 1); }
+      if (st.reticle) {
+        if (st.reticle.parent) st.reticle.parent.remove(st.reticle);
+        st.reticle.geometry.dispose(); st.reticle.material.dispose(); st.reticle = null;
+      }
     };
 
     cfg.knoepfe.forEach(function (id) { el(id).addEventListener('beforexrselect', function (e) { e.preventDefault(); }); });
@@ -196,7 +210,7 @@ var Kern = window.Kern = window.Kern || {};
      ueber dem Bild. Die Schilder stehen deshalb in Modellkoordinaten in zwei
      Spalten links und rechts neben dem Modell und drehen sich (WebXR) mit,
      sodass sie immer zum Betrachter zeigen.
-     Liefert { update(), usd(f4, xf), ausblenden() }. Die Gruppe entsteht erst
+     Liefert { update(), usd(f4, xf), ausblenden(), abbauen() }. Die Gruppe entsteht erst
      beim ersten update(), beim Laden und in schilder() selbst entsteht nichts.
      cfg:
        root, renderer, camera, xr (Steuer-Zustand aus AR.xr, nur .placed)
@@ -223,7 +237,7 @@ var Kern = window.Kern = window.Kern || {};
     var M = { mitte: 0, spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128,
       knick: 0.9, luecke: 0.12, punkt: 0.14, band: 0.035, punktBand: 0.13, anker: 0.05, schwelle: 0.4, dim: 0.4 };
     for (var key in cfg.masse) M[key] = cfg.masse[key];
-    var root = cfg.root, ARL = { g: null, lines: null, side: {}, items: [] };
+    var root = cfg.root, ARL = { g: null, lines: null, side: {}, items: [], eintraege: [] };
     var V = null;
 
     function canvas(a) {
@@ -288,7 +302,7 @@ var Kern = window.Kern = window.Kern || {};
       var dot = new THREE.Mesh(ARL.dotGeo, ARL.dotMat); dot.renderOrder = 999;
       ARL.g.add(mesh); ARL.g.add(dot);
       a.ar = { mesh: mesh, dot: dot };
-      ARL.items.push(a.ar);
+      ARL.items.push(a.ar); ARL.eintraege.push(a);
       return a.ar;
     }
 
@@ -315,6 +329,15 @@ var Kern = window.Kern = window.Kern || {};
       ARL.lines.geometry.setDrawRange(0, k);
     };
     S.ausblenden = function () { if (ARL.g) ARL.g.visible = false; };
+    /* Schilder samt Bildern, Linien und Punkt-Geometrie freigeben */
+    S.abbauen = function () {
+      ARL.items.forEach(function (o) { o.mesh.material.map.dispose(); o.mesh.material.dispose(); o.mesh.geometry.dispose(); });
+      ARL.eintraege.forEach(function (a) { delete a.ar; delete a.arC; });
+      if (ARL.lines) { ARL.lines.geometry.dispose(); ARL.lines.material.dispose(); }
+      if (ARL.dotGeo) { ARL.dotGeo.dispose(); ARL.dotMat.dispose(); }
+      if (ARL.g && ARL.g.parent) ARL.g.parent.remove(ARL.g);
+      ARL.g = null; ARL.lines = null; ARL.items = []; ARL.eintraege = []; ARL.side = {};
+    };
 
     /* Beschriftung fuer die USDZ-Datei: ein Bild mit allen Schildern (Atlas),
        je Schild ein Rechteck, Fuehrungslinien als schmale Baender.

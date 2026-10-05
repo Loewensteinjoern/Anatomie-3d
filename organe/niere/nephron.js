@@ -5,6 +5,81 @@
    ===================================================================== */
 (function () {
 'use strict';
+/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
+var MARKUP = `<div id="title">
+  <div class="kicker">Nephron &middot; funktionelle Einheit der Niere</div>
+  <h1>Nierenk&ouml;rperchen &amp; <em>Tubulus</em></h1>
+  <div class="sub">Das Blut bringt das Wasser mit &ndash; und holt es sich zur&uuml;ck.</div>
+</div>
+
+<div class="panel" id="tools">
+  <div class="trow">
+    <span class="cap">Ausschnitt</span>
+    <button id="cam0" class="gh on">&Uuml;bersicht</button>
+    <button id="cam1" class="gh">Nierenk&ouml;rperchen</button>
+    <button id="cam2" class="gh">Henle-Schleife</button>
+    <button id="cam3" class="gh">Sammelrohr</button>
+    <span class="sep"></span>
+    <button id="bLupe" class="gh" title="Lupe: Nahansicht eines Abschnitts">Lupe</button>
+    <button id="bAR" class="gh" title="Das Nephron mit der Kamera in den Raum stellen">AR</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Str&ouml;mung</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bS0" class="gh">langsam</button>
+    <button id="bS1" class="gh on">normal</button>
+    <button id="bS2" class="gh">schnell</button>
+    <span class="sep"></span>
+    <button id="bSee" class="gh on" title="Tubulus durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
+    <button id="bLab" class="gh on">Beschriftung</button>
+  </div>
+</div>
+
+<div class="panel" id="rail"></div>
+
+<div class="panel" id="legend">
+  <h4>Lesehilfe</h4>
+  <div id="ramp"></div>
+  <div class="sc"><span>verd&uuml;nnt</span><span>Inhalt des Rohrs</span><span>konzentriert</span></div>
+  <p><b style="color:#C0303C">Rot</b> Blutzellen &ndash; bleiben im Gef&auml;&szlig;.<br>
+  <b style="color:#3A9BEA">Blau</b> Wasser &ndash; kommt mit dem Blut, wird im Kn&auml;uel abgepresst und folgt dem Salz zur&uuml;ck ins Blut.<br>
+  <b style="color:#B98BD9">Violett</b> Salz &ndash; im Blut gel&ouml;st, wird mit abgepresst und zur&uuml;ckgeholt. Wo Salz ist, zieht es Wasser hin.</p>
+  <p id="legDrug" style="display:none"><b style="color:#33E0A0">Gr&uuml;n</b> Torasemid &ndash; wird ins Rohr ausgeschieden und blockiert die Salzpumpe im aufsteigenden Schenkel.</p>
+  <p id="legGluc" style="display:none"><b style="color:#F5B301">Gelb</b> Zucker (Sechsring) &ndash; bleibt bei Hyperglyk&auml;mie im Rohr und h&auml;lt das Wasser fest.</p>
+  <p class="note">Gef&auml;&szlig;e und Tubulus sind durchscheinend: Im Tubulus flie&szlig;en Wasser und Salz, die Blutzellen bleiben in den Gef&auml;&szlig;en.</p>
+</div>
+
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
+<div class="panel" id="info">
+  <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
+  <span class="lat" id="iLat"></span>
+  <h3 id="iDe"></h3>
+  <p id="iTx"></p>
+  <dl id="iDl"></dl>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Nephron in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Nephron hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSee">Undurchsichtig</button>
+    <button class="ar-b" id="arLab">Beschriftung aus</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
+</div>`;
+var organ = { renderer: {}, aufbauen: aufbauen };
+function aufbauen(umg) {
+umg.bereich.innerHTML = MARKUP;
 
 var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
 var DEG = Math.PI / 180;
@@ -234,18 +309,14 @@ function dotCloud(pts, r) {
 /* =====================================================================
    2. Szene, Licht, Material
    ===================================================================== */
-var canvas = document.getElementById('cv');
-var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.setClearColor(0x0b171c, 1);
+var canvas = umg.canvas;
+var renderer = umg.renderer;
 
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(38, 1, 0.3, 300);
+var scene = umg.szene;
+var camera = umg.kamera;
 var view = { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) };
 
-var envTex = Kern.umgebung(renderer);
-Kern.licht(scene, envTex);
+var envTex = umg.envTex;
 
 var srgb = Kern.srgb;
 function mat(hex, o) { return Kern.mat(hex, o || {}, envTex); }
@@ -1358,7 +1429,7 @@ var orbit = Kern.orbit(canvas, view, { minDist: 2.5, maxDist: 60 });
 function updateCamera() { Kern.kamera(camera, view); }
 
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-canvas.addEventListener('click', function (e) {
+function canvasKlick(e) {
   if (orbit.dragged) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
@@ -1369,7 +1440,8 @@ canvas.addEventListener('click', function (e) {
     return h.object.visible && h.object.userData.sid !== 'grad';
   });
   setSelected(hits.length ? hits[0].object.userData.sid : null);
-});
+}
+canvas.addEventListener('click', canvasKlick);
 
 /* =====================================================================
    8. Beschriftung - wird nur neu gesetzt, wenn sich die Ansicht aendert
@@ -2005,14 +2077,17 @@ function arQuickLook() {
 /* =====================================================================
    10. Renderschleife
    ===================================================================== */
+function groesse(w, h) {
+  camera.updateProjectionMatrix();
+  Kern.linienFlaeche(leaderSvg, w, h);
+}
+/* volle Anpassung (Renderer, Kamera, Organ) für den Aufruf aus dem Organ, z. B. nach dem AR-Ende */
 function resize() {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
-  Kern.linienFlaeche(leaderSvg, w, h);
+  camera.aspect = w / h;
+  groesse(w, h);
 }
-window.addEventListener('resize', resize);
-resize();
 
 var last = performance.now();
 function loop(now, frame) {
@@ -2032,7 +2107,28 @@ function loop(now, frame) {
 
 applyVisibility();
 setSelected(null);
-renderer.setAnimationLoop(loop);
-setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); }, 240);
+var bereitT = null, bereitOk = null;
+organ.bild = loop; organ.groesse = groesse;
+/* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
+organ.abbauen = function () {
+  if (bereitT !== null) { clearTimeout(bereitT); bereitT = null; bereitOk(); }
+  clearTimeout(Kern.toast._t);
+  AR.abbauen(); ARL.abbauen();
+  canvas.removeEventListener('click', canvasKlick);
+  orbit.loesen();
+  SZ.abbauen();
+  /* three.js: alles bis auf die Lichter des Rahmens freigeben */
+  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  canvas.style.cursor = '';
+  /* DOM */
+  if (LUPE.box.parentNode) LUPE.box.parentNode.removeChild(LUPE.box);
+  umg.bereich.innerHTML = '';
+  labelBox.innerHTML = ''; leaderSvg.innerHTML = '';
+  var tt = document.getElementById('toast'); tt.classList.remove('show'); tt.innerHTML = '';
+  document.getElementById('boot').classList.remove('gone');
+};
+return new Promise(function (ok) { bereitOk = ok; bereitT = setTimeout(function () { bereitT = null; Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); ok(); }, 240); });
 
+}
+Kern.organ('nephron', organ);
 })();

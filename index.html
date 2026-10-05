@@ -12,141 +12,7 @@
 <svg id="leaders"></svg>
 <div id="labels"></div>
 
-<div id="title">
-  <div class="kicker">Herz &middot; Pumpe des Kreislaufs</div>
-  <h1>Herzh&ouml;hlen &amp; <em>Klappen</em></h1>
-  <div class="sub">Vier R&auml;ume, vier Ventile &ndash; und eine elastische Aorta, die den Blutstrom gleichm&auml;&szlig;ig macht.</div>
-</div>
-
-<div class="panel" id="tools">
-  <div class="trow">
-    <span class="cap">Ansicht</span>
-    <button id="bOpen" class="gh on">Ge&ouml;ffnet</button>
-    <button id="bClosed" class="gh">Geschlossen</button>
-    <span class="sep"></span>
-    <button id="bSchema" class="gh" title="Kreislauf als Schema: Herz, Lunge und Körper">Schema</button>
-    <button id="bAR" class="gh" title="Das Herz mit der Kamera in den Raum stellen">AR</button>
-    <span class="sep"></span>
-    <button id="bSee" class="gh" title="Herzwand durchsichtig zeigen">Durchsicht</button>
-    <button id="bLab" class="gh on">Beschriftung</button>
-  </div>
-  <div class="trow cam">
-    <span class="cap">Ausschnitt</span>
-    <button id="cam0" class="gh on">&Uuml;bersicht</button>
-    <button id="cam1" class="gh">Klappen</button>
-    <button id="cam2" class="gh">Rechtes Herz</button>
-    <button id="cam3" class="gh">Linkes Herz</button>
-  </div>
-  <div class="trow" id="autoRow">
-    <span class="cap">Herzschlag</span>
-    <button id="bPlay" class="gh on">Pause</button>
-    <button id="bS0" class="gh">langsam</button>
-    <button id="bS1" class="gh on">normal</button>
-    <button id="bS2" class="gh">schnell</button>
-    <span class="sep"></span>
-    <button id="bHand" class="gh" title="Selbst bestimmen, wer dr&uuml;ckt">Handbetrieb</button>
-  </div>
-  <div class="trow" id="handRow" style="display:none">
-    <span class="cap">Dr&uuml;cken</span>
-    <button id="hV" class="gh">Vorh&ouml;fe</button>
-    <button id="hR" class="gh">rechte Kammer</button>
-    <button id="hL" class="gh">linke Kammer</button>
-    <button id="hX" class="gh">entspannen</button>
-    <span class="sep"></span>
-    <button id="bAuto" class="gh">Automatik</button>
-  </div>
-  <div class="trow">
-    <span class="cap">Zeigen</span>
-    <button id="fAll" class="gh on">Alle</button>
-    <button id="fLu" class="gh" title="Rechter Vorhof, rechte Kammer, Hohlvenen und Lungenarterien">Lungenkreislauf</button>
-    <button id="fKo" class="gh" title="Linker Vorhof, linke Kammer, Lungenvenen und Aorta">K&ouml;rperkreislauf</button>
-    <span class="sep"></span>
-    <button id="bErr" class="gh" title="Elektrische Impulse im Takt des EKGs zeigen">Erregung</button>
-    <button id="bLupe" class="gh" title="Nahansicht: Was passiert in einer Struktur?">Lupe</button>
-  </div>
-  <div class="trow">
-    <span class="cap">Aorta</span>
-    <button id="wkE" class="gh on">elastisch</button>
-    <button id="wkS" class="gh">starr</button>
-    <span class="sep"></span>
-    <button id="bSnd" class="gh" title="Herzt&ouml;ne einschalten">Herzt&ouml;ne</button>
-  </div>
-</div>
-
-<div class="panel" id="rail"></div>
-
-
-
-<div class="panel" id="zyk" aria-live="polite">
-  <span class="kick">Herzzyklus</span>
-  <h3 id="phT">Diastole &ndash; das Herz f&uuml;llt sich</h3>
-  <p id="phX"></p>
-  <canvas id="ekg" aria-label="EKG: Der Punkt zeigt, wo das Herz gerade im Schlag steht."></canvas>
-  <dl>
-    <dt>Segelklappen</dt><dd id="kSeg">offen</dd>
-    <dt>Taschenklappen</dt><dd id="kTas">zu</dd>
-    <dt>Windkessel</dt><dd id="kWk">&ndash;</dd>
-    <dt>Linke Kammer</dt><dd id="kLv">&ndash;</dd>
-    <dt class="erz">Erregung</dt><dd class="erz" id="kErr" style="grid-column:2 / span 3">&ndash;</dd>
-  </dl>
-  <div class="erz-n" id="kErrN"></div>
-  <div class="leg"><span><i style="background:#2F6FB5"></i>wenig Sauerstoff</span><span><i style="background:#C8342F"></i>viel Sauerstoff</span><span><i style="background:#E8B830"></i>Erregungsleitung</span></div>
-</div>
-
-<div class="panel" id="exp">
-  <span class="tag">Export</span>
-  <button id="bGlbA" class="gh">GLB<span class="lg"> &middot; animiert</span><span class="sm"> animiert</span></button>
-  <button id="bGlbS" class="gh">GLB<span class="lg"> &middot; statisch</span></button>
-  <button id="bStl" class="gh">STL</button>
-</div>
-
-<div class="panel" id="info">
-  <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
-  <span class="lat" id="iLat"></span>
-  <h3 id="iDe"></h3>
-  <p id="iTx"></p>
-  <dl id="iDl"></dl>
-  <div class="care"><h5>F&uuml;r die Pflege</h5><p id="iCare"></p></div>
-</div>
-
-<div class="panel" id="scard">
-  <button class="hbtn" id="sClose" aria-label="Schlie&szlig;en">&times;</button>
-  <div class="kick" id="sKick"></div>
-  <h3 id="sTitle"></h3>
-  <div class="lead" id="sLead"></div>
-  <div class="after" id="sAfter"></div>
-  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
-</div>
-
-<div class="panel" id="schema" aria-label="Schema des Kreislaufs">
-  <div class="sch-head"><span class="kick">Schema &middot; Kreislauf</span><span class="sch-hint">Gleiches Blut, gleicher Herzschlag wie im 3D-Herz &ndash; hier mit Lunge und K&ouml;rper.</span>
-  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
-  <div id="schemaBox"></div>
-</div>
-
-<div class="panel" id="lupe" aria-live="polite">
-  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
-  <div class="lp-kick">Lupe &middot; Nahansicht</div>
-  <h3 id="lpTitle"></h3>
-  <div class="lp-chips" id="lpChips"></div>
-  <canvas id="lpCv"></canvas>
-  <div class="lp-text" id="lpText"></div>
-  <div class="lp-leg" id="lpLeg"></div>
-</div>
-
-<div id="arUI" aria-live="polite">
-  <div class="ar-top"><span class="ar-title">Herz in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
-  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Herz hinzustellen.</div>
-  <div class="ar-bot">
-    <button class="ar-b" id="arOpen">Geschlossen</button>
-    <button class="ar-b" id="arLab">Beschriftung aus</button>
-    <button class="ar-b" id="arSmall">Kleiner</button>
-    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
-    <button class="ar-b" id="arPlace">Neu hinstellen</button>
-    <button class="ar-b" id="arPause">Pause</button>
-  </div>
-  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
-</div>
+<div id="organ" class="organ-herz" style="display:contents"></div>
 <a id="arQL" rel="ar" style="display:none"><img alt="AR" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></a>
 
 <div id="wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
@@ -156,9 +22,11 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/GLTFExporter.js"></script>
 <script src="core/kern.js"></script>
+<script src="core/rahmen.js"></script>
 <script src="core/export.js"></script>
 <script src="core/ar.js"></script>
 <script src="core/szenarien.js"></script>
 <script src="organe/herz/herz.js"></script>
+<script>Kern.einzelseite('herz');</script>
 </body>
 </html>
