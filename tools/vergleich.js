@@ -203,9 +203,9 @@ const MODELLE = {
         await t.klick('#fAll'); await t.klick('#bHand'); await t.klick('#hV'); await t.weiter(900); await t.bild('handbetrieb');
         await t.klick('#bAuto'); await t.klick('#wkS'); await t.weiter(900); await t.bild('aorta-starr');
         await t.klick('#wkE'); await t.taste('Escape');
-        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#rail .dis[data-card] >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
-        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
-        await t.klick('#qStop'); await t.klick('#rail .tabs .tab >> nth=0');
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#rail .dis[data-card] >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#qStop'); await t.klick('#rail .tabs .tab:text-is("Strukturen")');
         await t.klick('#bAR'); await t.weiter(300); await t.bild('ar-ohne-geraet');
       } },
       handy: { opt: HANDY, async ablauf(t) {          /* ohne Ausschnitt-Knöpfe: die blendet das Handy-Layout aus */

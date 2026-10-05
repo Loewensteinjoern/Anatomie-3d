@@ -2746,7 +2746,7 @@ function lupeOpen(scene, variant, point) {
   Array.prototype.forEach.call(document.querySelectorAll('#lpChips button'), function (b) { b.classList.toggle('on', b.getAttribute('data-sc') === scene); });
   if (point) LUPE.point = point; else LUPE.point = lupePoint(scene, v);
   closeCard(); $('info').classList.remove('show');
-  $('lupe').classList.add('show'); document.body.classList.add('card');
+  $('lupe').classList.add('show'); document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function lupePoint(scene, v) {
@@ -2763,7 +2763,7 @@ function lupeClose() {
   LUPE.open = false; LUPE.mode = false; $('lupe').classList.remove('show'); onOff('bLupe', false);
   if (LUPE.ring) LUPE.ring.visible = false; if (LUPE.line) LUPE.line.style.display = 'none';
   canvas.style.cursor = '';
-  document.body.classList.toggle('card', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  kartenLage();
 }
 function lupeFromStruct(sid, point) {
   if (!sid) return;
@@ -2965,7 +2965,7 @@ function heartScreenBox(w, h) {
   var cx = (x0 + x1) / 2, hw = (x1 - x0) / 2 * 0.82;
   return { x0: cx - hw, x1: cx + hw, y0: y0, y1: y1 };
 }
-function cardOpen() { return $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'); }
+function cardOpen() { return $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show') || !!(SZ.aktiv && SZ.offen); }
 function layoutLabels(w, h) {
   var narrow = w < 1000, dist = view.dist, hb = heartScreenBox(w, h);
   var zykTop = narrow ? 0 : $('zyk').getBoundingClientRect().top;
@@ -3020,7 +3020,7 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
-   6. Leiste: Strukturen, Hilfekarten, \u00dcben
+   6. Leiste: Strukturen, Krankheiten, Medikamente, Hilfekarten, \u00dcben
    ===================================================================== */
 function applyVisibility() {
   ORDER.forEach(function (s) {
@@ -3055,7 +3055,7 @@ function setSelected(id) {
   updateEmissive(App.W ? App.W.pos : undefined);
   ORDER.forEach(function (s) { var row = $('row-' + s.id); if (row) row.classList.toggle('sel', s.id === id); });
   var box = $('info');
-  if (!id) { box.classList.remove('show'); document.body.classList.toggle('card', $('scard').classList.contains('show')); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   var s = STRUCT[id];
   if (!s.on) { s.on = true; var rw = $('row-' + id); if (rw) rw.classList.remove('off'); applyVisibility(); }
   $('iLat').textContent = s.lat; $('iDe').textContent = s.de; $('iTx').textContent = s.txt; $('iCare').textContent = s.care;
@@ -3064,7 +3064,7 @@ function setSelected(id) {
   if (LUPE.open) lupeClose();
   box.classList.add('show');
   if (!App.quiz) closeCard();
-  document.body.classList.add('card');
+  document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function showCard(kick, title, lead, after, quiz) {
@@ -3079,7 +3079,7 @@ function showCard(kick, title, lead, after, quiz) {
   if (App.sel && !quiz) clearSel();
   $('scard').classList.add('show');
   $('info').classList.remove('show');
-  document.body.classList.add('card');
+  document.body.classList.add('card'); szWeichen();
   LABELS.forEach(function (a) { a.key = ''; });
 }
 function clearSel() {
@@ -3089,20 +3089,63 @@ function clearSel() {
 }
 function closeCard() {
   $('scard').classList.remove('show');
-  document.querySelectorAll('.dis').forEach(function (d) { d.classList.remove('on'); });
-  document.body.classList.toggle('card', $('info').classList.contains('show') || $('lupe').classList.contains('show'));
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
 }
 function openHelp(key) {
   var c = INFO.cards.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
   showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
 }
+/* =====================================================================
+   Krankheitsbilder und Medikamente – Daten für Reiter und Erklärkarte
+   Format wie im Nephron (SCENARIOS): id, kind ('disease' | 'drug'), name,
+   short, kicker, lead, values, steps, after, note. Die Einträge folgen
+   in den nächsten Schritten.
+   ===================================================================== */
+var SZENARIEN = [];
+var SZ = Kern.Szenarien({
+  daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info, Lupe und Üben weichen der Szenariokarte */
+      if (App.quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    kartenLage();
+    szenarioWirkung();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) {                                    /* wieder aufgeklappt: die anderen Karten weichen */
+      if (App.quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    kartenLage();
+  }
+});
+/* Platzhalter: Wirkung auf das Herz (Anteile in SZ.anteil), wird in den nächsten Schritten gefüllt */
+function szenarioWirkung() {}
+/* Szenariokarte klappt ein, wenn Hilfekarte, Info, Lupe oder Üben rechts aufgehen; das Szenario bleibt aktiv */
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+  kartenLage();
+}
+/* Karte „weg“, solange eine andere Karte rechts offen ist; Platz für die Beschriftung */
+function kartenLage() {
+  var andere = $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show');
+  SZ.el.classList.toggle('weg', andere && !SZ.offen);
+  document.body.classList.toggle('card', andere || !!(SZ.aktiv && SZ.offen));
+}
 (function buildRail() {
   var railRoot = $('rail');
   var tabs = document.createElement('div'); tabs.className = 'tabs';
-  var paneS = document.createElement('div'), paneH = document.createElement('div'), paneU = document.createElement('div');
-  var panes = [paneS, paneH, paneU];
-  [['Strukturen', paneS], ['Hilfekarten', paneH], ['\u00dcben', paneU]].forEach(function (t, k) {
+  var paneS = document.createElement('div'), paneD = document.createElement('div'), paneM = document.createElement('div'), paneH = document.createElement('div'), paneU = document.createElement('div');
+  var panes = [paneS, paneD, paneM, paneH, paneU];
+  [['Strukturen', paneS], ['Krankheiten', paneD], ['Medikamente', paneM], ['Hilfekarten', paneH], ['\u00dcben', paneU]].forEach(function (t, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = t[0];
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -3111,6 +3154,9 @@ function openHelp(key) {
     tabs.appendChild(b);
   });
   railRoot.appendChild(tabs); panes.forEach(function (p, k) { if (k) p.style.display = 'none'; railRoot.appendChild(p); });
+  /* Krankheiten, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Das Herz ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'Schalte ein Medikament ein: Das Herz zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
   /* Hilfekarten */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint rechts.'; paneH.appendChild(ih);
   INFO.cards.forEach(function (c) {
@@ -3578,6 +3624,7 @@ var last = performance.now();
 function loop(now, frame) {
   if (App.ar) AR.frame(frame);
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (SZ.schritt(dt)) szenarioWirkung();                   /* Anteile weich \u00fcberblenden */
   if (App.ready) {
     engine.step(dt);
     if (engine.events.length) { if (App.sound) engine.events.forEach(function (ev) { if (ev === 'S1') thump(48, 0.16, 0.9); else thump(74, 0.11, 0.7); }); engine.events.length = 0; }
