@@ -21,7 +21,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | – |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
 
-Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `export.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
 ## Ebenen
 
@@ -56,7 +56,8 @@ organe/niere/             Niere + Nephron
 - [x] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
 - [x] Gemeinsamen Kern aus Herz und Nephron herauslösen (`core/kern.css`, `core/kern.js`)
   - `vendor/RoomEnvironment.js` war unbenutzt und ist entfernt
-  - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Export, Beschriftungs-Layout; dabei Größenangabe, Download und Signatur vereinheitlichen (nur mit vereinbarter Abweichung möglich)
+  - Export ist vereinheitlicht (`core/export.js`, `Kern.Export`): eine Signatur (`Kern.WM`), ein GLB-Weg über GLTFExporter, gleiche Dateinamen (`<organ>_statisch.glb`, `<organ>_animiert_<zusatz>.glb`, `<organ>_stl_3d-druck.zip`); das Organ liefert nur die Konfiguration
+  - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Beschriftungs-Layout
 - [x] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung und den Kern erledigt)
 - [ ] Nephron bekommt AR, Herz bekommt Krankheitsbilder
 - [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen

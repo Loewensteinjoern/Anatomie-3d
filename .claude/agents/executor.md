@@ -23,8 +23,8 @@ Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung
 | `index.html`, `nephron.html` | HTML-Gerüst und Bedienelemente; binden CSS und Skripte ein | darf geändert werden |
 | `organe/herz/herz.css`, `organe/niere/nephron.css` | Gestaltung: `:root`-Variablen (`--brass`, `--ink`, …), Handy-Layout per `@media (max-width:1000px)` | darf geändert werden |
 | `organe/herz/herz.js` | App-Code Herz (~4200 Zeilen): Herz als Signed-Distance-Field (Einheit cm), Szene, Beschriftung, Schema, Lupe, Üben, Export, AR | hier findet die eigentliche Arbeit statt |
-| `organe/niere/nephron.js` | App-Code Nephron (~2250 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export | hier findet die eigentliche Arbeit statt |
-| `core/kern.css`, `core/kern.js` | gemeinsamer Kern beider Modelle (Gestaltung; globales `Kern`: Licht, Material, Kamera, Beschriftung, Toast, …) | darf geändert werden; Änderungen wirken auf beide Modelle |
+| `organe/niere/nephron.js` | App-Code Nephron (~2250 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export-Konfiguration | hier findet die eigentliche Arbeit statt |
+| `core/kern.css`, `core/kern.js`, `core/export.js` | gemeinsamer Kern beider Modelle (Gestaltung; globales `Kern`: Licht, Material, Kamera, Beschriftung, Toast, …; `export.js`: gemeinsamer Export `Kern.Export`, Konfiguration je Organ) | darf geändert werden; Änderungen wirken auf beide Modelle |
 | `vendor/` | three.js r128 (`three.min.js`: Lizenzkopf und eine einzige Zeile mit ~600 KB) und der Zusatz `GLTFExporter.js`, byte-identisch mit dem npm-Paket `three@0.128.0` | **nicht anfassen, nie lesen** |
 | `tools/vergleich.js` | Prüfwerkzeug: Vergleichsaufnahmen vorher/nachher (siehe unten) | nur ändern, wenn die Aufgabe es verlangt |
 
@@ -33,7 +33,7 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 ## Regeln für die Dateistruktur
 
 - Nur klassische Skripte (`<script src="…"></script>`), keine ES-Module (`type="module"`, `import`) und kein `fetch` auf lokale Dateien – beides scheitert, wenn die Seite lokal per `file://` geöffnet wird.
-- Reihenfolge der Skripte am Ende von `<body>`: zuerst `vendor/three.min.js`, dann die benötigten Zusätze aus `vendor/` (beim Herz `GLTFExporter.js`), dann `core/kern.js`, zuletzt der App-Code. Der Code nutzt das globale `THREE`, der App-Code zusätzlich `Kern`. CSS: `core/kern.css` vor der Organ-CSS laden; die Organ-CSS enthält nur Abweichendes.
+- Reihenfolge der Skripte am Ende von `<body>`: zuerst `vendor/three.min.js`, dann die benötigten Zusätze aus `vendor/` (`GLTFExporter.js`, bei beiden Modellen), dann `core/kern.js`, dann `core/export.js`, zuletzt der App-Code. Der Code nutzt das globale `THREE`, der App-Code zusätzlich `Kern`. CSS: `core/kern.css` vor der Organ-CSS laden; die Organ-CSS enthält nur Abweichendes.
 - Pfade relativ angeben (`vendor/…`, `organe/…`), nie mit `/` am Anfang – auf GitHub Pages liegt die Seite in einem Unterordner (derzeit `/Herz-3d/`).
 - Neue Dateien nur, wenn die Aufgabe es verlangt: Organ-Code nach `organe/<organ>/`, Gemeinsames nach `core/`, Fremdbibliotheken unverändert nach `vendor/`.
 
