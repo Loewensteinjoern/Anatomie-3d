@@ -10,7 +10,7 @@ var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
 var DEG = Math.PI / 180;
 var DUR = 12.0;    // Sekunden pro Umlauf
 var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
-var WATERMARK = 'Entwickelt und erstellt von J\u00f6rn L\u00f6wenstein mit Hilfe von k\u00fcnstlicher Intelligenz (Claude)';
+var WATERMARK = Kern.WM;
 function def(v, d) { return v === undefined ? d : v; }
 
 /* =====================================================================

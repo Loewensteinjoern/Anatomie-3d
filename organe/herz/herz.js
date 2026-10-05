@@ -1707,8 +1707,8 @@ const HeartInfo = (function () {
    ===================================================================== */
 const HerzExport = (function () {
   'use strict';
-  const WM = 'erstellt von Jörn Löwenstein mithilfe von Claude (Künstliche Intelligenz)';
-  const WM_ASCII = 'erstellt von Joern Loewenstein mithilfe von Claude (Kuenstliche Intelligenz)';
+  const WM = Kern.WM;
+  const WM_ASCII = Kern.WM_ASCII;
 
   /* ---------- ZIP (ohne Fremdbibliothek) ---------- */
   const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -2507,7 +2507,7 @@ var $ = function (id) { return document.getElementById(id); };
 var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
 var clamp = function (x, a, b) { return x < a ? a : (x > b ? b : x); };
 var sstep = function (a, b, x) { var t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-var WATERMARK = 'erstellt von J\u00f6rn L\u00f6wenstein mithilfe von Claude (K\u00fcnstliche Intelligenz)';
+var WATERMARK = Kern.WM;
 if (!window.THREE) { $('bootSt').textContent = 'Die 3D-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung pr\u00fcfen und neu laden.'; return; }
 
 var App = window.HerzApp = { ready: false, sel: null, opened: true, openK: 1, labels: true, see: false, sound: false, quiz: null, morph: [], pick: [] };

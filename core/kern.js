@@ -7,6 +7,11 @@ var Kern = window.Kern = window.Kern || {};
 (function (K) {
   'use strict';
 
+  /* Signatur fuer Seite, Exporte und AR; die ASCII-Fassung dient fuer
+     STL-Kopf und ZIP-Kommentar */
+  K.WM = 'erstellt von Jörn Löwenstein mithilfe von Claude (Künstliche Intelligenz)';
+  K.WM_ASCII = 'erstellt von Joern Loewenstein mithilfe von Claude (Kuenstliche Intelligenz)';
+
   /* sRGB-Hexwert -> lineare Farbe */
   K.srgb = function (hex) { return new THREE.Color(hex).convertSRGBToLinear(); };
 
