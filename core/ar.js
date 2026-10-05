@@ -202,6 +202,8 @@ var Kern = window.Kern = window.Kern || {};
        root, renderer, camera, xr (Steuer-Zustand aus AR.xr, nur .placed)
        name     Prim-Name fuer die Materialpfade der USDZ-Datei (/<name>/Materialien/...)
        masse    Laengen in Modelleinheiten; Vorgaben (Herz, cm) in M unten:
+                mitte (x-Lage der senkrechten Achse, um die sich die Schilder
+                drehen und an der die Seiten geteilt werden; Vorgabe 0),
                 spalte (Abstand der Spalten von der Mitte), hoehe (Schildhoehe),
                 abstand (Zeilenabstand), z (Tiefe der Schilder), oben/unten
                 (Bereich der Zeilen), px (Texturhoehe in Pixeln), knick (Weg der
@@ -218,7 +220,7 @@ var Kern = window.Kern = window.Kern || {};
        auswahl()  aktuell gewaehlte Struktur-ID (a.s.id) oder leer; alle
                 anderen Schilder werden abgedunkelt */
   AR.schilder = function (cfg) {
-    var M = { spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128,
+    var M = { mitte: 0, spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128,
       knick: 0.9, luecke: 0.12, punkt: 0.14, band: 0.035, punktBand: 0.13, anker: 0.05, schwelle: 0.4, dim: 0.4 };
     for (var key in cfg.masse) M[key] = cfg.masse[key];
     var root = cfg.root, ARL = { g: null, lines: null, side: {}, items: [] };
@@ -243,9 +245,9 @@ var Kern = window.Kern = window.Kern || {};
        Ergebnis in Modellkoordinaten: Ankerpunkt, Knick, Linienende und Schildmitte */
     function layout(list, yaw, sides) {
       var c = Math.cos(yaw), sn = Math.sin(yaw);
-      var back = function (x, y, z) { return [x * c + z * sn, y, -x * sn + z * c]; };
+      var back = function (x, y, z) { return [x * c + z * sn + M.mitte, y, -x * sn + z * c]; };
       list.forEach(function (it) {
-        var p = it.p, xr = p[0] * c - p[2] * sn, prev = sides[it.a.s.id + it.a.s.de];
+        var p = it.p, xr = (p[0] - M.mitte) * c - p[2] * sn, prev = sides[it.a.s.id + it.a.s.de];
         it.side = xr < -M.schwelle ? 'l' : (xr > M.schwelle ? 'r' : (prev || (xr < 0 ? 'l' : 'r')));
         sides[it.a.s.id + it.a.s.de] = it.side;
         var cv = canvas(it.a); it.w = M.hoehe * cv.width / cv.height;

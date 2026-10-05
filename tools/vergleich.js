@@ -13,7 +13,7 @@
    ist fest initialisiert. Bei unverändertem Verhalten sind die Bilder
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
-   und beim Herz der AR-Ablauf: WebXR mit nachgebildetem Gerät und
+   und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ).
    ===================================================================== */
 'use strict';
@@ -259,6 +259,18 @@ const MODELLE = {
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arSee'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('undurchsichtig-ohne-beschriftung');
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } }
     }
   }

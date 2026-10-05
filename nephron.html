@@ -27,6 +27,7 @@
     <button id="cam3" class="gh">Sammelrohr</button>
     <span class="sep"></span>
     <button id="bLupe" class="gh" title="Lupe: Nahansicht eines Abschnitts">Lupe</button>
+    <button id="bAR" class="gh" title="Das Nephron mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
     <span class="cap">Str&ouml;mung</span>
@@ -69,6 +70,21 @@
   <dl id="iDl"></dl>
 </div>
 
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Nephron in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Nephron hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSee">Undurchsichtig</button>
+    <button class="ar-b" id="arLab">Beschriftung aus</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
+</div>
+<a id="arQL" rel="ar" style="display:none"><img alt="AR" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></a>
+
 <div id="wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 <div id="toast"></div>
 <div id="boot">Nephron wird aufgebaut</div>
@@ -77,6 +93,7 @@
 <script src="vendor/GLTFExporter.js"></script>
 <script src="core/kern.js"></script>
 <script src="core/export.js"></script>
+<script src="core/ar.js"></script>
 <script src="organe/niere/nephron.js"></script>
 </body>
 </html>

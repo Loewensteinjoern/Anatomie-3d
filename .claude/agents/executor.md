@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
-Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung ohne Build-Schritt mit zwei 3D-Modellen auf Basis von three.js (r128) – Herz (`index.html`, auch in AR) und Nephron (`nephron.html`). Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`). Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
+Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung ohne Build-Schritt mit zwei 3D-Modellen auf Basis von three.js (r128) – Herz (`index.html`) und Nephron (`nephron.html`), beide auch in AR. Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`). Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
 
 ## Arbeitsweise
 
@@ -23,7 +23,7 @@ Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung
 | `index.html`, `nephron.html` | HTML-Gerüst und Bedienelemente; binden CSS und Skripte ein | darf geändert werden |
 | `organe/herz/herz.css`, `organe/niere/nephron.css` | Gestaltung: `:root`-Variablen (`--brass`, `--ink`, …), Handy-Layout per `@media (max-width:1000px)` | darf geändert werden |
 | `organe/herz/herz.js` | App-Code Herz (~4200 Zeilen): Herz als Signed-Distance-Field (Einheit cm), Szene, Beschriftung, Schema, Lupe, Üben, Export, AR | hier findet die eigentliche Arbeit statt |
-| `organe/niere/nephron.js` | App-Code Nephron (~2250 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export-Konfiguration | hier findet die eigentliche Arbeit statt |
+| `organe/niere/nephron.js` | App-Code Nephron (~2300 Zeilen): Geometrie, Strömung, Lupe, Krankheitsbilder und Medikamente, Export-Konfiguration, AR | hier findet die eigentliche Arbeit statt |
 | `core/kern.css`, `core/kern.js`, `core/export.js`, `core/ar.js` | gemeinsamer Kern beider Modelle (Gestaltung; globales `Kern`: Licht, Material, Kamera, Beschriftung, Toast, …; `export.js`: gemeinsamer Export `Kern.Export`, Konfiguration je Organ; `ar.js`: `Kern.AR`, USDZ und AR Quick Look) | darf geändert werden; Änderungen wirken auf beide Modelle |
 | `vendor/` | three.js r128 (`three.min.js`: Lizenzkopf und eine einzige Zeile mit ~600 KB) und der Zusatz `GLTFExporter.js`, byte-identisch mit dem npm-Paket `three@0.128.0` | **nicht anfassen, nie lesen** |
 | `tools/vergleich.js` | Prüfwerkzeug: Vergleichsaufnahmen vorher/nachher (siehe unten) | nur ändern, wenn die Aufgabe es verlangt |
@@ -41,7 +41,7 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 
 - Syntax jeder geänderten JS-Datei, z. B. `node --check organe/herz/herz.js`.
 - Bei Änderungen an Darstellung oder Bedienung, wenn sinnvoll: Seite mit Playwright/Chromium headless laden (`executablePath: '/opt/pw-browsers/chromium'`, **kein** `playwright install`) und auf Konsolenfehler und nicht geladene Dateien prüfen.
-- Soll sich nichts Sichtbares ändern (Umbau, Aufräumen) und verlangt die Aufgabe den Vergleich: `tools/vergleich.js` nimmt beide Modelle in festen Ansichten auf (Desktop, Handy, `file://`, AR, Exporte) und vergleicht bytegenau. AR wird bisher nur beim Herz aufgenommen; bekommt ein weiteres Organ AR, muss `tools/vergleich.js` um dessen AR-Ablauf erweitert werden (in `MODELLE`, wie beim Herz `webxr`/`quicklook`). Ordner außerhalb des Repositorys anlegen; ein Durchlauf dauert etwa 20 Minuten.
+- Soll sich nichts Sichtbares ändern (Umbau, Aufräumen) und verlangt die Aufgabe den Vergleich: `tools/vergleich.js` nimmt beide Modelle in festen Ansichten auf (Desktop, Handy, `file://`, AR, Exporte) und vergleicht bytegenau. AR wird bei Herz und Nephron aufgenommen (`webxr`/`quicklook` in `MODELLE`); bekommt ein weiteres Organ AR, muss `tools/vergleich.js` um dessen AR-Ablauf erweitert werden. Ordner außerhalb des Repositorys anlegen; ein Durchlauf dauert etwa 20 Minuten.
   ```bash
   mkdir -p <stand> && git archive HEAD | tar -x -C <stand>   # Stand vor der Änderung
   node tools/vergleich.js aufnehmen <vorher> --quelle <stand>
