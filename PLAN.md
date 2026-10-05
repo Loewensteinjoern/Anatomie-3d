@@ -101,6 +101,16 @@ organe/niere/             Niere + Nephron
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
 - [ ] Auge, Ohr, Haut, Hormondrüsen
 
+### Meilenstein: Version 1.0 für die Kollegen
+
+Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann je für ihren Fachbereich.
+
+- [ ] Umfang: alle Organe aus Phase 1 bis 3 – Körper-Atlas, Herz, Niere mit Nephron, Lunge, Leber, Magen und Darm, Gehirn, Muskel/Skelett/Gelenk, Auge, Ohr, Haut, Hormondrüsen – jeweils nach dem Bauplan (Strukturen, Beschriftung, Funktion, Lupe, Hilfe und Üben, Krankheitsbilder und Medikamente, Export, AR)
+- [ ] Offline als installierbare Web-App
+- [ ] Kurze Startanleitung in der App
+- [ ] Vor der Weitergabe: fachliche Durchsicht der Texte, Test auf echten Geräten (Android, iPhone/iPad, Laptop)
+- Rückmeldungen danach: Die Kollegen sagen oder schreiben sie Jörn, er gibt sie gesammelt an Claude weiter (Organ und Stelle, was fehlt oder falsch ist, Fachbereich); Claude sortiert sie (fachlicher Fehler, Verständlichkeit, Bedienung, Wunsch) und schlägt die Reihenfolge vor; keine Rückmeldefunktion in der App.
+
 ### Laufend
 
 - [ ] Schema wächst mit (Herz, Lunge, Niere, Leber im Kreislauf verbunden; Simulationen beeinflussen sich, z. B. Blutdruck und Nierenfunktion)
@@ -113,6 +123,7 @@ organe/niere/             Niere + Nephron
 - [x] Reihenfolge der Organe wie in Phase 3 vorgeschlagen
 - [x] Repository in „Anatomie-3d“ umbenennen, sobald es mehr als das Herz enthält
 - [x] Zusammenhängende App: eine Seite, Organe werden in dieselbe 3D-Szene nachgeladen (statt getrennter Seiten mit Seitenwechsel); jede Ansicht mit eigener Adresse
+- [x] Erste Weitergabe an Kollegen erst als Version 1.0 mit allen Organen; bis dahin testen nur Jörn und Claude
 - [x] Offline: installierbare Web-App (PWA) als Hauptweg; Ordner/ZIP ohne Server bleibt möglich; eine Einzeldatei nur bei Bedarf als zusätzliches Werkzeug
 
 ## Arbeitsweise
