@@ -2249,7 +2249,7 @@ const HerzLupe = (function () {
    HERZ – 3D-Anatomie
    Gestaltung wie das Nephron-Modell, Physik aus dem Windkessel-Modell.
    ===================================================================== */
-(function () {
+function aufbauen(umg) {
 'use strict';
 var S = HeartSDF, R = S.R, INFO = HeartInfo;
 var $ = function (id) { return document.getElementById(id); };
@@ -3848,5 +3848,6 @@ build().then(function () {
   Kern.Export.pruefeZiel('exp');
   $('boot').classList.add('gone');
 }).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
-})();
+}
+Kern.organ('herz', { aufbauen: aufbauen });
 })();

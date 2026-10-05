@@ -5,6 +5,7 @@
    ===================================================================== */
 (function () {
 'use strict';
+function aufbauen(umg) {
 
 var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
 var DEG = Math.PI / 180;
@@ -2035,4 +2036,6 @@ setSelected(null);
 renderer.setAnimationLoop(loop);
 setTimeout(function () { Kern.Export.pruefeZiel('exp'); document.getElementById('boot').classList.add('gone'); }, 240);
 
+}
+Kern.organ('nephron', { aufbauen: aufbauen });
 })();
