@@ -234,6 +234,14 @@ const MODELLE = {
         await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(4000); await t.bild('vorhofflimmern');
         await t.klick('#bErr'); await t.weiter(900); await t.bild('vorhofflimmern-erregung'); await t.klick('#bErr');
         await t.klick('#rail .dis:has(b:text-is("Vorhofflimmern"))'); await t.weiter(1500);
+        /* Herzinfarkt: geschlossen, geöffnet, EKG mit ST-Hebung; danach Rückkehr zu den Originalfarben */
+        const mi = '#rail .dis:has(b:text-is("Herzinfarkt (Vorderwand)"))';
+        await t.klick(mi); await t.klick('#bClosed'); await t.weiter(4000); await t.bild('vorderwandinfarkt');
+        await t.klick('#bOpen'); await t.weiter(1400); await t.bild('vorderwandinfarkt-offen');
+        await t.klick('#bErr'); await t.weiter(900); await t.bild('vorderwandinfarkt-ekg'); await t.klick('#bErr');
+        await t.klick(mi); await t.weiter(1500);
+        await t.klick('#bClosed'); await t.weiter(1400); await t.bild('nach-infarkt-geschlossen');
+        await t.klick('#bOpen'); await t.weiter(1400);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

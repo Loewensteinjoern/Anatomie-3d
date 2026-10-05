@@ -1329,7 +1329,7 @@ const HerzZyklus = (function () {
   function Engine(wege) {
     this.wege = wege;
     /* par: allgemeine Wirkgrößen der Krankheitsbilder/Medikamente; neutral = 1 (dann rechnet die Physik wie ohne sie) */
-    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0 } };
+    this.S = { modus: 'auto', tempo: 1, windkessel: true, laufen: true, hand: { vorhof: false, rk: false, lk: false }, par: { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0 } };
     this.rs = 20240607;                // Saat des eigenen Zufalls (Rhythmus); Math.random bleibt unberührt
     this.reset();
   }
@@ -1537,11 +1537,13 @@ const HerzZyklus = (function () {
   };
   // EKG-Kurve wie im 2D-Modell
   // fl = Flimmer-Anteil (0 = normal): P-Welle verschwindet, feine Flimmerwellen (t = Zeit); ohne fl exakt die bisherige Kurve
-  function ekgKurve(x, fl, t) {
+  // st = Infarkt-Anteil (0 = normal): ST-Strecke nach dem QRS angehoben, geht weich in die T-Welle \u00fcber; ohne st exakt die bisherige Kurve
+  function ekgKurve(x, fl, t, st) {
     let y = 0.13 * (fl ? 1 - fl : 1) * Math.exp(-Math.pow((x - 0.06) / 0.028, 2));
     const q = [[0.160, 0], [0.172, -0.09], [0.188, 0.95], [0.204, -0.24], [0.222, 0]];
     for (let i = 0; i < q.length - 1; i++) if (x >= q[i][0] && x <= q[i + 1][0]) { const f = (x - q[i][0]) / (q[i + 1][0] - q[i][0]); y += q[i][1] + f * (q[i + 1][1] - q[i][1]); }
     y += 0.27 * Math.exp(-Math.pow((x - 0.40) / 0.045, 2));
+    if (st) { const ss = (a, b, v) => { const u = Math.min(1, Math.max(0, (v - a) / (b - a))); return u * u * (3 - 2 * u); }; y += st * 0.25 * ss(0.208, 0.238, x) * (1 - ss(0.40, 0.50, x)); }
     if (fl) y += fl * 0.045 * (Math.sin(x * 138 + t * 31) + 0.7 * Math.sin(x * 233 - t * 47 + 1.3) + 0.5 * Math.sin(x * 87 + t * 19 + 2.1)) / 2.2;
     return y;
   }
@@ -2449,6 +2451,61 @@ function splitRuns(pts) {
   if (cur && cur.pts.length > 1) runs.push(cur);
   return runs;
 }
+/* Herzinfarkt: RIVA ab der Engstelle dunkel, Versorgungsgebiet blass (Vertexfarben); beides erst beim ersten Einschalten angelegt, bei 0 exakt die Originalfarben */
+var INF = { a: 0, pts: null, rohre: [], meshes: null, an: false };
+function infarktSetzen(a) {
+  a = a || 0;
+  if (!App.ready || a === INF.a || !INF.pts) return;
+  var ENG = 0.3, MAXW = 0.7, ZIEL = [0.402, 0.305, 0.392];   /* Engstelle bei 30 % des RIVA; blasser grau-violetter Ton (linear) */
+  if (!INF.meshes) {
+    if (a <= 0) return;
+    var n = INF.pts.length, i0 = Math.floor(ENG * (n - 1)), sh = [0.9, 0, -0.6];
+    var P = INF.pts.slice(i0).map(function (p) { return [p[0] + sh[0], p[1] + sh[1], p[2] + sh[2]]; });
+    var sst = function (e0, e1, x) { var u = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return u * u * (3 - 2 * u); };
+    INF.meshes = [];
+    backG.children.concat(lidG.children).forEach(function (m) {
+      var rg = m.userData.region;
+      if (!m.userData.tissue || (rg !== R.LV && rg !== R.IVS)) return;
+      var pos = m.geometry.attributes.position, col = m.geometry.attributes.color, nv = pos.count, w = new Float32Array(nv), any = false;
+      for (var v = 0; v < nv; v++) {
+        var x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v), d2 = 1e9;
+        for (var k = 0; k < P.length - 1; k++) {
+          var ax = P[k][0], ay = P[k][1], az = P[k][2], bx = P[k + 1][0] - ax, by = P[k + 1][1] - ay, bz = P[k + 1][2] - az;
+          var t = Math.min(1, Math.max(0, ((x - ax) * bx + (y - ay) * by + (z - az) * bz) / (bx * bx + by * by + bz * bz || 1)));
+          var dx = x - ax - bx * t, dy = y - ay - by * t, dz = z - az - bz * t, dd = dx * dx + dy * dy + dz * dz;
+          if (dd < d2) d2 = dd;
+        }
+        w[v] = 1 - sst(1.3, 2.9, Math.sqrt(d2)); if (w[v] > 0) any = true;
+      }
+      if (any) INF.meshes.push({ col: col, orig: new Float32Array(col.array), w: w });
+    });
+  }
+  INF.a = a;
+  INF.meshes.forEach(function (e) {
+    var c = e.col.array, o = e.orig, w = e.w;
+    if (a <= 0) c.set(o);
+    else for (var v = 0, nv = w.length; v < nv; v++) {
+      var k = MAXW * a * w[v];
+      for (var j = 0; j < 3; j++) c[v * 3 + j] = o[v * 3 + j] + (ZIEL[j] - o[v * 3 + j]) * k;
+    }
+    e.col.needsUpdate = true;
+  });
+  /* Gef\u00e4\u00df: Vertexfarben (wei\u00df = unver\u00e4ndert) ab der Engstelle zu dunklem Graurot */
+  var an = a > 0;
+  INF.rohre.forEach(function (r) {
+    var g = r.m.geometry, pos = g.attributes.position, nv = pos.count, rs = 7 + 1, segs = nv / rs - 1;
+    /* aus: Ausgangszustand ohne Farbattribut, damit auch der Export wieder gleich ist */
+    if (!an) { if (g.attributes.color) g.deleteAttribute('color'); if (r.m.material.vertexColors) { r.m.material.vertexColors = false; r.m.material.needsUpdate = true; } return; }
+    if (!g.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(nv * 3).fill(1), 3));
+    var vc = g.attributes.color.array;
+    for (var v2 = 0; v2 < nv; v2++) {
+      var f2 = r.f0 + (r.f1 - r.f0) * Math.floor(v2 / rs) / segs, s2 = Math.min(1, Math.max(0, (f2 - ENG) / 0.05)); s2 = s2 * s2 * (3 - 2 * s2) * a;
+      vc[v2 * 3] = 1 - 0.9 * s2; vc[v2 * 3 + 1] = 1 + 0.1 * s2; vc[v2 * 3 + 2] = 1 + 0.4 * s2;
+    }
+    g.attributes.color.needsUpdate = true;
+    if (r.m.material.vertexColors !== an) { r.m.material.vertexColors = an; r.m.material.needsUpdate = true; }
+  });
+}
 async function build() {
   var t0 = performance.now();
   var small = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
@@ -2492,12 +2549,14 @@ async function build() {
   await setLoad(0.94, 'Herzkranzgef\u00e4\u00dfe');
   App.corPts = { front: [], back: [] };
   HeartExtras.coronaries().forEach(function (c) {
+    if (c.name === 'RIVA') INF.pts = c.pts;
     var runs = splitRuns(c.pts), done = 0, total = c.pts.length;
     runs.forEach(function (run) {
       var f0 = done / total, f1 = (done + run.pts.length) / total; done += run.pts.length - 1;
       var m = tubeMesh(run.pts, c.r0 + (c.r1 - c.r0) * f0, c.r0 + (c.r1 - c.r0) * f1, mat(0xB02A22, { rough: 0.45, coat: 0.4, env: 0.3 }), 7);
       m.name = 'Koronar_' + c.name + (run.front ? '_vorn' : '_hinten');
       if (!run.front) { clipMats.push(m.material); corBack.push(m); } else glassify(m.material);
+      if (c.name === 'RIVA') INF.rohre.push({ m: m, f0: f0, f1: f1 });
       addMotionMorphs(m); (run.front ? lidG : backG).add(m); register('cor', m, [m.material]);
       Array.prototype.push.apply(run.front ? App.corPts.front : App.corPts.back, run.pts);
     });
@@ -3182,7 +3241,13 @@ var SZENARIEN = [
     values: [['Häufigkeit', 'häufigste Rhythmusstörung, vor allem im Alter'], ['Vorhöfe', '350–600 Erregungen/min, kein Schlag'], ['Puls', 'unregelmäßig, oft zu schnell'], ['EKG', 'keine P-Welle, unregelmäßige Abstände']],
     steps: [['Die Vorhöfe flimmern.', 'Statt eines geordneten Impulses vom Sinusknoten kreisen viele kleine Erregungen durch die Vorhöfe. Im Modell fehlt der Schub der Vorhöfe.'], ['Der AV-Knoten filtert.', 'Nur ein Teil der Impulse erreicht die Kammern – zufällig verteilt. Die Schläge kommen unregelmäßig und oft zu schnell.'], ['Weniger Füllung.', 'Ohne den letzten Schub der Vorhöfe füllen sich die Kammern schlechter; bei schnellen Schlägen bleibt kaum Zeit dafür. Die Pumpleistung sinkt.'], ['Gefahr Gerinnsel.', 'Im langsam fließenden Blut des linken Herzohrs können sich Gerinnsel bilden. Gelangen sie ins Gehirn, entsteht ein Schlaganfall.']],
     after: [['Folgen', 'Herzstolpern, Herzrasen, Schwindel, Leistungsschwäche, Atemnot; das Schlaganfallrisiko ist etwa fünfmal höher.'], ['Behandlung', 'Gerinnungshemmer (z. B. Apixaban, Rivaroxaban, Phenprocoumon), Frequenzkontrolle mit Betablockern wie Metoprolol, ggf. Rückführung in den Sinusrhythmus (Kardioversion, Ablation).'], ['Pflege beobachtet', 'Puls immer eine volle Minute zählen und mit der Herzfrequenz am Monitor oder beim Abhören vergleichen (Pulsdefizit), Blutdruck, Schwindel und Sturzgefahr, Blutungszeichen unter Gerinnungshemmern, Zeichen eines Schlaganfalls (Gesicht, Arme, Sprache) sofort melden.']],
-    note: 'Das Flimmern der Vorhöfe ist im Modell als feines Zittern angedeutet.', wirkung: { vorhofSchub: 0, rhythmus: 1, tempoFaktor: 1.35 }, datei: 'vorhofflimmern' }
+    note: 'Das Flimmern der Vorhöfe ist im Modell als feines Zittern angedeutet.', wirkung: { vorhofSchub: 0, rhythmus: 1, tempoFaktor: 1.35 }, datei: 'vorhofflimmern' },
+  { id: 'mi', kind: 'disease', name: 'Herzinfarkt (Vorderwand)', short: 'Der RIVA ist verschlossen \u2013 ein Teil der Vorderwand stirbt ab', kicker: 'Krankheitsbild \u00b7 akutes Koronarsyndrom',
+    lead: 'Ein Blutgerinnsel auf einer aufgebrochenen Ablagerung (Plaque) verschlie\u00dft den vorderen Ast der linken Herzkranzarterie (RIVA). Der Herzmuskel dahinter bekommt keinen Sauerstoff mehr und beginnt nach 20 bis 30 Minuten abzusterben.',
+    values: [['Verschluss', 'RIVA, vorderer Ast der linken Koronararterie'], ['Betroffen', 'Vorderwand der linken Kammer, Herzspitze, vordere Scheidewand'], ['EKG', 'ST-Hebung (STEMI)'], ['Labor', 'Troponin erh\u00f6ht']],
+    steps: [['Das Gef\u00e4\u00df ist verschlossen.', 'Im Modell ist der RIVA ab der Engstelle dunkel \u2013 dahinter kommt kein Blut mehr an.'], ['Der Muskel leidet.', 'Das Versorgungsgebiet \u2013 Vorderwand und Herzspitze \u2013 wird blass. Ohne Sauerstoff zieht sich der Muskel dort nicht mehr zusammen.'], ['Die Pumpleistung sinkt.', 'Die linke Kammer arbeitet nur noch mit dem gesunden Teil ihrer Wand; es drohen R\u00fcckstau in die Lunge und Schock.'], ['Zeit ist Muskel.', 'Je schneller das Gef\u00e4\u00df wieder ge\u00f6ffnet wird \u2013 meist mit Herzkatheter und Stent \u2013, desto mehr Muskel bleibt erhalten.']],
+    after: [['Warnzeichen', 'Starker Brustschmerz oder Druck, oft mit Ausstrahlung in linken Arm, Hals, Kiefer oder Oberbauch, Atemnot, Kaltschwei\u00dfigkeit, \u00dcbelkeit, Todesangst. Bei Frauen, \u00e4lteren Menschen und Menschen mit Diabetes oft untypisch und weniger schmerzhaft.'], ['Sofortma\u00dfnahmen', 'Notruf 112, Oberk\u00f6rper hoch lagern, enge Kleidung \u00f6ffnen, nicht allein lassen, keine Anstrengung; Vitalzeichen und 12-Kanal-EKG, Sauerstoff nur bei niedriger S\u00e4ttigung.'], ['Pflege beobachtet', 'Schmerz, Vitalzeichen und Herzrhythmus am Monitor (gef\u00e4hrliche Rhythmusst\u00f6rungen in den ersten Stunden), Punktionsstelle nach Herzkatheter, Bettruhe nach Anordnung, Ausscheidung; Angst ernst nehmen.']],
+    note: 'Die Grenzen des Infarktgebiets sind im Modell vereinfacht.', wirkung: { infarkt: 1, kraftL: 0.6 }, datei: 'vorderwandinfarkt' }
 ];
 var SZ = Kern.Szenarien({
   daten: SZENARIEN, karte: 'kcard', dauer: 1.2,
@@ -3205,7 +3270,7 @@ var SZ = Kern.Szenarien({
   }
 });
 /* Wirkung auf das Herz: Wirkgrößen = neutral + Summe anteil · (Zielwert - neutral), weich nach SZ.anteil gemischt; neutral = 1 */
-var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig) */
+var WIRKNEUTRAL = { kraftL: 1, kraftR: 1, tempoFaktor: 1, avOeffnung: 1, vorhofSchub: 1, rhythmus: 0, infarkt: 0 };   /* neutrale Werte (rhythmus: 0 = regelm\u00e4\u00dfig; infarkt: 0 = kein Infarkt) */
 var WIRKFELDER = Object.keys(WIRKNEUTRAL);
 function szenarioWirkung() {
   if (!engine) return;
@@ -3215,6 +3280,7 @@ function szenarioWirkung() {
     SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - n); });
     par[f] = v;
   });
+  infarktSetzen(par.infarkt);
 }
 /* aktives Szenario (Anteil > 0,5) f\u00fcr den Export, sonst null */
 function szenarioExport() {
@@ -3545,7 +3611,7 @@ var ekg = $('ekg'), ectx = ekg.getContext('2d');
 function ekgSize() { var d = Math.min(window.devicePixelRatio || 1, 2); ekg.width = Math.round((ekg.clientWidth || 400) * d); ekg.height = Math.round((ekg.clientHeight || 92) * d); ectx.setTransform(d, 0, 0, d, 0, 0); }
 function drawEKG(pos) {
   var b = ekg.clientWidth, h = ekg.clientHeight; if (!b || !h) return;
-  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70, fl = engine.flimmern(), tz = engine.flimT;
+  var L = 6, br = b - 12, base = h * 0.58, amp = h * 0.42, small = h < 70, fl = engine.flimmern(), tz = engine.flimT, st = engine.S.par.infarkt;
   ectx.clearRect(0, 0, b, h);
   HerzZyklus.FELDER.forEach(function (f) {
     var on = pos >= f.von && pos < f.bis;
@@ -3562,16 +3628,18 @@ function drawEKG(pos) {
   });
   ectx.strokeStyle = '#23414D'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(L, base); ectx.lineTo(L + br, base); ectx.stroke();
   ectx.strokeStyle = '#E7EFF0'; ectx.lineWidth = 1.8; ectx.lineJoin = 'round'; ectx.beginPath();
-  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x, fl, tz) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
+  for (var i = 0; i <= 300; i++) { var x = i / 300, px = L + x * br, py = base - HerzZyklus.ekgKurve(x, fl, tz, st) * amp; if (i) ectx.lineTo(px, py); else ectx.moveTo(px, py); }
   ectx.stroke();
   if (App.impulse && !small) {
     ectx.fillStyle = '#F2C94C'; ectx.font = '600 11px ui-monospace, Menlo, Consolas, monospace'; ectx.textAlign = 'center';
-    [[0.06, fl > 0.5 ? 'f' : 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]].forEach(function (w) {
-      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0], fl, tz) * amp - 7;
+    var wl = [[0.06, fl > 0.5 ? 'f' : 'P', 0, 0], [0.188, 'QRS', 20, 1], [0.40, 'T', 0, 0]];
+    if (st > 0.5) wl.push([0.30, 'ST', 0, 0]);
+    wl.forEach(function (w) {
+      var yy = w[3] ? 14 : base - HerzZyklus.ekgKurve(w[0], fl, tz, st) * amp - 7;
       ectx.fillText(w[1], L + w[0] * br + w[2], yy);
     });
   }
-  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos, fl, tz) * amp;
+  var dx = L + pos * br, dy = base - HerzZyklus.ekgKurve(pos, fl, tz, st) * amp;
   ectx.strokeStyle = 'rgba(224,169,74,0.55)'; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(dx, 3); ectx.lineTo(dx, h - (small ? 3 : 18)); ectx.stroke();
   ectx.fillStyle = '#C8342F'; ectx.beginPath(); ectx.arc(dx, dy, 5.5, 0, Math.PI * 2); ectx.fill();
   ectx.strokeStyle = '#FFFFFF'; ectx.lineWidth = 1.6; ectx.stroke();
