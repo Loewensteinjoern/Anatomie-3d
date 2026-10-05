@@ -20,7 +20,7 @@ Das Nephron ist online erreichbar unter `https://loewensteinjoern.github.io/Herz
 
 ```
 index.html, nephron.html   HTML-Gerüst der beiden Modelle
-core/                      kern.css, kern.js, export.js – gemeinsamer Kern beider Modelle (Gestaltung, Licht, Material, Kamera, Beschriftung, Export)
+core/                      kern.css, kern.js, export.js, ar.js – gemeinsamer Kern (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
 organe/niere/              nephron.css, nephron.js – Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
