@@ -15,6 +15,12 @@
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
+
+   Kontext abbau (Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
+   abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
+   Kern.organBeenden). Gemessen werden nach jedem Abbau Speicher, Szene, DOM und
+   Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
+   Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -104,6 +110,36 @@ function initDownloads() {
   };
 }
 
+/* Listener zählen (nur Kontext abbau): add/removeEventListener auf window, document und #cv.
+   Wie im Browser gilt ein Listener je (Typ, Handler, capture) nur einmal; AbortSignal und once
+   werden nicht nachgebildet. __listener() liefert je Ziel die Anzahl je Typ. */
+function initListener() {
+  const ziele = { window: new Set(), document: new Set(), cv: new Set() };
+  const ids = new WeakMap(); let nr = 0;
+  const ziel = (o) => o === window ? 'window' : o === document ? 'document' : (o instanceof HTMLCanvasElement && o.id === 'cv') ? 'cv' : null;
+  const schluessel = (typ, h, opt) => {
+    if (h === null || (typeof h !== 'function' && typeof h !== 'object')) return null;
+    if (!ids.has(h)) ids.set(h, ++nr);
+    return typ + '|' + ids.get(h) + '|' + !!(opt && typeof opt === 'object' ? opt.capture : opt);
+  };
+  const add = EventTarget.prototype.addEventListener, rem = EventTarget.prototype.removeEventListener;
+  EventTarget.prototype.addEventListener = function (typ, h, opt) {
+    const z = ziel(this), k = z && schluessel(String(typ), h, opt);
+    if (k) ziele[z].add(k);
+    return add.call(this, typ, h, opt);
+  };
+  EventTarget.prototype.removeEventListener = function (typ, h, opt) {
+    const z = ziel(this), k = z && schluessel(String(typ), h, opt);
+    if (k) ziele[z].delete(k);
+    return rem.call(this, typ, h, opt);
+  };
+  window.__listener = () => {
+    const r = {};
+    for (const z of Object.keys(ziele)) { r[z] = {}; for (const k of [...ziele[z]].sort()) { const typ = k.split('|')[0]; r[z][typ] = (r[z][typ] || 0) + 1; } }
+    return r;
+  };
+}
+
 /* AR Quick Look: der Browser gibt vor, rel="ar" zu kennen (wie Safari auf iPhone/iPad) */
 function initQuickLook() {
   const sup = DOMTokenList.prototype.supports;
@@ -179,6 +215,44 @@ function initWebXR() {
    ===================================================================== */
 const DESKTOP = { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 };
 const HANDY = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+
+/* Kontext abbau: gemeinsamer Ablauf; bedienung(t) bedient das neu aufgebaute Organ (Modell-spezifisch) */
+async function abbauAblauf(t, name, bedienung) {
+  await t.weiter(1500);
+  if (!(await t.js(() => typeof Kern !== 'undefined' && typeof Kern.organStarten === 'function' && typeof Kern.organBeenden === 'function'))) {
+    t.erg.abbau = { m1: 'nicht vorhanden', gleich: null };
+    process.stdout.write('  abbau ' + name + ': nicht vorhanden\n');
+    return;
+  }
+  /* Messwerte: Speicher, Szene (nur Rahmen-Objekte), DOM und Listener */
+  const messen = () => t.js(() => {
+    const R = Kern.Rahmen, info = R.renderer.info, kinder = (id) => { const e = document.getElementById(id); return e ? e.childNodes.length : null; };
+    return {
+      geometrien: info.memory.geometries, texturen: info.memory.textures, programme: info.programs.length,
+      szene: R.szene.children.map((c) => c.type + (c.name ? ':' + c.name : '')),
+      organ: kinder('organ'), labels: kinder('labels'), leaders: kinder('leaders'),
+      bodyKinder: document.body.childElementCount, bodyKlasse: document.body.className,
+      herzApp: typeof window.HerzApp !== 'undefined', listener: window.__listener()
+    };
+  });
+  const beenden = () => t.js(() => Kern.organBeenden());
+  await beenden(); const m1 = await messen();
+  await t.js((n) => { Kern.organStarten(n); }, name); await t.weiter(50); await beenden(); await t.weiter(2000); const m2 = await messen();
+  await t.js((n) => { window.__organFertig = false; Kern.organStarten(n).then(() => { window.__organFertig = true; }); }, name);
+  const t0 = Date.now();
+  while (!(await t.js(() => window.__organFertig))) {
+    if (Date.now() - t0 > 300000) throw new Error('Organ wurde nach dem Neuaufbau nicht fertig');
+    await t.weiter(50);
+  }
+  await t.weiter(1500); await t.bild('neuaufbau');
+  await bedienung(t);
+  await beenden(); await t.weiter(500); const m3 = await messen();
+  const felder = [];
+  for (const k of Object.keys(m1)) if (JSON.stringify(m1[k]) !== JSON.stringify(m2[k]) || JSON.stringify(m1[k]) !== JSON.stringify(m3[k])) felder.push(k);
+  t.erg.abbau = { m1, m2, m3, gleich: !felder.length };
+  process.stdout.write('  abbau ' + name + ': ' + (felder.length ? 'ABWEICHUNG in ' + felder.join(', ') : 'gleich') + '\n');
+  if (felder.length) for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k], m3[k]]) + '\n');
+}
 
 const MODELLE = {
   herz: {
@@ -265,7 +339,14 @@ const MODELLE = {
       quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
         await t.weiter(1500);
         await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
-      } }
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'herz', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('klappen');
+        await t.klick('#cam0'); await t.klick('#rail .tabs .tab:text-is("Krankheiten")'); await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(4000); await t.bild('linksherzinsuffizienz');
+        await t.klick('#rail .dis:has(b:text-is("Linksherzinsuffizienz"))'); await t.weiter(1500);
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#bLupeX'); await t.weiter(300);
+      }) }
     }
   },
   nephron: {
@@ -307,7 +388,13 @@ const MODELLE = {
       quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
         await t.weiter(1500);
         await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
-      } }
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'nephron', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('nierenkoerperchen');
+        await t.klick('#cam0'); await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('hyperglykaemie');
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#bLupeX'); await t.weiter(300);
+      }) }
     }
   }
 };
@@ -478,7 +565,14 @@ async function vergleichen(va, vb) {
       fs.writeFileSync(path.join(vb, 'diff', m + '-' + k + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
       probleme.push(m + '-' + k + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + m + '-' + k + '.png)');
     }
-    for (const k of Object.keys(b.bilder)) if (!(k in a.bilder)) probleme.push(m + '-' + k + ': neues Bild');
+    /* Kontexte ohne Aufnahme in <vorher> (z. B. abbau, oder dort ohne Bilder aufgenommen) haben keine Referenz: nur listen */
+    const neuK = (k) => !Object.keys(a.bilder).some((x) => x.split('-')[0] === k.split('-')[0]);
+    for (const k of Object.keys(b.bilder)) if (!(k in a.bilder)) { if (neuK(k)) ok.push(m + '-' + k + ': neu (keine Referenz)'); else probleme.push(m + '-' + k + ': neues Bild'); }
+    if (b.abbau) {
+      if (b.abbau.gleich === false) probleme.push(m + ' Abbau: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.abbau));
+      else if (b.abbau.gleich === null) ok.push(m + ' Abbau: nicht vorhanden (alter Stand)');
+      else ok.push(m + ' Abbau: Messwerte gleich (neu, keine Referenz)');
+    }
     ok.push(m + ': ' + gleich + ' von ' + Object.keys(a.bilder).length + ' Bildern bytegleich');
     for (const k of Object.keys(a.exporte)) {
       const x = a.exporte[k], y = b.exporte[k];
@@ -489,7 +583,7 @@ async function vergleichen(va, vb) {
     const vgl = (titel, x, y) => { if (JSON.stringify(x) === JSON.stringify(y)) ok.push(m + ' ' + titel + ': gleich'); else probleme.push(m + ' ' + titel + ': anders\n    vorher:  ' + JSON.stringify(x) + '\n    nachher: ' + JSON.stringify(y)); };
     vgl('AR (WebXR-Anfrage)', a.ar, b.ar);
     vgl('Seitentext', a.text, b.text);
-    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
+    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) if (!(k in a.konsole)) { const z = (b.konsole[k] || []); if (z.length) probleme.push(m + ' Konsole ' + k + ' (neu): ' + z.join(' | ')); else ok.push(m + ' Konsole ' + k + ': neu (keine Referenz), ohne Meldungen'); } else vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
     if (b.lokalWieHttp === false) probleme.push(m + ': file:// sieht anders aus als über HTTP');
   }
   if (browser) await browser.close();
