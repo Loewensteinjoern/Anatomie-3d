@@ -3,6 +3,7 @@
    Koordinaten (Ansicht von vorn): x = linke Körperseite (Betrachter rechts),
    y = oben, z = vorn (zum Betrachter).
    ===================================================================== */
+(function () {
 const HeartSDF = (function () {
   'use strict';
   const nrm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -3847,4 +3848,5 @@ build().then(function () {
   Kern.Export.pruefeZiel('exp');
   $('boot').classList.add('gone');
 }).catch(function (e) { console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
+})();
 })();
