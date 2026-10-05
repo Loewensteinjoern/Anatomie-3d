@@ -78,6 +78,8 @@ var Kern = window.Kern = window.Kern || {};
     window.removeEventListener('resize', groesseFn);
     groesseFn = null;
     try { if (o.abbauen) o.abbauen(); } catch (e) { console.error('Fehler beim Abbauen:', e); }
+    R.renderer.setClearColor(0x0b171c, 1);   /* letztes Bild vom Canvas nehmen (sonst Geisterbild hinter der Auswahl) */
+    R.renderer.clear();
   };
 
   /* Organ-Skript und -CSS nachladen (falls noch nicht geschehen). Gibt ein
