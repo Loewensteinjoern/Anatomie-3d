@@ -59,6 +59,7 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
 button.on{background:var(--brass);color:#14222A;font-weight:600}
 button.gh{border:1px solid var(--line)}
 button.gh:hover{border-color:var(--brass-dim)}
+button:disabled{opacity:.45;cursor:default}
 
 #exp{bottom:22px;right:22px;padding:5px;display:flex;gap:4px;align-items:center}
 #exp .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
