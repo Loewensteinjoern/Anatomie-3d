@@ -93,6 +93,19 @@ var MARKUP = `<div id="title">
   <div class="sub">Organsysteme ein- und ausblenden, Organe antippen.</div>
 </div>
 
+<div class="panel" id="tools">
+  <div class="trow">
+    <span class="cap">Ausschnitt</span>
+    <button id="cam0" class="gh on">Ganzk&ouml;rper</button>
+    <button id="cam1" class="gh">Kopf/Hals</button>
+    <button id="cam2" class="gh">Brustkorb</button>
+    <button id="cam3" class="gh">Bauch</button>
+    <button id="cam4" class="gh">Becken</button>
+    <button id="cam5" class="gh">R&uuml;cken</button>
+    <button id="bLab" class="gh on">Beschriftung</button>
+  </div>
+</div>
+
 <div class="panel" id="rail"></div>
 
 <div class="panel" id="info">
@@ -676,7 +689,7 @@ async function organe() {
    ===================================================================== */
 var t0;
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
-var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, ansicht: ansicht };
+var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
@@ -696,7 +709,7 @@ async function bauen() {
 /* =====================================================================
    6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
    ===================================================================== */
-var gewaehlt = null, rows = {}, sysRows = {}, hl = [];
+var gewaehlt = null, rows = {}, sysRows = {}, hl = [], lv = 0;   /* lv: Version fuer die Beschriftung (Auswahl, Systemmodus, Schalter) */
 var hlMat = new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending,
   depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 function hex6(c) { return '#' + c.toString(16).padStart(6, '0'); }
@@ -715,7 +728,7 @@ function hervorheben(id) {
 }
 function waehle(id) {
   if (id && (!STR[id] || SYS[STR[id].def.system].modus === 'aus')) id = null;
-  gewaehlt = id;
+  gewaehlt = id; lv++;
   hervorheben(id);
   Object.keys(rows).forEach(function (k) { rows[k].classList.toggle('sel', k === id); });
   var box = $('info');
@@ -734,7 +747,7 @@ function waehle(id) {
 /* Schalter eines Systems (an | glas | aus), Liste und Auswahl nachziehen */
 function systemModus(id, m) {
   if (!SYS[id]) return;
-  modus(id, m);
+  modus(id, m); lv++;
   var r = sysRows[id];
   if (r) {
     r.classList.toggle('off', SYS[id].modus === 'aus');
@@ -840,20 +853,62 @@ function canvasKlick(e) {
 canvas.addEventListener('click', canvasKlick);
 
 /* =====================================================================
-   7. Kamera und Renderschleife
+   7. Kamera: Ausschnitte, freier Bildbereich, Renderschleife
    ===================================================================== */
 var view = { theta: 0, phi: PI / 2, dist: 290, target: V(0, 88, 0) };
 var orbit = Kern.orbit(canvas, view, { minDist: 25, maxDist: 520 });
 var kamAlt = { near: camera.near, far: camera.far };
 camera.near = 2; camera.far = 1200; camera.updateProjectionMatrix();
-var fitDist = 0;
-function passen(w, h) {
-  var th = Math.tan(camera.fov * PI / 360), asp = w / h;
-  var d = Math.max(104 / th, 50 / (th * asp));
-  if (!fitDist || Math.abs(view.dist - fitDist) < 1e-6) view.dist = d;
-  fitDist = d;
+/* ext = Breite und Hoehe (cm), die im freien Bereich ganz sichtbar sein sollen;
+   halb = halbe Koerperbreite (cm), die die Beschriftungsspalten freilassen */
+var AUSSCHNITTE = [
+  { name: 'Ganzkörper', theta: 0, target: V(0, 88, 0), ext: [90, 184], halb: 42 },
+  { name: 'Kopf/Hals', theta: 0, target: V(0, 154, 0), ext: [60, 50], halb: 30 },
+  { name: 'Brustkorb', theta: 0, target: V(0, 126, 0), ext: [70, 50], halb: 30 },
+  { name: 'Bauch', theta: 0, target: V(0, 103, 0), ext: [66, 46], halb: 30 },
+  { name: 'Becken', theta: 0, target: V(0, 86, 0), ext: [66, 40], halb: 30 },
+  { name: 'Rücken', theta: PI, target: V(0, 88, 0), ext: [90, 184], halb: 42 }
+];
+var aktiv = 0, fitDist = 0;
+
+/* Freier Bereich fuer Koerper und Beschriftung (Pixel): Desktop rechts der Leiste, Handy zwischen Titel und Werkzeugleiste */
+function bereich(w, h) {
+  if (w < 1000) {
+    var tt = $('tools').getBoundingClientRect().top;
+    return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (tt > 100 ? tt : h * 0.6) - 6), labW: 104, fit: 64 };   /* fit: Platz je Seite, den die Beschriftung beim Einpassen abzieht (sie darf auf dem Handy den Koerperrand ueberdecken) */
+  }
+  return { x0: 330, x1: w - 22, y0: Math.max(76, Math.ceil($('tools').getBoundingClientRect().bottom) + 6), y1: h - 30, labW: 142, fit: 142 };
 }
-function groesse(w, h) { passen(w, h); }
+function distFuer(a, w, h) {
+  var r = bereich(w, h), th = Math.tan(camera.fov * PI / 360);
+  var pxcm = Math.min((r.y1 - r.y0) / a.ext[1], (r.x1 - r.x0 - 2 * r.fit) / a.ext[0]);
+  return h / (2 * th * Math.max(pxcm, 0.5));
+}
+function gehe(i) {
+  var a = AUSSCHNITTE[i]; if (!a) return;
+  aktiv = i;
+  for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === i);
+  var w = window.innerWidth, h = window.innerHeight, d = distFuer(a, w, h);
+  /* kuerzester Weg beim Drehen (Vorder- <-> Rueckansicht) */
+  var th = a.theta, dth = th - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI;
+  orbit.anim = Kern.fahrt(view, { theta: view.theta + dth, phi: PI / 2, dist: d, target: a.target }, 700);
+  fitDist = d;
+  lv++;
+}
+for (var ci = 0; ci < AUSSCHNITTE.length; ci++) (function (i) { $('cam' + i).onclick = function () { gehe(i); }; })(ci);
+
+function groesse(w, h) {
+  var r = bereich(w, h), a = AUSSCHNITTE[aktiv];
+  camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
+  camera.updateProjectionMatrix();
+  var d = distFuer(a, w, h);
+  if (!fitDist || (!orbit.anim && Math.abs(view.dist - fitDist) < 1e-6)) view.dist = d;
+  fitDist = d;
+  /* Infokarte auf dem Handy ueber der Werkzeugleiste */
+  $('info').style.bottom = w < 1000 ? (h - $('tools').getBoundingClientRect().top + 8) + 'px' : '';
+  Kern.linienFlaeche($('leaders'), w, h);
+  lv++;
+}
 function ansicht(theta, phi, dist, target) {
   if (theta !== undefined) view.theta = theta * PI / 180;
   if (phi !== undefined) view.phi = phi * PI / 180;
@@ -861,10 +916,113 @@ function ansicht(theta, phi, dist, target) {
   if (target) view.target.set(target[0], target[1], target[2]);
   orbit.anim = null;
 }
+
+/* =====================================================================
+   8. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt,
+   wenn sich die Ansicht aendert. Je Ausschnitt eine eigene Auswahl.
+   ===================================================================== */
+/* Ankerpunkt je Struktur (x, y, z in cm; x > 0 = linke Koerperseite) */
+var ANKER = {
+  gehirn: [-3, 166, 1], schaedel: [-6.6, 168, 0], augen: [-3, 161.8, 8.4], rueckenmark: [0, 146, -6],
+  schilddruese: [2.3, 145, 2.6], luftroehre: [0, 132, 0], speiseroehre: [1.5, 124, -2.5],
+  herz: [3, 124, 5], herzkranz: [4.2, 121, 5], lunge: [-9, 128, 5], zwerchfell: [-8, 112, 8],
+  brustkorb: [-11, 134, 9], aorta: [2, 128, -2], hohlvenen: [-2.2, 132, 1],
+  leber: [-8, 110, 7], gallenblase: [-6.3, 100, 7.5], magen: [9, 106, 6], milz: [10, 108, -6],
+  pankreas: [3, 101, 1], duenndarm: [-1, 92, 6], dickdarm: [-11, 93, 8], nieren: [8, 104, -6],
+  harnleiter: [-4.5, 92, -1], harnblase: [0, 83, 5.5], wirbelsaeule: [0, 96, -8], becken: [-13.5, 88, 5]
+};
+var HANDYNAME = { pankreas: 'Pankreas', herzkranz: 'Koronargef\u00e4\u00dfe', luftroehre: 'Luftr\u00f6hre' };   /* kuerzere Namen, wo die Spalte auf dem Handy schmal ist */
+var KURZ = { aorta: 'Aorta', luftroehre: 'Luftröhre', pankreas: 'Bauchspeicheldrüse' };
+/* je Ausschnitt: Strukturen in der Beschriftung; [id, x, y, z] ersetzt den Standardanker */
+var LISTEN = [
+  ['gehirn', 'schilddruese', 'herz', 'lunge', 'leber', 'magen', 'duenndarm', 'dickdarm', 'nieren', 'harnblase', 'wirbelsaeule', 'becken'],
+  ['gehirn', 'augen', 'schaedel', 'rueckenmark', 'schilddruese', 'luftroehre', 'speiseroehre', ['aorta', -3.6, 148, 0.5], ['hohlvenen', -2.4, 140, 1]],
+  ['herz', 'lunge', 'luftroehre', 'speiseroehre', ['aorta', 4.5, 141, 0], 'hohlvenen', 'zwerchfell', 'brustkorb', 'herzkranz'],
+  ['leber', 'gallenblase', 'magen', 'milz', 'pankreas', 'duenndarm', 'dickdarm', 'nieren', ['aorta', 1.5, 100, -3]],
+  ['harnblase', 'harnleiter', 'dickdarm', 'becken', 'wirbelsaeule'],
+  ['wirbelsaeule', 'rueckenmark', 'nieren', 'milz', ['lunge', 8, 128, -6], 'becken']
+];
+var labelBox = $('labels'), leaderSvg = $('leaders');
+var LAB = {};   /* Struktur-id -> { el, ln, dot } */
+var zeigeLabels = true, lastKey = '';
+LISTEN.forEach(function (l) {
+  l.forEach(function (e) {
+    var id = typeof e === 'string' ? e : e[0];
+    if (LAB[id]) return;
+    var d = STR[id].def, b = Kern.beschriftung(labelBox, leaderSvg, KURZ[id] || d.de, d.lat);
+    b.el.style.pointerEvents = 'auto'; b.el.style.cursor = 'pointer';
+    b.el.onclick = function () {
+      if (SYS[d.system].modus === 'aus') systemModus(d.system, 'an');
+      waehle(id);
+    };
+    b.nm = b.el.querySelector('b'); b.de = KURZ[id] || d.de;
+    LAB[id] = b;
+  });
+});
+$('bLab').onclick = function () {
+  zeigeLabels = !zeigeLabels;
+  this.classList.toggle('on', zeigeLabels);
+  labelBox.style.display = zeigeLabels ? '' : 'none';
+  leaderSvg.style.display = zeigeLabels ? '' : 'none';
+  lv++;
+};
+
+var pv = new THREE.Vector3();
+function layoutLabels(w, h) {
+  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(2), view.target.y.toFixed(2), w, h, lv, aktiv].join('|');
+  if (key === lastKey) return;
+  lastKey = key;
+  var narrow = w < 1000, r = bereich(w, h), a = AUSSCHNITTE[aktiv], th = Math.tan(camera.fov * PI / 360);
+  var pxcm = h / (2 * view.dist * th), cx = (r.x0 + r.x1) / 2;
+  var colL = Math.min(cx - 20, Math.max(r.x0 + r.labW + 4, cx - a.halb * pxcm - 12));
+  var colR = Math.max(cx + 20, Math.min(r.x1 - r.labW - 4, cx + a.halb * pxcm + 12));
+  var topL = narrow ? r.y0 : 30, topR = narrow ? r.y0 : $('tools').getBoundingClientRect().bottom + 16;
+  var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
+  if (!narrow && $('info').classList.contains('show')) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var gap = narrow ? 27 : 36, items = [], shown = {};
+  var ls = LISTEN[aktiv];
+  Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
+  ls.forEach(function (e) {
+    var id = typeof e === 'string' ? e : e[0], p = typeof e === 'string' ? ANKER[id] : [e[1], e[2], e[3]];
+    if (SYS[STR[id].def.system].modus === 'aus') return;
+    if (narrow && gewaehlt) return;   /* Handy: die Infokarte deckt den Koerper, ohne Beschriftung bleibt er frei */
+    pv.set(p[0], p[1], p[2]).project(camera);
+    if (pv.z > 1) return;
+    var sx = (pv.x * 0.5 + 0.5) * w, sy = (-pv.y * 0.5 + 0.5) * h;
+    items.push({ id: id, sx: sx, sy: sy });
+  });
+  /* Seite: nach Lage zur Koerperachse; fast mittige Anker gleichen die Spalten aus */
+  var nl = 0, nr = 0;
+  items.forEach(function (it) { it.dx = it.sx - cx; if (it.dx < -8) { it.side = 'l'; nl++; } else if (it.dx > 8) { it.side = 'r'; nr++; } });
+  items.filter(function (it) { return !it.side; }).sort(function (p, q) { return p.sy - q.sy; }).forEach(function (it) {
+    if (nl <= nr) { it.side = 'l'; nl++; } else { it.side = 'r'; nr++; }
+  });
+  ['l', 'r'].forEach(function (side) {
+    var g = items.filter(function (it) { return it.side === side; }).sort(function (p, q) { return p.sy - q.sy; });
+    var top = side === 'l' ? topL : topR, bot = side === 'l' ? botL : botR, gp = g.length > 1 ? Math.min(gap, (bot - top) / (g.length - 1)) : gap, y = top;
+    g.forEach(function (it) { it.ly = Math.max(y, Math.min(bot, it.sy)); y = it.ly + gp; });
+    var over = y - gp - bot;
+    if (over > 0) g.forEach(function (it) { it.ly -= over; });
+  });
+  var sichtbarSel = items.some(function (it) { return it.id === gewaehlt; });
+  items.forEach(function (it) {
+    var b = LAB[it.id], lx = it.side === 'l' ? colL : colR;
+    b.el.style.display = ''; b.ln.style.display = ''; b.dot.style.display = '';
+    b.nm.textContent = narrow && HANDYNAME[it.id] || b.de;
+    b.el.className = 'lbl ' + it.side + ((sichtbarSel && it.id !== gewaehlt) ? ' dim' : '') + (it.id === gewaehlt ? ' sel' : '');
+    b.el.style.left = lx + 'px'; b.el.style.top = it.ly + 'px';
+    b.el.style.transform = it.side === 'l' ? 'translate(-100%,-50%)' : 'translateY(-50%)';
+    var ex = it.side === 'l' ? lx + 7 : lx - 7;
+    b.ln.setAttribute('points', it.sx + ',' + it.sy + ' ' + (ex + (it.side === 'l' ? 16 : -16)) + ',' + it.ly + ' ' + ex + ',' + it.ly);
+    b.dot.setAttribute('cx', it.sx); b.dot.setAttribute('cy', it.sy);
+  });
+}
+
 function loop(now) {
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   renderer.render(scene, camera);
+  layoutLabels(window.innerWidth, window.innerHeight);
 }
 organ.bild = loop; organ.groesse = groesse;
 
@@ -877,8 +1035,11 @@ organ.abbauen = function () {
   hlMat.dispose();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  camera.clearViewOffset();
   camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
   /* DOM */
+  Object.keys(LAB).forEach(function (id) { var b = LAB[id]; [b.el, b.ln, b.dot].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }); });
+  labelBox.style.display = ''; leaderSvg.style.display = '';
   umg.bereich.innerHTML = '';
   $('bootBar').style.width = ''; $('bootSt').textContent = '';
   delete window.KoerperApp;
