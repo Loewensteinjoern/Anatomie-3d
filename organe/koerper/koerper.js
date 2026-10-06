@@ -47,7 +47,8 @@ function mat(sys, hex, o) {
 
 /* Glasartiges Material (Mitte durchsichtig, Kanten dichter, wie glassify im Herz);
    u.value skaliert die Deckkraft (1 = an, kleiner = glas) */
-function glasMat(sys, hex, a0, a1) {
+function glasMat(sys, hex, a0, a1, ex) {
+  ex = ex || 2.2;
   var m = Kern.mat(hex, { rough: 0.45, coat: 0.3, env: 0.4 }, envTex);
   m.transparent = true; m.opacity = 1; m.depthWrite = false;
   var u = { value: 1 };
@@ -57,9 +58,9 @@ function glasMat(sys, hex, a0, a1) {
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uKoerperGlas;')
       .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n' +
         'float frg = 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition)));\n' +
-        'gl_FragColor.a *= uKoerperGlas * mix(' + a0.toFixed(3) + ', ' + a1.toFixed(3) + ', pow(frg, 2.2));');
+        'gl_FragColor.a *= uKoerperGlas * mix(' + a0.toFixed(3) + ', ' + a1.toFixed(3) + ', pow(frg, ' + ex.toFixed(2) + '));');
   };
-  m.customProgramCacheKey = function () { return 'koerperGlas' + a0 + '_' + a1; };
+  m.customProgramCacheKey = function () { return 'koerperGlas' + a0 + '_' + a1 + '_' + ex; };
   SYS[sys].mats.push(m);
   return m;
 }
@@ -72,7 +73,7 @@ function modus(sys, m) {
   s.grp.visible = m !== 'aus';
   s.mats.forEach(function (x) {
     if (x.userData.gu) { x.userData.gu.value = m === 'glas' ? 0.35 : 1; return; }
-    if (m === 'glas') { x.transparent = true; x.opacity = 0.25; x.depthWrite = false; }
+    if (m === 'glas') { x.transparent = true; x.opacity = 0.38; x.depthWrite = false; }
     else { x.transparent = x.userData.tr0; x.opacity = x.userData.op0; x.depthWrite = x.userData.dw0; }
   });
 }
@@ -226,11 +227,12 @@ function skelett() {
   stab(sk, kn, [0, 84, -7.6], [0, 80.4, -6.2], 0.9, 0.4, true);
   /* Brustkorb: 12 Rippenpaare */
   var R = [[5.6, 141.0, 1.5, 3.6], [8.4, 136.6, 3.5, 5.6], [10.6, 132.0, 5.5, 7.6], [12.2, 129.6, 7.5, 8.8], [13.2, 127.6, 9, 9.8],
-    [13.9, 125.9, 10.2, 10.4], [14.3, 124.6, 11, 10.8], [14.4, 123.6, 12, 9.4], [14.2, 123.0, 12, 10.8], [13.8, 122.6, 11.5, 11.8],
+    [13.9, 125.9, 10.2, 10.4], [14.3, 124.6, 11, 10.8], [14.4, 123.6, 8, 9.4], [14.2, 123.0, 8, 10.8], [13.8, 122.6, 7, 11.8],
     [13.0, 109.5, 1.5, 0, 2.1, 7.0], [12.0, 108.5, 1, 0, 1.8, 5.0]];
-  var knorpel = mat(sk, 0xC7D3DC, { rough: 0.7, env: 0.25 }), enden = [];
+  var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [];
   R.forEach(function (r, i) {
     var yb = 141.5 - 2.15 * i, a = r[0], yf = r[1], sag = r[2];
+    var yfb = i < 7 ? yf - [0.8, 1.8, 2.8, 3.6, 4.4, 5.2, 6.0][i] : i < 10 ? [114.5, 112, 110.5][i - 7] : yf;   /* Knochenende: Knorpel steigt zum Brustbein an */
     var te = r[4] !== undefined ? r[4] : PI - Math.asin(r[3] / a);
     var zb = zst(yb) + 0.2, zf = r[5] !== undefined ? r[5] : zSternum(yf);
     var b = (zf - zb) / (1 + Math.abs(Math.cos(te))), zc = zb + b * Math.cos(0.12);
@@ -238,15 +240,15 @@ function skelett() {
       var pts = [], n = 26;
       for (var k = 0; k <= n; k++) {
         var t = k / n, th = 0.12 + (te - 0.12) * t;
-        pts.push([s * a * Math.sin(th), yb + (yf - yb) * t * t - sag * Math.sin(PI * t), zc - b * Math.cos(th)]);
+        pts.push([s * a * Math.sin(th), yb + (yfb - yb) * t * t - sag * Math.sin(PI * t), zc - b * Math.cos(th)]);
       }
       rohr(sk, kn, pts, 0.5, 40);
       var e = pts[n], ziel;
       (enden[i] = enden[i] || {})[s] = e;
-      if (i < 7) ziel = [s * 1.3, yf + 0.3, zSternum(yf) - 0.1];
-      else if (i === 7) ziel = [s * 1.0, 123.4, zSternum(123.4) - 0.1];
+      if (i < 7) ziel = [s * 1.2, yf, zSternum(yf) - 0.1];
+      else if (i === 7) ziel = [s * 1.0, 123.6, zSternum(123.6) - 0.1];
       else if (i < 10) ziel = enden[i - 1][s];
-      if (ziel) rohr(sk, knorpel, [e, [(e[0] + ziel[0]) / 2, (e[1] + ziel[1]) / 2 + (i < 7 ? 0 : 0.4), (e[2] + ziel[2]) / 2], ziel], 0.38, 10);
+      if (ziel) rohr(sk, knorpel, [e, ziel], 0.45, 8);
     });
   });
   /* Brustbein: Griff, Koerper, Schwertfortsatz als flache, sich verjuengende Form */
@@ -307,9 +309,11 @@ function domY(x, z, xc, ytop) {
 var DOM_R = 118, DOM_L = 115.5;
 
 function sdfHerz(x, y, z) {
-  var d = kap(x, y, z, 1.2, 124.2, 1.4, 8.0, 114.4, 3.8, 4.4, 1.7);
-  d = smin(d, ell(x, y, z, 1.6, 123.6, 1.2, 3.8, 3.8, 3.2), 2.5);
-  d = smin(d, ell(x, y, z, -1.0, 121.8, 1.8, 2.8, 3.6, 2.6), 2);
+  /* gerundeter Kegel: Basis oben-rechts-hinten, stumpfe Spitze links unten, Dicke ca. 6 cm (z gestaucht) */
+  var zz = 2.8 + (z - 2.8) * 1.45;
+  var d = kap(x, y, zz, 3.1, 123.6, 2.8, 6.3, 119.9, 3.3, 4.5, 2.7) / 1.25;
+  d = smin(d, ell(x, y, z, 0.2, 125.6, 1.6, 3.4, 3.0, 2.6), 2);      // Vorhoefe
+  d = smin(d, ell(x, y, z, -0.6, 121.6, 3.2, 2.6, 3.6, 2.4), 1.6);   // rechter Rand (rechter Vorhof/Kammer)
   return d;
 }
 function sdfLunge(s) {
@@ -319,7 +323,7 @@ function sdfLunge(s) {
     var d = ell(x, y, z, cx, 125, -0.8, rx, 19, 7.8);
     d = Math.max(d, 0.4 * (domY(x, z, xc, ytop) + 0.5 - y));
     if (s > 0) {
-      d = S.smax(d, -ell(x, y, z, 5.0, 119, 2.6, 6.4, 8.2, 5.2), 1);          // Herzbucht
+      d = S.smax(d, -ell(x, y, z, 4.6, 120.5, 2.8, 6.4, 8.0, 5.2), 1);          // Herzbucht
       d = S.smax(d, -kap(x, y, z, 5.1, 134, -4.1, 3.8, 110, -2.6, 2.1), 0.8);  // Aortenrinne
     }
     /* Lappengrenzen: flache Furchen */
@@ -333,15 +337,16 @@ function sdfLunge(s) {
   };
 }
 function sdfLeber(x, y, z) {
-  var d = ell(x, y, z, -3.2, 109.2, 0.6, 11.0, 9.6, 9.6);
-  d = smin(d, ell(x, y, z, 5.2, 109.6, 3.2, 8.0, 4.4, 5.6), 4);
-  return Math.max(d, 0.4 * (y - (domY(x, z, -6.5, DOM_R) - 0.6)));
+  var d = ell(x, y, z, -4.0, 109.8, 0.8, 9.0, 8.4, 7.0);             // rechter Lappen
+  d = smin(d, ell(x, y, z, 2.6, 111.6, 3.4, 7.4, 4.0, 4.6), 4);       // linker Lappen, duenn auslaufend
+  d = Math.max(d, 0.4 * (y - (domY(x, z, -6.5, DOM_R) - 0.6)));         // Oberseite folgt der Kuppel
+  return Math.max(d, -(y - 100.2 - 0.5 * (x + 12)) * 0.89);            // schraeger, scharfer Unterrand
 }
 function sdfMagen(x, y, z) {
-  var d = ell(x, y, z, 7.6, 108.2, -1.8, 4.6, 4.4, 4.2);                  // Fundus
-  d = smin(d, kap(x, y, z, 7.4, 107, -1.2, 6.8, 101.6, 1.2, 4.6, 4.2), 3);   // Korpus, grosse Kurvatur links
-  d = smin(d, kap(x, y, z, 6.8, 101.6, 1.2, 1.5, 99.6, 2.8, 4.0, 2.8), 3);
-  d = smin(d, kap(x, y, z, 1.5, 99.6, 2.8, -3, 100.6, 3.0, 2.8, 1.6), 2);    // Antrum, Pfoertner
+  var d = ell(x, y, z, 7.8, 109.6, -1.8, 5.0, 4.6, 4.6);                  // Fundus unter der linken Kuppel
+  d = smin(d, kap(x, y, z, 7.6, 108, -1.4, 6.6, 101.6, 1.0, 4.4, 4.2), 3);    // Korpus
+  d = smin(d, kap(x, y, z, 6.6, 101.6, 1.0, 2.5, 100.2, 3.0, 4.2, 3.0), 3);   // grosse Kurvatur unten
+  d = smin(d, kap(x, y, z, 2.5, 100.2, 3.0, -2.0, 104.0, 3.2, 3.0, 1.7), 2);  // Antrum steigt zum Pfoertner
   return d;
 }
 function sdfNiere(s) {
@@ -376,7 +381,7 @@ function sdfPankreas(x, y, z) {
   return smin(d, kap(x, y, z, 3.5, 102.2, -3.4, 9.5, 105.5, -4.4, 1.5, 1.2), 1.5);
 }
 function sdfBlase(x, y, z) { return ell(x, y, z, 0, 83, 2.8, 3.2, 3.6, 3.0); }
-function sdfGalle(x, y, z) { return smin(ell(x, y, z, -6.6, 99.2, 5.2, 1.4, 3.0, 1.4), kap(x, y, z, -6.2, 97, 4.6, -4.5, 94.6, 3.6, 0.35, 0.3), 0.6); }
+function sdfGalle(x, y, z) { return smin(ell(x, y, z, -6.4, 101.0, 6.2, 1.5, 3.0, 1.5), kap(x, y, z, -6.0, 99, 5.6, -4.6, 97, 4.6, 0.35, 0.3), 0.6); }
 
 async function organe() {
   var b = function (x0, y0, z0, x1, y1, z1) { return [[x0, y0, z0], [x1, y1, z1]]; };
@@ -402,7 +407,7 @@ async function organe() {
   ellM('hormon', th, 0, 144.2, 2.2, 1.7, 0.6, 0.8);
   /* Kreislauf */
   var rot = mat('kreislauf', 0xC8342F, { rough: 0.45, coat: 0.5 }), blau = mat('kreislauf', 0x2F6FB5, { rough: 0.45, coat: 0.4 });
-  await sdfMesh('kreislauf', rot, sdfHerz, b(-5, 108, -3, 14, 130, 9), h);
+  await sdfMesh('kreislauf', rot, sdfHerz, b(-6, 108, -3, 14, 132, 10), h);
   if (abgebaut) return; await weiter('Herz');
   rohr('kreislauf', rot, [[2.6, 122.5, 1.4], [2.6, 127, 1.0], [2.2, 132, 0.4], [1.6, 135.6, -0.8], [2.8, 135.8, -2.4], [4.4, 133.8, -3.8],
     [5.2, 129.5, -4.3], [5.2, 124, -4.2], [5.0, 118, -3.6], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
@@ -426,20 +431,21 @@ async function organe() {
   if (abgebaut) return; await weiter('Lungen');
   await sdfMesh('atmung', lm, sdfLunge(1), b(1.5, 105, -10, 15, 146.5, 9.5), h);
   if (abgebaut) return; await weiter('Lungen');
-  var zw = mat('atmung', 0xB5655A, { rough: 0.6, opacity: 0.55, side: THREE.DoubleSide });
+  var zw = mat('atmung', 0xB5655A, { rough: 0.6, opacity: 0.3, side: THREE.DoubleSide });
   dazu('atmung', new THREE.Mesh(zwerchfellGeo(), zw));
   await weiter('Zwerchfell');
   /* Verdauung */
   rohr('verdauung', mat('verdauung', 0xD99A8A, { rough: 0.5, coat: 0.3 }), [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], 0.8, 40);
   var le = mat('verdauung', 0x8B3A2E, { rough: 0.45, coat: 0.5 });
-  await sdfMesh('verdauung', le, sdfLeber, b(-16, 97, -10, 15, 119, 11), h);
+  await sdfMesh('verdauung', le, sdfLeber, b(-15, 97, -10, 14, 119, 11), h);
   if (abgebaut) return; await weiter('Leber');
   await sdfMesh('verdauung', mat('verdauung', 0xE8B48E, { rough: 0.5, coat: 0.4 }), sdfMagen, b(-6, 94, -7, 14, 115, 8), h);
   if (abgebaut) return; await weiter('Magen');
-  await sdfMesh('verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), sdfGalle, b(-9, 92, 0, -2, 104, 8), 0.4);
+  await sdfMesh('verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), sdfGalle, b(-10, 92, 0, -1, 106, 9), 0.4);
   if (abgebaut) return; await weiter('Gallenblase');
   await sdfMesh('verdauung', mat('verdauung', 0xE8C27A, { rough: 0.6 }), sdfPankreas, b(-8, 96, -8, 12, 109, 2), 0.45);
   if (abgebaut) return; await weiter('Bauchspeicheldrüse');
+  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], 1.0, 50);
   ellM('verdauung', mat('verdauung', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
   /* Duenndarm: Schlingen in vier Lagen */
   var dd = [], r, k;
@@ -479,7 +485,8 @@ var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: modus, ansicht
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
-  var hm = glasMat('haut', 0xD9C2AE, 0.12, 0.5);
+  var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
+  hm.emissive.copy(Kern.srgb(0xE0C3A8)).multiplyScalar(0.8);   /* Eigenleuchten in Hautfarbe: liest sich vor dem dunklen Grund als Haut */
   await sdfMesh('haut', hm, huelle, [[-44, -1, -17], [44, 179, 19]], klein ? 1.6 : 1.2, function (f) { return setLoad(0.02 + f * 0.4); });
   if (abgebaut) return;
   await setLoad(0.45, 'Skelett'); if (abgebaut) return;
