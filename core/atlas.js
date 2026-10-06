@@ -77,6 +77,7 @@
       u.style.opacity = '1';
       u.style.pointerEvents = '';
     }
+    var vorher = $('atlasFehler').hasAttribute('hidden') ? aktuell : null;   /* vorheriges Organ (nicht nach Fehler) */
     beenden();
     zeige($('atlasFehler'), false);
     zeige($('atlasZurueck'), false);
@@ -93,7 +94,7 @@
       $('organ').className = 'organ-' + name;
       document.title = e.seitentitel;
       zeige($('atlasZurueck'), name !== 'koerper');   /* im Koerper selbst gibt es kein Zurueck */
-      return K.organStarten(name);
+      return K.organStarten(name, { von: vorher });
     }).then(function () {
       if (nr !== zaehler) return;
       $('boot').classList.add('gone');

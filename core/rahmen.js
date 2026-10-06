@@ -21,7 +21,7 @@ var Kern = window.Kern = window.Kern || {};
 
   /* Organ-Modul anmelden. def:
        renderer: { alpha }   Optionen fuer den Renderer des Rahmens
-       aufbauen(umg)         baut das Organ auf (umg: bereich (Element #organ, nimmt das Markup der Bedienelemente auf), canvas, renderer, szene, kamera, envTex), gibt ein Promise oder nichts zurueck
+       aufbauen(umg)         baut das Organ auf (umg: bereich (Element #organ, nimmt das Markup der Bedienelemente auf), canvas, renderer, szene, kamera, envTex, von (Name des vorigen Organs beim Wechsel, sonst null)), gibt ein Promise oder nichts zurueck
        bild(now, frame)      Renderschleife (setzt aufbauen)
        groesse(w, h)         Fenstergroesse geaendert (setzt aufbauen)
        abbauen()             raeumt das Organ vollstaendig weg (setzt aufbauen): Sitzungen, Listener, Timer, three.js-Objekte, DOM; Rahmen-Objekte bleiben */
@@ -67,12 +67,13 @@ var Kern = window.Kern = window.Kern || {};
   }
 
   /* Organ im Rahmen starten; ein schon aktives Organ wird vorher beendet. */
-  K.organStarten = function (name) {
+  K.organStarten = function (name, opt) {
     if (aktiv) K.organBeenden();
     var o = K.Organe[name];
     var ro = o.renderer || {};
     if (R && R.alpha !== !!ro.alpha) rahmenErneuern();   /* Renderer-Optionen des Organs weichen ab */
     rahmenAnlegen(ro);
+    R.von = (opt && opt.von) || null;
     var fertig = o.aufbauen(R);
     groesseFn = function () {
       var w = window.innerWidth, h = window.innerHeight;

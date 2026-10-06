@@ -32,7 +32,7 @@
    Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
 
    Modell atlas (index.html): Die Kontexte uebergaenge (Körper, Kamerafahrt und Herz über die Infokarte,
-   Zurück-Knopf des Browsers, Wechsel, leere Adresse; Messwerte m1 und m2 müssen gleich sein)
+   Zurück-Knopf des Browsers mit Rückfahrt, Wechsel, leere Adresse; Messwerte m1 und m2 müssen gleich sein)
    und fehler (unbekannte Adresse, Ladefehler, „Zum Körper“, Neuversuch) haben kein Gegenstück
    und sind nur anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz und atlas.html: Ziel-Adresse muss stimmen,
@@ -472,7 +472,7 @@ for (const organ of ['koerper', 'herz', 'nephron']) {
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = organ === 'koerper' ? '' : '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
 MODELLE.atlas = { datei: 'index.html', kontexte: {} };
-/* Kontext uebergaenge: Körper, Herz über die Infokarte, Zurück-Knopf des Browsers, Wechsel zwischen den Organen; Messwerte vorher/nachher */
+/* Kontext uebergaenge: Körper, Herz über die Infokarte, Zurück-Knopf des Browsers (Rückfahrt zur Ganzkörperansicht), Wechsel zwischen den Organen; Messwerte vorher/nachher */
 MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const messen = () => t.js(() => {
     const R = Kern.Rahmen, kinder = (id) => { const e = document.getElementById(id); return e ? e.childNodes.length : null; };
@@ -488,12 +488,12 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500); await t.bild('koerper');
   await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.weiter(700); await organ('herz'); await t.weiter(1500); await t.bild('herz');
-  await t.zurueck(); await organ('koerper'); await t.weiter(500); await t.bild('koerper-zurueck');
+  await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
   const m1 = await messen();
   await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
   await t.js(() => { location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-nach-nephron');
   await t.js(() => { location.hash = 'nephron'; location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-schnell');
-  await t.js(() => { location.hash = ''; }); await organ('koerper'); await t.weiter(500);
+  await t.js(() => { location.hash = ''; }); await organ('koerper'); await t.weiter(2200);
   const m2 = await messen();
   const felder = Object.keys(m1).filter((k) => JSON.stringify(m1[k]) !== JSON.stringify(m2[k]));
   t.erg.uebergaenge = { m1, m2, gleich: !felder.length };
