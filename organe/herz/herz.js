@@ -2393,6 +2393,8 @@ var MARKUP = `<div id="title">
   <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 var organ = { renderer: { alpha: true }, aufbauen: aufbauen };
+/* Formbausteine fuer andere Organe (Koerper-Modell): nur Verweise, nichts wird ausgefuehrt */
+organ.form = { sdf: HeartSDF, mesher: HeartMesher, assemble: HeartAssemble, extras: HeartExtras };
 function aufbauen(umg) {
 'use strict';
 umg.bereich.innerHTML = MARKUP;

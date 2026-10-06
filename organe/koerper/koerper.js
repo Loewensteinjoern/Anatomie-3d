@@ -307,6 +307,8 @@ function domY(x, z, xc, ytop) {
 }
 
 var DOM_R = 118, DOM_L = 115.5;
+/* Herz aus dem Herz-Modell: Verschiebung (Herz-Koordinaten -> Koerper) und Abtaster der Herzform (fuer die Lungenbucht); leer = einfaches Ersatzherz */
+var HERZ_V = [2.0, 122.5, 2.4], herzSmp = null, herzP = null;
 
 function sdfHerz(x, y, z) {
   /* gerundeter Kegel: Basis oben-rechts-hinten, stumpfe Spitze links unten, Dicke ca. 6 cm (z gestaucht) */
@@ -322,7 +324,10 @@ function sdfLunge(s) {
   return function (x, y, z) {
     var d = ell(x, y, z, cx, 125, -0.8, rx, 19, 7.8);
     d = Math.max(d, 0.4 * (domY(x, z, xc, ytop) + 0.5 - y));
-    if (s > 0) {
+    if (herzSmp) {
+      d = S.smax(d, -(herzSmp.val(x - HERZ_V[0], y - HERZ_V[1], z - HERZ_V[2]) - 0.4), 0.8);   // Herzbucht nach der Form des Herzens
+      if (s > 0) d = S.smax(d, -kap(x, y, z, 4.7, 127, -3.2, 3.8, 110, -2.6, 2.1), 0.8);       // Aortenrinne
+    } else if (s > 0) {
       d = S.smax(d, -ell(x, y, z, 4.6, 120.5, 2.8, 6.4, 8.0, 5.2), 1);          // Herzbucht
       d = S.smax(d, -kap(x, y, z, 5.1, 134, -4.1, 3.8, 110, -2.6, 2.1), 0.8);  // Aortenrinne
     }
@@ -383,6 +388,43 @@ function sdfPankreas(x, y, z) {
 function sdfBlase(x, y, z) { return ell(x, y, z, 0, 83, 2.8, 3.2, 3.6, 3.0); }
 function sdfGalle(x, y, z) { return smin(ell(x, y, z, -6.4, 101.0, 6.2, 1.5, 3.0, 1.5), kap(x, y, z, -6.0, 99, 5.6, -4.6, 97, 4.6, 0.35, 0.3), 0.6); }
 
+/* Herz aus den Formbausteinen des Herz-Modells: ganzes Herz geschlossen (nur die Aussenform samt Gefaessstuempfen),
+   Farben pro Vertex wie dort; keine Klappen, Faeden, Leitungsbahnen. Gibt das Mesh zurueck (noch nicht eingebaut). */
+async function herzBauen(form, h) {
+  var HS = form.sdf, C2 = {};
+  var G = form.mesher.makeGrid([[-6.4, -6.6, -7.0], [6.6, 9.9, 3.7]], h);
+  var T = await form.mesher.evalTissue(G, function (x, y, z) { HS.tissue(x, y, z, C2); return C2.outer; });
+  if (abgebaut) return null;
+  var smp = form.assemble.makeSampler(G, T);
+  var P = form.mesher.surfaceNets(G, T), pos = P.positions, nv = pos.length / 3, col = new Float32Array(nv * 3);
+  for (var v = 0; v < nv; v++) {
+    var x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+    var r = HS.classify(x, y, z);
+    var c = form.assemble.colorFor(r, false, 0, HS.C, x, y, z);
+    col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2];
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(new THREE.BufferAttribute(P.index, 1));
+  g.computeVertexNormals();
+  var mesh = new THREE.Mesh(g, mat('kreislauf', 0xffffff, { vc: true, rough: 0.55, coat: 0.25, env: 0.3 }));
+  mesh.position.set(HERZ_V[0], HERZ_V[1], HERZ_V[2]);
+  /* Herzkranzgefaesse (Rohre auf der Oberflaeche) */
+  var km = mat('kreislauf', 0xB02A22, { rough: 0.45, coat: 0.4, env: 0.3 });
+  form.extras.coronaries().forEach(function (cr) {
+    var curve = new THREE.CatmullRomCurve3(cr.pts.map(function (q) { return V(q[0], q[1], q[2]); }));
+    var segs = Math.max(4, Math.round(cr.pts.length * 2.2)), rs = 7;
+    var tg = new THREE.TubeGeometry(curve, segs, 1, rs, false), tp = tg.attributes.position, tn = tg.attributes.normal;
+    for (var i = 0; i <= segs; i++) {
+      var t = i / segs, rr = cr.r0 + (cr.r1 - cr.r0) * t, cp = curve.getPointAt(t);
+      for (var k = 0; k <= rs; k++) { var id = i * (rs + 1) + k; tp.setXYZ(id, cp.x + tn.getX(id) * rr, cp.y + tn.getY(id) * rr, cp.z + tn.getZ(id) * rr); }
+    }
+    var tm = new THREE.Mesh(tg, km); tm.renderOrder = 2; mesh.add(tm);
+  });
+  return { mesh: mesh, smp: smp };
+}
+
 async function organe() {
   var b = function (x0, y0, z0, x1, y1, z1) { return [[x0, y0, z0], [x1, y1, z1]]; };
   var n = 0, N = 17;
@@ -406,17 +448,41 @@ async function organe() {
   [-1, 1].forEach(function (s) { ellM('hormon', th, s * 2.1, 145.2, 1.8, 1.3, 2.3, 1.1, [0, 0, s * 0.15]); });
   ellM('hormon', th, 0, 144.2, 2.2, 1.7, 0.6, 0.8);
   /* Kreislauf */
-  var rot = mat('kreislauf', 0xC8342F, { rough: 0.45, coat: 0.5 }), blau = mat('kreislauf', 0x2F6FB5, { rough: 0.45, coat: 0.4 });
-  await sdfMesh('kreislauf', rot, sdfHerz, b(-6, 108, -3, 14, 132, 10), h);
-  if (abgebaut) return; await weiter('Herz');
-  rohr('kreislauf', rot, [[2.6, 122.5, 1.4], [2.6, 127, 1.0], [2.2, 132, 0.4], [1.6, 135.6, -0.8], [2.8, 135.8, -2.4], [4.4, 133.8, -3.8],
-    [5.2, 129.5, -4.3], [5.2, 124, -4.2], [5.0, 118, -3.6], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
-  [-1, 1].forEach(function (s) {
-    rohr('kreislauf', rot, [[1.8, 94, 0.2], [s * 4, 88.5, -1.0], [s * 6.5, 84.5, 0.5]], 0.7, 14);
-    rohr('kreislauf', rot, [[s * 2.4, 135.4, -0.6], [s * 2.8, 143, -1.6], [s * 3.0, 152, -1.8]], 0.55, 20);
-  });
-  rohr('kreislauf', blau, [[-1.3, 129, 2.2], [-1.8, 135, 1.0], [-2.0, 141, -0.2]], 1.0, 14);
-  rohr('kreislauf', blau, [[-1.0, 118.5, 1.6], [-1.6, 112, -0.5], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);
+  var rot = mat('kreislauf', 0xC9483A, { rough: 0.45, coat: 0.5 }), blau = mat('kreislauf', 0x4F70B8, { rough: 0.45, coat: 0.4 });
+  var hz = null, hform = await herzP;
+  if (hform) {
+    try { hz = await herzBauen(hform, klein ? 0.3 : 0.2); } catch (e) { console.warn('Herz-Modell konnte nicht eingebaut werden, einfaches Herz als Ersatz:', e); }
+  } else console.warn('Herz-Modell nicht geladen, einfaches Herz als Ersatz.');
+  if (abgebaut) return;
+  var iliaka = function (s) { rohr('kreislauf', rot, [[1.8, 94, 0.2], [s * 4, 88.5, -1.0], [s * 6.5, 84.5, 0.5]], 0.7, 14); };
+  if (hz) {
+    dazu('kreislauf', hz.mesh); herzSmp = hz.smp;
+    await weiter('Herz');
+    /* Anschluss an die Gefaessstuempfe des Herzens (Herz-Koordinaten + HERZ_V) */
+    rohr('kreislauf', rot, [[4.5, 125.2, -3.1], [4.9, 121, -3.9], [5.0, 118, -3.9], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
+    [-1, 1].forEach(iliaka);
+    rohr('kreislauf', rot, [[2.3, 130.2, 0.45], [2.5, 136, -0.4], [2.9, 143, -1.6], [3.0, 152, -1.8]], 0.55, 20);     // linke Halsschlagader
+    rohr('kreislauf', rot, [[0.35, 130.2, 1.4], [-1.0, 135, 0.6], [-2.6, 143, -1.6], [-3.0, 152, -1.8]], 0.55, 20);   // rechte Halsschlagader
+    rohr('kreislauf', rot, [[3.7, 130.2, -0.7], [7, 133, -0.5], [12, 138.5, 0.8]], 0.6, 14);                          // linke Schluesselbeinarterie
+    rohr('kreislauf', rot, [[0.35, 130.2, 1.4], [-4, 133.2, 1.0], [-12, 138.5, 0.8]], 0.6, 14);                        // rechte Schluesselbeinarterie
+    rohr('kreislauf', blau, [[-1.65, 130.1, 1.6], [-1.9, 134, 0.9], [-2.1, 141, -0.2]], 1.0, 14);                      // obere Hohlvene nach oben
+    rohr('kreislauf', blau, [[-1.65, 119.2, 0.65], [-1.9, 115, -0.3], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);   // untere Hohlvene nach unten
+    rohr('kreislauf', mat('kreislauf', 0x4F6CBF, { rough: 0.45, coat: 0.4 }), [[-2.3, 127.4, -1.15], [-5.5, 126.9, -1.6]], 0.9, 10);      // rechte Lungenarterie bis zum Hilus
+    var pvm = mat('kreislauf', 0xC04C43, { rough: 0.45, coat: 0.4 });
+    rohr('kreislauf', pvm, [[1.7, 126, -1.55], [-1.5, 125.4, -1.9], [-5.6, 123.8, -1.9]], 0.62, 16);                    // rechte Lungenvenen
+    rohr('kreislauf', pvm, [[1.7, 124.1, -1.6], [-1.2, 124.3, -2.0]], 0.62, 10);
+  } else {
+    await sdfMesh('kreislauf', rot, sdfHerz, b(-6, 108, -3, 14, 132, 10), h);
+    if (abgebaut) return; await weiter('Herz');
+    rohr('kreislauf', rot, [[2.6, 122.5, 1.4], [2.6, 127, 1.0], [2.2, 132, 0.4], [1.6, 135.6, -0.8], [2.8, 135.8, -2.4], [4.4, 133.8, -3.8],
+      [5.2, 129.5, -4.3], [5.2, 124, -4.2], [5.0, 118, -3.6], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
+    [-1, 1].forEach(function (s) {
+      iliaka(s);
+      rohr('kreislauf', rot, [[s * 2.4, 135.4, -0.6], [s * 2.8, 143, -1.6], [s * 3.0, 152, -1.8]], 0.55, 20);
+    });
+    rohr('kreislauf', blau, [[-1.3, 129, 2.2], [-1.8, 135, 1.0], [-2.0, 141, -0.2]], 1.0, 14);
+    rohr('kreislauf', blau, [[-1.0, 118.5, 1.6], [-1.6, 112, -0.5], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);
+  }
   /* Atmung */
   var ros = mat('atmung', 0xE39AA4, { rough: 0.55, coat: 0.35, coatRough: 0.4 });
   var lu = mat('atmung', 0xE39AA4, { rough: 0.5 });
@@ -484,6 +550,8 @@ var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareCo
 var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: modus, ansicht: ansicht };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
+  /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
+  herzP = Kern.organLaden('herz', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
   hm.emissive.copy(Kern.srgb(0xE0C3A8)).multiplyScalar(0.8);   /* Eigenleuchten in Hautfarbe: liest sich vor dem dunklen Grund als Haut */

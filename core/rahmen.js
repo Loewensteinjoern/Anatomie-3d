@@ -102,7 +102,8 @@ var Kern = window.Kern = window.Kern || {};
 
   /* Organ-Skript und -CSS nachladen (falls noch nicht geschehen). Gibt ein
      Promise zurueck, das mit der Organ-Definition (Kern.Organe[name]) erfuellt
-     wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab. */
+     wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab.
+     opt.ohneCss: nur das Skript laden (z. B. um Bausteine eines anderen Organs zu nutzen). */
   var ladend = {};
 
   function cssLink(name, e) {
@@ -120,10 +121,10 @@ var Kern = window.Kern = window.Kern || {};
     return l.__p;
   }
 
-  K.organLaden = function (name) {
+  K.organLaden = function (name, opt) {
     var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
     if (!e) return Promise.reject(new Error('Unbekanntes Organ: ' + name));
-    var css = cssLink(name, e);
+    var css = opt && opt.ohneCss ? Promise.resolve() : cssLink(name, e);
     if (K.Organe[name]) return css.then(function () { return K.Organe[name]; });
     if (!ladend[name]) {
       ladend[name] = new Promise(function (ok, fehl) {
