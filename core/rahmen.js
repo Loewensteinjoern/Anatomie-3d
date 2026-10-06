@@ -15,7 +15,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis ladbarer Organe (Name -> Titel, Seitentitel, Skript, CSS) */
   K.ORGANE = {
     herz: { titel: 'Herz', seitentitel: 'Herz \u2013 Herzh\u00f6hlen, Klappen und Windkessel', skript: 'organe/herz/herz.js', css: 'organe/herz/herz.css' },
-    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css' }
+    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css' },
+    koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
 
   /* Organ-Modul anmelden. def:
@@ -101,7 +102,8 @@ var Kern = window.Kern = window.Kern || {};
 
   /* Organ-Skript und -CSS nachladen (falls noch nicht geschehen). Gibt ein
      Promise zurueck, das mit der Organ-Definition (Kern.Organe[name]) erfuellt
-     wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab. */
+     wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab.
+     opt.ohneCss: nur das Skript laden (z. B. um Bausteine eines anderen Organs zu nutzen). */
   var ladend = {};
 
   function cssLink(name, e) {
@@ -119,10 +121,10 @@ var Kern = window.Kern = window.Kern || {};
     return l.__p;
   }
 
-  K.organLaden = function (name) {
+  K.organLaden = function (name, opt) {
     var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
     if (!e) return Promise.reject(new Error('Unbekanntes Organ: ' + name));
-    var css = cssLink(name, e);
+    var css = opt && opt.ohneCss ? Promise.resolve() : cssLink(name, e);
     if (K.Organe[name]) return css.then(function () { return K.Organe[name]; });
     if (!ladend[name]) {
       ladend[name] = new Promise(function (ok, fehl) {

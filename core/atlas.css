@@ -1,19 +1,9 @@
-/* Atlas-Rahmenseite: Startauswahl, Fehleranzeige, Zurueck-Knopf.
+/* Atlas-Rahmenseite: Fehleranzeige, Zurueck-Knopf.
    Beeinflusst keine Organ-Elemente. */
-#atlasStart[hidden],#atlasFehler[hidden],#atlasZurueck[hidden]{display:none}
+#atlasFehler[hidden],#atlasZurueck[hidden]{display:none}
 /* Grundgestalt der Ladeanzeige, bis die Organ-CSS (ueberschreibt) geladen ist */
 #boot{position:fixed;inset:0;z-index:50;background:var(--bg-deep);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:12px;font-size:12px;color:var(--ink-dim)}
-
-#atlasStart{top:50%;left:50%;transform:translate(-50%,-50%);width:min(420px,calc(100vw - 32px));padding:26px 26px 22px;z-index:20}
-#atlasStart h1{margin:0 0 6px;font-family:var(--serif);font-weight:400;font-size:29px;color:var(--ink)}
-#atlasStart p{margin:0 0 18px;font-size:12.5px;color:var(--ink-dim)}
-#atlasStart a,#atlasStart .aus{display:block;margin-top:8px;padding:12px 14px;border:1px solid var(--line);border-radius:3px;
-  font-size:14px;font-weight:600;color:var(--ink);text-decoration:none}
-#atlasStart a:hover{background:var(--panel-hi);border-color:var(--brass-dim)}
-#atlasStart a:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
-#atlasStart .aus{opacity:.45;color:var(--ink-dim)}
-#atlasStart small{display:block;margin-top:3px;font-size:11px;font-weight:400;color:var(--ink-faint)}
 
 #atlasFehler{top:50%;left:50%;transform:translate(-50%,-50%);width:min(380px,calc(100vw - 32px));padding:20px 22px;z-index:60}
 #atlasFehler b{display:block;font-size:14px;color:var(--brass)}
@@ -25,6 +15,4 @@
 @media (max-width:1000px){
   /* Handy: im freien Bildbereich des Modells, unter Kopfleiste/Zyklus-Karte, ueber der Schaltflaeche-Leiste */
   #atlasZurueck{top:176px;bottom:auto;left:auto;right:8px;height:32px;padding:0 12px;font-size:12px;line-height:normal}
-  #atlasStart{padding:20px 18px 16px}
-  #atlasStart h1{font-size:24px}
 }

@@ -20,8 +20,11 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Export GLB/STL mit Signatur | ✓ | ✓ |
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` | – (Niere folgt in Phase 2) |
 
 Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+
+Eine Form je Organ: Jedes Organ-Modul liefert seine Form als eigenen Baustein (`organe/<organ>/<organ>-form.js`). Körper-Atlas und Detailmodell nutzen dieselbe Form (im Körper gröber gerastert); so passen Körper und Organ zusammen, und jede Verbesserung am Organ zeigt sich auch im Körper. Der Körper lädt nur die Form-Bausteine, nicht den übrigen Organ-Code. Organe ohne Detailmodell erscheinen im Körper vorerst als vereinfachte Platzhalter und werden ersetzt, sobald ihr Modul fertig ist. Das Herz stellt seine Form vorerst über `organ.form` in `herz.js` bereit; die Auslagerung nach `herz-form.js` folgt, wenn sie sich lohnt.
 
 ## Ebenen
 
@@ -84,17 +87,22 @@ organe/niere/             Niere + Nephron
   - `abbauen()` beendet AR und Audio, meldet Listener ab, stoppt Timer (auch mitten im Aufbau), gibt alle three.js-Objekte frei und leert das DOM; `tools/vergleich.js` prüft das im Kontext `abbau` (Speicher, Szene, DOM, Listener nach dem Abbauen jedes Mal gleich)
   - noch offen für die Rahmenseite: Organ-CSS nur im eigenen Bereich (`.organ-herz`), Renderer-Optionen je Organ (Herz `alpha`) beim Wechsel, Ladeanzeige `#boot` im Rahmen
 - [x] Rahmenseite, die Organe per Adresse lädt (`#herz`, `#nephron`) und wieder abbaut
-  - Rahmenseite (zuerst `atlas.html`, jetzt `index.html`) enthält nur den Rahmen; `core/atlas.js` steuert per Adresse (leer = Startauswahl, `#herz`, `#nephron`), Browser-Zurück und Lesezeichen funktionieren; Knopf „← Atlas“ (`core/atlas.css`)
+  - Rahmenseite (zuerst `atlas.html`, jetzt `index.html`) enthält nur den Rahmen; `core/atlas.js` steuert per Adresse (leer = Startansicht, `#herz`, `#nephron`), Browser-Zurück und Lesezeichen funktionieren; Knopf „← Atlas“ (`core/atlas.css`)
   - `Kern.ORGANE` (Titel, Seitentitel, Skript, CSS je Organ), `Kern.organLaden` fügt Skript und CSS per `<script>`/`<link>` ein (auch per `file://`), lädt in einer Sitzung nur einmal; die Organ-CSS wird beim Wechsel wieder entfernt (immer nur ein Organ, daher noch keine Beschränkung auf `.organ-herz`)
   - Fehler (unbekannte Adresse, Ladefehler, Fehler beim Aufbau) zeigen „Organ konnte nicht geladen werden“, der Rahmen bleibt bedienbar; veraltete Ladevorgänge bei schnellem Wechsel werden verworfen
   - Renderer-Optionen je Organ: unterscheiden sie sich beim Wechsel (Herz `alpha`), legt der Rahmen Canvas und Renderer neu an; so sind Herz und Nephron im Atlas bytegleich zu den Einzelseiten
   - `tools/vergleich.js`, Modell `atlas`: Herz und Nephron im Atlas laufen dieselben Abläufe wie die Einzelseiten und müssen bytegleich zu deren Bildern und Exporten sein; dazu Übergänge (Messung vor/nach gleich), Fehlerfälle und Startauswahl
 - [x] `index.html` wird der Atlas; das Herz zieht um, die bisherigen Adressen (`index.html` als Herz, `nephron.html`) leiten weiter
-  - `index.html` ohne Adresse zeigt die Startauswahl (später der Körper), Herz unter `#herz`, Nephron unter `#nephron`; eigene Organ-Seiten gibt es nicht mehr (`Kern.einzelseite` entfällt)
+  - `index.html` ohne Adresse zeigte zunächst eine Startauswahl, jetzt den Körper, Herz unter `#herz`, Nephron unter `#nephron`; eigene Organ-Seiten gibt es nicht mehr (`Kern.einzelseite` entfällt)
   - `nephron.html` leitet auf `index.html#nephron`, `atlas.html` auf `index.html` weiter (Adresse nach `#` bleibt), per `location.replace` mit meta-refresh als Rückfall, auch per `file://`
   - `tools/vergleich.js`: Modelle `herz` und `nephron` laufen im Atlas und sind bytegleich zu den Aufnahmen der früheren Einzelseiten; `atlas` prüft zusätzlich die Weiterleitungen
-- [ ] Ganzer Körper mit allen Organen in einfacher Form
-- [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
+- [x] Ganzer Körper mit allen Organen in einfacher Form
+  - Organ-Modul `koerper` (`organe/koerper/`), Startansicht von `index.html` (auch `#koerper`); stilisiertes Lehrmodell: glasartige Körperhülle, vereinfachtes Skelett, Organe in anatomischer Lage, farbig nach Organsystem; Geometrie per Signed-Distance-Field (`core/sdf.js`, `Kern.SDF`)
+  - Das Herz kommt aus dem Herz-Modell (`organ.form` in `herz.js`, geschlossen und gröber gerastert, Herz-Modell bleibt bytegleich); die übrigen Organe sind Platzhalter bis zu ihrem Detailmodell
+  - Strukturliste (29 Strukturen, Texte als Daten), Auswahl per Tippen mit Infokarte, „Herz öffnen“ bzw. „Nephron ansehen“; Ausschnitte Ganzkörper, Kopf/Hals, Brustkorb, Bauch, Becken, Rücken; Beschriftung mit Führungslinien; Handy-Layout
+  - `tools/vergleich.js`: Modell `koerper` (Desktop, Handy, Datei, Abbau); Übergänge starten im Körper
+- [x] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
+  - je System „an / glas / aus“ (Haut, Skelett, Nerven, Sinnesorgane, Hormone, Kreislauf, Atmung, Verdauung, Harnsystem), „Alle sichtbar“; Muskeln und weitere Systeme kommen mit ihren Modulen dazu
 - [ ] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
 - [ ] AR für den ganzen Körper
 - [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin

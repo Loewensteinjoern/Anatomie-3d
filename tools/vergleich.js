@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /* =====================================================================
-   Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Herz und Nephron
+   Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz und Nephron
 
    Prüft, ob die Modelle nach einer Änderung genauso aussehen und
-   funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Herz und Nephron
-   werden im Atlas aufgenommen (index.html#herz, index.html#nephron).
+   funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz und
+   Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|nephron|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -16,22 +16,27 @@
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
-   In den Modellen herz und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
+   In den Modellen koerper, herz und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
    von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
 
-   Kontext abbau (Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
+   Modell koerper (index.html ohne Adresse, Startansicht): desktop (Ganzkörper, die Ausschnitte
+   #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
+   datei (file://) und abbau; keine Exporte und kein AR (hat der Körper noch nicht). Der Körper
+   lädt das Herz-Skript im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
+
+   Kontext abbau (Körper, Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
    Kern.organBeenden). Gemessen werden nach jedem Abbau Speicher, Szene, DOM und
    Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
    Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
 
-   Modell atlas (index.html ohne Adresse): Die Kontexte uebergaenge (Auswahl, Wechsel,
-   Zurück-Knopf des Browsers, Messwerte m1 und m2 müssen gleich sein), fehler (unbekannte
-   Adresse, Ladefehler, Neuversuch) und auswahl-handy haben kein Gegenstück und sind nur
-   anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Modell atlas (index.html): Die Kontexte uebergaenge (Körper, Herz über die Infokarte,
+   Zurück-Knopf des Browsers, Wechsel, leere Adresse; Messwerte m1 und m2 müssen gleich sein)
+   und fehler (unbekannte Adresse, Ladefehler, „Zum Körper“, Neuversuch) haben kein Gegenstück
+   und sind nur anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz und atlas.html: Ziel-Adresse muss stimmen,
-   das Organ muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
+   das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
    Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
    früheren atlas-herz-desktop usw.), meldet `vergleichen` als entfallen.
@@ -253,7 +258,7 @@ async function abbauAblauf(t, name, bedienung) {
       szene: R.szene.children.map((c) => c.type + (c.name ? ':' + c.name : '')),
       organ: kinder('organ'), labels: kinder('labels'), leaders: kinder('leaders'),
       bodyKinder: document.body.childElementCount, bodyKlasse: document.body.className,
-      herzApp: typeof window.HerzApp !== 'undefined', listener: window.__listener()
+      herzApp: typeof window.HerzApp !== 'undefined', koerperApp: typeof window.KoerperApp !== 'undefined', listener: window.__listener()
     };
   });
   const beenden = () => t.js(() => Kern.organBeenden());
@@ -276,6 +281,40 @@ async function abbauAblauf(t, name, bedienung) {
 }
 
 const MODELLE = {
+  koerper: {
+    datei: 'index.html',
+    bereit: () => !!(window.KoerperApp && window.KoerperApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, async ablauf(t) {
+        const sys = (id, m) => t.klick('#sys-' + id + ' .seg button[data-m="' + m + '"]');
+        const waehle = (id) => t.js((i) => window.KoerperApp.waehle(i), id);
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        for (const [i, name] of [[1, 'kopf-hals'], [2, 'brustkorb'], [3, 'bauch'], [4, 'becken'], [5, 'ruecken']]) {
+          await t.klick('#cam' + i); await t.weiter(900); await t.bild(name);
+        }
+        await t.klick('#cam0'); await t.weiter(900);
+        await sys('skelett', 'aus'); await t.weiter(600); await t.bild('skelett-aus'); await t.klick('#bAlle');
+        await sys('verdauung', 'glas'); await t.weiter(600); await t.bild('verdauung-glas'); await t.klick('#bAlle');
+        await sys('haut', 'aus'); await t.weiter(600); await t.bild('haut-aus'); await t.klick('#bAlle');
+        await waehle('herz'); await t.weiter(600); await t.bild('auswahl-herz');
+        await waehle('leber'); await t.weiter(600); await t.bild('auswahl-leber');
+        await waehle(null); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('bauch');
+        await t.klick('#cam0'); await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(900); await t.bild('auswahl-herz');
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'koerper', async (t) => {
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('bauch');
+        await t.klick('#cam0'); await t.js(() => window.KoerperApp.waehle('leber')); await t.weiter(600); await t.bild('auswahl-leber');
+        await t.klick('#bCls'); await t.weiter(300);
+      }) }
+    }
+  },
   herz: {
     datei: 'index.html',
     bereit: () => !!(window.HerzApp && window.HerzApp.ready),
@@ -420,21 +459,21 @@ const MODELLE = {
   }
 };
 
-/* Bereitschaft im Atlas; herz und nephron laufen auf index.html#herz / #nephron */
+/* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz und nephron auf #herz / #nephron */
 const ATLAS_BEREIT = (organ) => ({
+  koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
   herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
-const ATLAS_START = () => !document.getElementById('atlasStart').hidden;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['herz', 'nephron']) {
+for (const organ of ['koerper', 'herz', 'nephron']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
-  for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
+  for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = organ === 'koerper' ? '' : '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
 MODELLE.atlas = { datei: 'index.html', kontexte: {} };
-/* Kontext uebergaenge: Auswahl, Wechsel zwischen den Organen, Zurück-Knopf des Browsers; Messwerte vorher/nachher */
-MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: ATLAS_START, async ablauf(t) {
+/* Kontext uebergaenge: Körper, Herz über die Infokarte, Zurück-Knopf des Browsers, Wechsel zwischen den Organen; Messwerte vorher/nachher */
+MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const messen = () => t.js(() => {
     const R = Kern.Rahmen, kinder = (id) => { const e = document.getElementById(id); return e ? e.childNodes.length : null; };
     return {
@@ -447,14 +486,14 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
     };
   });
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
-  await t.weiter(300); await t.bild('auswahl');
-  await t.klick('#atlasStart a[href="#herz"]'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
-  await t.zurueck(); await t.echt(100); await t.warteAuf(ATLAS_START); await t.weiter(500); await t.bild('auswahl-zurueck');
+  await t.weiter(500); await t.bild('koerper');
+  await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
+  await t.zurueck(); await organ('koerper'); await t.weiter(500); await t.bild('koerper-zurueck');
   const m1 = await messen();
   await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
   await t.js(() => { location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-nach-nephron');
   await t.js(() => { location.hash = 'nephron'; location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-schnell');
-  await t.js(() => { location.hash = ''; }); await t.echt(100); await t.warteAuf(ATLAS_START); await t.weiter(500);
+  await t.js(() => { location.hash = ''; }); await organ('koerper'); await t.weiter(500);
   const m2 = await messen();
   const felder = Object.keys(m1).filter((k) => JSON.stringify(m1[k]) !== JSON.stringify(m2[k]));
   t.erg.uebergaenge = { m1, m2, gleich: !felder.length };
@@ -471,18 +510,18 @@ MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: 
     await t.warteAuf(() => !document.getElementById('atlasFehler').hidden && /Herz/.test(document.getElementById('atlasFehlerText').textContent));
     await t.weiter(300); await t.bild('ladefehler');
     await t.freigeben('**/organe/herz/herz.js');
-    await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_START);
+    await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(500); await t.bild('koerper-nach-fehler');
     await t.js(() => { location.hash = 'herz'; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'herz', 'herz'); await t.weiter(1500); await t.bild('herz-nach-fehler');
   } };
 /* Kontexte weiterleitung / weiterleitung-datei: die alten Adressen leiten auf index.html weiter */
 const WEITERLEITUNG = { async ablauf(t) {
-  const faelle = [['nephron.html', 'index.html#nephron', 'nephron', 'nephron'], ['atlas.html#herz', 'index.html#herz', 'herz', 'herz'], ['atlas.html', 'index.html', null, 'auswahl']];
+  const faelle = [['nephron.html', 'index.html#nephron', 'nephron', 'nephron'], ['atlas.html#herz', 'index.html#herz', 'herz', 'herz'], ['atlas.html', 'index.html', 'koerper', 'koerper']];
   const res = {}; let gleich = true;
   for (const [von, soll, organ, bild] of faelle) {
     await t.gehe(von);
     await t.warteUrl(/index\.html/);
-    await t.warteAuf(organ ? ATLAS_BEREIT(organ) : ATLAS_START, organ);
-    await t.weiter(organ ? 1500 : 300); await t.bild(bild);
+    await t.warteAuf(ATLAS_BEREIT(organ), organ);
+    await t.weiter(1500); await t.bild(bild);
     const ist = t.url(); res[von] = ist; if (ist !== soll) gleich = false;
     process.stdout.write('  ' + von + ' -> ' + ist + (ist === soll ? '' : ' (erwartet ' + soll + ')') + '\n');
   }
@@ -490,8 +529,6 @@ const WEITERLEITUNG = { async ablauf(t) {
 } };
 MODELLE.atlas.kontexte.weiterleitung = { opt: DESKTOP, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
 MODELLE.atlas.kontexte['weiterleitung-datei'] = { opt: DESKTOP, lokal: true, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
-/* Kontext auswahl-handy: die Auswahl im Handy-Layout */
-MODELLE.atlas.kontexte['auswahl-handy'] = { opt: HANDY, bereit: ATLAS_START, async ablauf(t) { await t.weiter(300); await t.bild('auswahl'); } };
 
 /* =====================================================================
    3. Aufnehmen
@@ -775,7 +812,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|nephron|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }
