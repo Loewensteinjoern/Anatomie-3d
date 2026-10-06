@@ -7,11 +7,102 @@
    ===================================================================== */
 (function () {
 'use strict';
+/* =====================================================================
+   Inhalte (Daten, getrennt vom Code)
+   SYSTEME: Reihenfolge der Liste; id = Name der Gruppe in der Szene.
+   STRUKTUREN: de/lat, system, Text (Lage und Hauptaufgabe);
+   oeffnen = Adresse des Detailmodells, knopf = Beschriftung des Knopfes;
+   ohne oeffnen: detail false = noch kein Detailmodell.
+   ===================================================================== */
+var SYSTEME = [
+  { id: 'haut', name: 'Haut', farbe: 0xE0C3A8 },
+  { id: 'skelett', name: 'Skelett', farbe: 0xE6DCC6 },
+  { id: 'nerven', name: 'Nervensystem', farbe: 0xE2C25A },
+  { id: 'sinne', name: 'Sinnesorgane', farbe: 0x3D6FA8 },
+  { id: 'hormon', name: 'Hormonsystem', farbe: 0x9C7BC6 },
+  { id: 'kreislauf', name: 'Kreislauf', farbe: 0xC9483A },
+  { id: 'atmung', name: 'Atmung', farbe: 0xE39AA4 },
+  { id: 'verdauung', name: 'Verdauung', farbe: 0xD9A06A },
+  { id: 'harn', name: 'Harnsystem', farbe: 0xD9B44A }
+];
+var STRUKTUREN = [
+  { id: 'haut', de: 'Haut', lat: 'Cutis', system: 'haut', detail: false,
+    text: 'Die Haut bedeckt die gesamte Körperoberfläche (etwa 1,5–2 m²) und besteht aus Oberhaut, Lederhaut und Unterhaut. Sie schützt vor Keimen, Austrocknung und mechanischer Belastung, hilft bei der Temperaturregulation und enthält Sinnesrezeptoren für Berührung, Schmerz und Temperatur.' },
+  { id: 'schaedel', de: 'Schädel', lat: 'Cranium', system: 'skelett', detail: false,
+    text: 'Der Schädel sitzt auf der Halswirbelsäule und besteht aus Hirnschädel und Gesichtsschädel mit dem beweglichen Unterkiefer. Er umschließt und schützt Gehirn und Sinnesorgane und bietet Ansatzflächen für Kau- und Nackenmuskeln.' },
+  { id: 'wirbelsaeule', de: 'Wirbelsäule', lat: 'Columna vertebralis', system: 'skelett', detail: false,
+    text: 'Sieben Halswirbel, zwölf Brustwirbel, fünf Lendenwirbel sowie Kreuz- und Steißbein bilden die doppelt-S-förmige Körperachse; Zwischenwirbelscheiben federn Belastungen ab. Sie trägt den Rumpf, macht ihn beweglich und schützt im Wirbelkanal das Rückenmark.' },
+  { id: 'brustkorb', de: 'Brustkorb', lat: 'Thorax', system: 'skelett', detail: false,
+    text: 'Zwölf Rippenpaare, Brustbein und Brustwirbelsäule bilden den knorpelig-knöchernen Korb des Brustraums. Er schützt Herz und Lunge und bewegt sich bei jedem Atemzug mit: Die Rippen heben sich beim Einatmen und senken sich beim Ausatmen.' },
+  { id: 'becken', de: 'Becken', lat: 'Pelvis', system: 'skelett', detail: false,
+    text: 'Der Beckenring besteht aus den beiden Hüftbeinen (Darm-, Sitz- und Schambein), die hinten mit dem Kreuzbein verbunden sind. Er trägt das Gewicht des Oberkörpers auf die Beine, bildet die Pfannen der Hüftgelenke und umschließt Harnblase und Enddarm.' },
+  { id: 'armknochen', de: 'Arm- und Schultergürtelknochen', lat: 'Ossa membri superioris', system: 'skelett', detail: false,
+    text: 'Schlüsselbein und Schulterblatt bilden den Schultergürtel, daran schließen Oberarmknochen, Elle und Speiche sowie die Handknochen an. Sie machen den Arm beweglich; das Schultergelenk ist das beweglichste Gelenk des Körpers.' },
+  { id: 'beinknochen', de: 'Bein- und Fußknochen', lat: 'Ossa membri inferioris', system: 'skelett', detail: false,
+    text: 'Oberschenkelknochen (der längste und stärkste Knochen), Kniescheibe, Schien- und Wadenbein sowie die Fußknochen. Sie tragen das Körpergewicht und ermöglichen Stehen, Gehen und Laufen.' },
+  { id: 'gehirn', de: 'Gehirn', lat: 'Encephalon', system: 'nerven', detail: false,
+    text: 'Das Gehirn liegt geschützt in der Schädelhöhle und besteht aus Großhirn, Kleinhirn und Hirnstamm. Es steuert Bewusstsein, Wahrnehmung, Denken und Bewegung sowie lebenswichtige Funktionen wie Atmung und Kreislauf.' },
+  { id: 'rueckenmark', de: 'Rückenmark', lat: 'Medulla spinalis', system: 'nerven', detail: false,
+    text: 'Das Rückenmark verläuft im Wirbelkanal vom Hinterhauptsloch bis etwa zum ersten bis zweiten Lendenwirbel. Es leitet Signale zwischen Gehirn und Körper und steuert einfache Reflexe; zwischen den Wirbeln treten paarig die Spinalnerven aus.' },
+  { id: 'augen', de: 'Augen', lat: 'Oculi', system: 'sinne', detail: false,
+    text: 'Die Augen liegen geschützt in den knöchernen Augenhöhlen. Hornhaut und Linse bündeln das Licht auf die Netzhaut; deren Sinneszellen wandeln es in Nervensignale um, die der Sehnerv zum Gehirn leitet.' },
+  { id: 'schilddruese', de: 'Schilddrüse', lat: 'Glandula thyroidea', system: 'hormon', detail: false,
+    text: 'Die schmetterlingsförmige Schilddrüse liegt am Hals vor der Luftröhre unterhalb des Kehlkopfes. Sie bildet die jodhaltigen Hormone Thyroxin (T4) und Trijodthyronin (T3), die Stoffwechsel, Herzfrequenz und Wachstum beeinflussen.' },
+  { id: 'herz', de: 'Herz', lat: 'Cor', system: 'kreislauf', oeffnen: '#herz', knopf: 'Herz öffnen',
+    text: 'Das faustgroße Hohlmuskelorgan liegt im Mittelfellraum auf dem Zwerchfell, mit der Spitze nach links unten. Als Doppelpumpe treibt es das Blut durch Lungen- und Körperkreislauf (in Ruhe etwa 5 Liter pro Minute).' },
+  { id: 'herzkranz', de: 'Herzkranzgefäße', lat: 'Arteriae coronariae', system: 'kreislauf', detail: false,
+    text: 'Die rechte und die linke Koronararterie entspringen der Aorta direkt oberhalb der Aortenklappe und umziehen das Herz. Sie versorgen den Herzmuskel selbst mit sauerstoffreichem Blut; ein Verschluss führt zum Herzinfarkt.' },
+  { id: 'aorta', de: 'Aorta und große Arterien', lat: 'Aorta', system: 'kreislauf', detail: false,
+    text: 'Die Hauptschlagader entspringt der linken Herzkammer, bildet den Aortenbogen mit den Abgängen zu Kopf und Armen und zieht vor der Wirbelsäule durch Brust und Bauch, bis sie sich in die Beckenarterien teilt. Sie verteilt sauerstoffreiches Blut an alle Organe.' },
+  { id: 'hohlvenen', de: 'Hohlvenen', lat: 'Venae cavae', system: 'kreislauf', detail: false,
+    text: 'Die obere Hohlvene sammelt das Blut aus Kopf, Hals und Armen, die untere aus Bauch, Becken und Beinen. Beide münden in den rechten Vorhof und bringen sauerstoffarmes Blut zum Herzen zurück.' },
+  { id: 'milz', de: 'Milz', lat: 'Splen', system: 'kreislauf', detail: false,
+    text: 'Die Milz liegt im linken Oberbauch unter dem Zwerchfell, hinter dem Magen. Als größtes lymphatisches Organ filtert sie das Blut, baut alte rote Blutkörperchen ab und bildet Abwehrzellen; zudem dient sie als Blutspeicher.' },
+  { id: 'luftroehre', de: 'Luftröhre und Bronchien', lat: 'Trachea et bronchi', system: 'atmung', detail: false,
+    text: 'Die etwa 10–12 cm lange Luftröhre führt vom Kehlkopf in den Brustraum und teilt sich in die beiden Hauptbronchien. Knorpelspangen halten sie offen; das Flimmerepithel befördert Schleim und Fremdkörper Richtung Rachen.' },
+  { id: 'lunge', de: 'Lunge', lat: 'Pulmo', system: 'atmung', detail: false,
+    text: 'Die rechte Lunge hat drei, die linke zwei Lappen; sie füllen den Brustraum beiderseits des Herzens. In den Lungenbläschen (Alveolen) tritt Sauerstoff ins Blut über und Kohlendioxid wird abgegeben.' },
+  { id: 'zwerchfell', de: 'Zwerchfell', lat: 'Diaphragma', system: 'atmung', detail: false,
+    text: 'Die kuppelförmige Muskelplatte trennt Brust- und Bauchraum. Als wichtigster Atemmuskel flacht es sich beim Einatmen ab und erweitert so den Brustraum; Speiseröhre, Aorta und untere Hohlvene treten durch Lücken hindurch.' },
+  { id: 'speiseroehre', de: 'Speiseröhre', lat: 'Oesophagus', system: 'verdauung', detail: false,
+    text: 'Der etwa 25 cm lange Muskelschlauch verläuft hinter der Luftröhre durch den Brustraum und das Zwerchfell zum Magen. Durch wellenförmige Bewegungen (Peristaltik) transportiert er den Speisebrei; ein Schließmuskel am Mageneingang verhindert Rückfluss.' },
+  { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', detail: false,
+    text: 'Der Magen liegt im linken Oberbauch unter dem Zwerchfell. Er speichert die Nahrung, durchmischt sie mit Magensaft (Salzsäure, Pepsin) und gibt sie portionsweise an den Zwölffingerdarm weiter; seine Schleimhaut schützt sich durch eine Schleimschicht selbst.' },
+  { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', detail: false,
+    text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her.' },
+  { id: 'gallenblase', de: 'Gallenblase', lat: 'Vesica biliaris', system: 'verdauung', detail: false,
+    text: 'Die birnenförmige Gallenblase haftet an der Unterseite der Leber. Sie speichert und konzentriert die Galle und gibt sie bei fetthaltiger Nahrung über den Gallengang in den Zwölffingerdarm ab, wo sie die Fettverdauung unterstützt.' },
+  { id: 'pankreas', de: 'Bauchspeicheldrüse', lat: 'Pancreas', system: 'verdauung', detail: false,
+    text: 'Die Bauchspeicheldrüse liegt quer im Oberbauch hinter dem Magen, ihr Kopf in der Schlinge des Zwölffingerdarms. Sie gibt Verdauungsenzyme in den Darm ab und bildet in den Langerhans-Inseln Insulin und Glukagon, die den Blutzucker regeln.' },
+  { id: 'duenndarm', de: 'Dünndarm', lat: 'Intestinum tenue', system: 'verdauung', detail: false,
+    text: 'Der Dünndarm ist etwa 3–5 m lang und gliedert sich in Zwölffingerdarm, Leerdarm und Krummdarm. Hier wird die Nahrung fertig verdaut; über die Darmzotten gelangen Nährstoffe, Wasser und Elektrolyte ins Blut und in die Lymphe.' },
+  { id: 'dickdarm', de: 'Dickdarm', lat: 'Intestinum crassum', system: 'verdauung', detail: false,
+    text: 'Der etwa 1,5 m lange Dickdarm rahmt den Dünndarm ein: Blinddarm mit Wurmfortsatz, aufsteigender, querer und absteigender Teil, S-förmiges Sigma und Mastdarm. Er entzieht dem Darminhalt Wasser und Salze, dickt den Stuhl ein und beherbergt die Darmflora.' },
+  { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#nephron', knopf: 'Nephron ansehen',
+    text: 'Die beiden bohnenförmigen Nieren liegen hinter dem Bauchfell beiderseits der Wirbelsäule auf H\u00f6he der untersten Rippen. Sie filtern das Blut, bilden den Harn und regeln Wasser-, Salz- und Säure-Basen-Haushalt sowie den Blutdruck. Funktionseinheit ist das Nephron.' },
+  { id: 'harnleiter', de: 'Harnleiter', lat: 'Ureteres', system: 'harn', detail: false,
+    text: 'Die beiden 25–30 cm langen Muskelschläuche führen vom Nierenbecken zur Harnblase und befördern den Urin durch Peristaltik. An drei natürlichen Engstellen können Nierensteine hängen bleiben und Koliken auslösen.' },
+  { id: 'harnblase', de: 'Harnblase', lat: 'Vesica urinaria', system: 'harn', detail: false,
+    text: 'Die Harnblase liegt im kleinen Becken hinter dem Schambein. Ihr Hohlmuskel (Detrusor) speichert den Urin (Fassungsvermögen etwa 500 ml, Harndrang ab 200–300 ml) und entleert ihn über die Harnröhre.' }
+];
+
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
 var MARKUP = `<div id="title">
   <div class="kicker">K&ouml;rper &middot; Organe und Organsysteme</div>
   <h1>Der <em>Mensch</em></h1>
-  <div class="sub">Stilisiertes Lehrmodell: H&uuml;lle, Skelett und Organe.</div>
+  <div class="sub">Organsysteme ein- und ausblenden, Organe antippen.</div>
+</div>
+
+<div class="panel" id="rail"></div>
+
+<div class="panel" id="info">
+  <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="iKick"></div>
+  <h3 id="iDe"></h3>
+  <span class="lat" id="iLat"></span>
+  <p id="iTx"></p>
+  <button class="gh" id="iOpen" style="display:none"></button>
+  <div class="hint" id="iHint">Detailmodell in Arbeit</div>
 </div>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
@@ -30,10 +121,12 @@ var setLoad = function (f, t) { $('bootBar').style.width = Math.round(f * 100) +
    1. Systeme, Materialien, Steuerung
    ===================================================================== */
 var wurzel = new THREE.Group(); scene.add(wurzel);
+var STR = {};   /* Struktur-id -> { def, meshes } */
+STRUKTUREN.forEach(function (d) { STR[d.id] = { def: d, meshes: [] }; });
 var SYS = {};
-['haut', 'skelett', 'nerven', 'sinne', 'hormon', 'kreislauf', 'atmung', 'verdauung', 'harn'].forEach(function (n) {
-  var g = new THREE.Group(); g.name = n; wurzel.add(g);
-  SYS[n] = { grp: g, mats: [], modus: 'an' };
+SYSTEME.forEach(function (d) {
+  var n = d.id, g = new THREE.Group(); g.name = n; wurzel.add(g);
+  SYS[n] = { grp: g, mats: [], modus: 'an', def: d };
 });
 
 /* Gewebematerial eines Systems; o.opacity = Grundzustand, 'glas' setzt darunter */
@@ -78,7 +171,12 @@ function modus(sys, m) {
   });
 }
 
+/* Struktur, zu der die gerade gebauten Meshes gehoeren (userData.sid, wie im Nephron) */
+var SID = null;
+function als(id) { SID = id; }
 function dazu(sys, mesh) {
+  mesh.userData.sid = SID;
+  if (SID && STR[SID]) STR[SID].meshes.push(mesh);
   mesh.renderOrder = sys === 'haut' ? 10 : (mesh.material.userData.gu ? 5 : 2);
   SYS[sys].grp.add(mesh);
   return mesh;
@@ -201,6 +299,7 @@ function skelett() {
   var knD = mat(sk, 0xE6DCC6, { rough: 0.8, env: 0.2, side: THREE.DoubleSide });
   /* Schaedel: gläsern, damit das Gehirn sichtbar bleibt */
   var sch = glasMat(sk, 0xE6DCC6, 0.2, 0.85);
+  als('schaedel');
   ellM(sk, sch, 0, 164.6, 0.3, 6.9, 10.2, 8.6);
   ellM(sk, sch, 0, 156.8, 3.6, 4.6, 4.2, 4.8);
   /* Augenhoehlen, Jochbeine, Nasenwurzel */
@@ -213,6 +312,7 @@ function skelett() {
   /* Unterkiefer: Bogen */
   rohr(sk, kn, [[-5.6, 159, -1.8], [-5.0, 154.5, 1.8], [-2.6, 152.6, 5.0], [0, 152.0, 6.0], [2.6, 152.6, 5.0], [5.0, 154.5, 1.8], [5.6, 159, -1.8]], 0.8, 40);
   /* Wirbelsaeule: 7 + 12 + 5 Wirbelkoerper, Kreuz- und Steissbein */
+  als('wirbelsaeule');
   var wy = [], i;
   for (i = 0; i < 7; i++) wy.push([150 - i * 1.4, 0.95]);
   for (i = 0; i < 12; i++) wy.push([140 - i * 2.1, 1.5]);
@@ -226,6 +326,7 @@ function skelett() {
   stab(sk, kn, [0, 99.5, zst(99.5)], [0, 84, -7.6], 3.6, 1.5, true);
   stab(sk, kn, [0, 84, -7.6], [0, 80.4, -6.2], 0.9, 0.4, true);
   /* Brustkorb: 12 Rippenpaare */
+  als('brustkorb');
   var R = [[5.6, 141.0, 1.5, 3.6], [8.4, 136.6, 3.5, 5.6], [10.6, 132.0, 5.5, 7.6], [12.2, 129.6, 7.5, 8.8], [13.2, 127.6, 9, 9.8],
     [13.9, 125.9, 10.2, 10.4], [14.3, 124.6, 11, 10.8], [14.4, 123.6, 8, 9.4], [14.2, 123.0, 8, 10.8], [13.8, 122.6, 7, 11.8],
     [13.0, 109.5, 1.5, 0, 2.1, 7.0], [12.0, 108.5, 1, 0, 1.8, 5.0]];
@@ -262,6 +363,7 @@ function skelett() {
   var so = new THREE.Mesh(sg, kn); so.position.set(0, 143, zSternum(143)); so.rotation.x = -tilt; dazu(sk, so);
   [-1, 1].forEach(function (s) {
     /* Schluesselbein, Schulterblatt */
+    als('armknochen');
     rohr(sk, kn, [[s * 1.6, 142.2, 4.6], [s * 7, 143.3, 6.0], [s * 13, 143.4, 4.2], [s * 18.5, 141.6, 0.5]], 0.75, 30);
     ellM(sk, kn, s * 11.5, 131, -8.8, 4.2, 6.5, 0.6, [0.1, s * 0.2, s * 0.12]);
     /* Arm */
@@ -276,6 +378,7 @@ function skelett() {
     });
     stab(sk, kn, [s * 35.2, 83.6, 1.0], [s * 40.4, 77.2, 1.6], 0.5, 0.35, true);     // Daumen
     /* Becken */
+    als('becken');
     var il = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, PI, PI, 0, PI * 0.62), knD);   // Darmbeinschale, nach vorn offen
     il.position.set(s * 9.4, 98.2, -1.0); il.scale.set(6.2, 8.0, 6.2); il.rotation.y = -s * 0.35; dazu(sk, il);
     ellM(sk, kn, 0, 82.6, 6.3, 1.4, 1.2, 0.7);
@@ -285,6 +388,7 @@ function skelett() {
     rohr(sk, kn, [[s * 8.2, 86.5, -1.0], [s * 7.5, 81.5, -3.2]], 1.0, 10);
     kugelM(sk, kn, s * 7.4, 80.8, -3.6, 1.5);
     /* Bein */
+    als('beinknochen');
     rohr(sk, kn, [[s * 8.5, 89, 0.3], [s * 9.5, 75, 1.2], [s * 10.3, 62, 1.5], [s * 10.8, 50, 0.9]], 1.5, 24);
     kugelM(sk, kn, s * 11.0, 48.8, 1.0, 2.5);
     ellM(sk, kn, s * 11.3, 48.5, 5.0, 1.6, 1.9, 0.8);
@@ -420,7 +524,7 @@ async function herzBauen(form, h) {
       var t = i / segs, rr = cr.r0 + (cr.r1 - cr.r0) * t, cp = curve.getPointAt(t);
       for (var k = 0; k <= rs; k++) { var id = i * (rs + 1) + k; tp.setXYZ(id, cp.x + tn.getX(id) * rr, cp.y + tn.getY(id) * rr, cp.z + tn.getZ(id) * rr); }
     }
-    var tm = new THREE.Mesh(tg, km); tm.renderOrder = 2; mesh.add(tm);
+    var tm = new THREE.Mesh(tg, km); tm.renderOrder = 2; tm.userData.sid = 'herzkranz'; STR.herzkranz.meshes.push(tm); mesh.add(tm);
   });
   return { mesh: mesh, smp: smp };
 }
@@ -431,19 +535,23 @@ async function organe() {
   var weiter = function (t) { return setLoad(0.58 + 0.42 * (++n) / N, t); };
   var h = 0.6;
   /* Nerven */
+  als('gehirn');
   await sdfMesh('nerven', mat('nerven', 0xE2C25A, { rough: 0.55, coat: 0.3 }), sdfHirn, b(-8.5, 149, -10.5, 8.5, 176, 9), 0.5);
   if (abgebaut) return; await weiter('Gehirn');
+  als('rueckenmark');
   var zrd = [];
   for (var y = 150; y >= 100; y -= 7) zrd.push([0, y, zst(y) - interp(RWT, y) - 1.0]);
   rohr('nerven', mat('nerven', 0xE2C25A, { rough: 0.5 }), zrd, 0.5, 40);
   /* Sinne */
   var aw = mat('sinne', 0xEDE6DA, { rough: 0.3, coat: 0.6 }), ir = mat('sinne', 0x3D6FA8, { rough: 0.3, coat: 0.5 }), pu = mat('sinne', 0x111111, { rough: 0.4 });
+  als('augen');
   [-1, 1].forEach(function (s) {
     kugelM('sinne', aw, s * 3.4, 161.8, 7.1, 1.25);
     ellM('sinne', ir, s * 3.4, 161.8, 8.15, 0.78, 0.78, 0.28);
     ellM('sinne', pu, s * 3.4, 161.8, 8.4, 0.34, 0.34, 0.12);
   });
   /* Hormon */
+  als('schilddruese');
   var th = mat('hormon', 0x9C7BC6, { rough: 0.5, coat: 0.3 });
   [-1, 1].forEach(function (s) { ellM('hormon', th, s * 2.1, 145.2, 1.8, 1.3, 2.3, 1.1, [0, 0, s * 0.15]); });
   ellM('hormon', th, 0, 144.2, 2.2, 1.7, 0.6, 0.8);
@@ -456,34 +564,41 @@ async function organe() {
   if (abgebaut) return;
   var iliaka = function (s) { rohr('kreislauf', rot, [[1.8, 94, 0.2], [s * 4, 88.5, -1.0], [s * 6.5, 84.5, 0.5]], 0.7, 14); };
   if (hz) {
-    dazu('kreislauf', hz.mesh); herzSmp = hz.smp;
+    als('herz'); dazu('kreislauf', hz.mesh); herzSmp = hz.smp;
     await weiter('Herz');
     /* Anschluss an die Gefaessstuempfe des Herzens (Herz-Koordinaten + HERZ_V) */
+    als('aorta');
     rohr('kreislauf', rot, [[4.5, 125.2, -3.1], [4.9, 121, -3.9], [5.0, 118, -3.9], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
     [-1, 1].forEach(iliaka);
     rohr('kreislauf', rot, [[2.3, 130.2, 0.45], [2.5, 136, -0.4], [2.9, 143, -1.6], [3.0, 152, -1.8]], 0.55, 20);     // linke Halsschlagader
     rohr('kreislauf', rot, [[0.35, 130.2, 1.4], [-1.0, 135, 0.6], [-2.6, 143, -1.6], [-3.0, 152, -1.8]], 0.55, 20);   // rechte Halsschlagader
     rohr('kreislauf', rot, [[3.7, 130.2, -0.7], [7, 133, -0.5], [12, 138.5, 0.8]], 0.6, 14);                          // linke Schluesselbeinarterie
     rohr('kreislauf', rot, [[0.35, 130.2, 1.4], [-4, 133.2, 1.0], [-12, 138.5, 0.8]], 0.6, 14);                        // rechte Schluesselbeinarterie
+    als('hohlvenen');
     rohr('kreislauf', blau, [[-1.65, 130.1, 1.6], [-1.9, 134, 0.9], [-2.1, 141, -0.2]], 1.0, 14);                      // obere Hohlvene nach oben
     rohr('kreislauf', blau, [[-1.65, 119.2, 0.65], [-1.9, 115, -0.3], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);   // untere Hohlvene nach unten
+    als('herz');
     rohr('kreislauf', mat('kreislauf', 0x4F6CBF, { rough: 0.45, coat: 0.4 }), [[-2.3, 127.4, -1.15], [-5.5, 126.9, -1.6]], 0.9, 10);      // rechte Lungenarterie bis zum Hilus
     var pvm = mat('kreislauf', 0xC04C43, { rough: 0.45, coat: 0.4 });
     rohr('kreislauf', pvm, [[1.7, 126, -1.55], [-1.5, 125.4, -1.9], [-5.6, 123.8, -1.9]], 0.62, 16);                    // rechte Lungenvenen
     rohr('kreislauf', pvm, [[1.7, 124.1, -1.6], [-1.2, 124.3, -2.0]], 0.62, 10);
   } else {
+    als('herz');
     await sdfMesh('kreislauf', rot, sdfHerz, b(-6, 108, -3, 14, 132, 10), h);
     if (abgebaut) return; await weiter('Herz');
+    als('aorta');
     rohr('kreislauf', rot, [[2.6, 122.5, 1.4], [2.6, 127, 1.0], [2.2, 132, 0.4], [1.6, 135.6, -0.8], [2.8, 135.8, -2.4], [4.4, 133.8, -3.8],
       [5.2, 129.5, -4.3], [5.2, 124, -4.2], [5.0, 118, -3.6], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], 1.25, 80);
     [-1, 1].forEach(function (s) {
       iliaka(s);
       rohr('kreislauf', rot, [[s * 2.4, 135.4, -0.6], [s * 2.8, 143, -1.6], [s * 3.0, 152, -1.8]], 0.55, 20);
     });
+    als('hohlvenen');
     rohr('kreislauf', blau, [[-1.3, 129, 2.2], [-1.8, 135, 1.0], [-2.0, 141, -0.2]], 1.0, 14);
     rohr('kreislauf', blau, [[-1.0, 118.5, 1.6], [-1.6, 112, -0.5], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);
   }
   /* Atmung */
+  als('luftroehre');
   var ros = mat('atmung', 0xE39AA4, { rough: 0.55, coat: 0.35, coatRough: 0.4 });
   var lu = mat('atmung', 0xE39AA4, { rough: 0.5 });
   rohr('atmung', lu, [[0, 150, -0.6], [0, 140, -1.4], [0, 134, -2.2], [0, 128.5, -3.3]], 1.0, 24);
@@ -492,28 +607,38 @@ async function organe() {
     rohr('atmung', lu, [[s * 6.2, 123, -2.5], [s * 9, 127, -1.5]], 0.45, 8);
     rohr('atmung', lu, [[s * 6.2, 123, -2.5], [s * 9.5, 118, -1.0]], 0.45, 8);
   });
+  als('lunge');
   var lm = mat('atmung', 0xE39AA4, { rough: 0.5, coat: 0.3, coatRough: 0.45 });
   await sdfMesh('atmung', lm, sdfLunge(-1), b(-15, 105, -10, -1.5, 146.5, 9.5), h);
   if (abgebaut) return; await weiter('Lungen');
   await sdfMesh('atmung', lm, sdfLunge(1), b(1.5, 105, -10, 15, 146.5, 9.5), h);
   if (abgebaut) return; await weiter('Lungen');
+  als('zwerchfell');
   var zw = mat('atmung', 0xB5655A, { rough: 0.6, opacity: 0.3, side: THREE.DoubleSide });
   dazu('atmung', new THREE.Mesh(zwerchfellGeo(), zw));
   await weiter('Zwerchfell');
   /* Verdauung */
+  als('speiseroehre');
   rohr('verdauung', mat('verdauung', 0xD99A8A, { rough: 0.5, coat: 0.3 }), [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], 0.8, 40);
+  als('leber');
   var le = mat('verdauung', 0x8B3A2E, { rough: 0.45, coat: 0.5 });
   await sdfMesh('verdauung', le, sdfLeber, b(-15, 97, -10, 14, 119, 11), h);
   if (abgebaut) return; await weiter('Leber');
+  als('magen');
   await sdfMesh('verdauung', mat('verdauung', 0xE8B48E, { rough: 0.5, coat: 0.4 }), sdfMagen, b(-6, 94, -7, 14, 115, 8), h);
   if (abgebaut) return; await weiter('Magen');
+  als('gallenblase');
   await sdfMesh('verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), sdfGalle, b(-10, 92, 0, -1, 106, 9), 0.4);
   if (abgebaut) return; await weiter('Gallenblase');
+  als('pankreas');
   await sdfMesh('verdauung', mat('verdauung', 0xE8C27A, { rough: 0.6 }), sdfPankreas, b(-8, 96, -8, 12, 109, 2), 0.45);
   if (abgebaut) return; await weiter('Bauchspeicheldrüse');
+  als('duenndarm');
   rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], 1.0, 50);
-  ellM('verdauung', mat('verdauung', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
+  als('milz');
+  ellM('kreislauf', mat('kreislauf', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
   /* Duenndarm: Schlingen in vier Lagen */
+  als('duenndarm');
   var dd = [], r, k;
   for (r = 0; r < 4; r++) {
     var yy = 95.5 - 2.5 * r;
@@ -524,20 +649,24 @@ async function organe() {
   }
   rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), dd, 1.2, 420);
   /* Dickdarm: Rahmen um den Duenndarm */
+  als('dickdarm');
   var dk = mat('verdauung', 0xB8775A, { rough: 0.55, coat: 0.3 });
   rohr('verdauung', dk, [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
     [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], 1.8, 260);
   kugelM('verdauung', dk, -11.3, 89.2, 0.5, 2.4);
   /* Harn */
+  als('nieren');
   var ni = mat('harn', 0x9C4A3A, { rough: 0.5, coat: 0.45 });
   await sdfMesh('harn', ni, sdfNiere(-1), b(-12, 94, -11, -3, 111, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
   await sdfMesh('harn', ni, sdfNiere(1), b(3, 96, -11, 12, 113, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
+  als('harnleiter');
   var ur = mat('harn', 0xD9B44A, { rough: 0.5 });
   [-1, 1].forEach(function (s) {
     rohr('harn', ur, [[s * 5.8, 101 + (s < 0 ? -2.5 : 0), -5], [s * 5.3, 95, -4.8], [s * 5, 88, -3.5], [s * 4, 84, -0.5], [s * 2.6, 83.6, 2.4]], 0.28, 40);
   });
+  als('harnblase');
   await sdfMesh('harn', mat('harn', 0xD9B44A, { rough: 0.4, coat: 0.5 }), sdfBlase, b(-6, 77, -3, 6, 90, 8), 0.5);
   if (abgebaut) return; await weiter('Harnblase');
 }
@@ -547,12 +676,13 @@ async function organe() {
    ===================================================================== */
 var t0;
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
-var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: modus, ansicht: ansicht };
+var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, ansicht: ansicht };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
   herzP = Kern.organLaden('herz', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
+  als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
   hm.emissive.copy(Kern.srgb(0xE0C3A8)).multiplyScalar(0.8);   /* Eigenleuchten in Hautfarbe: liest sich vor dem dunklen Grund als Haut */
   await sdfMesh('haut', hm, huelle, [[-44, -1, -17], [44, 179, 19]], klein ? 1.6 : 1.2, function (f) { return setLoad(0.02 + f * 0.4); });
@@ -562,6 +692,152 @@ async function bauen() {
   await setLoad(0.58, 'Organe'); if (abgebaut) return;
   await organe(); if (abgebaut) return;
 }
+
+/* =====================================================================
+   6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
+   ===================================================================== */
+var gewaehlt = null, rows = {}, sysRows = {}, hl = [];
+var hlMat = new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending,
+  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+function hex6(c) { return '#' + c.toString(16).padStart(6, '0'); }
+var MODI = [['an', 'an', 'sichtbar'], ['glas', 'glas', 'durchsichtig'], ['aus', 'aus', 'ausgeblendet']];
+
+/* Hervorhebung: Deckschicht in Messing auf den Meshes der Struktur (Materialien sind zwischen Strukturen geteilt) */
+function hervorheben(id) {
+  hl.forEach(function (o) { if (o.parent) o.parent.remove(o); });
+  hl = [];
+  if (!id) return;
+  STR[id].meshes.forEach(function (m) {
+    var o = new THREE.Mesh(m.geometry, hlMat);
+    o.raycast = function () {}; o.userData.hl = true; o.renderOrder = 30;
+    m.add(o); hl.push(o);
+  });
+}
+function waehle(id) {
+  if (id && (!STR[id] || SYS[STR[id].def.system].modus === 'aus')) id = null;
+  gewaehlt = id;
+  hervorheben(id);
+  Object.keys(rows).forEach(function (k) { rows[k].classList.toggle('sel', k === id); });
+  var box = $('info');
+  if (!id) { box.classList.remove('show'); return; }
+  var d = STR[id].def;
+  $('iKick').textContent = SYS[d.system].def.name;
+  $('iDe').textContent = d.de;
+  $('iLat').textContent = d.lat;
+  $('iTx').textContent = d.text;
+  $('iOpen').style.display = d.oeffnen ? '' : 'none';
+  $('iOpen').textContent = d.knopf || 'Detailmodell öffnen';
+  $('iHint').style.display = d.oeffnen ? 'none' : '';
+  box.classList.add('show');
+  if (rows[id]) rows[id].scrollIntoView({ block: 'nearest' });
+}
+/* Schalter eines Systems (an | glas | aus), Liste und Auswahl nachziehen */
+function systemModus(id, m) {
+  if (!SYS[id]) return;
+  modus(id, m);
+  var r = sysRows[id];
+  if (r) {
+    r.classList.toggle('off', SYS[id].modus === 'aus');
+    Array.prototype.forEach.call(r.querySelectorAll('.seg button'), function (b) { b.classList.toggle('on', b.dataset.m === SYS[id].modus); });
+  }
+  STRUKTUREN.forEach(function (d) { if (d.system === id && rows[d.id]) rows[d.id].classList.toggle('off', SYS[id].modus === 'aus'); });
+  if (gewaehlt && STR[gewaehlt].def.system === id && SYS[id].modus === 'aus') waehle(null);
+}
+
+(function leiste() {
+  var railRoot = $('rail');
+  var tabs = document.createElement('div'); tabs.className = 'tabs';
+  var paneS = document.createElement('div'), paneT = document.createElement('div'); paneT.style.display = 'none';
+  var panes = [paneS, paneT];
+  [['Organsysteme', paneS], ['Strukturen', paneT]].forEach(function (t, k) {
+    var b = document.createElement('button');
+    b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = t[0];
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      panes.forEach(function (pn, pk) { pn.style.display = pk === k ? '' : 'none'; });
+    });
+    tabs.appendChild(b);
+  });
+  railRoot.appendChild(tabs); railRoot.appendChild(paneS); railRoot.appendChild(paneT);
+
+  /* Reiter Organsysteme: je System ein dreistufiger Schalter */
+  var alle = document.createElement('div'); alle.className = 'sysall';
+  var ab = document.createElement('button'); ab.className = 'gh'; ab.id = 'bAlle'; ab.textContent = 'Alle sichtbar';
+  ab.addEventListener('click', function () { SYSTEME.forEach(function (d) { systemModus(d.id, 'an'); }); });
+  alle.appendChild(ab); paneS.appendChild(alle);
+  var wrapS = document.createElement('div'); wrapS.className = 'grp'; paneS.appendChild(wrapS);
+  SYSTEME.forEach(function (d) {
+    var row = document.createElement('div'); row.className = 'row sys'; row.id = 'sys-' + d.id;
+    row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b></span><span class="seg"></span>';
+    row.querySelector('.sw').style.background = hex6(d.farbe);
+    row.querySelector('b').textContent = d.name;
+    var seg = row.querySelector('.seg');
+    MODI.forEach(function (m) {
+      var b = document.createElement('button');
+      b.textContent = m[1]; b.title = d.name + ': ' + m[2]; b.dataset.m = m[0];
+      b.setAttribute('aria-label', d.name + ' ' + m[2]);
+      if (m[0] === 'an') b.className = 'on';
+      b.addEventListener('click', function () { systemModus(d.id, m[0]); });
+      seg.appendChild(b);
+    });
+    sysRows[d.id] = row; wrapS.appendChild(row);
+  });
+
+  /* Reiter Strukturen: nach System gruppiert */
+  SYSTEME.forEach(function (sd) {
+    var wrap = document.createElement('div'); wrap.className = 'grp';
+    var h = document.createElement('h2'); h.textContent = sd.name; wrap.appendChild(h);
+    STRUKTUREN.filter(function (d) { return d.system === sd.id; }).forEach(function (d) {
+      var row = document.createElement('div');
+      row.className = 'row'; row.id = 'row-' + d.id; row.tabIndex = 0;
+      row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b><i></i></span>';
+      row.querySelector('.sw').style.background = hex6(sd.farbe);
+      row.querySelector('b').textContent = d.de;
+      row.querySelector('i').textContent = d.lat;
+      function wahl() {
+        if (SYS[sd.id].modus === 'aus') systemModus(sd.id, 'an');
+        waehle(d.id);
+      }
+      row.addEventListener('click', wahl);
+      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); wahl(); } });
+      rows[d.id] = row; wrap.appendChild(row);
+    });
+    paneT.appendChild(wrap);
+  });
+})();
+
+$('bCls').onclick = function () { waehle(null); };
+$('iOpen').onclick = function () {
+  var d = gewaehlt && STR[gewaehlt].def;
+  if (d && d.oeffnen) location.hash = d.oeffnen;
+};
+function taste(e) { if (e.key === 'Escape') waehle(null); }
+document.addEventListener('keydown', taste);
+
+/* Antippen im 3D: nur sichtbare Systeme; durchsichtige und die Haut zaehlen nur, wenn nichts Dichteres getroffen wird */
+var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function canvasKlick(e) {
+  if (orbit.dragged) return;
+  var r = canvas.getBoundingClientRect();
+  ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ray.setFromCamera(ndc, camera);
+  var hits = ray.intersectObjects(wurzel.children, true), treffer = null, glas = null, haut = false;
+  for (var i = 0; i < hits.length && !treffer; i++) {
+    var o = hits[i].object, sid = null;
+    if (o.userData.hl) continue;
+    for (var q = o; q && !sid; q = q.parent) sid = q.userData.sid;
+    if (!sid || !STR[sid]) continue;
+    var m = SYS[STR[sid].def.system].modus;
+    if (m === 'aus') continue;
+    if (sid === 'haut') haut = true;
+    else if (m === 'glas') glas = glas || sid;   /* durchsichtige Systeme verdecken nichts */
+    else treffer = sid;
+  }
+  waehle(treffer || glas || (haut ? 'haut' : null));
+}
+canvas.addEventListener('click', canvasKlick);
 
 /* =====================================================================
    7. Kamera und Renderschleife
@@ -596,6 +872,9 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   abgebaut = true;
   orbit.loesen();
+  canvas.removeEventListener('click', canvasKlick);
+  document.removeEventListener('keydown', taste);
+  hlMat.dispose();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
   camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
