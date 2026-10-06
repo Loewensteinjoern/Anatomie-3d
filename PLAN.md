@@ -1,6 +1,6 @@
 # Plan: Anatomie-App (3D)
 
-Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html`) und Nephron (`nephron.html`).
+Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html#herz`) und Nephron (`index.html#nephron`).
 
 ## Bauplan je Organ
 
@@ -52,7 +52,7 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
 - Dateistruktur (Ziel):
 
 ```
-index.html                Körper-Atlas (Start); alte Adressen leiten weiter
+index.html                Körper-Atlas (Start); nephron.html und atlas.html leiten weiter
 core/                     gemeinsamer Kern (JS, CSS)
 vendor/three.min.js       three.js, unverändert
 organe/herz/              Herz-Modul + Inhalte
@@ -78,18 +78,21 @@ organe/niere/             Niere + Nephron
 ### Phase 1 – Körper-Atlas
 
 - [x] Herz und Nephron bekommen die Andockpunkte (`aufbauen`/`abbauen`, Bedienelemente), bleiben aber zunächst eigene Seiten (Prüfung: bytegleich)
-  - `core/rahmen.js`: `Kern.organ(name, def)` meldet ein Organ an (`Kern.Organe`); der Rahmen legt Renderer, Szene, Kamera, Umgebung und Licht einmal an, `Kern.organStarten(name)`/`Kern.organBeenden()` bauen Organe darin auf und ab; `Kern.einzelseite(name)` startet eine Einzelseite (eine Zeile im HTML)
+  - `core/rahmen.js`: `Kern.organ(name, def)` meldet ein Organ an (`Kern.Organe`); der Rahmen legt Renderer, Szene, Kamera, Umgebung und Licht einmal an, `Kern.organStarten(name)`/`Kern.organBeenden()` bauen Organe darin auf und ab; (`Kern.einzelseite(name)` für Einzelseiten entfiel mit dem Atlas als `index.html`)
   - Organ-Modul `def`: `renderer` (Optionen, z. B. `alpha`), `aufbauen(umg)` → Promise (`umg`: `bereich` = `#organ`, `canvas`, `renderer`, `szene`, `kamera`, `envTex`), setzt `bild(now, frame)`, `groesse(w, h)`, `abbauen()`
   - Organ-Dateien lösen beim Laden nichts aus und haben keine globalen Namen (vorerst außer `window.HerzApp` für `tools/vergleich.js`); die Bedienelemente liegen als `MARKUP` in der Organ-Datei, im HTML stehen nur die Rahmen-Elemente
   - `abbauen()` beendet AR und Audio, meldet Listener ab, stoppt Timer (auch mitten im Aufbau), gibt alle three.js-Objekte frei und leert das DOM; `tools/vergleich.js` prüft das im Kontext `abbau` (Speicher, Szene, DOM, Listener nach dem Abbauen jedes Mal gleich)
   - noch offen für die Rahmenseite: Organ-CSS nur im eigenen Bereich (`.organ-herz`), Renderer-Optionen je Organ (Herz `alpha`) beim Wechsel, Ladeanzeige `#boot` im Rahmen
 - [x] Rahmenseite, die Organe per Adresse lädt (`#herz`, `#nephron`) und wieder abbaut
-  - `atlas.html` (Übergangsname bis zum nächsten Punkt) enthält nur den Rahmen; `core/atlas.js` steuert per Adresse (leer = Startauswahl, `#herz`, `#nephron`), Browser-Zurück und Lesezeichen funktionieren; Knopf „← Atlas“ (`core/atlas.css`)
+  - Rahmenseite (zuerst `atlas.html`, jetzt `index.html`) enthält nur den Rahmen; `core/atlas.js` steuert per Adresse (leer = Startauswahl, `#herz`, `#nephron`), Browser-Zurück und Lesezeichen funktionieren; Knopf „← Atlas“ (`core/atlas.css`)
   - `Kern.ORGANE` (Titel, Seitentitel, Skript, CSS je Organ), `Kern.organLaden` fügt Skript und CSS per `<script>`/`<link>` ein (auch per `file://`), lädt in einer Sitzung nur einmal; die Organ-CSS wird beim Wechsel wieder entfernt (immer nur ein Organ, daher noch keine Beschränkung auf `.organ-herz`)
   - Fehler (unbekannte Adresse, Ladefehler, Fehler beim Aufbau) zeigen „Organ konnte nicht geladen werden“, der Rahmen bleibt bedienbar; veraltete Ladevorgänge bei schnellem Wechsel werden verworfen
   - Renderer-Optionen je Organ: unterscheiden sie sich beim Wechsel (Herz `alpha`), legt der Rahmen Canvas und Renderer neu an; so sind Herz und Nephron im Atlas bytegleich zu den Einzelseiten
   - `tools/vergleich.js`, Modell `atlas`: Herz und Nephron im Atlas laufen dieselben Abläufe wie die Einzelseiten und müssen bytegleich zu deren Bildern und Exporten sein; dazu Übergänge (Messung vor/nach gleich), Fehlerfälle und Startauswahl
-- [ ] `index.html` wird der Atlas; das Herz zieht um, die bisherigen Adressen (`index.html` als Herz, `nephron.html`) leiten weiter
+- [x] `index.html` wird der Atlas; das Herz zieht um, die bisherigen Adressen (`index.html` als Herz, `nephron.html`) leiten weiter
+  - `index.html` ohne Adresse zeigt die Startauswahl (später der Körper), Herz unter `#herz`, Nephron unter `#nephron`; eigene Organ-Seiten gibt es nicht mehr (`Kern.einzelseite` entfällt)
+  - `nephron.html` leitet auf `index.html#nephron`, `atlas.html` auf `index.html` weiter (Adresse nach `#` bleibt), per `location.replace` mit meta-refresh als Rückfall, auch per `file://`
+  - `tools/vergleich.js`: Modelle `herz` und `nephron` laufen im Atlas und sind bytegleich zu den Aufnahmen der früheren Einzelseiten; `atlas` prüft zusätzlich die Weiterleitungen
 - [ ] Ganzer Körper mit allen Organen in einfacher Form
 - [ ] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
 - [ ] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“

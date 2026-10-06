@@ -149,10 +149,4 @@ var Kern = window.Kern = window.Kern || {};
     var l = document.querySelector('link[data-organ="' + name + '"]');
     if (l && l.parentNode) l.parentNode.removeChild(l);
   };
-
-  /* Start einer Einzelseite: Rahmen anlegen und das Organ starten. */
-  K.einzelseite = function (name) {
-    rahmenAnlegen(K.Organe[name].renderer || {});
-    return K.organStarten(name);
-  };
 })(Kern);

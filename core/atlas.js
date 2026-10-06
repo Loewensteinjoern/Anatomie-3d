@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Gemeinsamer Kern - Atlas: Adresssteuerung der Rahmenseite atlas.html
+   Gemeinsamer Kern - Atlas: Adresssteuerung der Rahmenseite index.html
    Klassisches Skript (kein Modul). Liest den Teil nach # der Adresse
    (#herz, #nephron), laedt das Organ per Kern.organLaden nach, startet es
    im Rahmen und baut es beim Wechsel oder bei leerer Adresse wieder ab.
