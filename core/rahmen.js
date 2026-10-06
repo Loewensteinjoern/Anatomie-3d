@@ -100,6 +100,19 @@ var Kern = window.Kern = window.Kern || {};
     R.renderer.clear();
   };
 
+  /* Standbild: aktuelles Bild des Organs in ein 2D-Canvas kopieren (Atlas, weicher Wechsel).
+     Rendern und Kopieren im selben Aufruf, weil der WebGL-Puffer sonst leer sein kann. */
+  K.standbild = function (ziel) {
+    if (!aktiv || !R) return false;
+    try {
+      R.renderer.render(R.szene, R.kamera);
+      ziel.width = R.canvas.width;
+      ziel.height = R.canvas.height;
+      ziel.getContext('2d').drawImage(R.canvas, 0, 0);
+      return true;
+    } catch (e) { return false; }
+  };
+
   /* Organ-Skript und -CSS nachladen (falls noch nicht geschehen). Gibt ein
      Promise zurueck, das mit der Organ-Definition (Kern.Organe[name]) erfuellt
      wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab.
