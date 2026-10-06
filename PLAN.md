@@ -20,8 +20,11 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Export GLB/STL mit Signatur | ✓ | ✓ |
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` | – (Niere folgt in Phase 2) |
 
 Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+
+Eine Form je Organ: Jedes Organ-Modul liefert seine Form als eigenen Baustein (`organe/<organ>/<organ>-form.js`). Körper-Atlas und Detailmodell nutzen dieselbe Form (im Körper gröber gerastert); so passen Körper und Organ zusammen, und jede Verbesserung am Organ zeigt sich auch im Körper. Der Körper lädt nur die Form-Bausteine, nicht den übrigen Organ-Code. Organe ohne Detailmodell erscheinen im Körper vorerst als vereinfachte Platzhalter und werden ersetzt, sobald ihr Modul fertig ist. Das Herz stellt seine Form vorerst über `organ.form` in `herz.js` bereit; die Auslagerung nach `herz-form.js` folgt, wenn sie sich lohnt.
 
 ## Ebenen
 
