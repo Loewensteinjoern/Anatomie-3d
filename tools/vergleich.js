@@ -500,7 +500,7 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   }).then(async (m) => Object.assign(m, { endzustand: await t.js(ATLAS_ENDZUSTAND) }));
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500); await t.bild('koerper');
-  await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.weiter(700); await organ('herz'); await t.weiter(1500); await t.bild('herz');
+  await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.bisAdresse('#herz'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
   await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
   const m1 = await messen();
   await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
@@ -518,7 +518,7 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
 MODELLE.atlas.kontexte['uebergaenge-nephron'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
-  await t.js(() => window.KoerperApp.waehle('nieren')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nieren'); await t.weiter(700);
+  await t.js(() => window.KoerperApp.waehle('nieren')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nieren'); await t.bisAdresse('#nephron');
   await organ('nephron'); await t.bild('standbild');
   await t.weiter(1500); await t.bild('nephron');
   await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
@@ -542,7 +542,7 @@ MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: 
     /* Ladefehler nach der Kamerafahrt: die Stylesheet-Datei des Herzens wird erst beim Öffnen geladen (das Skript lädt der Körper schon) */
     await t.js(() => { location.hash = ''; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(2200);
     await t.blockiere('**/organe/herz/herz.css');
-    await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(1300);
+    await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.bisAdresse('#herz');
     await t.echt(300);
     await t.warteAuf(ATLAS_FEHLER);
     await t.weiter(300); await t.bild('fehler-nach-fahrt');
@@ -620,6 +620,15 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     klick: (sel) => page.click(sel),
     echt: warte,                                   /* echte Zeit, die virtuelle steht (Atlas: Nachladen) */
     zurueck: () => page.goBack(),
+    /* virtuelle Zeit in 50-ms-Schritten vorrücken, bis die Kamerafahrt die Adresse gesetzt hat, und sofort anhalten
+       (sonst hinge die Herzphase davon ab, wie lange das Organ in echter Zeit nachlädt) */
+    async bisAdresse(hash, maxMs) {
+      for (let ms = 0; ms <= (maxMs || 3000); ms += 50) {
+        if (await page.evaluate((h) => location.hash === h, hash)) return;
+        await weiter(50, 50);
+      }
+      throw new Error('Adresse ' + hash + ' wurde nicht gesetzt');
+    },
     blockiere: (muster) => page.route(muster, (r) => r.abort()),
     freigeben: (muster) => page.unroute(muster),
     /* warten, bis fn(arg) wahr ist; ist organ gesetzt, zuerst in echter Zeit, bis dessen Skript und CSS
