@@ -306,6 +306,55 @@ var RWT = [[100, 2.7], [114, 2.5], [117, 2.0], [140, 1.8], [143, 1.5], [150, 1.3
 function zst(y) { return interp(ZST, y); }
 function zSternum(y) { return 4.3 + (143 - y) * 0.31; }
 
+/* Rippen: Verlauf je Rippe (i = 0..11) als Ellipsenbogen um den Brustkorb; die Parameter dienen auch der Lunge (Innenraum) */
+var RIP_R = 0.5;
+var RIP_A = [6.6, 9.0, 11.4, 13.2, 14.3, 14.8, 15.0, 15.0, 14.8, 14.4, 13.4, 12.4];   /* halbe Breite der Rippenmittellinie */
+var RIP_XE = [2.6, 4.6, 6.2, 7.2, 8.0, 8.4, 8.6, 12.4, 13.0, 13.4, 12.9, 11.7];       /* seitlicher Abstand des vorderen Knochenendes */
+var RIP_YE = [139.1, 135.7, 132.0, 128.4, 124.8, 121.9, 119.8, 117.9, 116.2, 114.6, 112.4, 110.4];   /* Hoehe des vorderen Knochenendes */
+var RIP_YA = [139.4, 136.8, 134.0, 131.2, 128.4, 125.6, 123.2];      /* Ansatzhoehe am Brustbein (Rippe 1-7) */
+var RIP_ZE = [6.0, 4.6, 3.2, 0.8, -2.5];                             /* vorderes Ende Rippe 8-12 (z) */
+var RIP_P = null;
+function rippenParam() {
+  if (RIP_P) return RIP_P;
+  RIP_P = [];
+  for (var i = 0; i < 12; i++) {
+    var yb = 140 - 2.1 * i + 0.6, A = RIP_A[i], xe = RIP_XE[i];
+    var zb = zst(yb) - (i < 2 ? 1.2 : 1.6), ze = i < 7 ? zSternum(RIP_YA[i]) - (i < 5 ? 0.3 : i === 5 ? 0.6 : 1.3) : RIP_ZE[i - 7];
+    var ua = Math.sqrt(1 - Math.pow(3.3 / A, 2)), va = Math.sqrt(1 - Math.pow(xe / A, 2));
+    var B = (ze - zb) / (ua + va);
+    RIP_P.push({ yb: yb, ye: RIP_YE[i], A: A, B: B, zc: zb + B * ua, zb: zb, p0: Math.asin(3.3 / A), p1: PI - Math.asin(xe / A) });
+  }
+  return RIP_P;
+}
+/* Rippe i, Seite s: Stuetzpunkte; Abstand zur Lunge (lg) und Haut (hh) werden eingehalten */
+function rippeStuetz(i, s, lg, hh) {
+  var P = rippenParam()[i], n = 15, pts = [], k, u, ph, x, z, y, dx, dz, l, m;
+  for (k = 0; k <= n; k++) {
+    u = k / n; ph = P.p0 + (P.p1 - P.p0) * u;
+    x = P.A * Math.sin(ph);
+    z = P.zc - P.B * Math.cos(ph) - 0.5 * Math.sin(PI * Math.min(1, u / 0.3));   /* erst nach hinten-seitlich */
+    y = P.yb + (P.ye - P.yb) * Math.pow(u, 1.4);
+    if (k === 0) x = 3.3;
+    pts.push([s * x, y, z]);
+  }
+  /* radial nach aussen schieben, bis Lunge und Haut passen */
+  for (k = 1; k <= n; k++) {
+    var p = pts[k];
+    dx = p[0]; dz = p[2] - P.zc; l = Math.sqrt(dx * dx + dz * dz); dx /= l; dz /= l;
+    for (m = 0; m < 40 && lg(p[0], p[1], p[2]) < RIP_R + 0.6; m++) {
+      var qx = p[0] + dx * 0.15, qz = p[2] + dz * 0.15;
+      if (huelle(qx, p[1], qz) > -(RIP_R + 0.8)) break;
+      p[0] = qx; p[2] = qz;
+    }
+  }
+  /* glaetten (Enden bleiben) */
+  for (m = 0; m < 2; m++) {
+    var q = pts.map(function (a) { return a.slice(); });
+    for (k = 1; k < n; k++) for (var c = 0; c < 3; c++) pts[k][c] = 0.25 * q[k - 1][c] + 0.5 * q[k][c] + 0.25 * q[k + 1][c];
+  }
+  return pts;
+}
+
 function skelett() {
   var kn = mat('skelett', 0xE6DCC6, { rough: 0.8, env: 0.2 });
   var sk = 'skelett';
@@ -338,29 +387,16 @@ function skelett() {
   });
   stab(sk, kn, [0, 99.5, zst(99.5)], [0, 84, -7.6], 3.6, 1.5, true);
   stab(sk, kn, [0, 84, -7.6], [0, 80.4, -6.2], 0.9, 0.4, true);
-  /* Brustkorb: 12 Rippenpaare */
+  /* Brustkorb: 12 Rippenpaare, Querfortsaetze, Rippenknorpel */
   als('brustkorb');
-  var R = [[5.6, 141.0, 1.5, 3.6], [8.4, 136.6, 3.5, 5.6], [10.6, 132.0, 5.5, 7.6], [12.2, 129.6, 7.5, 8.8], [13.2, 127.6, 9, 9.8],
-    [13.9, 125.9, 10.2, 10.4], [14.3, 124.6, 11, 10.8], [14.4, 123.6, 8, 9.4], [14.2, 123.0, 8, 10.8], [13.8, 122.6, 7, 11.8],
-    [13.0, 109.5, 1.5, 0, 2.1, 7.0], [12.0, 108.5, 1, 0, 1.8, 5.0]];
-  var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [];
-  R.forEach(function (r, i) {
-    var yb = 141.5 - 2.15 * i, a = r[0], yf = r[1], sag = r[2];
-    var yfb = i < 7 ? yf - [0.8, 1.8, 2.8, 3.6, 4.4, 5.2, 6.0][i] : i < 10 ? [114.5, 112, 110.5][i - 7] : yf;   /* Knochenende: Knorpel steigt zum Brustbein an */
-    var te = r[4] !== undefined ? r[4] : PI - Math.asin(r[3] / a);
-    var zb = zst(yb) + 0.2, zf = r[5] !== undefined ? r[5] : zSternum(yf);
-    var b = (zf - zb) / (1 + Math.abs(Math.cos(te))), zc = zb + b * Math.cos(0.12);
+  var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [], lgs = { '-1': sdfLunge(-1), '1': sdfLunge(1) };
+  rippenParam().forEach(function (P, i) {
     [-1, 1].forEach(function (s) {
-      var pts = [], n = 26;
-      for (var k = 0; k <= n; k++) {
-        var t = k / n, th = 0.12 + (te - 0.12) * t;
-        pts.push([s * a * Math.sin(th), yb + (yfb - yb) * t * t - sag * Math.sin(PI * t), zc - b * Math.cos(th)]);
-      }
-      rohr(sk, kn, pts, 0.5, 40);
-      var e = pts[n], ziel;
+      var pts = rippeStuetz(i, s, lgs[s], huelle), e = pts[pts.length - 1], ziel;
+      stab(sk, kn, [s * 0.9, P.yb, zst(P.yb) - 1.2], [s * 3.3, P.yb, P.zb], 0.5, 0.45, true);   /* Querfortsatz */
+      rohr(sk, kn, pts, RIP_R, 48);
       (enden[i] = enden[i] || {})[s] = e;
-      if (i < 7) ziel = [s * 1.2, yf, zSternum(yf) - 0.1];
-      else if (i === 7) ziel = [s * 1.0, 123.6, zSternum(123.6) - 0.1];
+      if (i < 7) ziel = [s * 1.2, RIP_YA[i], zSternum(RIP_YA[i]) - 0.1];
       else if (i < 10) ziel = enden[i - 1][s];
       if (ziel) rohr(sk, knorpel, [e, ziel], 0.45, 8);
     });
@@ -435,11 +471,28 @@ function sdfHerz(x, y, z) {
   d = smin(d, ell(x, y, z, -0.6, 121.6, 3.2, 2.6, 3.6, 2.4), 1.6);   // rechter Rand (rechter Vorhof/Kammer)
   return d;
 }
+/* Innenraum des Brustkorbs: elliptischer Querschnitt je Hoehe aus den Rippen (Abstand Rippe + 1.2 cm), schnuert die Lunge ein */
+var THX = null;
+function thoraxInnen(x, y, z) {
+  if (!THX) {
+    THX = rippenParam().map(function (P) { return [P.yb + (P.ye - P.yb) * 0.4, P.A - 1.7, P.B - 1.7, P.zc]; }).reverse();
+  }
+  var t = THX, n = t.length, a, i, f;
+  if (y <= t[0][0]) a = t[0]; else if (y >= t[n - 1][0]) a = t[n - 1];
+  else {
+    for (i = 1; i < n && y > t[i][0]; i++);
+    f = (y - t[i - 1][0]) / (t[i][0] - t[i - 1][0]);
+    a = [0, t[i - 1][1] + (t[i][1] - t[i - 1][1]) * f, t[i - 1][2] + (t[i][2] - t[i - 1][2]) * f, t[i - 1][3] + (t[i][3] - t[i - 1][3]) * f];
+  }
+  var u = x / a[1], v = (z - a[3]) / a[2];
+  return (Math.sqrt(u * u + v * v) - 1) * Math.min(a[1], a[2]);
+}
 function sdfLunge(s) {
   var cx = s * 8.4, ytop = s < 0 ? DOM_R : DOM_L, xc = s * 6.5;
   var rx = s < 0 ? 5.2 : 4.9;
   return function (x, y, z) {
-    var d = ell(x, y, z, cx, 125, -0.8, rx, 19, 7.8);
+    var d = ell(x, y, z, cx - s * 0.18 * Math.max(0, y - 122), 125, -0.8, rx, 19, 7.8);   // Spitze neigt sich zur Mitte
+    d = S.smax(d, thoraxInnen(x, y, z), 1.0);
     d = Math.max(d, 0.4 * (domY(x, z, xc, ytop) + 0.5 - y));
     if (herzSmp) {
       d = S.smax(d, -(herzSmp.val(x - HERZ_V[0], y - HERZ_V[1], z - HERZ_V[2]) - 0.4), 0.8);   // Herzbucht nach der Form des Herzens
