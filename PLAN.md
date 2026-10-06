@@ -1,6 +1,6 @@
 # Plan: Anatomie-App (3D)
 
-Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html`) und Nephron (`nephron.html`).
+Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html#herz`) und Nephron (`index.html#nephron`).
 
 ## Bauplan je Organ
 
@@ -52,7 +52,7 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
 - Dateistruktur (Ziel):
 
 ```
-index.html                Körper-Atlas (Start); alte Adressen leiten weiter
+index.html                Körper-Atlas (Start); nephron.html und atlas.html leiten weiter
 core/                     gemeinsamer Kern (JS, CSS)
 vendor/three.min.js       three.js, unverändert
 organe/herz/              Herz-Modul + Inhalte
@@ -78,7 +78,7 @@ organe/niere/             Niere + Nephron
 ### Phase 1 – Körper-Atlas
 
 - [x] Herz und Nephron bekommen die Andockpunkte (`aufbauen`/`abbauen`, Bedienelemente), bleiben aber zunächst eigene Seiten (Prüfung: bytegleich)
-  - `core/rahmen.js`: `Kern.organ(name, def)` meldet ein Organ an (`Kern.Organe`); der Rahmen legt Renderer, Szene, Kamera, Umgebung und Licht einmal an, `Kern.organStarten(name)`/`Kern.organBeenden()` bauen Organe darin auf und ab; `Kern.einzelseite(name)` startet eine Einzelseite (eine Zeile im HTML)
+  - `core/rahmen.js`: `Kern.organ(name, def)` meldet ein Organ an (`Kern.Organe`); der Rahmen legt Renderer, Szene, Kamera, Umgebung und Licht einmal an, `Kern.organStarten(name)`/`Kern.organBeenden()` bauen Organe darin auf und ab; (`Kern.einzelseite(name)` für Einzelseiten entfiel mit dem Atlas als `index.html`)
   - Organ-Modul `def`: `renderer` (Optionen, z. B. `alpha`), `aufbauen(umg)` → Promise (`umg`: `bereich` = `#organ`, `canvas`, `renderer`, `szene`, `kamera`, `envTex`), setzt `bild(now, frame)`, `groesse(w, h)`, `abbauen()`
   - Organ-Dateien lösen beim Laden nichts aus und haben keine globalen Namen (vorerst außer `window.HerzApp` für `tools/vergleich.js`); die Bedienelemente liegen als `MARKUP` in der Organ-Datei, im HTML stehen nur die Rahmen-Elemente
   - `abbauen()` beendet AR und Audio, meldet Listener ab, stoppt Timer (auch mitten im Aufbau), gibt alle three.js-Objekte frei und leert das DOM; `tools/vergleich.js` prüft das im Kontext `abbau` (Speicher, Szene, DOM, Listener nach dem Abbauen jedes Mal gleich)

@@ -3,21 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Herz &ndash; Herzh&ouml;hlen, Klappen und Windkessel</title>
+<title>Anatomie-Atlas</title>
 <link rel="stylesheet" href="core/kern.css">
-<link rel="stylesheet" href="organe/herz/herz.css">
+<link rel="stylesheet" href="core/atlas.css">
 </head>
 <body>
-<div id="stage"><canvas id="cv" aria-label="3D-Modell des Herzens. Ziehen dreht, zwei Finger oder das Mausrad zoomen, Tippen w&auml;hlt eine Struktur."></canvas></div>
+<div id="stage"><canvas id="cv" aria-label="3D-Modell des gew&auml;hlten Organs. Ziehen dreht, zwei Finger oder das Mausrad zoomen, Tippen w&auml;hlt eine Struktur."></canvas></div>
 <svg id="leaders"></svg>
 <div id="labels"></div>
 
-<div id="organ" class="organ-herz" style="display:contents"></div>
+<div id="organ" style="display:contents"></div>
 <a id="arQL" rel="ar" style="display:none"><img alt="AR" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></a>
 
 <div id="wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 <div id="toast"></div>
-<div id="boot"><span>Herz wird aufgebaut</span><div class="bar"><i id="bootBar"></i></div><span class="st" id="bootSt"></span></div>
+<div id="boot" class="gone"><span>Organ wird aufgebaut</span><div class="bar"><i id="bootBar"></i></div><span class="st" id="bootSt"></span></div>
+
+<div id="atlasStart" class="panel" hidden>
+  <h1>Anatomie-Atlas</h1>
+  <p>W&auml;hle ein Organ, um sein 3D-Modell zu erkunden.</p>
+  <a href="#herz">Herz<small>Herzh&ouml;hlen, Klappen und Windkessel</small></a>
+  <a href="#nephron">Nephron (Niere)<small>Nierenk&ouml;rperchen und Tubulussystem</small></a>
+  <span class="aus" aria-disabled="true">K&ouml;rper &ndash; in Arbeit<small>Ganzk&ouml;rper-&Uuml;bersicht folgt</small></span>
+</div>
+<div id="atlasFehler" class="panel" role="alert" hidden>
+  <b>Organ konnte nicht geladen werden</b>
+  <small id="atlasFehlerText"></small>
+  <button type="button" class="gh" id="atlasFehlerZurueck">Zur Auswahl</button>
+</div>
+<button type="button" id="atlasZurueck" class="gh" hidden>&larr; Atlas</button>
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/GLTFExporter.js"></script>
@@ -26,7 +40,6 @@
 <script src="core/export.js"></script>
 <script src="core/ar.js"></script>
 <script src="core/szenarien.js"></script>
-<script src="organe/herz/herz.js"></script>
-<script>Kern.einzelseite('herz');</script>
+<script src="core/atlas.js"></script>
 </body>
 </html>
