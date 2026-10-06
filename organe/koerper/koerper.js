@@ -863,10 +863,10 @@ camera.near = 2; camera.far = 1200; camera.updateProjectionMatrix();
    halb = halbe Koerperbreite (cm), die die Beschriftungsspalten freilassen */
 var AUSSCHNITTE = [
   { name: 'Ganzkörper', theta: 0, target: V(0, 88, 0), ext: [90, 184], halb: 42 },
-  { name: 'Kopf/Hals', theta: 0, target: V(0, 154, 0), ext: [60, 50], halb: 30 },
-  { name: 'Brustkorb', theta: 0, target: V(0, 126, 0), ext: [70, 50], halb: 30 },
-  { name: 'Bauch', theta: 0, target: V(0, 103, 0), ext: [66, 46], halb: 30 },
-  { name: 'Becken', theta: 0, target: V(0, 86, 0), ext: [66, 40], halb: 30 },
+  { name: 'Kopf/Hals', theta: 0, target: V(0, 157, 0), ext: [44, 42], halb: 20 },
+  { name: 'Brustkorb', theta: 0, target: V(0, 124.5, 0), ext: [40, 44], halb: 18 },
+  { name: 'Bauch', theta: 0, target: V(0, 101.5, 0), ext: [36, 36], halb: 18 },
+  { name: 'Becken', theta: 0, target: V(0, 92.5, 0), ext: [36, 32], halb: 18 },
   { name: 'Rücken', theta: PI, target: V(0, 88, 0), ext: [90, 184], halb: 42 }
 ];
 var aktiv = 0, fitDist = 0;
@@ -875,9 +875,9 @@ var aktiv = 0, fitDist = 0;
 function bereich(w, h) {
   if (w < 1000) {
     var tt = $('tools').getBoundingClientRect().top;
-    return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (tt > 100 ? tt : h * 0.6) - 6), labW: 104, fit: 64 };   /* fit: Platz je Seite, den die Beschriftung beim Einpassen abzieht (sie darf auf dem Handy den Koerperrand ueberdecken) */
+    return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (tt > 100 ? tt : h * 0.6) - 6), labW: 104, fit: 30 };   /* fit: Platz je Seite, den die Beschriftung beim Einpassen abzieht (sie darf auf dem Handy den Koerperrand ueberdecken) */
   }
-  return { x0: 330, x1: w - 22, y0: Math.max(76, Math.ceil($('tools').getBoundingClientRect().bottom) + 6), y1: h - 30, labW: 142, fit: 142 };
+  return { x0: 330, x1: w - 22, y0: Math.max(76, Math.ceil($('tools').getBoundingClientRect().bottom) + 6), y1: h - 30, labW: 142, fit: 100 };
 }
 function distFuer(a, w, h) {
   var r = bereich(w, h), th = Math.tan(camera.fov * PI / 360);
