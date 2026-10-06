@@ -33,8 +33,11 @@
 
    Modell atlas (index.html): Die Kontexte uebergaenge (Körper, Kamerafahrt und Herz über die Infokarte,
    Zurück-Knopf des Browsers mit Rückfahrt, Wechsel, leere Adresse; Messwerte m1 und m2 müssen gleich sein)
-   und fehler (unbekannte Adresse, Ladefehler, „Zum Körper“, Neuversuch) haben kein Gegenstück
-   und sind nur anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   und fehler (unbekannte Adresse, Ladefehler, „Zum Körper“, Neuversuch, am Ende Ladefehler der Herz-CSS
+   nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
+   Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
+   von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-nephron (Fahrt zur Niere,
+   Standbild, Rückfahrt) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz und atlas.html: Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
@@ -472,6 +475,16 @@ for (const organ of ['koerper', 'herz', 'nephron']) {
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = organ === 'koerper' ? '' : '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
 MODELLE.atlas = { datei: 'index.html', kontexte: {} };
+/* Endzustand nach einem Übergang (im Browser): Standbild verborgen und ohne Breite, keine inline-Styles auf Organ-Kindern und Canvas */
+const ATLAS_ENDZUSTAND = () => {
+  const u = document.getElementById('uebergang'), o = document.getElementById('organ'), c = document.querySelector('canvas');
+  return {
+    standbild: !u || (u.hidden && u.getBoundingClientRect().width === 0) ? 'verborgen' : 'sichtbar',
+    inlineStile: [...o.children].filter((e) => e.style.opacity !== '' || e.style.pointerEvents !== '').length,
+    bodyPE: document.body.style.pointerEvents, canvasPE: c ? c.style.pointerEvents : ''
+  };
+};
+const ATLAS_ENDZUSTAND_OK = (z) => z.standbild === 'verborgen' && z.inlineStile === 0 && z.bodyPE === '' && z.canvasPE === '';
 /* Kontext uebergaenge: Körper, Herz über die Infokarte, Zurück-Knopf des Browsers (Rückfahrt zur Ganzkörperansicht), Wechsel zwischen den Organen; Messwerte vorher/nachher */
 MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const messen = () => t.js(() => {
@@ -484,7 +497,7 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
       titel: document.title, cssLinks: [...document.querySelectorAll('link[data-organ]')].map((l) => l.getAttribute('data-organ')),
       listener: window.__listener()
     };
-  });
+  }).then(async (m) => Object.assign(m, { endzustand: await t.js(ATLAS_ENDZUSTAND) }));
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500); await t.bild('koerper');
   await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.weiter(700); await organ('herz'); await t.weiter(1500); await t.bild('herz');
@@ -496,13 +509,27 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   await t.js(() => { location.hash = ''; }); await organ('koerper'); await t.weiter(2200);
   const m2 = await messen();
   const felder = Object.keys(m1).filter((k) => JSON.stringify(m1[k]) !== JSON.stringify(m2[k]));
-  t.erg.uebergaenge = { m1, m2, gleich: !felder.length };
-  process.stdout.write('  uebergaenge: ' + (felder.length ? 'ABWEICHUNG in ' + felder.join(', ') : 'gleich') + '\n');
+  const endOk = ATLAS_ENDZUSTAND_OK(m1.endzustand) && ATLAS_ENDZUSTAND_OK(m2.endzustand);
+  t.erg.uebergaenge = { m1, m2, gleich: !felder.length, endzustandOk: endOk };
+  process.stdout.write('  uebergaenge: ' + (felder.length ? 'ABWEICHUNG in ' + felder.join(', ') : 'gleich') + (endOk ? '' : ' – ABWEICHUNG Endzustand: ' + JSON.stringify([m1.endzustand, m2.endzustand])) + '\n');
   for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
+} };
+/* Kontext uebergaenge-nephron: Körper, Niere wählen, Kamerafahrt, Standbild beim Aufbau des Nephrons, Rückfahrt; Endzustand prüfen */
+MODELLE.atlas.kontexte['uebergaenge-nephron'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.js(() => window.KoerperApp.waehle('nieren')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nieren'); await t.weiter(700);
+  await organ('nephron'); await t.bild('standbild');
+  await t.weiter(1500); await t.bild('nephron');
+  await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
+  const z = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z);
+  t.erg.uebergaengeNephron = { endzustand: z, ok };
+  process.stdout.write('  uebergaenge-nephron: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify(z)) + '\n');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
-  erwartet: [/Unbekanntes Organ: gibtsnicht/, /konnte nicht geladen werden/, /^nicht geladen: organe\/herz\/herz\.js \(net::ERR_FAILED\)/, /^error: Failed to load resource: net::ERR_FAILED/],
+  erwartet: [/Unbekanntes Organ: gibtsnicht/, /konnte nicht geladen werden/, /^nicht geladen: organe\/herz\/herz\.js \(net::ERR_FAILED\)/, /^error: Failed to load resource: net::ERR_FAILED/, /^nicht geladen: organe\/herz\/herz\.css \(net::ERR_FAILED\)/],
   async ablauf(t) {
     await t.weiter(300); await t.bild('unbekannt');
     await t.blockiere('**/organe/herz/herz.js');
@@ -512,6 +539,18 @@ MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: 
     await t.freigeben('**/organe/herz/herz.js');
     await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(500); await t.bild('koerper-nach-fehler');
     await t.js(() => { location.hash = 'herz'; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'herz', 'herz'); await t.weiter(1500); await t.bild('herz-nach-fehler');
+    /* Ladefehler nach der Kamerafahrt: die Stylesheet-Datei des Herzens wird erst beim Öffnen geladen (das Skript lädt der Körper schon) */
+    await t.js(() => { location.hash = ''; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(2200);
+    await t.blockiere('**/organe/herz/herz.css');
+    await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(1300);
+    await t.echt(300);
+    await t.warteAuf(ATLAS_FEHLER);
+    await t.weiter(300); await t.bild('fehler-nach-fahrt');
+    const z = await t.js(ATLAS_ENDZUSTAND);
+    t.erg.fehlerNachFahrt = { endzustand: z, ok: z.standbild === 'verborgen' };
+    process.stdout.write('  fehler-nach-fahrt: ' + (z.standbild === 'verborgen' ? 'Standbild verborgen' : 'ABWEICHUNG Standbild sichtbar') + '\n');
+    await t.freigeben('**/organe/herz/herz.css');
+    await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(500); await t.bild('koerper-nach-fahrtfehler');
   } };
 /* Kontexte weiterleitung / weiterleitung-datei: die alten Adressen leiten auf index.html weiter */
 const WEITERLEITUNG = { async ablauf(t) {
@@ -742,6 +781,12 @@ async function vergleichen(va, vb) {
     if (b.uebergaenge) {
       if (b.uebergaenge.gleich === false) probleme.push(m + ' Übergänge: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.uebergaenge));
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
+      if (b.uebergaenge.endzustandOk === false) probleme.push(m + ' Übergänge: Endzustand falsch (Standbild sichtbar oder inline-Styles)\n    ' + JSON.stringify([b.uebergaenge.m1.endzustand, b.uebergaenge.m2.endzustand]));
+    }
+    for (const [k, tx] of [['uebergaengeNephron', 'Übergänge Nephron'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
+      if (!b[k]) continue;
+      if (!b[k].ok) probleme.push(m + ' ' + tx + ': Endzustand falsch\n    ' + JSON.stringify(b[k].endzustand));
+      else ok.push(m + ' ' + tx + ': Endzustand stimmt');
     }
     for (const [k, w] of Object.entries(b.weiterleitung || {})) {
       if (!w.gleich) probleme.push(m + ' Weiterleitung ' + k + ': falsches Ziel\n    ' + JSON.stringify(w.ziele));
