@@ -103,6 +103,8 @@ var MARKUP = `<div id="title">
     <button id="cam4" class="gh">Becken</button>
     <button id="cam5" class="gh">R&uuml;cken</button>
     <button id="bLab" class="gh on">Beschriftung</button>
+    <span class="sep"></span>
+    <button id="bAR" class="gh" title="Den K&ouml;rper mit der Kamera in den Raum stellen">AR</button>
   </div>
 </div>
 
@@ -115,6 +117,19 @@ var MARKUP = `<div id="title">
   <span class="lat" id="iLat"></span>
   <p id="iTx"></p>
   <button class="gh" id="iOpen" style="display:none"></button>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">K&ouml;rper in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Ger&auml;t langsam &uuml;ber den Boden oder Tisch, bis ein Ring erscheint &ndash; dann tippen, um den K&ouml;rper hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arHaut">Haut aus</button>
+    <button class="ar-b" id="arLab" hidden>Beschriftung aus</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
@@ -743,7 +758,7 @@ async function organe() {
    ===================================================================== */
 var t0;
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
-var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, oeffnen: oeffnen, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
+var App = window.KoerperApp = { ready: false, ar: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, oeffnen: oeffnen, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
@@ -950,6 +965,7 @@ function gehe(i) {
 for (var ci = 0; ci < AUSSCHNITTE.length; ci++) (function (i) { $('cam' + i).onclick = function () { gehe(i); }; })(ci);
 
 function groesse(w, h) {
+  if (inAR) return;   /* in AR bestimmt die Sitzung die Kamera */
   var r = bereich(w, h), a = AUSSCHNITTE[aktiv];
   camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
   camera.updateProjectionMatrix();
@@ -1174,7 +1190,53 @@ function fahrtBild(now) {
   return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
 }
 
-function loop(now) {
+/* =====================================================================
+   9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
+   Beschriftung in AR und AR Quick Look (iPhone) kommen spaeter dazu.
+   ===================================================================== */
+var inAR = false, hautAlt = 'glas', arBigAlt = false;
+var arCfg = {
+  renderer: renderer, scene: scene, camera: camera, root: wurzel,
+  stufen: [0.0015, 0.0025, 0.004, 0.006, 0.01], skala: 0.0025,   /* 27 / 45 / 72 / 108 / 180 cm; 0.01 = lebensgross */
+  fuss: 0,                                                      /* Fusssohlen unter dem Ursprung; wird nach dem Aufbau gesetzt */
+  hintergrund: 0x0b171c,
+  ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+  knoepfe: ['arEnd', 'arHaut', 'arLab', 'arSmall', 'arBig', 'arPlace'],
+  beimStart: function () {
+    inAR = true; App.ar = true;
+    camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
+    labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+    arHautText();
+  },
+  beimEnde: function () {
+    inAR = false; App.ar = false;
+    camera.near = 2; camera.far = 1200;
+    labelBox.style.display = zeigeLabels ? '' : 'none'; leaderSvg.style.display = zeigeLabels ? '' : 'none';
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    groesse(w, h);
+    lv++;
+  }
+};
+var AR = Kern.AR.xr(arCfg);
+function arHautText() { $('arHaut').textContent = SYS.haut.modus === 'aus' ? 'Haut an' : 'Haut aus'; }
+$('arHaut').onclick = function () {
+  if (SYS.haut.modus === 'aus') systemModus('haut', hautAlt);
+  else { hautAlt = SYS.haut.modus; systemModus('haut', 'aus'); }
+  arHautText();
+};
+$('arBig').addEventListener('click', function () {
+  var max = AR.scale === arCfg.stufen[arCfg.stufen.length - 1];
+  if (max && !arBigAlt) Kern.toast('Lebensgro\u00df \u2013 am besten auf den Boden stellen.');
+  arBigAlt = max;
+});
+$('arSmall').addEventListener('click', function () { arBigAlt = false; });
+$('bAR').onclick = function () { if (fz) return; AR.start(); };
+AR.check();
+
+function loop(now, frame) {
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -1190,6 +1252,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  AR.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   orbit.loesen();
   canvas.removeEventListener('click', canvasKlick);
@@ -1209,6 +1272,7 @@ organ.abbauen = function () {
 return bauen().then(function () {
   if (abgebaut) return;
   App.aufbauMs = Math.round(performance.now() - t0);
+  arCfg.fuss = -new THREE.Box3().setFromObject(wurzel).min.y;   /* Fusssohlen stehen auf der Flaeche */
   if (umg.von && VON[umg.von] && STR[VON[umg.von]]) rueckkehr(VON[umg.von]);   /* Rueckweg aus einem Detailmodell */
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
