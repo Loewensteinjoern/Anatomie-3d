@@ -146,7 +146,11 @@ var Kern = window.Kern = window.Kern || {};
   /* USDZ fuer AR Quick Look: Momentaufnahme der aktuellen Ansicht.
      cfg: name, creator, datei, gruppen, skala, beschriftung(f4) (optional,
      liefert { mats, meshes, png } oder null; Rueckruf laeuft nach den
-     Teilen und darf Welt-Matrizen vorher aktualisieren) */
+     Teilen und darf Welt-Matrizen vorher aktualisieren).
+     Material mit userData.usdzOp (Zahl): Der Wert gilt in der USDZ als Deckkraft
+     (ersetzt op); mit usdzOp wird ein Material nur bei usdzOp <= 0 weggelassen,
+     die Schwelle opacity < 0.3 gilt nur ohne usdzOp. Z. B. fuer Glas, das nur
+     im Shader durchsichtig ist. Ohne usdzOp bleibt alles wie bisher. */
   AR.usdz = function (cfg) {
     var name = cfg.name, skala = cfg.skala;
     var meshes = [], mats = [], txt = [];
@@ -161,7 +165,7 @@ var Kern = window.Kern = window.Kern || {};
         var grs = Array.isArray(m.material) && g.groups.length ? g.groups : [{ start: 0, count: idx ? idx.length : pos.count, materialIndex: 0 }];
         m.updateWorldMatrix(true, false); nmat.getNormalMatrix(m.matrixWorld);
         grs.forEach(function (gr) {
-          var mt = list[gr.materialIndex]; if (!mt || !mt.visible || mt.opacity < 0.3) return;
+          var mt = list[gr.materialIndex]; if (!mt || !mt.visible || (typeof mt.userData.usdzOp === 'number' ? mt.userData.usdzOp <= 0 : mt.opacity < 0.3)) return;
           var map = new Map(), P = [], N = [], I = [], cr = 0, cg = 0, cb = 0, cn = 0;
           for (var t = gr.start; t < gr.start + gr.count; t++) {
             var vi = idx ? idx[t] : t, ni = map.get(vi);
@@ -178,7 +182,7 @@ var Kern = window.Kern = window.Kern || {};
           }
           if (I.length < 3) return;
           var c = cn ? [cr / cn, cg / cn, cb / cn] : [mt.color.r, mt.color.g, mt.color.b];
-          var mi = mats.length; mats.push({ c: c, r: mt.roughness === undefined ? 0.6 : mt.roughness, op: mt.userData.glass ? 1 : Math.min(1, mt.opacity) });
+          var mi = mats.length; mats.push({ c: c, r: mt.roughness === undefined ? 0.6 : mt.roughness, op: typeof mt.userData.usdzOp === 'number' ? Math.min(1, mt.userData.usdzOp) : (mt.userData.glass ? 1 : Math.min(1, mt.opacity)) });
           meshes.push({ P: P, N: N, I: I, m: mi, ds: mt.side === THREE.DoubleSide });
         });
       });

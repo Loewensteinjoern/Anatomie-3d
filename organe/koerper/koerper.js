@@ -1200,6 +1200,7 @@ var arCfg = {
   stufen: [0.0015, 0.0025, 0.004, 0.006, 0.01], skala: 0.0025,   /* 27 / 45 / 72 / 108 / 180 cm; 0.01 = lebensgross */
   fuss: 0,                                                      /* Fusssohlen unter dem Ursprung; wird nach dem Aufbau gesetzt */
   hintergrund: 0x0b171c,
+  quickLook: function () { arQuickLook(); },
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
   knoepfe: ['arEnd', 'arHaut', 'arLab', 'arSmall', 'arBig', 'arPlace'],
   beimStart: function () {
@@ -1256,6 +1257,35 @@ $('arBig').addEventListener('click', function () {
   arBigAlt = max;
 });
 $('arSmall').addEventListener('click', function () { arBigAlt = false; });
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme des Koerpers ---- */
+function usdzBuild() {
+  /* Glas ist nur im Shader durchsichtig (opacity 1): in der USDZ Deckkraft ueber userData.usdzOp */
+  var gesetzt = [];
+  Object.keys(SYS).forEach(function (k) {
+    SYS[k].mats.forEach(function (x) {
+      if (!x.userData.gu) return;
+      x.userData.usdzOp = SYS[k].modus === 'glas' ? 0.15 : 0.3;
+      gesetzt.push(x);
+    });
+  });
+  try {
+    return Kern.AR.usdz({
+      name: 'Koerper', creator: 'Koerper 3D - ' + Kern.WM, datei: 'koerper.usda', skala: 0.0025,
+      gruppen: [wurzel],
+      beschriftung: function (f4) {
+        var v = new THREE.Vector3();
+        wurzel.updateWorldMatrix(true, false);
+        return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(wurzel.matrixWorld); return [v.x * 0.0025, v.y * 0.0025, v.z * 0.0025]; });
+      }
+    });
+  } finally {
+    gesetzt.forEach(function (x) { delete x.userData.usdzOp; });
+  }
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Der K\u00f6rper \u00f6ffnet sich in AR Quick Look. Mit zwei Fingern l\u00e4sst er sich vergr\u00f6\u00dfern und drehen.' });
+}
+App.usdzBuild = usdzBuild;
 $('bAR').onclick = function () { if (fz) return; AR.start(); };
 AR.check();
 
