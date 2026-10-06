@@ -20,7 +20,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Export GLB/STL mit Signatur | ✓ | ✓ |
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
-| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` | – (Niere folgt in Phase 2) |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | – (Niere folgt in Phase 2) |
 
 Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
@@ -41,14 +41,14 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
 - Ein Modul pro Organ: Geometrie, Strukturliste, Simulation, Lupen-Inhalte, Hilfetexte, Krankheitsbilder.
 - Inhalte (Namen, Texte, Quizfragen) als Daten getrennt vom Code.
 - Organe werden erst beim Öffnen geladen.
-- Eine einzige Seite: Körper und Organe teilen sich eine 3D-Szene (Renderer, Licht, Kamera, Kern). Beim Antippen eines Organs fliegt die Kamera hin, die Organdatei wird per eingefügtem `<script>` nachgeladen (funktioniert auch per `file://`), das Organ wird an seiner Stelle im Körper eingesetzt und der Körper ausgeblendet; „Zurück“ baut es wieder ab. Ebenso eine Ebene tiefer (Niere → Nephron).
+- Eine einzige Seite: Körper und Organe teilen sich eine 3D-Szene (Renderer, Licht, Kamera, Kern). Beim Antippen eines Organs fliegt die Kamera im Körper in die Startansicht des Detailmodells (`organ.start`), die Organdatei wird per eingefügtem `<script>` nachgeladen (funktioniert auch per `file://`), der Körper wird abgebaut und das Detailmodell darunter aufgebaut; ein Standbild des letzten Bildes verdeckt den Wechsel und wird weich ausgeblendet. Das Detailmodell liegt nicht gleichzeitig mit dem Körper in der Szene; „Zurück“ baut es ab und fährt im Körper aus dem Nahbild zur Ganzkörperansicht. Ebenso eine Ebene tiefer (Niere → Nephron).
 - Jedes Organ-Modul hat feste Andockpunkte, z. B. `aufbauen(szene, bereich)`, `abbauen()`, Bedienelemente, Beschriftung, Kamera-Ansichten; der Rahmen ruft sie auf.
 - Jede Ansicht hat eine eigene Adresse (`#herz`, `#niere/nephron`): Zurück-Knopf des Browsers, Lesezeichen und Links direkt auf ein Organ funktionieren.
 - Regeln gegen die Nachteile einer einzigen Seite:
   - Speicher: `abbauen()` räumt das Organ vollständig weg (Geometrien, Materialien, Texturen, Bedienelemente); es ist immer nur ein Detail-Organ geladen.
   - Keine gegenseitige Störung: jedes Organ in eigenem Namensraum im Code; sein CSS gilt nur in seinem Bereich (z. B. unter einer Organ-Klasse am Rahmen).
   - Fehler abfangen: scheitert das Laden oder Aufbauen eines Organs, erscheint „Organ konnte nicht geladen werden“, Körper und Rahmen bleiben bedienbar.
-  - Wartezeit: Laden und Aufbau starten schon während der Kamerafahrt, mit Fortschrittsanzeige; erneutes Öffnen in derselben Sitzung nutzt die bereits geladene Datei.
+  - Wartezeit: das Organ-Skript wird schon im Körper geladen (beim Herz), CSS und Aufbau starten nach der Kamerafahrt unter dem Standbild, mit leiser Ladeanzeige (`#boot.leise`); erneutes Öffnen in derselben Sitzung nutzt die bereits geladene Datei.
   - Umbau in kleinen Schritten mit Vergleichsbildern (`tools/vergleich.js`), wie in Phase 0.
   - Prüfung der Übergänge: `tools/vergleich.js` bekommt Abläufe wie Körper → Organ → zurück.
 - Offline: Die App läuft weiterhin ohne Server und ohne Build-Schritt (Ordner/ZIP, `index.html` doppelklicken). Zusätzlich wird sie eine installierbare Web-App (PWA: Manifest mit Name und Symbol, Service Worker als Offline-Speicher): einmal über GitHub Pages öffnen, „Zum Startbildschirm hinzufügen“, danach ohne Internet nutzbar – auch mit AR. Der Service Worker speichert alle Organdateien vorab, damit auch noch nicht geöffnete Organe offline funktionieren.
@@ -103,7 +103,15 @@ organe/niere/             Niere + Nephron
   - `tools/vergleich.js`: Modell `koerper` (Desktop, Handy, Datei, Abbau); Übergänge starten im Körper
 - [x] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
   - je System „an / glas / aus“ (Haut, Skelett, Nerven, Sinnesorgane, Hormone, Kreislauf, Atmung, Verdauung, Harnsystem), „Alle sichtbar“; Muskeln und weitere Systeme kommen mit ihren Modulen dazu
-- [ ] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
+- [x] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
+  - Standbild beim Wechsel (`Kern.standbild` in `core/rahmen.js`, `core/atlas.js`, `<canvas id="uebergang">`, `#boot.leise`): das letzte Bild bleibt stehen, das neue Organ baut sich darunter mit leiser Ladeanzeige auf, danach blendet das Standbild in ca. 400 ms per `requestAnimationFrame` aus (keine CSS-Transition, wegen der virtuellen Zeit in `vergleich.js`); Direktaufruf ohne vorheriges Organ zeigt wie bisher das Vollbild-`#boot`, bei Fehler verschwindet das Standbild sofort
+  - `Kern.organStarten(name, opt)`: `opt.von` kommt als `umg.von` (voriges Organ) beim Organ an
+  - Herz: neuer Andockpunkt `organ.start(w, h)` (Startansicht: Kamera in Herz-Koordinaten und View-Offset bei geschlossener Karte; Hilfsfunktionen `fokusVersatz`, `handyAbstand`, Konstante `START`); Herz-Modell bleibt bytegleich
+  - Körper: der Knopf der Infokarte startet eine Kamerafahrt (1200 ms): Herz genau in die Startansicht des Herz-Modells (`organ.start` + `HERZ_V`), Nieren in eine Nahansicht der linken Niere von hinten; alle anderen Strukturen und die Bedienelemente blenden dabei aus, danach wird die Adresse gesetzt
+  - Rückweg (`umg.von`): der Körper startet im Nahbild und fährt nach 450 ms zur Ganzkörperansicht zurück; danach pixelgleich zum frisch geladenen Körper
+  - Organe ohne Detailmodell: ausgegrauter Knopf „Detailmodell in Arbeit“ in der Infokarte; Organe mit Detailmodell tragen in der Strukturliste das Zeichen „3D“
+  - Verworfen: Körper-Renderer mit `alpha` (wie das Herz), damit beim Wechsel kein neuer WebGL-Kontext nötig wäre; die Handy-Aufnahmen des Körpers waren damit nicht bytegleich (Skalierung des Canvas mit Alphakanal, bis 15/255). Beim Wechsel Körper ↔ Herz legt der Rahmen weiter Canvas und Renderer neu an, das Standbild verdeckt das
+  - `tools/vergleich.js`: `atlas:uebergaenge` mit Bildern `fahrt-herz` und `rueckfahrt` und Prüfung des Endzustands (Standbild weg, keine inline-Styles an `#organ`-Kindern); neuer Kontext `atlas:uebergaenge-nephron` (Körper → Nephron → zurück); `atlas:fehler` mit Fall „Ladefehler nach der Fahrt“ (`herz.css` blockiert)
 - [ ] AR für den ganzen Körper
 - [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
 - [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
