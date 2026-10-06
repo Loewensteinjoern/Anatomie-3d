@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* =====================================================================
-   Vergleichsaufnahmen für Herz (index.html) und Nephron (nephron.html)
+   Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Herz und Nephron
 
-   Prüft, ob beide Modelle nach einer Änderung genauso aussehen und
-   funktionieren wie vorher.
+   Prüft, ob die Modelle nach einer Änderung genauso aussehen und
+   funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Herz und Nephron
+   werden im Atlas aufgenommen (index.html#herz, index.html#nephron).
 
      node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
@@ -15,6 +16,9 @@
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
+   In den Modellen herz und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
+   virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
+   von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
 
    Kontext abbau (Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -22,17 +26,15 @@
    Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
    Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
 
-   Modell atlas (atlas.html, lädt das Organ per Adresse #herz / #nephron nach):
-   Die Kontexte herz-desktop, herz-handy, herz-datei, herz-szenarien, nephron-desktop,
-   nephron-handy und nephron-datei wiederholen die Abläufe der Einzelseiten 1:1 (bei
-   verstecktem Zurück-Knopf). `vergleichen` vergleicht ihre Bilder, Exporte, Seitentexte
-   und Konsolen innerhalb von <nachher> bytegenau mit dem Gegenstück (z. B. atlas-herz-desktop-01-uebersicht
-   mit herz-desktop-01-uebersicht; Diff-Bilder: diff/atlas-…-gegen.png) und zusätzlich
-   mit <vorher>. Die Kontexte uebergaenge (Auswahl, Wechsel, Zurück-Knopf des Browsers, Messwerte
-   m1 und m2 müssen gleich sein), fehler (unbekannte Adresse, Ladefehler, Neuversuch) und
-   auswahl-handy haben kein Gegenstück und sind nur anzusehen. Erwartete Fehlermeldungen
-   des Kontexts fehler werden gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel
-   hineingemischt, so lassen sich Einzelseite und Atlas getrennt aufnehmen.
+   Modell atlas (index.html ohne Adresse): Die Kontexte uebergaenge (Auswahl, Wechsel,
+   Zurück-Knopf des Browsers, Messwerte m1 und m2 müssen gleich sein), fehler (unbekannte
+   Adresse, Ladefehler, Neuversuch) und auswahl-handy haben kein Gegenstück und sind nur
+   anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   alten Adressen nephron.html, atlas.html#herz und atlas.html: Ziel-Adresse muss stimmen,
+   das Organ muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
+   gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
+   Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
+   früheren atlas-herz-desktop usw.), meldet `vergleichen` als entfallen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -369,7 +371,7 @@ const MODELLE = {
     }
   },
   nephron: {
-    datei: 'nephron.html',
+    datei: 'index.html',
     bereit: () => document.getElementById('boot').classList.contains('gone'),
     kontexte: {
       desktop: { opt: DESKTOP, async ablauf(t) {
@@ -418,7 +420,7 @@ const MODELLE = {
   }
 };
 
-/* Modell atlas: Kontexte, die die Einzelseiten-Abläufe wiederholen (gegen = Gegenstück), und eigene Abläufe */
+/* Bereitschaft im Atlas; herz und nephron laufen auf index.html#herz / #nephron */
 const ATLAS_BEREIT = (organ) => ({
   herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
@@ -426,16 +428,11 @@ const ATLAS_BEREIT = (organ) => ({
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_START = () => !document.getElementById('atlasStart').hidden;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-MODELLE.atlas = { datei: 'atlas.html', kontexte: {} };
-for (const [organ, kontexte] of [['herz', ['desktop', 'handy', 'datei', 'szenarien']], ['nephron', ['desktop', 'handy', 'datei']]]) {
-  for (const k of kontexte) {
-    const Q = MODELLE[organ].kontexte[k];
-    MODELLE.atlas.kontexte[organ + '-' + k] = {
-      opt: Q.opt, lokal: Q.lokal, init: (Q.init || []).concat([initAtlasZurueckAus]), ablauf: Q.ablauf,
-      adresse: '#' + organ, organ, exportPraefix: true, bereit: ATLAS_BEREIT(organ), gegen: { modell: organ, kontext: k }
-    };
-  }
+for (const organ of ['herz', 'nephron']) {
+  MODELLE[organ].bereit = ATLAS_BEREIT(organ);
+  for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
+MODELLE.atlas = { datei: 'index.html', kontexte: {} };
 /* Kontext uebergaenge: Auswahl, Wechsel zwischen den Organen, Zurück-Knopf des Browsers; Messwerte vorher/nachher */
 MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: ATLAS_START, async ablauf(t) {
   const messen = () => t.js(() => {
@@ -477,6 +474,22 @@ MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: 
     await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_START);
     await t.js(() => { location.hash = 'herz'; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'herz', 'herz'); await t.weiter(1500); await t.bild('herz-nach-fehler');
   } };
+/* Kontexte weiterleitung / weiterleitung-datei: die alten Adressen leiten auf index.html weiter */
+const WEITERLEITUNG = { async ablauf(t) {
+  const faelle = [['nephron.html', 'index.html#nephron', 'nephron', 'nephron'], ['atlas.html#herz', 'index.html#herz', 'herz', 'herz'], ['atlas.html', 'index.html', null, 'auswahl']];
+  const res = {}; let gleich = true;
+  for (const [von, soll, organ, bild] of faelle) {
+    await t.gehe(von);
+    await t.warteUrl(/index\.html/);
+    await t.warteAuf(organ ? ATLAS_BEREIT(organ) : ATLAS_START, organ);
+    await t.weiter(organ ? 1500 : 300); await t.bild(bild);
+    const ist = t.url(); res[von] = ist; if (ist !== soll) gleich = false;
+    process.stdout.write('  ' + von + ' -> ' + ist + (ist === soll ? '' : ' (erwartet ' + soll + ')') + '\n');
+  }
+  t.erg.weiterleitung = Object.assign(t.erg.weiterleitung || {}, { [t.kname]: { ziele: res, gleich } });
+} };
+MODELLE.atlas.kontexte.weiterleitung = { opt: DESKTOP, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
+MODELLE.atlas.kontexte['weiterleitung-datei'] = { opt: DESKTOP, lokal: true, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
 /* Kontext auswahl-handy: die Auswahl im Handy-Layout */
 MODELLE.atlas.kontexte['auswahl-handy'] = { opt: HANDY, bereit: ATLAS_START, async ablauf(t) { await t.weiter(300); await t.bild('auswahl'); } };
 
@@ -522,7 +535,10 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   let nr = 0;
   const weiter = (ms, frameMs) => page.evaluate(([a, b]) => window.__zeit.weiter(a, b), [ms, frameMs || 50]);
   const t = {
-    erg,
+    erg, kname,
+    gehe: (rel) => page.goto((K.lokal ? 'file://' + wurzel + '/' : basis) + rel),
+    url: () => page.url().replace(K.lokal ? 'file://' + wurzel + '/' : basis, ''),
+    warteUrl: (re) => page.waitForURL(re),
     weiter: (ms) => weiter(ms, 50),
     ruhe: (ms) => weiter(ms, 500),                 /* Zeit verstreichen lassen, wenige Frames */
     klick: (sel) => page.click(sel),
@@ -572,9 +588,11 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     }
   };
   try {
-    const url = (K.lokal ? 'file://' + path.join(wurzel, M.datei) : basis + M.datei) + (K.adresse || '');
-    await page.goto(url);
-    await t.warteAuf(K.bereit || M.bereit, K.organ);
+    if (!K.ohneStart) {
+      const url = (K.lokal ? 'file://' + path.join(wurzel, M.datei) : basis + M.datei) + (K.adresse || '');
+      await page.goto(url);
+      await t.warteAuf(K.bereit || M.bereit, K.organ);
+    }
     await K.ablauf(t);
   } catch (e) {
     erg.abbruch[kname] = e.message.split('\n')[0];
@@ -603,7 +621,7 @@ async function aufnehmen(ziel, wurzel, nur) {
       const e = erg.modelle[mname] || (erg.modelle[mname] = { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} });
       for (const kname of Object.keys(M.kontexte)) {
         if (nurK && nurK !== kname) continue;
-        for (const k of Object.keys(e.bilder)) if (k.startsWith(kname + '-')) delete e.bilder[k];   /* frühere Aufnahme dieses Kontexts ersetzen */
+        for (const k of Object.keys(e.bilder)) if (k.startsWith(kname + '-') && !Object.keys(M.kontexte).some((x) => x !== kname && x.startsWith(kname + '-') && k.startsWith(x + '-'))) delete e.bilder[k];   /* frühere Aufnahme dieses Kontexts ersetzen */
         delete e.text[kname]; delete e.abbruch[kname]; if (e.erwartet) delete e.erwartet[kname];
         process.stdout.write(mname + ' · ' + kname + '\n');
         await kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, M.kontexte[kname], e);
@@ -658,8 +676,16 @@ async function vergleichen(va, vb) {
   };
   for (const m of new Set(Object.keys(A.modelle).concat(Object.keys(B.modelle)))) {
     const neuM = !A.modelle[m] && !!B.modelle[m];       /* Modell nur in <nachher>: keine Referenz */
-    const a = A.modelle[m] || { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} }, b = B.modelle[m];
+    let a = A.modelle[m] || { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} }; const b = B.modelle[m];
     if (!b) { probleme.push(m + ': fehlt in ' + vb); continue; }
+    /* Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen: entfallen, kein Unterschied */
+    if (MODELLE[m]) {
+      const alle = Object.keys(a.konsole).filter((x) => !(x in MODELLE[m].kontexte)).sort((x, y) => y.length - x.length);
+      const entf = (k) => alle.find((x) => k === x || k.startsWith(x + '-'));
+      const fil = (o) => { const r = {}; for (const k of Object.keys(o)) if (!entf(k)) r[k] = o[k]; return r; };
+      for (const x of alle.slice().sort()) ok.push(m + '-' + x + ': entfallen (nur in Referenz)');
+      a = Object.assign({}, a, { bilder: fil(a.bilder), exporte: fil(a.exporte), text: fil(a.text), konsole: fil(a.konsole) });
+    }
     for (const k of Object.keys(b.abbruch)) probleme.push(m + '-' + k + ': Abbruch – ' + b.abbruch[k]);
     let gleich = 0;
     for (const k of Object.keys(a.bilder)) {
@@ -679,6 +705,11 @@ async function vergleichen(va, vb) {
     if (b.uebergaenge) {
       if (b.uebergaenge.gleich === false) probleme.push(m + ' Übergänge: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.uebergaenge));
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
+    }
+    for (const [k, w] of Object.entries(b.weiterleitung || {})) {
+      if (!w.gleich) probleme.push(m + ' Weiterleitung ' + k + ': falsches Ziel\n    ' + JSON.stringify(w.ziele));
+      else if (a.weiterleitung && a.weiterleitung[k] && JSON.stringify(a.weiterleitung[k].ziele) !== JSON.stringify(w.ziele)) probleme.push(m + ' Weiterleitung ' + k + ': Ziele anders');
+      else ok.push(m + ' Weiterleitung ' + k + ': Ziele stimmen');
     }
     if (b.abbau) {
       if (b.abbau.gleich === false) probleme.push(m + ' Abbau: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.abbau));
