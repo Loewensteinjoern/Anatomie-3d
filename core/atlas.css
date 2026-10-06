@@ -5,6 +5,12 @@
 #boot{position:fixed;inset:0;z-index:50;background:var(--bg-deep);display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:12px;font-size:12px;color:var(--ink-dim)}
 
+/* Standbild des alten Organs beim Wechsel (deckt den Aufbau des neuen ab, #boot liegt darueber) */
+#uebergang{position:fixed;inset:0;width:100%;height:100%;z-index:49;pointer-events:auto}
+#uebergang[hidden]{display:none}
+/* leise Ladeanzeige: ueber dem Standbild, ohne Hintergrund, unten mittig */
+#boot.leise{background:transparent;justify-content:flex-end;padding-bottom:48px;pointer-events:none}
+
 #atlasFehler{top:50%;left:50%;transform:translate(-50%,-50%);width:min(380px,calc(100vw - 32px));padding:20px 22px;z-index:60}
 #atlasFehler b{display:block;font-size:14px;color:var(--brass)}
 #atlasFehler small{display:block;margin:8px 0 14px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);word-break:break-word}

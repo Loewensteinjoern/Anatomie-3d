@@ -2395,6 +2395,26 @@ var MARKUP = `<div id="title">
 var organ = { renderer: { alpha: true }, aufbauen: aufbauen };
 /* Formbausteine fuer andere Organe (Koerper-Modell): nur Verweise, nichts wird ausgefuehrt */
 organ.form = { sdf: HeartSDF, mesher: HeartMesher, assemble: HeartAssemble, extras: HeartExtras };
+/* Startansicht (Kamera in Herz-Koordinaten, cm) und Bildbereich: gemeinsam fuer das Modell und den Andockpunkt organ.start (Kamerafahrt aus dem Koerper) */
+var START = { theta: 0.0, phi: 1.52, dist: 34.5, target: [0.4, 1.0, -1.2] };
+function fokusVersatz(w, h, karte) {
+  if (w < 1000) { var top = 170, bot = h - h * 0.34 - 150; return { x: 0, y: h / 2 - (top + Math.max(top + 120, bot)) / 2 }; }
+  var xMin = 282 + 150, xMax = w - 22 - 160 - (karte ? 342 : 0);
+  return { x: w / 2 - (xMin + xMax) / 2, y: h / 2 - (96 + h - 30) / 2 };
+}
+/* Handy-Abstand der Startansicht (nur w < 1000) */
+function handyAbstand(w, h) {
+  var free = Math.max(160, (h - h * 0.34 - 150) - 170), pxcm = free / 17.5, fd = h / (2 * Math.tan(19 * Math.PI / 180) * pxcm);
+  var wcm = (w - 40) / 14.5, fdw = h / (2 * Math.tan(19 * Math.PI / 180) * wcm);
+  return Math.max(fd, fdw);
+}
+/* Startansicht bei Fenstergroesse w x h und geschlossener Karte: Kamera und View-Offset (Pixel) */
+organ.start = function (w, h) {
+  var d = START.dist;
+  if (w < 1000) { var nd = handyAbstand(w, h); if (Math.abs(nd - 34.5) > 0.5) d = START.dist * nd / 34.5; }
+  var o = fokusVersatz(w, h, false);
+  return { theta: START.theta, phi: START.phi, dist: d, target: START.target.slice(), versatz: [o.x, o.y] };
+};
 function aufbauen(umg) {
 'use strict';
 umg.bereich.innerHTML = MARKUP;
@@ -2421,7 +2441,7 @@ var clipMats = [], clipMatsPv = [], clipMatsErl = [], CLIP_ERL = new THREE.Plane
 var CLIP0 = CLIP.clone(), CLIP_PV0 = CLIP_PV.clone(), CLIP_ERL0 = CLIP_ERL.clone();
 var scene = umg.szene;
 var camera = umg.kamera;
-var view = { theta: 0.0, phi: 1.52, dist: 34.5, target: V(0.4, 1.0, -1.2) };
+var view = { theta: START.theta, phi: START.phi, dist: START.dist, target: V(START.target[0], START.target[1], START.target[2]) };
 
 var envTex = umg.envTex;
 
@@ -3911,11 +3931,7 @@ $('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
    10. Renderschleife
    ===================================================================== */
 var focusX = 0, focusGoal = 0;
-function focusOffset(w, h) {
-  if (w < 1000) { var top = 170, bot = h - h * 0.34 - 150; return { x: 0, y: h / 2 - (top + Math.max(top + 120, bot)) / 2 }; }
-  var xMin = 282 + 150, xMax = w - 22 - 160 - (cardOpen() ? 342 : 0);
-  return { x: w / 2 - (xMin + xMax) / 2, y: h / 2 - (96 + h - 30) / 2 };
-}
+function focusOffset(w, h) { return fokusVersatz(w, h, cardOpen()); }
 function applyOffset() {
   var w = window.innerWidth, h = window.innerHeight, o = focusOffset(w, h);
   focusGoal = o.x;
@@ -3929,9 +3945,7 @@ function fitRail() {
 function groesse(w, h) {
   focusX = focusOffset(w, h).x; applyOffset();
   if (w < 1000) {
-    var free = Math.max(160, (h - h * 0.34 - 150) - 170), pxcm = free / 17.5, fd = h / (2 * Math.tan(19 * Math.PI / 180) * pxcm);
-    var wcm = (w - 40) / 14.5, fdw = h / (2 * Math.tan(19 * Math.PI / 180) * wcm);
-    var nd = Math.max(fd, fdw);
+    var nd = handyAbstand(w, h);
     if (Math.abs(nd - fitDist) > 0.5) { view.dist *= nd / fitDist; fitDist = nd; }
   } else if (fitDist !== 34.5) { view.dist *= 34.5 / fitDist; fitDist = 34.5; }
   fitRail();

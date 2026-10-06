@@ -115,7 +115,6 @@ var MARKUP = `<div id="title">
   <span class="lat" id="iLat"></span>
   <p id="iTx"></p>
   <button class="gh" id="iOpen" style="display:none"></button>
-  <div class="hint" id="iHint">Detailmodell in Arbeit</div>
 </div>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
@@ -742,7 +741,7 @@ async function organe() {
    ===================================================================== */
 var t0;
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
-var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
+var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, oeffnen: oeffnen, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
@@ -780,6 +779,7 @@ function hervorheben(id) {
   });
 }
 function waehle(id) {
+  if (fz) return;
   if (id && (!STR[id] || SYS[STR[id].def.system].modus === 'aus')) id = null;
   gewaehlt = id; lv++;
   hervorheben(id);
@@ -791,9 +791,9 @@ function waehle(id) {
   $('iDe').textContent = d.de;
   $('iLat').textContent = d.lat;
   $('iTx').textContent = d.text;
-  $('iOpen').style.display = d.oeffnen ? '' : 'none';
-  $('iOpen').textContent = d.knopf || 'Detailmodell öffnen';
-  $('iHint').style.display = d.oeffnen ? 'none' : '';
+  $('iOpen').style.display = '';
+  $('iOpen').disabled = !d.oeffnen;
+  $('iOpen').textContent = d.oeffnen ? (d.knopf || 'Detailmodell öffnen') : 'Detailmodell in Arbeit';
   box.classList.add('show');
   if (rows[id]) rows[id].scrollIntoView({ block: 'nearest' });
 }
@@ -857,7 +857,7 @@ function systemModus(id, m) {
     STRUKTUREN.filter(function (d) { return d.system === sd.id; }).forEach(function (d) {
       var row = document.createElement('div');
       row.className = 'row'; row.id = 'row-' + d.id; row.tabIndex = 0;
-      row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b><i></i></span>';
+      row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b><i></i></span>' + (d.oeffnen ? '<span class="mdl" title="Detailmodell vorhanden">3D</span>' : '');
       row.querySelector('.sw').style.background = hex6(sd.farbe);
       row.querySelector('b').textContent = d.de;
       row.querySelector('i').textContent = d.lat;
@@ -874,17 +874,14 @@ function systemModus(id, m) {
 })();
 
 $('bCls').onclick = function () { waehle(null); };
-$('iOpen').onclick = function () {
-  var d = gewaehlt && STR[gewaehlt].def;
-  if (d && d.oeffnen) location.hash = d.oeffnen;
-};
-function taste(e) { if (e.key === 'Escape') waehle(null); }
+$('iOpen').onclick = function () { oeffnen(gewaehlt); };
+function taste(e) { if (fz) return; if (e.key === 'Escape') waehle(null); }
 document.addEventListener('keydown', taste);
 
 /* Antippen im 3D: nur sichtbare Systeme; durchsichtige und die Haut zaehlen nur, wenn nichts Dichteres getroffen wird */
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function canvasKlick(e) {
-  if (orbit.dragged) return;
+  if (orbit.dragged || fz) return;
   var r = canvas.getBoundingClientRect();
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
@@ -1071,10 +1068,119 @@ function layoutLabels(w, h) {
   });
 }
 
+/* =====================================================================
+   9. Kamerafahrt zum Organ (Knopf der Infokarte): alles ausser dem Organ blendet aus,
+   die Kamera landet in der Startansicht des Detailmodells, dann wird die Adresse gesetzt
+   ===================================================================== */
+/* Ziel je Struktur: Kamera in Koerper-Koordinaten (cm); ext = Breite und Hoehe (cm), die im freien Bereich Platz finden sollen */
+var ZIELE = {
+  herz: { theta: 0, phi: 1.52, dist: 34.5, target: [0.4 + HERZ_V[0], 1.0 + HERZ_V[1], -1.2 + HERZ_V[2]] },   /* Startansicht des Herz-Modells (Ersatz, wenn das Herz-Modul fehlt) */
+  nieren: { theta: PI, phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von hinten */
+};
+var fz = null;   /* laufende Fahrt */
+function zielFuer(id, w, h) {
+  var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
+  var hz = Kern.Organe && Kern.Organe.herz;
+  if (id === 'herz' && hz && hz.start) {
+    var st = hz.start(w, h);
+    return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
+  }
+  return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
+}
+/* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
+var VON = { herz: 'herz', nephron: 'nieren' };
+/* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
+function ausblendVorbereiten(id) {
+  /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
+  var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
+  STR[id].meshes.forEach(function (m) { m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  wurzel.traverse(function (o) {
+    if (zielObj.has(o) || !o.material || !o.visible) return;
+    var ms = [].concat(o.material), frei = true;
+    ms.forEach(function (x) { if (keep.has(x)) frei = false; });
+    if (!frei) { o.visible = false; sofort.push(o); return; }   /* teilt ein Material mit dem Organ: sofort weg */
+    ausObj.push(o);
+    ms.forEach(function (x) { if (!ausMat.has(x)) { ausMat.set(x, x.opacity); altT.set(x, x.transparent); x.transparent = true; x.needsUpdate = true; } });
+  });
+  var ui = Array.prototype.slice.call(umg.bereich.children);
+  var altUi = ui.map(function (e) { return { op: e.style.opacity, pe: e.style.pointerEvents }; });
+  ui.forEach(function (e) { e.style.pointerEvents = 'none'; });
+  canvas.style.pointerEvents = 'none';
+  labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+  return { mats: ausMat, altT: altT, obj: ausObj, sofort: sofort, ui: ui, altUi: altUi, fertig: false };
+}
+function oeffnen(id) {
+  var d = id && STR[id] && STR[id].def;
+  if (fz || abgebaut || !d || !d.oeffnen || !ZIELE[id]) return;
+  var w = window.innerWidth, h = window.innerHeight, ziel = zielFuer(id, w, h), r = bereich(w, h);
+  var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
+  hervorheben(null);
+  var f = ausblendVorbereiten(id);
+  orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);
+  f.hin = true; f.id = id; f.adresse = d.oeffnen; f.a = orbit.anim;
+  f.von = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2]; f.nach = ziel.versatz;
+  fz = f;
+}
+/* Rueckkehr aus dem Detailmodell: Koerper steht im Nahbild der Struktur, alles andere ist ausgeblendet; die Fahrt zur Ganzkoerperansicht beginnt nach 450 ms */
+function rueckkehr(id) {
+  var w = window.innerWidth, h = window.innerHeight, ziel = zielFuer(id, w, h), r = bereich(w, h);
+  var f = ausblendVorbereiten(id);
+  f.mats.forEach(function (op, m) { m.opacity = 0; });
+  f.ui.forEach(function (e) { e.style.opacity = '0'; });
+  f.obj.forEach(function (o) { o.visible = false; });
+  view.theta = ziel.theta; view.phi = ziel.phi; view.dist = ziel.dist; view.target.copy(ziel.target);
+  orbit.anim = null;
+  f.hin = false; f.id = id; f.a = null; f.warte = performance.now() + 450;
+  f.von = ziel.versatz; f.nach = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
+  camera.setViewOffset(w, h, f.von[0], f.von[1], w, h);
+  camera.updateProjectionMatrix();
+  fz = f;
+}
+function rueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
+  var w = window.innerWidth, h = window.innerHeight, r = bereich(w, h), a0 = AUSSCHNITTE[0], d = distFuer(a0, w, h);
+  fz.mats.forEach(function (op, m) { m.opacity = op; if (m.transparent !== fz.altT.get(m)) { m.transparent = fz.altT.get(m); m.needsUpdate = true; } });
+  fz.obj.forEach(function (o) { o.visible = true; });
+  fz.sofort.forEach(function (o) { o.visible = true; });
+  fz.ui.forEach(function (e, i) { e.style.opacity = fz.altUi[i].op; e.style.pointerEvents = fz.altUi[i].pe; });
+  canvas.style.pointerEvents = '';
+  labelBox.style.display = zeigeLabels ? '' : 'none'; leaderSvg.style.display = zeigeLabels ? '' : 'none';
+  view.theta = fz.a.t.theta; view.phi = PI / 2; view.dist = d; view.target.copy(a0.target);
+  orbit.anim = null;
+  camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
+  camera.updateProjectionMatrix();
+  aktiv = 0; fitDist = d;
+  for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === 0);
+  lv++;
+  fz = null;
+}
+/* je Bild waehrend der Fahrt: Bildbereich und Deckkraft mit derselben Glaettung wie die Kamera */
+function fahrtBild(now) {
+  if (!fz.a && now >= fz.warte) {   /* Rueckfahrt beginnt: zur Ganzkoerperansicht, kuerzester Weg beim Drehen */
+    var w0 = window.innerWidth, h0 = window.innerHeight, a0 = AUSSCHNITTE[0];
+    var dth = a0.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI;
+    orbit.anim = fz.a = Kern.fahrt(view, { theta: view.theta + dth, phi: PI / 2, dist: distFuer(a0, w0, h0), target: a0.target }, 1200);
+    fz.obj.forEach(function (o) { o.visible = true; });
+  }
+  var t = fz.a ? Math.min(1, Math.max(0, (now - fz.a.t0) / fz.a.d)) : 0, s = t * t * (3 - 2 * t), f = fz.hin ? 1 - s : s;
+  var w = window.innerWidth, h = window.innerHeight;
+  camera.setViewOffset(w, h, fz.von[0] + (fz.nach[0] - fz.von[0]) * s, fz.von[1] + (fz.nach[1] - fz.von[1]) * s, w, h);
+  camera.updateProjectionMatrix();
+  fz.mats.forEach(function (op, m) { m.opacity = op * f; });
+  fz.ui.forEach(function (e) { e.style.opacity = String(f); });
+  if (!fz.hin) { if (t >= 1) rueckEnde(); return false; }
+  if (t >= 1 && !fz.fertig) { fz.fertig = true; fz.obj.forEach(function (o) { o.visible = false; }); return false; }
+  return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
+}
+
 function loop(now) {
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
+  var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
   renderer.render(scene, camera);
+  if (fz) {
+    if (weiter && fz.hin && !fz.gesetzt) { fz.gesetzt = true; location.hash = fz.adresse; }   /* Endbild ist gezeichnet */
+    return;
+  }
   layoutLabels(window.innerWidth, window.innerHeight);
 }
 organ.bild = loop; organ.groesse = groesse;
@@ -1082,6 +1188,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  fz = null; canvas.style.pointerEvents = '';
   orbit.loesen();
   canvas.removeEventListener('click', canvasKlick);
   document.removeEventListener('keydown', taste);
@@ -1100,6 +1207,7 @@ organ.abbauen = function () {
 return bauen().then(function () {
   if (abgebaut) return;
   App.aufbauMs = Math.round(performance.now() - t0);
+  if (umg.von && VON[umg.von] && STR[VON[umg.von]]) rueckkehr(VON[umg.von]);   /* Rueckweg aus einem Detailmodell */
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
