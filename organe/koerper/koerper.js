@@ -116,7 +116,7 @@ var MARKUP = `<div id="title">
   <p id="iTx"></p>
   <button class="gh" id="iOpen" style="display:none"></button>
 </div>`;
-var organ = { renderer: { alpha: true }, aufbauen: aufbauen }; /* wie das Herz: kein neuer WebGL-Kontext beim Wechsel Koerper <-> Herz */
+var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
 var canvas = umg.canvas, renderer = umg.renderer, scene = umg.szene, camera = umg.kamera, envTex = umg.envTex;
 umg.bereich.innerHTML = MARKUP;
