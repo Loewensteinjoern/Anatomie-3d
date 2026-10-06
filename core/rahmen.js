@@ -15,7 +15,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis ladbarer Organe (Name -> Titel, Seitentitel, Skript, CSS) */
   K.ORGANE = {
     herz: { titel: 'Herz', seitentitel: 'Herz \u2013 Herzh\u00f6hlen, Klappen und Windkessel', skript: 'organe/herz/herz.js', css: 'organe/herz/herz.css' },
-    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css' }
+    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css' },
+    koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
 
   /* Organ-Modul anmelden. def:
