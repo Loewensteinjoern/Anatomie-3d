@@ -115,7 +115,6 @@ var MARKUP = `<div id="title">
   <span class="lat" id="iLat"></span>
   <p id="iTx"></p>
   <button class="gh" id="iOpen" style="display:none"></button>
-  <div class="hint" id="iHint">Detailmodell in Arbeit</div>
 </div>`;
 var organ = { renderer: { alpha: true }, aufbauen: aufbauen }; /* wie das Herz: kein neuer WebGL-Kontext beim Wechsel Koerper <-> Herz */
 function aufbauen(umg) {
@@ -792,9 +791,9 @@ function waehle(id) {
   $('iDe').textContent = d.de;
   $('iLat').textContent = d.lat;
   $('iTx').textContent = d.text;
-  $('iOpen').style.display = d.oeffnen ? '' : 'none';
-  $('iOpen').textContent = d.knopf || 'Detailmodell öffnen';
-  $('iHint').style.display = d.oeffnen ? 'none' : '';
+  $('iOpen').style.display = '';
+  $('iOpen').disabled = !d.oeffnen;
+  $('iOpen').textContent = d.oeffnen ? (d.knopf || 'Detailmodell öffnen') : 'Detailmodell in Arbeit';
   box.classList.add('show');
   if (rows[id]) rows[id].scrollIntoView({ block: 'nearest' });
 }
@@ -858,7 +857,7 @@ function systemModus(id, m) {
     STRUKTUREN.filter(function (d) { return d.system === sd.id; }).forEach(function (d) {
       var row = document.createElement('div');
       row.className = 'row'; row.id = 'row-' + d.id; row.tabIndex = 0;
-      row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b><i></i></span>';
+      row.innerHTML = '<span class="sw dot"></span><span class="nm"><b></b><i></i></span>' + (d.oeffnen ? '<span class="mdl" title="Detailmodell vorhanden">3D</span>' : '');
       row.querySelector('.sw').style.background = hex6(sd.farbe);
       row.querySelector('b').textContent = d.de;
       row.querySelector('i').textContent = d.lat;
