@@ -1030,8 +1030,8 @@ LISTEN.forEach(function (l) {
 $('bLab').onclick = function () {
   zeigeLabels = !zeigeLabels;
   this.classList.toggle('on', zeigeLabels);
-  labelBox.style.display = zeigeLabels ? '' : 'none';
-  leaderSvg.style.display = zeigeLabels ? '' : 'none';
+  labelBox.style.display = (zeigeLabels && !inAR) ? '' : 'none';   /* in AR bleibt die HTML-Ebene aus */
+  leaderSvg.style.display = (zeigeLabels && !inAR) ? '' : 'none';
   lv++;
 };
 
@@ -1206,10 +1206,11 @@ var arCfg = {
     inAR = true; App.ar = true;
     camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
     labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
-    arHautText();
+    arHautText(); arLabText();
   },
   beimEnde: function () {
     inAR = false; App.ar = false;
+    ARL.ausblenden();
     camera.near = 2; camera.far = 1200;
     labelBox.style.display = zeigeLabels ? '' : 'none'; leaderSvg.style.display = zeigeLabels ? '' : 'none';
     var w = window.innerWidth, h = window.innerHeight;
@@ -1226,6 +1227,29 @@ $('arHaut').onclick = function () {
   else { hautAlt = SYS.haut.modus; systemModus('haut', 'aus'); }
   arHautText();
 };
+function arLabText() { $('arLab').textContent = zeigeLabels ? 'Beschriftung aus' : 'Beschriftung an'; }
+$('arLab').hidden = false;
+$('arLab').onclick = function () { $('bLab').click(); arLabText(); };
+/* ---- Beschriftung in AR: Schilder mit Fuehrungslinien (Kern.AR.schilder), Strukturen der Ganzkoerperansicht ---- */
+var ARL_EINTR = LISTEN[0].map(function (e) {
+  var id = typeof e === 'string' ? e : e[0], d = STR[id].def;
+  return { a: { s: { id: id, de: KURZ[id] || d.de, lat: d.lat } }, id: id, p: typeof e === 'string' ? ANKER[id] : [e[1], e[2], e[3]] };
+});
+var ARL = Kern.AR.schilder({
+  root: wurzel, renderer: renderer, camera: camera, xr: AR,
+  name: 'Koerper', anzahl: LISTEN[0].length,
+  masse: { mitte: 0, spalte: 52, hoehe: 7.5, abstand: 9, z: 12, oben: 172, unten: 70, px: 128,
+    knick: 4, luecke: 0.6, punkt: 0.7, band: 0.15, punktBand: 0.6, anker: 0.2, schwelle: 2 },
+  liste: function () {
+    var out = [];
+    if (!zeigeLabels) return out;
+    ARL_EINTR.forEach(function (e) {
+      if (SYS[STR[e.id].def.system].modus !== 'aus') out.push({ a: e.a, p: e.p });
+    });
+    return out;
+  },
+  auswahl: function () { return gewaehlt; }
+});
 $('arBig').addEventListener('click', function () {
   var max = AR.scale === arCfg.stufen[arCfg.stufen.length - 1];
   if (max && !arBigAlt) Kern.toast('Lebensgro\u00df \u2013 am besten auf den Boden stellen.');
@@ -1236,7 +1260,7 @@ $('bAR').onclick = function () { if (fz) return; AR.start(); };
 AR.check();
 
 function loop(now, frame) {
-  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }
+  if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -1252,7 +1276,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  AR.abbauen();
+  AR.abbauen(); ARL.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   orbit.loesen();
   canvas.removeEventListener('click', canvasKlick);
