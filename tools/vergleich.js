@@ -5,7 +5,7 @@
    Prüft, ob beide Modelle nach einer Änderung genauso aussehen und
    funktionieren wie vorher.
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -21,6 +21,18 @@
    Kern.organBeenden). Gemessen werden nach jedem Abbau Speicher, Szene, DOM und
    Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
    Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
+
+   Modell atlas (atlas.html, lädt das Organ per Adresse #herz / #nephron nach):
+   Die Kontexte herz-desktop, herz-handy, herz-datei, herz-szenarien, nephron-desktop,
+   nephron-handy und nephron-datei wiederholen die Abläufe der Einzelseiten 1:1 (bei
+   verstecktem Zurück-Knopf). `vergleichen` vergleicht ihre Bilder, Exporte, Seitentexte
+   und Konsolen innerhalb von <nachher> bytegenau mit dem Gegenstück (z. B. atlas-herz-desktop-01-uebersicht
+   mit herz-desktop-01-uebersicht; Diff-Bilder: diff/atlas-…-gegen.png) und zusätzlich
+   mit <vorher>. Die Kontexte uebergaenge (Auswahl, Wechsel, Zurück-Knopf des Browsers, Messwerte
+   m1 und m2 müssen gleich sein), fehler (unbekannte Adresse, Ladefehler, Neuversuch) und
+   auswahl-handy haben kein Gegenstück und sind nur anzusehen. Erwartete Fehlermeldungen
+   des Kontexts fehler werden gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel
+   hineingemischt, so lassen sich Einzelseite und Atlas getrennt aufnehmen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -144,6 +156,13 @@ function initListener() {
 function initQuickLook() {
   const sup = DOMTokenList.prototype.supports;
   DOMTokenList.prototype.supports = function (t) { return t === 'ar' ? true : sup.call(this, t); };
+}
+
+/* Atlas: Zurück-Knopf ausblenden, damit Bilder und Seitentext mit der Einzelseite vergleichbar sind */
+function initAtlasZurueckAus() {
+  const s = document.createElement('style');
+  s.textContent = '#atlasZurueck{display:none !important}';
+  document.addEventListener('DOMContentLoaded', () => document.head.appendChild(s));   /* beim Init-Skript gibt es noch kein <head> */
 }
 
 /* WebXR: nachgebildetes AR-Gerät. Kamera 0,9 m vor einer Tischfläche,
@@ -399,6 +418,68 @@ const MODELLE = {
   }
 };
 
+/* Modell atlas: Kontexte, die die Einzelseiten-Abläufe wiederholen (gegen = Gegenstück), und eigene Abläufe */
+const ATLAS_BEREIT = (organ) => ({
+  herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
+})[organ];
+const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
+const ATLAS_START = () => !document.getElementById('atlasStart').hidden;
+const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
+MODELLE.atlas = { datei: 'atlas.html', kontexte: {} };
+for (const [organ, kontexte] of [['herz', ['desktop', 'handy', 'datei', 'szenarien']], ['nephron', ['desktop', 'handy', 'datei']]]) {
+  for (const k of kontexte) {
+    const Q = MODELLE[organ].kontexte[k];
+    MODELLE.atlas.kontexte[organ + '-' + k] = {
+      opt: Q.opt, lokal: Q.lokal, init: (Q.init || []).concat([initAtlasZurueckAus]), ablauf: Q.ablauf,
+      adresse: '#' + organ, organ, exportPraefix: true, bereit: ATLAS_BEREIT(organ), gegen: { modell: organ, kontext: k }
+    };
+  }
+}
+/* Kontext uebergaenge: Auswahl, Wechsel zwischen den Organen, Zurück-Knopf des Browsers; Messwerte vorher/nachher */
+MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], bereit: ATLAS_START, async ablauf(t) {
+  const messen = () => t.js(() => {
+    const R = Kern.Rahmen, kinder = (id) => { const e = document.getElementById(id); return e ? e.childNodes.length : null; };
+    return {
+      geometrien: R ? R.renderer.info.memory.geometries : null, texturen: R ? R.renderer.info.memory.textures : null,
+      programme: R ? R.renderer.info.programs.length : null, szene: R ? R.szene.children.map((c) => c.type + (c.name ? ':' + c.name : '')) : null,
+      organ: kinder('organ'), organKlasse: document.getElementById('organ').className, labels: kinder('labels'), leaders: kinder('leaders'),
+      bodyKinder: [...document.body.children].filter((e) => e.tagName !== 'SCRIPT').length, bodyKlasse: document.body.className,
+      titel: document.title, cssLinks: [...document.querySelectorAll('link[data-organ]')].map((l) => l.getAttribute('data-organ')),
+      listener: window.__listener()
+    };
+  });
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(300); await t.bild('auswahl');
+  await t.klick('#atlasStart a[href="#herz"]'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
+  await t.zurueck(); await t.echt(100); await t.warteAuf(ATLAS_START); await t.weiter(500); await t.bild('auswahl-zurueck');
+  const m1 = await messen();
+  await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
+  await t.js(() => { location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-nach-nephron');
+  await t.js(() => { location.hash = 'nephron'; location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-schnell');
+  await t.js(() => { location.hash = ''; }); await t.echt(100); await t.warteAuf(ATLAS_START); await t.weiter(500);
+  const m2 = await messen();
+  const felder = Object.keys(m1).filter((k) => JSON.stringify(m1[k]) !== JSON.stringify(m2[k]));
+  t.erg.uebergaenge = { m1, m2, gleich: !felder.length };
+  process.stdout.write('  uebergaenge: ' + (felder.length ? 'ABWEICHUNG in ' + felder.join(', ') : 'gleich') + '\n');
+  for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
+} };
+/* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
+MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
+  erwartet: [/Unbekanntes Organ: gibtsnicht/, /konnte nicht geladen werden/, /^nicht geladen: organe\/herz\/herz\.js \(net::ERR_FAILED\)/, /^error: Failed to load resource: net::ERR_FAILED/],
+  async ablauf(t) {
+    await t.weiter(300); await t.bild('unbekannt');
+    await t.blockiere('**/organe/herz/herz.js');
+    await t.js(() => { location.hash = 'herz'; }); await t.echt(300);
+    await t.warteAuf(() => !document.getElementById('atlasFehler').hidden && /Herz/.test(document.getElementById('atlasFehlerText').textContent));
+    await t.weiter(300); await t.bild('ladefehler');
+    await t.freigeben('**/organe/herz/herz.js');
+    await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_START);
+    await t.js(() => { location.hash = 'herz'; }); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'herz', 'herz'); await t.weiter(1500); await t.bild('herz-nach-fehler');
+  } };
+/* Kontext auswahl-handy: die Auswahl im Handy-Layout */
+MODELLE.atlas.kontexte['auswahl-handy'] = { opt: HANDY, bereit: ATLAS_START, async ablauf(t) { await t.weiter(300); await t.bild('auswahl'); } };
+
 /* =====================================================================
    3. Aufnehmen
    ===================================================================== */
@@ -431,10 +512,12 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   const page = await ctx.newPage();
   page.setDefaultTimeout(20000);
   const log = []; erg.konsole[kname] = log;
-  page.on('console', (m) => { const s = m.type() + ': ' + normLog(m.text()); if (!RAUSCHEN.test(s)) log.push(s); });
-  page.on('pageerror', (e) => log.push('Seitenfehler: ' + e.message));
-  page.on('requestfailed', (q) => log.push('nicht geladen: ' + q.url().replace(basis, '') + ' (' + (q.failure() || {}).errorText + ')'));
-  page.on('response', (r) => { if (r.status() >= 400) log.push('nicht geladen: ' + r.url().replace(basis, '') + ' (' + r.status() + ')'); });
+  /* erwartete Meldungen (nur Kontext fehler) werden gesondert gezählt */
+  const melde = (s) => { if (K.erwartet && K.erwartet.some((re) => re.test(s))) { const x = erg.erwartet || (erg.erwartet = {}); x[kname] = (x[kname] || 0) + 1; } else log.push(s); };
+  page.on('console', (m) => { const s = m.type() + ': ' + normLog(m.text()); if (!RAUSCHEN.test(s)) melde(s); });
+  page.on('pageerror', (e) => melde('Seitenfehler: ' + e.message));
+  page.on('requestfailed', (q) => melde('nicht geladen: ' + q.url().replace(basis, '') + ' (' + (q.failure() || {}).errorText + ')'));
+  page.on('response', (r) => { if (r.status() >= 400) melde('nicht geladen: ' + r.url().replace(basis, '') + ' (' + r.status() + ')'); });
 
   let nr = 0;
   const weiter = (ms, frameMs) => page.evaluate(([a, b]) => window.__zeit.weiter(a, b), [ms, frameMs || 50]);
@@ -443,6 +526,17 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     weiter: (ms) => weiter(ms, 50),
     ruhe: (ms) => weiter(ms, 500),                 /* Zeit verstreichen lassen, wenige Frames */
     klick: (sel) => page.click(sel),
+    echt: warte,                                   /* echte Zeit, die virtuelle steht (Atlas: Nachladen) */
+    zurueck: () => page.goBack(),
+    blockiere: (muster) => page.route(muster, (r) => r.abort()),
+    freigeben: (muster) => page.unroute(muster),
+    /* warten, bis fn(arg) wahr ist; ist organ gesetzt, zuerst in echter Zeit, bis dessen Skript und CSS
+       nachgeladen sind (die virtuelle Zeit steht, sonst hinge der Aufbau von der Ladezeit ab) */
+    async warteAuf(fn, organ, arg) {
+      const t0 = Date.now(), zu = () => { if (Date.now() - t0 > 300000) throw new Error('Seite wurde nicht fertig aufgebaut'); };
+      if (organ) while (!(await page.evaluate((n) => { const l = document.querySelector('link[data-organ="' + n + '"]'); return !!(Kern.Organe[n] && l && l.getAttribute('data-geladen')); }, organ))) { zu(); await warte(20); }
+      while (!(await page.evaluate(fn, arg))) { zu(); await weiter(50, 50); }
+    },
     taste: (k) => page.keyboard.press(k),
     js: (fn, arg) => page.evaluate(fn, arg),
     async bild(name) {
@@ -456,6 +550,7 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     async text() { erg.text[kname] = sha(await page.evaluate(() => document.body.innerText)); },
     /* Klick, Zeit bis zum Download (nur virtuelle Timer der Seite), dann echt warten */
     async export(sel, key, virt) {
+      if (K.exportPraefix) key = kname + '-' + key;
       const n0 = await page.evaluate(() => window.__downloads.length);
       await page.click(sel); await weiter(virt || 100, 50);
       const t0 = Date.now();
@@ -477,13 +572,9 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     }
   };
   try {
-    const url = K.lokal ? 'file://' + path.join(wurzel, M.datei) : basis + M.datei;
+    const url = (K.lokal ? 'file://' + path.join(wurzel, M.datei) : basis + M.datei) + (K.adresse || '');
     await page.goto(url);
-    const t0 = Date.now();
-    while (!(await page.evaluate(M.bereit))) {
-      if (Date.now() - t0 > 300000) throw new Error('Seite wurde nicht fertig aufgebaut');
-      await weiter(50, 50);
-    }
+    await t.warteAuf(K.bereit || M.bereit, K.organ);
     await K.ablauf(t);
   } catch (e) {
     erg.abbruch[kname] = e.message.split('\n')[0];
@@ -499,14 +590,21 @@ async function aufnehmen(ziel, wurzel, nur) {
   fs.mkdirSync(path.join(ziel, 'export'), { recursive: true });
   const srv = await server(wurzel), basis = 'http://127.0.0.1:' + srv.address().port + '/';
   const browser = await pw.chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: CHROMIUM_ARGS });
-  const erg = { quelle: wurzel, browser: browser.version(), modelle: {} };
+  let erg = { quelle: wurzel, browser: browser.version(), modelle: {} };
   const [nurM, nurK] = (nur || '').split(':');
+  /* mit --nur wird in ein vorhandenes Ergebnis hineingemischt (Einzelseite und Atlas getrennt aufnehmen) */
+  const alt = path.join(ziel, 'ergebnis.json');
+  if (nur && fs.existsSync(alt)) { erg = JSON.parse(fs.readFileSync(alt, 'utf8')); erg.quelle = wurzel; erg.browser = browser.version(); }
   try {
     for (const mname of Object.keys(MODELLE)) {
       if (nurM && nurM !== mname) continue;
-      const M = MODELLE[mname], e = erg.modelle[mname] = { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} };
+      const M = MODELLE[mname];
+      if (!fs.existsSync(path.join(wurzel, M.datei))) { process.stdout.write(mname + ' · übersprungen (' + M.datei + ' fehlt)\n'); continue; }
+      const e = erg.modelle[mname] || (erg.modelle[mname] = { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} });
       for (const kname of Object.keys(M.kontexte)) {
         if (nurK && nurK !== kname) continue;
+        for (const k of Object.keys(e.bilder)) if (k.startsWith(kname + '-')) delete e.bilder[k];   /* frühere Aufnahme dieses Kontexts ersetzen */
+        delete e.text[kname]; delete e.abbruch[kname]; if (e.erwartet) delete e.erwartet[kname];
         process.stdout.write(mname + ' · ' + kname + '\n');
         await kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, M.kontexte[kname], e);
       }
@@ -550,8 +648,17 @@ async function vergleichen(va, vb) {
   const probleme = [], ok = [];
   let page = null, browser = null;
   const durl = (dir, f) => 'data:image/png;base64,' + fs.readFileSync(path.join(dir, 'bilder', f)).toString('base64');
-  for (const m of Object.keys(A.modelle)) {
-    const a = A.modelle[m], b = B.modelle[m];
+  const diffBild = async (ka, kb, name, titel) => {   /* zwei Bilder aus <nachher> vergleichen; Diff nach diff/<name>.png */
+    if (!page) { browser = await ladePlaywright().chromium.launch({ executablePath: process.env.CHROMIUM || undefined }); page = await browser.newPage(); }
+    const d = await pixelDiff(page, durl(vb, ka + '.png'), durl(vb, kb + '.png'));
+    if (d.anders < 0) { probleme.push(titel + ': andere Bildgröße ' + d.groesse.join('×')); return; }
+    fs.mkdirSync(path.join(vb, 'diff'), { recursive: true });
+    fs.writeFileSync(path.join(vb, 'diff', name + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
+    probleme.push(titel + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + name + '.png)');
+  };
+  for (const m of new Set(Object.keys(A.modelle).concat(Object.keys(B.modelle)))) {
+    const neuM = !A.modelle[m] && !!B.modelle[m];       /* Modell nur in <nachher>: keine Referenz */
+    const a = A.modelle[m] || { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} }, b = B.modelle[m];
     if (!b) { probleme.push(m + ': fehlt in ' + vb); continue; }
     for (const k of Object.keys(b.abbruch)) probleme.push(m + '-' + k + ': Abbruch – ' + b.abbruch[k]);
     let gleich = 0;
@@ -566,14 +673,19 @@ async function vergleichen(va, vb) {
       probleme.push(m + '-' + k + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + m + '-' + k + '.png)');
     }
     /* Kontexte ohne Aufnahme in <vorher> (z. B. abbau, oder dort ohne Bilder aufgenommen) haben keine Referenz: nur listen */
-    const neuK = (k) => !Object.keys(a.bilder).some((x) => x.split('-')[0] === k.split('-')[0]);
+    const kontextVon = (k) => { const n = Object.keys((MODELLE[m] || { kontexte: {} }).kontexte).filter((x) => k.startsWith(x + '-')).sort((x, y) => y.length - x.length)[0]; return n || k.split('-')[0]; };
+    const neuK = (k) => !Object.keys(a.bilder).some((x) => kontextVon(x) === kontextVon(k));
     for (const k of Object.keys(b.bilder)) if (!(k in a.bilder)) { if (neuK(k)) ok.push(m + '-' + k + ': neu (keine Referenz)'); else probleme.push(m + '-' + k + ': neues Bild'); }
+    if (b.uebergaenge) {
+      if (b.uebergaenge.gleich === false) probleme.push(m + ' Übergänge: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.uebergaenge));
+      else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
+    }
     if (b.abbau) {
       if (b.abbau.gleich === false) probleme.push(m + ' Abbau: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.abbau));
       else if (b.abbau.gleich === null) ok.push(m + ' Abbau: nicht vorhanden (alter Stand)');
       else ok.push(m + ' Abbau: Messwerte gleich (neu, keine Referenz)');
     }
-    ok.push(m + ': ' + gleich + ' von ' + Object.keys(a.bilder).length + ' Bildern bytegleich');
+    if (neuM) ok.push(m + ': neu (keine Referenz in ' + va + ')'); else ok.push(m + ': ' + gleich + ' von ' + Object.keys(a.bilder).length + ' Bildern bytegleich');
     for (const k of Object.keys(a.exporte)) {
       const x = a.exporte[k], y = b.exporte[k];
       if (!y) probleme.push(m + ' Export ' + k + ': fehlt');
@@ -582,8 +694,36 @@ async function vergleichen(va, vb) {
     }
     const vgl = (titel, x, y) => { if (JSON.stringify(x) === JSON.stringify(y)) ok.push(m + ' ' + titel + ': gleich'); else probleme.push(m + ' ' + titel + ': anders\n    vorher:  ' + JSON.stringify(x) + '\n    nachher: ' + JSON.stringify(y)); };
     vgl('AR (WebXR-Anfrage)', a.ar, b.ar);
-    vgl('Seitentext', a.text, b.text);
-    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) if (!(k in a.konsole)) { const z = (b.konsole[k] || []); if (z.length) probleme.push(m + ' Konsole ' + k + ' (neu): ' + z.join(' | ')); else ok.push(m + ' Konsole ' + k + ': neu (keine Referenz), ohne Meldungen'); } else vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
+    const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
+    for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
+    vgl('Seitentext', a.text, textB);
+    for (const k of new Set(Object.keys(a.konsole).concat(Object.keys(b.konsole)))) if (!(k in a.konsole)) { const z = (b.konsole[k] || []); if (((MODELLE[m] || { kontexte: {} }).kontexte[k] || {}).gegen) ok.push(m + ' Konsole ' + k + ': neu, Gegenstück wird gesondert geprüft'); else if (z.length) probleme.push(m + ' Konsole ' + k + ' (neu): ' + z.join(' | ')); else ok.push(m + ' Konsole ' + k + ': neu (keine Referenz), ohne Meldungen'); } else vgl('Konsole ' + k, (a.konsole[k] || []).slice().sort(), (b.konsole[k] || []).slice().sort());
+    for (const k of Object.keys(b.erwartet || {})) ok.push(m + ' Konsole ' + k + ': ' + b.erwartet[k] + ' erwartete Fehlermeldungen (nicht verglichen)');
+    /* Gegenstück: Atlas-Kontexte wiederholen die Einzelseiten-Abläufe und müssen innerhalb von <nachher> bytegleich sein */
+    for (const [kn, K] of Object.entries((MODELLE[m] || { kontexte: {} }).kontexte)) {
+      if (!K.gegen || !(kn in b.konsole)) continue;
+      const g = B.modelle[K.gegen.modell], gn = K.gegen.kontext, titel = m + '-' + kn + ' ↔ ' + K.gegen.modell + '-' + gn;
+      if (!g) { ok.push(titel + ': Gegenstück nicht aufgenommen'); continue; }
+      const gm = K.gegen.modell;
+      let n = 0, gl = 0;
+      for (const k of Object.keys(b.bilder).filter((x) => x.startsWith(kn + '-'))) {
+        const gk = k.slice(gm.length + 1);                   /* herz-desktop-01-x -> desktop-01-x */
+        n++;
+        if (!(gk in g.bilder)) { probleme.push(titel + ': Gegenstück-Bild ' + gk + ' fehlt'); continue; }
+        if (g.bilder[gk] === b.bilder[k]) { gl++; continue; }
+        await diffBild(gm + '-' + gk, m + '-' + k, m + '-' + k + '-gegen', titel + ' ' + k);
+      }
+      if (n) for (const k of Object.keys(g.bilder).filter((x) => x.startsWith(gn + '-'))) if (!((gm + '-' + k) in b.bilder)) probleme.push(titel + ': Bild ' + k + ' fehlt im Atlas');
+      for (const k of Object.keys(b.exporte).filter((x) => x.startsWith(kn + '-'))) {
+        const x = g.exporte[k.slice(kn.length + 1)], y = b.exporte[k];
+        if (!x) probleme.push(titel + ' Export ' + k + ': Gegenstück fehlt');
+        else if (x.sha256 !== y.sha256 || x.name !== y.name) probleme.push(titel + ' Export ' + k + ': anders (' + x.name + ' ' + x.bytes + ' B → ' + y.name + ' ' + y.bytes + ' B)');
+        else ok.push(titel + ' Export ' + k + ': bytegleich (' + x.bytes + ' Bytes)');
+      }
+      if (kn in b.text) { if (g.text[gn] === b.text[kn]) ok.push(titel + ' Seitentext: gleich'); else probleme.push(titel + ' Seitentext: anders'); }
+      if (kn in b.konsole) { const x = (g.konsole[gn] || []).slice().sort(), y = (b.konsole[kn] || []).slice().sort(); if (JSON.stringify(x) === JSON.stringify(y)) ok.push(titel + ' Konsole: gleich'); else probleme.push(titel + ' Konsole: anders\n    Einzelseite: ' + JSON.stringify(x) + '\n    Atlas:       ' + JSON.stringify(y)); }
+      ok.push(titel + ': ' + gl + ' von ' + n + ' Bildern bytegleich');
+    }
     if (b.lokalWieHttp === false) probleme.push(m + ': file:// sieht anders aus als über HTTP');
   }
   if (browser) await browser.close();
@@ -604,7 +744,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur herz|nephron|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }
