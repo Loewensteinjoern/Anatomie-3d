@@ -9,8 +9,9 @@ Die App ist eine statische Webanwendung ohne Installation und ohne Build-Schritt
 - **Online (GitHub Pages):** In den Repository-Einstellungen unter *Settings → Pages* als Quelle den Branch `main` und den Ordner `/ (root)` wählen. Die App ist dann erreichbar unter
   `https://loewensteinjoern.github.io/Herz-3d/`
 
-`index.html` ist der Anatomie-Atlas. Ohne Zusatz zeigt er die Startauswahl, die Organe liegen unter
+`index.html` ist der Anatomie-Atlas. Ohne Zusatz (oder mit `#koerper`) zeigt er den Körper mit Organsystemen und Organen; die Detailmodelle liegen unter
 
+- `index.html#koerper` – Körper (Startansicht, auch ohne Zusatz)
 - `index.html#herz` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
 - `index.html#nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
@@ -19,9 +20,10 @@ Die alten Adressen `nephron.html` und `atlas.html` leiten auf den Atlas weiter.
 ### Dateien
 
 ```
-index.html                 Atlas: HTML-Rahmen, lädt die Organe per Adresse (#herz, #nephron)
+index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #nephron)
 nephron.html, atlas.html   Weiterleitungen auf index.html
-core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, export.js, ar.js, szenarien.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
+core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, export.js, ar.js, szenarien.js, sdf.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
+organe/koerper/            koerper.css, koerper.js – Gestaltung und App-Code des Körpers (Startansicht)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
 organe/niere/              nephron.css, nephron.js – Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert

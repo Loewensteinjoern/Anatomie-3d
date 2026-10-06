@@ -1,10 +1,12 @@
 /* ==========================================================================
    Gemeinsamer Kern - Atlas: Adresssteuerung der Rahmenseite index.html
    Klassisches Skript (kein Modul). Liest den Teil nach # der Adresse
-   (#herz, #nephron), laedt das Organ per Kern.organLaden nach, startet es
-   im Rahmen und baut es beim Wechsel oder bei leerer Adresse wieder ab.
-   Zurueck zur Auswahl: location.hash = '' (neuer Verlaufseintrag, daher
-   fuehrt auch der Zurueck-Knopf des Browsers sauber zum vorigen Organ).
+   (#herz, #nephron, #koerper), laedt das Organ per Kern.organLaden nach,
+   startet es im Rahmen und baut es beim Wechsel wieder ab. Leere Adresse
+   und #koerper zeigen den Koerper (Startansicht); die Adresse wird dafuer
+   nicht veraendert. Zurueck zum Koerper: location.hash = '' (neuer
+   Verlaufseintrag, daher fuehrt auch der Zurueck-Knopf des Browsers sauber
+   zum vorigen Organ).
    ========================================================================== */
 (function (K) {
   'use strict';
@@ -28,25 +30,16 @@
     beenden();
     $('boot').classList.add('gone');
     $('atlasFehlerText').textContent = (e && e.message) || String(e);
-    zeige($('atlasStart'), false);
     zeige($('atlasZurueck'), false);
     zeige($('atlasFehler'), true);
     document.title = 'Anatomie-Atlas';
   }
 
   function route() {
+    var name = decodeURIComponent(location.hash.replace(/^#/, '')) || 'koerper';
+    if (name === aktuell && $('atlasFehler').hasAttribute('hidden')) return;   /* gleiche Ansicht (z. B. '' und #koerper) */
     var nr = ++zaehler;
-    var name = decodeURIComponent(location.hash.replace(/^#/, ''));
     beenden();
-    if (!name) {
-      $('boot').classList.add('gone');
-      zeige($('atlasFehler'), false);
-      zeige($('atlasZurueck'), false);
-      zeige($('atlasStart'), true);
-      document.title = 'Anatomie-Atlas';
-      return;
-    }
-    zeige($('atlasStart'), false);
     zeige($('atlasFehler'), false);
     zeige($('atlasZurueck'), false);
     var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
@@ -60,7 +53,7 @@
       if (nr !== zaehler) return;
       $('organ').className = 'organ-' + name;
       document.title = e.seitentitel;
-      zeige($('atlasZurueck'), true);
+      zeige($('atlasZurueck'), name !== 'koerper');   /* im Koerper selbst gibt es kein Zurueck */
       return K.organStarten(name);
     }).then(function () {
       if (nr !== zaehler) return;
@@ -68,10 +61,13 @@
     }).catch(function (err) { fehler(err, nr); });
   }
 
-  function zurAuswahl() { location.hash = ''; }
+  function zumKoerper() {
+    if (location.hash.replace(/^#/, '') === '') route();   /* Adresse ist schon leer: kein hashchange, Neuversuch */
+    else location.hash = '';
+  }
 
-  $('atlasZurueck').addEventListener('click', zurAuswahl);
-  $('atlasFehlerZurueck').addEventListener('click', zurAuswahl);
+  $('atlasZurueck').addEventListener('click', zumKoerper);
+  $('atlasFehlerZurueck').addEventListener('click', zumKoerper);
   window.addEventListener('hashchange', route);
   K.Atlas = { route: route };
   route();
