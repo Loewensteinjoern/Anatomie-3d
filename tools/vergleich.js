@@ -31,7 +31,7 @@
    Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
    Bilder dieses Kontexts haben keine Referenz, sie sind nur anzusehen.
 
-   Modell atlas (index.html): Die Kontexte uebergaenge (Körper, Herz über die Infokarte,
+   Modell atlas (index.html): Die Kontexte uebergaenge (Körper, Kamerafahrt und Herz über die Infokarte,
    Zurück-Knopf des Browsers, Wechsel, leere Adresse; Messwerte m1 und m2 müssen gleich sein)
    und fehler (unbekannte Adresse, Ladefehler, „Zum Körper“, Neuversuch) haben kein Gegenstück
    und sind nur anzusehen. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
@@ -487,7 +487,7 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   });
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500); await t.bild('koerper');
-  await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
+  await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.weiter(700); await organ('herz'); await t.weiter(1500); await t.bild('herz');
   await t.zurueck(); await organ('koerper'); await t.weiter(500); await t.bild('koerper-zurueck');
   const m1 = await messen();
   await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
