@@ -367,6 +367,11 @@ MAT.saltArrow = MAT.flowSalt.clone(); MAT.saltArrow.transparent = true; MAT.salt
 MAT.waterArrow = MAT.flowWater.clone(); MAT.waterArrow.transparent = true; MAT.waterArrow.name = 'waterArrow';
 MAT.waterArrow.userData.baseEmissive = MAT.flowWater.emissive.clone();
 MAT.saltArrow.userData.baseEmissive = MAT.flowSalt.emissive.clone();
+/* Deckkraft in AR (WebXR und AR Quick Look): Tubulus und Gefaesse weniger durchsichtig als am Bildschirm.
+   userData.op merkt die Bildschirm-Deckkraft der Gefaesse; userData.usdzOp gilt als Deckkraft in der USDZ (Kern.AR.usdz) */
+var AR_DECK = { tubule: 0.6, glomerulus: 0.8, afferens: 0.8, efferens: 0.8, peritub: 0.8, vasa: 0.8 };
+var AR_GEFAESSE = ['glomerulus', 'afferens', 'efferens', 'peritub', 'vasa'];
+AR_GEFAESSE.forEach(function (k) { MAT[k].userData.op = MAT[k].opacity; MAT[k].userData.usdzOp = AR_DECK[k]; });
 
 var root = new THREE.Group();
 scene.add(root);
@@ -1230,9 +1235,12 @@ var playing = true, speed = 1, clock = 0;
 function applyVisibility() {
   root.traverse(function (o) { if (o.isMesh) o.visible = enabled[o.userData.sid]; });
   /* Durchsicht: der Tubulus wird glasig, damit man das Wasser darin fliessen sieht */
-  MAT.tubule.transparent = seeThrough; MAT.tubule.opacity = seeThrough ? 0.32 : 1;
+  MAT.tubule.transparent = seeThrough; MAT.tubule.opacity = seeThrough ? (inAR ? AR_DECK.tubule : 0.32) : 1;
   MAT.tubule.depthWrite = !seeThrough; MAT.tubule.side = seeThrough ? THREE.DoubleSide : THREE.FrontSide;
   MAT.tubule.needsUpdate = true;
+  /* AR: Gefaesse weniger durchsichtig (am Bildschirm unveraendert); die USDZ fuer AR Quick Look folgt der Durchsicht */
+  MAT.tubule.userData.usdzOp = seeThrough ? AR_DECK.tubule : 1;
+  AR_GEFAESSE.forEach(function (k) { MAT[k].opacity = inAR ? AR_DECK[k] : MAT[k].userData.op; });
   visVersion++;
 }
 function setSelected(id) {
@@ -2027,12 +2035,14 @@ var AR = Kern.AR.xr({
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
+    applyVisibility();
     document.getElementById('arSee').textContent = seeThrough ? 'Undurchsichtig' : 'Durchsichtig';
     document.getElementById('arLab').textContent = showLabels ? 'Beschriftung aus' : 'Beschriftung an';
     document.getElementById('arPause').textContent = playing ? 'Pause' : 'Weiter';
   },
   beimEnde: function () {
     inAR = false;
+    applyVisibility();
     ARL.ausblenden();
     resize();
     lastLabelKey = '';
