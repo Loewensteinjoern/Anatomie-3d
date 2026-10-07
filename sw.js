@@ -4,10 +4,11 @@
    keine Nutzerdaten und nichts zur Laufzeit. Eine neue Version wartet, bis
    die Seite per Nachricht 'aktivieren' zustimmt; die Seite, die den Worker
    zum ersten Mal anmeldet, bleibt ohne Worker (kein clients.claim).
+   VERSION setzt `node tools/version.js` (nach jeder Änderung an einer App-Datei ausführen).
    ========================================================================== */
 'use strict';
 
-var VERSION = '1';
+var VERSION = '14480d94a99f';
 var SPEICHER = 'anatomie-' + VERSION;
 
 /* Dateien der App (relativ zum Ordner von sw.js) */
