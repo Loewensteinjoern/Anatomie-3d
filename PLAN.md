@@ -141,10 +141,23 @@ organe/niere/             Niere + Nephron
 
 ### Phase 2 – Niere komplett
 
-- [ ] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße)
-- [ ] Nephron als Zoomstufe innerhalb der Niere
-- [ ] Nephron: Schema (2D-Bild wie beim Herz, z. B. Filtration, Rückresorption und Sekretion entlang des Tubulus) – Bauplan-Lücke, Wunsch von Jörn
+Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des Nephrons, Adressen, Form-Baustein der Niere, Niere (Grundgerüst), Körper → Niere, Niere → Nephron, Funktion, Lupe und Hilfe, Krankheitsbilder und Medikamente, Nephron-Schema. Jeder Schritt ist ein eigener Pull Request und wird mit `tools/vergleich.js` gegen die Referenz von `main` geprüft; Abweichungen nur, wo vereinbart.
+
 - [ ] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
+  - nur in AR (WebXR und AR Quick Look): Tubulus bei Durchsicht 60 % statt 32 % deckend; Glomerulus, Arteriolen, peritubuläre Kapillaren und Vasa recta 80 % statt 46–60 %; am Bildschirm unverändert
+- [ ] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
+- [ ] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
+- [ ] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan
+  - Frontalschnitt wie im Lehrbuch (aufgeschnitten oder geschlossen), ca. 11 cm groß
+  - Strukturen: Nierenkapsel, Rinde, Mark mit Pyramiden, Nierensäulen, Papillen, kleine und große Kelche, Nierenbecken, Anfang des Harnleiters, Nierenarterie und -vene mit Segment-, Interlobär-, Bogen- und Interlobulargefäßen, Nebenniere; ohne Fettkapsel
+  - Funktion als Simulation: Durchblutung (Arterie → Rinde → Vene) und Harnabfluss (Papille → Kelche → Becken → Harnleiter) als Teilchen, Tempo wie beim Nephron, Kennzahlen (ca. 1,2 l Blut/min, 180 l Primärharn → 1,5 l Harn am Tag)
+  - Lupe: Papille (Sammelrohre münden, Harn tropft in den Kelch); Hilfekarten
+  - Krankheitsbilder: Harnstau durch Nierenstein, Nierenarterienstenose (Renin, Bluthochdruck); Medikamente: Ramipril (ACE-Hemmer), Ibuprofen (NSAR, drosselt die Nierendurchblutung)
+  - Körper → Niere: Kamerafahrt wie zum Herz (`organ.start` der Niere); die Infokarte der Nieren im Körper zeigt „Niere öffnen“ statt „Nephron ansehen“
+- [ ] Nephron als Zoomstufe innerhalb der Niere
+  - markiertes Nephron in einer Pyramide; Knopf „Nephron ansehen“ in der Niere und Antippen des Nephrons; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt wie beim Körper
+- [ ] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
+  - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
 
 ### Phase 3 und weiter – Organ für Organ
 
@@ -179,6 +192,7 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 - [x] Zusammenhängende App: eine Seite, Organe werden in dieselbe 3D-Szene nachgeladen (statt getrennter Seiten mit Seitenwechsel); jede Ansicht mit eigener Adresse
 - [x] Erste Weitergabe an Kollegen erst als Version 1.0 mit allen Organen; bis dahin testen nur Jörn und Claude
 - [x] Offline: installierbare Web-App (PWA) als Hauptweg; Ordner/ZIP ohne Server bleibt möglich; eine Einzeldatei nur bei Bedarf als zusätzliches Werkzeug
+- [x] Phase 2: Adressen gestuft (`#niere/nephron`, alte Links leiten weiter), Niere als Frontalschnitt mit Durchblutung und Harnabfluss, Lupe an der Papille, Nephron als Zoomstufe mit Kamerafahrt, Nephron-Schema in der Form des 3D-Modells (Einzelheiten unter Phase 2)
 
 ## Arbeitsweise
 
