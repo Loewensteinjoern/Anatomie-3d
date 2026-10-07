@@ -15,9 +15,11 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 
 - `index.html#koerper` – Körper (Startansicht, auch ohne Zusatz)
 - `index.html#herz` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
-- `index.html#nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
+- `index.html#niere/nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
-Die alten Adressen `nephron.html` und `atlas.html` leiten auf den Atlas weiter.
+Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch, vom Nephron derzeit zum Körper.
+
+Die alten Adressen `index.html#nephron` und `nephron.html` leiten auf `index.html#niere/nephron` weiter, `atlas.html` auf den Atlas.
 
 ### Als App installieren (offline)
 
@@ -36,7 +38,7 @@ Für Entwickler: Nach Änderungen an App-Dateien `node tools/version.js` ausfüh
 ### Dateien
 
 ```
-index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #nephron)
+index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #niere/nephron)
 nephron.html, atlas.html   Weiterleitungen auf index.html
 sw.js, app.webmanifest     Service Worker (Offline-Speicher) und Web-App-Manifest
 icons/                     App-Symbol (symbol.svg, PNGs)

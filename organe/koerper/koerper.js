@@ -78,7 +78,7 @@ var STRUKTUREN = [
     text: 'Der Dünndarm ist etwa 3–5 m lang und gliedert sich in Zwölffingerdarm, Leerdarm und Krummdarm. Hier wird die Nahrung fertig verdaut; über die Darmzotten gelangen Nährstoffe, Wasser und Elektrolyte ins Blut und in die Lymphe.' },
   { id: 'dickdarm', de: 'Dickdarm', lat: 'Intestinum crassum', system: 'verdauung', detail: false,
     text: 'Der etwa 1,5 m lange Dickdarm rahmt den Dünndarm ein: Blinddarm mit Wurmfortsatz, aufsteigender, querer und absteigender Teil, S-förmiges Sigma und Mastdarm. Er entzieht dem Darminhalt Wasser und Salze, dickt den Stuhl ein und beherbergt die Darmflora.' },
-  { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#nephron', knopf: 'Nephron ansehen',
+  { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#niere/nephron', knopf: 'Nephron ansehen',
     text: 'Die beiden bohnenförmigen Nieren liegen hinter dem Bauchfell beiderseits der Wirbelsäule auf H\u00f6he der untersten Rippen. Sie filtern das Blut, bilden den Harn und regeln Wasser-, Salz- und Säure-Basen-Haushalt sowie den Blutdruck. Funktionseinheit ist das Nephron.' },
   { id: 'harnleiter', de: 'Harnleiter', lat: 'Ureteres', system: 'harn', detail: false,
     text: 'Die beiden 25–30 cm langen Muskelschläuche führen vom Nierenbecken zur Harnblase und befördern den Urin durch Peristaltik. An drei natürlichen Engstellen können Nierensteine hängen bleiben und Koliken auslösen.' },

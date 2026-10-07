@@ -12,11 +12,40 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis der Organ-Module (Name -> Definition) */
   K.Organe = {};
 
-  /* Verzeichnis ladbarer Organe (Name -> Titel, Seitentitel, Skript, CSS) */
+  /* Verzeichnis ladbarer Organe (Name -> Titel, Seitentitel, Skript, CSS, optional adresse und alt).
+     Der Name ist der interne Schluessel (Kern.Organe, Klasse organ-<Name>, umg.von).
+     adresse: Teil der Seitenadresse nach # (fehlt sie, gilt der Name). Gestufte Adressen wie
+       'niere/nephron' legen die Ebene fest: der Teil vor dem letzten Schraegstrich ist die Adresse
+       des uebergeordneten Organs (Kern.organEltern).
+     alt: fruehere Adressen (Liste), die auf adresse umgeleitet werden (alte Links und Lesezeichen). */
   K.ORGANE = {
     herz: { titel: 'Herz', seitentitel: 'Herz \u2013 Herzh\u00f6hlen, Klappen und Windkessel', skript: 'organe/herz/herz.js', css: 'organe/herz/herz.css' },
-    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css' },
+    nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css', adresse: 'niere/nephron', alt: ['nephron'] },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
+  };
+
+  /* Adresse eines Organs (Teil nach #): adresse, sonst der Name */
+  K.organAdresse = function (name) {
+    var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
+    return (e && e.adresse) || name;
+  };
+
+  /* Adresse -> { name, alt } oder null (unbekannt). Gesucht wird zuerst unter den
+     Adressen der Organe (adresse oder Name), dann unter den frueheren (alt: true). */
+  K.organZuAdresse = function (adr) {
+    var namen = Object.keys(K.ORGANE), i;
+    for (i = 0; i < namen.length; i++) if (K.organAdresse(namen[i]) === adr) return { name: namen[i], alt: false };
+    for (i = 0; i < namen.length; i++) if ((K.ORGANE[namen[i]].alt || []).indexOf(adr) >= 0) return { name: namen[i], alt: true };
+    return null;
+  };
+
+  /* Name des uebergeordneten Organs: das Organ, dessen Adresse der Adresse dieses Organs ohne den
+     letzten Abschnitt entspricht ('niere/nephron' -> das Organ mit der Adresse 'niere'); sonst null */
+  K.organEltern = function (name) {
+    var adr = K.organAdresse(name), i = adr.lastIndexOf('/');
+    if (i < 0) return null;
+    var z = K.organZuAdresse(adr.slice(0, i));
+    return z && !z.alt ? z.name : null;
   };
 
   /* Organ-Modul anmelden. def:
