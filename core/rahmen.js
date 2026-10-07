@@ -4,6 +4,9 @@
    angelegt, nichts aufgebaut. Organ-Dateien melden sich mit Kern.organ an.
    Kern.ORGANE/Kern.organLaden laden Organ-Skript und -CSS bei Bedarf nach
    (script/link-Elemente, daher auch per file:// moeglich).
+   Formbausteine (Kern.FORMEN, Kern.form, Kern.formLaden): die Form eines Organs
+   als eigenes Skript, das Koerper und Detailmodell gemeinsam nutzen; sie meldet
+   sich mit Kern.form an und wird ebenso nachgeladen.
    ========================================================================== */
 var Kern = window.Kern = window.Kern || {};
 (function (K) {
@@ -56,6 +59,22 @@ var Kern = window.Kern = window.Kern || {};
        abbauen()             raeumt das Organ vollstaendig weg (setzt aufbauen): Sitzungen, Listener, Timer, three.js-Objekte, DOM; Rahmen-Objekte bleiben */
   K.organ = function (name, def) {
     K.Organe[name] = def;
+    return def;
+  };
+
+  /* Verzeichnis der Formbausteine (Name -> Definition): die Form eines Organs (eine Form je Organ), die der
+     Koerper und das Detailmodell des Organs gemeinsam nutzen */
+  K.Formen = {};
+
+  /* Verzeichnis ladbarer Formen (Name -> Titel, Skript). Hat ein Organ in Kern.ORGANE denselben Namen,
+     laedt Kern.organLaden zuerst die Form und dann das Organ-Skript. */
+  K.FORMEN = {
+    niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' }
+  };
+
+  /* Formbaustein anmelden (die Form-Datei ruft das beim Laden auf; def: Funktionen und Daten der Form, je Organ eigen) */
+  K.form = function (name, def) {
+    K.Formen[name] = def;
     return def;
   };
 
@@ -146,7 +165,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Organ-Skript und -CSS nachladen (falls noch nicht geschehen). Gibt ein
      Promise zurueck, das mit der Organ-Definition (Kern.Organe[name]) erfuellt
      wird; unbekannter Name, Lade- oder Anmeldefehler lehnen es ab.
-     opt.ohneCss: nur das Skript laden (z. B. um Bausteine eines anderen Organs zu nutzen). */
+     opt.ohneCss: nur das Skript laden (z. B. um Bausteine eines anderen Organs zu nutzen).
+     Hat das Organ eine Form (Kern.FORMEN), wird sie vor dem Organ-Skript geladen. */
   var ladend = {};
 
   function cssLink(name, e) {
@@ -164,25 +184,52 @@ var Kern = window.Kern = window.Kern || {};
     return l.__p;
   }
 
+  /* Skript per script-Element einfuegen (daher auch per file:// moeglich). Gibt ein Promise zurueck, das mit dem
+     Ergebnis von angemeldet() erfuellt wird, sobald sich das Skript angemeldet hat; scheitert das Laden (das Element
+     wird dann wieder entfernt) oder fehlt die Anmeldung, wird es abgelehnt. was: 'Das Organ' bzw. 'Die Form' (Fehlertext). */
+  function skriptLaden(was, titel, url, angemeldet) {
+    return new Promise(function (ok, fehl) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function () {
+        var d = angemeldet();
+        if (d) ok(d);
+        else fehl(new Error(was + ' "' + titel + '" hat sich nicht angemeldet (' + url + ').'));
+      };
+      s.onerror = function () {
+        if (s.parentNode) s.parentNode.removeChild(s);
+        fehl(new Error(was + ' "' + titel + '" konnte nicht geladen werden (' + url + ').'));
+      };
+      (document.body || document.head).appendChild(s);
+    });
+  }
+
+  /* Formbaustein nachladen (falls noch nicht geschehen; das Skript wird je Sitzung nur einmal eingefuegt). Gibt ein
+     Promise zurueck, das mit der Form (Kern.Formen[name]) erfuellt wird; unbekannter Name, Lade- oder
+     Anmeldefehler lehnen es ab. */
+  var formLadend = {};
+
+  K.formLaden = function (name) {
+    var e = Object.prototype.hasOwnProperty.call(K.FORMEN, name) ? K.FORMEN[name] : null;
+    if (!e) return Promise.reject(new Error('Unbekannte Form: ' + name));
+    if (K.Formen[name]) return Promise.resolve(K.Formen[name]);
+    if (!formLadend[name]) {
+      formLadend[name] = skriptLaden('Die Form', e.titel, e.form, function () { return K.Formen[name]; });
+      var weg = function () { delete formLadend[name]; };
+      formLadend[name].then(weg, weg);
+    }
+    return formLadend[name];
+  };
+
   K.organLaden = function (name, opt) {
     var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
     if (!e) return Promise.reject(new Error('Unbekanntes Organ: ' + name));
     var css = opt && opt.ohneCss ? Promise.resolve() : cssLink(name, e);
     if (K.Organe[name]) return css.then(function () { return K.Organe[name]; });
     if (!ladend[name]) {
-      ladend[name] = new Promise(function (ok, fehl) {
-        var s = document.createElement('script');
-        s.src = e.skript;
-        s.onload = function () {
-          if (K.Organe[name]) ok(K.Organe[name]);
-          else fehl(new Error('Das Organ "' + e.titel + '" hat sich nicht angemeldet (' + e.skript + ').'));
-        };
-        s.onerror = function () {
-          if (s.parentNode) s.parentNode.removeChild(s);
-          fehl(new Error('Das Organ "' + e.titel + '" konnte nicht geladen werden (' + e.skript + ').'));
-        };
-        (document.body || document.head).appendChild(s);
-      });
+      var skript = function () { return skriptLaden('Das Organ', e.titel, e.skript, function () { return K.Organe[name]; }); };
+      /* hat das Organ eine Form (Kern.FORMEN), wird zuerst sie geladen, dann das Organ-Skript */
+      ladend[name] = Object.prototype.hasOwnProperty.call(K.FORMEN, name) ? K.formLaden(name).then(skript) : skript();
       var weg = function () { delete ladend[name]; };
       ladend[name].then(weg, weg);
     }

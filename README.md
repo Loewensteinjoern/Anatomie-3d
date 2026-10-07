@@ -45,7 +45,7 @@ icons/                     App-Symbol (symbol.svg, PNGs)
 core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, offline.js, export.js, ar.js, szenarien.js, sdf.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
 organe/koerper/            koerper.css, koerper.js – Gestaltung und App-Code des Körpers (Startansicht)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
-organe/niere/              nephron.css, nephron.js – Gestaltung und App-Code des Nephrons
+organe/niere/              niere-form.js, nephron.css, nephron.js – Form der Niere (eigener Baustein, den der Körper allein nachlädt), Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
 tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen

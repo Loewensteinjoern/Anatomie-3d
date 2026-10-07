@@ -5,7 +5,7 @@
    Berechnet die Version aus den Dateien der Liste DATEIEN in sw.js
    (erste 12 Hex-Zeichen von SHA-256 über Pfad + Inhalt jeder Datei, in
    Listenreihenfolge) und prüft, ob die Liste vollständig ist (alles, was
-   index.html, app.webmanifest und Kern.ORGANE laden, sowie die Weiterleitungen).
+   index.html, app.webmanifest, Kern.ORGANE und Kern.FORMEN laden, sowie die Weiterleitungen).
 
    Aufruf (nach jeder Änderung an einer App-Datei ausführen):
      node tools/version.js             schreibt die Version in sw.js
@@ -54,7 +54,7 @@ function pruefen() {
     (mani.icons || []).forEach(i => { if (rel(i.src)) erforderlich.push(norm(i.src)); });
   } catch (e) { fehler.push('app.webmanifest: ' + e.message); }
   const rahmen = lesen('core/rahmen.js').toString('utf8');
-  const reO = /\b(?:skript|css): '([^']+)'/g;
+  const reO = /\b(?:skript|css|form): '([^']+)'/g;
   while ((m = reO.exec(rahmen))) erforderlich.push(m[1]);
   erforderlich.forEach((d, i) => {
     if (d && erforderlich.indexOf(d) === i && dateien.indexOf(d) < 0) fehler.push('Nicht in DATEIEN: ' + d);

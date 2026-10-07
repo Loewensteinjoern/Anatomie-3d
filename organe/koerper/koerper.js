@@ -538,12 +538,24 @@ function sdfMagen(x, y, z) {
   d = smin(d, kap(x, y, z, 2.5, 100.2, 3.0, -2.0, 104.0, 3.2, 3.0, 1.7), 2);  // Antrum steigt zum Pfoertner
   return d;
 }
-function sdfNiere(s) {
-  var cx = s * 7.5, cy = s > 0 ? 105 : 102.5;
+/* Nieren aus dem Form-Baustein der Niere (organe/niere/niere-form.js; nur dieser Baustein wird nachgeladen): Promise der Form, Wert null = einfacher Ersatz.
+   Die Form liegt in anatomischen Achsen um die Mitte der linken Niere; die rechte Niere ist die gespiegelte linke (x -> -x), damit der Hilus zur Mitte zeigt. */
+var nierenP = null;
+/* Mitte der Niere s (1 = links, -1 = rechts) */
+function nierenMitte(s) { return [s * 7.5, s > 0 ? 105 : 102.5, -6.2]; }
+function sdfNiere(s, form) {
+  var m = nierenMitte(s), cx = m[0], cy = m[1], cz = m[2];
+  if (form) return function (x, y, z) { return form.aussen(s * (x - cx), y - cy, z - cz); };
   return function (x, y, z) {
-    var d = ell(x, y, z, cx, cy, -6.2, 2.7, 5.6, 2.3);
-    return S.smax(d, -S.kugel(x, y, z, cx - s * 2.8, cy, -6.2, 1.5), 1.0);
+    var d = ell(x, y, z, cx, cy, cz, 2.7, 5.6, 2.3);
+    return S.smax(d, -S.kugel(x, y, z, cx - s * 2.8, cy, cz, 1.5), 1.0);
   };
+}
+/* Gitter um die Niere s aus den Grenzen der Form (anatomisch um die Mitte; rechts gespiegelt) */
+function nierenGrenzen(s, form) {
+  var m = nierenMitte(s), g = form.grenzen;
+  return [[s > 0 ? m[0] + g[0][0] : m[0] - g[1][0], m[1] + g[0][1], m[2] + g[0][2]],
+    [s > 0 ? m[0] + g[1][0] : m[0] - g[0][0], m[1] + g[1][1], m[2] + g[1][2]]];
 }
 function sdfHirn(x, y, z) {
   var sx = x < 0 ? -x : x;
@@ -737,16 +749,22 @@ async function organe() {
     [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], 1.8, 260);
   kugelM('verdauung', dk, -11.3, 89.2, 0.5, 2.4);
   /* Harn */
+  var nform = await nierenP;   // null: Form nicht geladen, dann einfache Nieren als Ersatz
+  if (abgebaut) return;
   als('nieren');
   var ni = mat('harn', 0x9C4A3A, { rough: 0.5, coat: 0.45 });
-  await sdfMesh('harn', ni, sdfNiere(-1), b(-12, 94, -11, -3, 111, -1), 0.5);
+  await sdfMesh('harn', ni, sdfNiere(-1, nform), nform ? nierenGrenzen(-1, nform) : b(-12, 94, -11, -3, 111, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
-  await sdfMesh('harn', ni, sdfNiere(1), b(3, 96, -11, 12, 113, -1), 0.5);
+  await sdfMesh('harn', ni, sdfNiere(1, nform), nform ? nierenGrenzen(1, nform) : b(3, 96, -11, 12, 113, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
   als('harnleiter');
   var ur = mat('harn', 0xD9B44A, { rough: 0.5 });
   [-1, 1].forEach(function (s) {
-    rohr('harn', ur, [[s * 5.8, 101 + (s < 0 ? -2.5 : 0), -5], [s * 5.3, 95, -4.8], [s * 5, 88, -3.5], [s * 4, 84, -0.5], [s * 2.6, 83.6, 2.4]], 0.28, 40);
+    /* Anfang aus der Form: Nierenbecken und Austritt aus dem Hilus (rechts gespiegelt); ohne Form wie bisher ein Punkt.
+       Die uebrigen Punkte gelten fuer beide Faelle; Segmentzahl des Rohrs fest, es entsteht kein weiteres Objekt */
+    var m = nierenMitte(s), a = nform ? nform.harnleiterKoerper : null;
+    var anfang = a ? a.map(function (p) { return [m[0] + s * p[0], m[1] + p[1], m[2] + p[2]]; }) : [[s * 5.8, 101 + (s < 0 ? -2.5 : 0), -5]];
+    rohr('harn', ur, anfang.concat([[s * 5.3, 95, -4.8], [s * 5, 88, -3.5], [s * 4, 84, -0.5], [s * 2.6, 83.6, 2.4]]), 0.28, 40);
   });
   als('harnblase');
   await sdfMesh('harn', mat('harn', 0xD9B44A, { rough: 0.4, coat: 0.5 }), sdfBlase, b(-6, 77, -3, 6, 90, 8), 0.5);
@@ -763,6 +781,8 @@ async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
   herzP = Kern.organLaden('herz', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
+  /* Form der Niere: nur der Form-Baustein (nicht das Organ-Modul der Niere); Fehler werden erst beim Nieren-Schritt behandelt */
+  nierenP = Kern.formLaden('niere').then(function (f) { return f; }, function (e) { console.warn(e && e.message || e); return null; });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
