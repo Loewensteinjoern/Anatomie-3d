@@ -51,11 +51,13 @@ Mensch     Atmung          Lunge     Alveole              Gasaustausch
   - Wartezeit: das Organ-Skript wird schon im Körper geladen (beim Herz), CSS und Aufbau starten nach der Kamerafahrt unter dem Standbild, mit leiser Ladeanzeige (`#boot.leise`); erneutes Öffnen in derselben Sitzung nutzt die bereits geladene Datei.
   - Umbau in kleinen Schritten mit Vergleichsbildern (`tools/vergleich.js`), wie in Phase 0.
   - Prüfung der Übergänge: `tools/vergleich.js` bekommt Abläufe wie Körper → Organ → zurück.
-- Offline: Die App läuft weiterhin ohne Server und ohne Build-Schritt (Ordner/ZIP, `index.html` doppelklicken). Zusätzlich wird sie eine installierbare Web-App (PWA: Manifest mit Name und Symbol, Service Worker als Offline-Speicher): einmal über GitHub Pages öffnen, „Zum Startbildschirm hinzufügen“, danach ohne Internet nutzbar – auch mit AR. Der Service Worker speichert alle Organdateien vorab, damit auch noch nicht geöffnete Organe offline funktionieren.
+- Offline: Die App läuft weiterhin ohne Server und ohne Build-Schritt (Ordner/ZIP, `index.html` doppelklicken). Zusätzlich wird sie eine installierbare Web-App (PWA: Manifest mit Name und Symbol, Service Worker als Offline-Speicher): einmal über GitHub Pages öffnen, „Zum Startbildschirm hinzufügen“, danach ohne Internet nutzbar – auch mit AR. Der Service Worker speichert alle Organdateien vorab, damit auch noch nicht geöffnete Organe offline funktionieren (umgesetzt in `sw.js`, `core/offline.js`).
 - Dateistruktur (Ziel):
 
 ```
 index.html                Körper-Atlas (Start); nephron.html und atlas.html leiten weiter
+sw.js, app.webmanifest    Service Worker (Offline-Speicher) und Web-App-Manifest
+icons/                    App-Symbol (symbol.svg, PNGs)
 core/                     gemeinsamer Kern (JS, CSS)
 vendor/three.min.js       three.js, unverändert
 organe/herz/              Herz-Modul + Inhalte
@@ -123,7 +125,14 @@ organe/niere/             Niere + Nephron
   - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
   - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
   - Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet
-- [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
+- [x] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
+  - Manifest und Symbol: `app.webmanifest` (Name „Anatomie-Atlas für Pflegeberufe“, Kurzname „Anatomie“, standalone, Farben #0B171C); Symbol `icons/symbol.svg` (Körpersilhouette in Messing mit rotem Herz) → PNGs 180/192/512/maskable per `node tools/symbole.js`; Kopf von `index.html` mit manifest, apple-touch-icon, theme-color, apple-mobile-web-app-* (Statusleiste `black`)
+  - Service Worker `sw.js`: speichert genau die Dateien der Liste `DATEIEN` vorab (am HTTP-Cache vorbei), beantwortet nur diese aus dem Speicher, schreibt zur Laufzeit nichts und speichert keine Nutzerdaten; Speichername `anatomie-<VERSION>`; neue Version wartet (kein `skipWaiting`/`clients.claim`), Nachricht `'aktivieren'`; alte `anatomie-*`-Speicher werden beim Aktivieren gelöscht; `core/offline.js` meldet ihn nur über http(s) an, per `file://` ändert sich nichts
+  - Update-Hinweis (`#atlasUpdateBox`, `core/offline.js`, `core/atlas.css`): „Neue Version verfügbar – neu laden“ mit Kreuz „Später“; Desktop unten mittig, Handy oben links neben dem Zurück-Knopf; Klick aktiviert und lädt neu, ohne Klick gilt die neue Version beim nächsten Start; beim Wiedersichtbarwerden höchstens alle 10 Min. Suche nach Updates (`Kern.Offline`)
+  - `tools/version.js`: VERSION = SHA-256 (12 Hex) über alle Dateien in `DATEIEN`; `node tools/version.js` schreibt sie, `--pruefen` prüft sie und die Vollständigkeit der Liste (index.html, Manifest, `Kern.ORGANE`, Weiterleitungen); nach jeder Änderung an einer App-Datei ausführen
+  - `tools/vergleich.js`: Atlas-Kontexte `offline`, `update`, `update-handy`, `offline-datei` und Versionsprüfung (`erg.version`); der Testserver liefert für Ordneradressen `index.html`
+  - Mit dem Nutzer abgestimmt: Name „Anatomie-Atlas für Pflegeberufe“ (Kurzname „Anatomie“), Symbol Körper mit Herz, Update-Hinweis mit Knopf
+  - Noch auf echten Geräten zu testen: Installation und Offline auf iPhone (Startbildschirm-App: AR Quick Look und Export-Downloads) und Android
 - [x] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
   - Neue Adresse: https://loewensteinjoern.github.io/Anatomie-3d/; Verweise im Repository (README.md, executor.md) angepasst, an der App selbst ändert sich nichts
   - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); Weiterleitung ist noch offen
