@@ -43,7 +43,7 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das markierte Nephron und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
@@ -458,6 +458,7 @@ const MODELLE = {
         await t.klick('#bSee'); await t.klick('#bOffen'); await t.weiter(1400); await t.bild('aufgeschnitten');
         await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(600); await t.bild('auswahl-nephron');   /* Infokarte mit dem Knopf „Nephron ansehen“ */
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -592,7 +593,8 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
 } };
 /* Kontext uebergaenge-niere: Körper, Niere wählen, Kamerafahrt, Standbild beim Aufbau der Niere, Rückfahrt; dann Nephron über die Adresse
-   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; Endzustand prüfen */
+   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das markierte Nephron (Knopf „Nephron ansehen“, Kamerafahrt,
+   Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
 MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
@@ -603,10 +605,17 @@ MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListene
   const z1 = await t.js(ATLAS_ENDZUSTAND);
   await t.js(() => { location.hash = 'niere/nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');   /* Zurück-Knopf zeigt „← Niere“ */
   await t.klick('#atlasZurueck'); await organ('niere'); await t.weiter(1500); await t.bild('niere-von-nephron');
+  await t.weiter(1500);   /* Rückfahrt der Niere ist zu Ende */
   const z2 = await t.js(ATLAS_ENDZUSTAND);
-  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2);
-  t.erg.uebergaengeNiere = { endzustand: [z1, z2], ok };
-  process.stdout.write('  uebergaenge-niere: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2])) + '\n');
+  /* Zoomstufe: markiertes Nephron in der Niere wählen, „Nephron ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet im Nahbild, Rückfahrt) */
+  await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
+  await organ('nephron'); await t.bild('standbild-nephron');
+  await t.weiter(1500); await t.bild('nephron-von-niere');
+  await t.zurueck(); await organ('niere'); await t.weiter(1000); await t.bild('rueckfahrt-niere'); await t.weiter(1200); await t.bild('niere-zurueck');
+  const z3 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && ATLAS_ENDZUSTAND_OK(z3);
+  t.erg.uebergaengeNiere = { endzustand: [z1, z2, z3], ok };
+  process.stdout.write('  uebergaenge-niere: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, z3])) + '\n');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,

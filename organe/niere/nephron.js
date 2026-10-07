@@ -77,18 +77,6 @@ var MARKUP = `<div id="title">
   </div>
   <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
-var organ = { renderer: {}, aufbauen: aufbauen };
-function aufbauen(umg) {
-umg.bereich.innerHTML = MARKUP;
-
-var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
-var DEG = Math.PI / 180;
-var DUR = 12.0;    // Sekunden pro Umlauf
-var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
-
-/* =====================================================================
-   1. Geometrie-Werkzeuge
-   ===================================================================== */
 function smooth(pts, n) {
   return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5).getSpacedPoints(n);
 }
@@ -105,6 +93,112 @@ function smoothSeg(pts, n, prev, next) {
   for (var i = 0; i <= n; i++) out.push(c.getPointAt(u0 + (u1 - u0) * i / n));
   return out;
 }
+/* ---------------------------------------------------------------------
+   Bahnen des Nephrons: Kontrollpunkte und Radien in Nephron-Koordinaten (Einheit = Modelleinheit, Nephron ca. 17 lang). Reine Funktion
+   (kein Zufall, keine three.js-Objekte ausser Vektoren): das Modell (aufbauen) und organ.form.bahnen (Niere) nutzen dieselben Werte.
+   --------------------------------------------------------------------- */
+function bahnenDef() {
+var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
+var DEG = Math.PI / 180;
+var GC = V(0, 5.80, 0), GR = 1.45, RO = GR + 0.05, RI = GR - 0.05;
+var POLE = V(-1.42, 5.78, 0);
+var AX = V(0.880, -0.440, 0.180).normalize();               // Achse zum Harnpol
+var AU = V(0, 0, 1).addScaledVector(AX, -AX.z).normalize(); // Fenster zeigt nach vorn
+var AW = new THREE.Vector3().crossVectors(AX, AU).normalize();
+var TH0 = 27 * DEG, NECK_L = 1.02, NECK_R = 0.30, WALL = 0.048;
+var MOUTH = GC.clone().addScaledVector(AX, RO * Math.cos(TH0) + NECK_L);
+var WIN = 66 * DEG;                                           // halbe Fensterbreite
+
+/* Gefaesspol: hier tritt die zufuehrende Arteriole ein und teilt sich,
+   daneben verlaesst die abfuehrende Arteriole das Knaeuel. */
+var HUB = GC.clone().add(V(-1.18, 0, 0));
+var HA = HUB.clone().add(V(0, 0.13, 0.04));
+var HE = HUB.clone().add(V(0, -0.15, -0.04));
+
+var AFF = [V(-5.40, 7.60, 0.50), V(-3.60, 7.00, 0.30), V(-2.40, 6.32, 0.10), V(-1.66, 6.00, 0.06), HA.clone()];
+var EFF = [HE.clone(), V(-1.66, 5.58, -0.08), V(-2.22, 5.16, -0.20), V(-2.92, 4.48, -0.35)];
+var VASA = [
+  V(-2.92, 4.48, -0.35), V(-1.70, 3.70, -0.95), V(0.40, 2.75, -1.05), V(2.30, 1.75, -1.02),
+  V(3.02, -0.50, -0.98), V(3.10, -3.50, -0.96), V(3.05, -6.50, -0.94),
+  V(2.55, -8.55, -0.92), V(1.40, -8.95, -0.92), V(0.25, -8.45, -0.92),
+  V(-0.15, -6.00, -0.94), V(-0.20, -3.00, -0.96), V(-0.25, 0.00, -0.96),
+  V(-0.38, 2.60, -0.98), V(-1.00, 4.35, -1.60), V(-2.05, 6.25, -1.52), V(-3.65, 7.65, -1.15)
+];
+/* Windungen so weich, dass das Rohr sich nirgends selbst durchdringt
+   (engste Kurve 1,09-mal so weit wie der Rohrradius). */
+var PROX = [MOUTH.clone(), V(2.56, 4.52, 0.54), V(3.10, 4.72, 0.72), V(3.60, 5.28, 0.40), V(4.14, 5.30, -0.12),
+            V(4.56, 4.74, -0.08), V(4.38, 4.10, 0.25), V(3.74, 3.78, 0.32), V(3.10, 3.55, -0.02),
+            V(2.62, 3.06, 0.14), V(2.30, 2.55, 0)];
+var DESC = [V(2.30, 2.55, 0), V(2.20, 0.60, 0.10), V(2.10, -1.80, 0), V(2.02, -4.20, 0.08), V(1.96, -6.40, 0)];
+var LOOP = [V(1.96, -6.40, 0), V(1.90, -7.45, 0), V(1.42, -8.05, 0), V(0.85, -7.55, 0), V(0.72, -6.55, 0)];
+var ASC = [V(0.72, -6.55, 0), V(0.72, -4.20, -0.08), V(0.76, -1.60, 0), V(0.82, 1.00, 0.06),
+           V(0.95, 3.20, -0.18), V(0.10, 4.10, -0.95), V(-0.90, 4.35, -1.05), V(-1.50, 5.28, -0.86)];
+var DIST = [V(-1.50, 5.28, -0.86), V(-1.55, 6.30, -1.05), V(-0.60, 7.30, -0.95), V(0.90, 7.35, -0.95),
+            V(2.60, 7.50, -0.60), V(4.12, 6.90, -0.62), V(5.50, 5.85, -0.32)];
+var COLL = [V(5.50, 5.85, -0.32), V(5.85, 4.90, -0.12), V(5.92, 2.50, 0), V(5.96, -0.50, 0),
+            V(5.98, -3.50, 0), V(6.00, -6.50, 0), V(6.02, -8.90, 0)];
+/* Aufsteigendes Vas rectum neben dem Sammelrohr: nimmt das Wasser aus dem
+   Mark auf und bringt es nach oben zurueck in den Kreislauf. */
+var CAPC = [V(5.12, -8.55, -0.52), V(5.10, -6.00, -0.56), V(5.08, -3.00, -0.58), V(5.06, 0.00, -0.58),
+            V(5.04, 2.10, -0.62), V(4.92, 3.30, -1.05), V(4.80, 3.75, -2.25)];
+/* Rohrradien je Abschnitt (gleichmaessig ueber die Laenge verteilt) */
+var RAD = { afferens: [0.25, 0.24, 0.22, 0.2, 0.17], efferens: [0.13, 0.14, 0.145, 0.15],
+  prox: [0.30, 0.29, 0.27, 0.25, 0.23], desc: [0.23, 0.16, 0.15, 0.15, 0.15], loop: [0.15, 0.15, 0.15], asc: [0.15, 0.20, 0.24, 0.24, 0.24],
+  dist: [0.23, 0.22, 0.22, 0.23], coll: [0.23, 0.36, 0.40, 0.44, 0.46] };
+return { GC: GC, GR: GR, RO: RO, RI: RI, POLE: POLE, AX: AX, AU: AU, AW: AW, TH0: TH0, NECK_L: NECK_L, NECK_R: NECK_R, WALL: WALL, MOUTH: MOUTH, WIN: WIN,
+  HUB: HUB, HA: HA, HE: HE, AFF: AFF, EFF: EFF, VASA: VASA, PROX: PROX, DESC: DESC, LOOP: LOOP, ASC: ASC, DIST: DIST, COLL: COLL, CAPC: CAPC, RAD: RAD };
+}
+
+/* Startansicht des Modells (Kamera in Nephron-Koordinaten, ohne Versatz des Bildbereichs): gemeinsam fuer das Modell (aufbauen) und den
+   Andockpunkt organ.start (Kamerafahrt aus der Niere), damit Fahrt-Ende und Modell zusammenpassen */
+var START = { theta: 0.26, phi: 1.46, dist: 27, target: [1.2, -0.5, 0], versatz: [0, 0] };
+/* Hintergrundtafel Rinde/Mark: Breite, Hoehe, Mitte (x, y), Tiefe z; grenze = y der Grenze Rinde/Mark */
+var TAFEL = { b: 14.4, h: 18.2, mx: 0.5, my: -0.6, z: -2.6, grenze: 3 };
+var organ = { renderer: {}, aufbauen: aufbauen };
+/* Startansicht bei Fenstergroesse w x h: die Werte, mit denen aufbauen die Uebersicht zeigt (hier unabhaengig von der Fenstergroesse,
+   kein Versatz des Bildbereichs) */
+organ.start = function (w, h) {
+  return { theta: START.theta, phi: START.phi, dist: START.dist, target: START.target.slice(), versatz: START.versatz.slice() };
+};
+/* Form fuer die Niere (Kern.Organe.nephron.form): Mittellinien der Bahnen aus denselben Kontrollpunkten wie das Modell (bahnenDef).
+   Jede Bahn: id, pts (Punktliste [x, y, z] in Nephron-Koordinaten), r (Radien gleichmaessig ueber die Laenge). glomerulus: Mitte und
+   Radius der Kugel (Nierenkoerperchen). tafel: Grenzen der Hintergrundtafel (x0, x1, y0, y1, z, grenze = Rinde/Mark). Kein Zufall. */
+organ.form = {
+  START: START,
+  tafel: { x0: TAFEL.mx - TAFEL.b / 2, x1: TAFEL.mx + TAFEL.b / 2, y0: TAFEL.my - TAFEL.h / 2, y1: TAFEL.my + TAFEL.h / 2, z: TAFEL.z, grenze: TAFEL.grenze },
+  bahnen: function () {
+    var B = bahnenDef(), arr = function (p) { return [p.x, p.y, p.z]; };
+    function laenge(pts) { var l = 0; for (var i = 1; i < pts.length; i++) l += pts[i].distanceTo(pts[i - 1]); return l; }
+    function bahn(id, pts, prev, next, r) {   /* geglaettet wie im Modell (smoothSeg), etwa alle 0,4 Einheiten ein Punkt */
+      var n = Math.max(6, Math.ceil(laenge(pts) / 0.4));
+      return { id: id, pts: smoothSeg(pts, n, prev, next).map(arr), r: r.slice() };
+    }
+    return {
+      glomerulus: { mitte: arr(B.GC), r: B.GR },
+      linien: [
+        bahn('afferens', B.AFF, null, null, B.RAD.afferens),
+        bahn('efferens', B.EFF, null, null, B.RAD.efferens),
+        bahn('prox', B.PROX, null, B.DESC[1], B.RAD.prox),
+        bahn('desc', B.DESC, B.PROX[B.PROX.length - 2], B.LOOP[1], B.RAD.desc),
+        bahn('loop', B.LOOP, B.DESC[B.DESC.length - 2], B.ASC[1], B.RAD.loop),
+        bahn('asc', B.ASC, B.LOOP[B.LOOP.length - 2], B.DIST[1], B.RAD.asc),
+        bahn('dist', B.DIST, B.ASC[B.ASC.length - 2], B.COLL[1], B.RAD.dist),
+        bahn('coll', B.COLL, B.DIST[B.DIST.length - 2], null, B.RAD.coll)
+      ]
+    };
+  }
+};
+function aufbauen(umg) {
+umg.bereich.innerHTML = MARKUP;
+
+var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
+var DEG = Math.PI / 180;
+var DUR = 12.0;    // Sekunden pro Umlauf
+var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
+
+/* =====================================================================
+   1. Geometrie-Werkzeuge
+   ===================================================================== */
 /* Laplace-Glaettung mit festen Enden: nimmt engen Kurven die Schaerfe */
 function relax(pts, iters, lam) {
   var p = pts.map(function (q) { return q.clone(); }), n = p.length, i, it;
@@ -314,7 +408,7 @@ var renderer = umg.renderer;
 
 var scene = umg.szene;
 var camera = umg.kamera;
-var view = { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) };
+var view = { theta: START.theta, phi: START.phi, dist: START.dist, target: V(START.target[0], START.target[1], START.target[2]) };
 
 var envTex = umg.envTex;
 
@@ -458,47 +552,8 @@ reg('flowDrug', { de: 'Torasemid', lat: 'Torasemidum', grp: 'Str\u00f6mung', col
 /* =====================================================================
    4. Bahnen und Bauteile
    ===================================================================== */
-var GC = V(0, 5.80, 0), GR = 1.45, RO = GR + 0.05, RI = GR - 0.05;
-var POLE = V(-1.42, 5.78, 0);
-var AX = V(0.880, -0.440, 0.180).normalize();               // Achse zum Harnpol
-var AU = V(0, 0, 1).addScaledVector(AX, -AX.z).normalize(); // Fenster zeigt nach vorn
-var AW = new THREE.Vector3().crossVectors(AX, AU).normalize();
-var TH0 = 27 * DEG, NECK_L = 1.02, NECK_R = 0.30, WALL = 0.048;
-var MOUTH = GC.clone().addScaledVector(AX, RO * Math.cos(TH0) + NECK_L);
-var WIN = 66 * DEG;                                           // halbe Fensterbreite
-
-/* Gefaesspol: hier tritt die zufuehrende Arteriole ein und teilt sich,
-   daneben verlaesst die abfuehrende Arteriole das Knaeuel. */
-var HUB = GC.clone().add(V(-1.18, 0, 0));
-var HA = HUB.clone().add(V(0, 0.13, 0.04));
-var HE = HUB.clone().add(V(0, -0.15, -0.04));
-
-var AFF = [V(-5.40, 7.60, 0.50), V(-3.60, 7.00, 0.30), V(-2.40, 6.32, 0.10), V(-1.66, 6.00, 0.06), HA.clone()];
-var EFF = [HE.clone(), V(-1.66, 5.58, -0.08), V(-2.22, 5.16, -0.20), V(-2.92, 4.48, -0.35)];
-var VASA = [
-  V(-2.92, 4.48, -0.35), V(-1.70, 3.70, -0.95), V(0.40, 2.75, -1.05), V(2.30, 1.75, -1.02),
-  V(3.02, -0.50, -0.98), V(3.10, -3.50, -0.96), V(3.05, -6.50, -0.94),
-  V(2.55, -8.55, -0.92), V(1.40, -8.95, -0.92), V(0.25, -8.45, -0.92),
-  V(-0.15, -6.00, -0.94), V(-0.20, -3.00, -0.96), V(-0.25, 0.00, -0.96),
-  V(-0.38, 2.60, -0.98), V(-1.00, 4.35, -1.60), V(-2.05, 6.25, -1.52), V(-3.65, 7.65, -1.15)
-];
-/* Windungen so weich, dass das Rohr sich nirgends selbst durchdringt
-   (engste Kurve 1,09-mal so weit wie der Rohrradius). */
-var PROX = [MOUTH.clone(), V(2.56, 4.52, 0.54), V(3.10, 4.72, 0.72), V(3.60, 5.28, 0.40), V(4.14, 5.30, -0.12),
-            V(4.56, 4.74, -0.08), V(4.38, 4.10, 0.25), V(3.74, 3.78, 0.32), V(3.10, 3.55, -0.02),
-            V(2.62, 3.06, 0.14), V(2.30, 2.55, 0)];
-var DESC = [V(2.30, 2.55, 0), V(2.20, 0.60, 0.10), V(2.10, -1.80, 0), V(2.02, -4.20, 0.08), V(1.96, -6.40, 0)];
-var LOOP = [V(1.96, -6.40, 0), V(1.90, -7.45, 0), V(1.42, -8.05, 0), V(0.85, -7.55, 0), V(0.72, -6.55, 0)];
-var ASC = [V(0.72, -6.55, 0), V(0.72, -4.20, -0.08), V(0.76, -1.60, 0), V(0.82, 1.00, 0.06),
-           V(0.95, 3.20, -0.18), V(0.10, 4.10, -0.95), V(-0.90, 4.35, -1.05), V(-1.50, 5.28, -0.86)];
-var DIST = [V(-1.50, 5.28, -0.86), V(-1.55, 6.30, -1.05), V(-0.60, 7.30, -0.95), V(0.90, 7.35, -0.95),
-            V(2.60, 7.50, -0.60), V(4.12, 6.90, -0.62), V(5.50, 5.85, -0.32)];
-var COLL = [V(5.50, 5.85, -0.32), V(5.85, 4.90, -0.12), V(5.92, 2.50, 0), V(5.96, -0.50, 0),
-            V(5.98, -3.50, 0), V(6.00, -6.50, 0), V(6.02, -8.90, 0)];
-/* Aufsteigendes Vas rectum neben dem Sammelrohr: nimmt das Wasser aus dem
-   Mark auf und bringt es nach oben zurueck in den Kreislauf. */
-var CAPC = [V(5.12, -8.55, -0.52), V(5.10, -6.00, -0.56), V(5.08, -3.00, -0.58), V(5.06, 0.00, -0.58),
-            V(5.04, 2.10, -0.62), V(4.92, 3.30, -1.05), V(4.80, 3.75, -2.25)];
+var BD = bahnenDef();
+var GC = BD.GC, GR = BD.GR, RO = BD.RO, RI = BD.RI, POLE = BD.POLE, AX = BD.AX, AU = BD.AU, AW = BD.AW, TH0 = BD.TH0, NECK_L = BD.NECK_L, NECK_R = BD.NECK_R, WALL = BD.WALL, MOUTH = BD.MOUTH, WIN = BD.WIN, HUB = BD.HUB, HA = BD.HA, HE = BD.HE, AFF = BD.AFF, EFF = BD.EFF, VASA = BD.VASA, PROX = BD.PROX, DESC = BD.DESC, LOOP = BD.LOOP, ASC = BD.ASC, DIST = BD.DIST, COLL = BD.COLL, CAPC = BD.CAPC;
 
 /* ---- Kapsel und Trichter zum Tubulus: ein durchgehendes Stueck ---- */
 (function () {
@@ -606,9 +661,9 @@ var CAP_R = 0.10;
 
 /* ---- Arteriolen (durchscheinend) und Vasa recta ---- */
 (function () {
-  add('afferens', tube(smooth(AFF, 48), lerpArr([0.25, 0.24, 0.22, 0.2, 0.17], 48), 20, true, false),
+  add('afferens', tube(smooth(AFF, 48), lerpArr(BD.RAD.afferens, 48), 20, true, false),
     MAT.afferens, 'Arteriola_afferens');
-  add('efferens', tube(smooth(EFF, 30), lerpArr([0.13, 0.14, 0.145, 0.15], 30), 18, false, false),
+  add('efferens', tube(smooth(EFF, 30), lerpArr(BD.RAD.efferens, 30), 18, false, false),
     MAT.efferens, 'Arteriola_efferens');
   var p = smooth(VASA, 90), cols = [], i;
   for (i = 0; i <= 90; i++)
@@ -648,12 +703,12 @@ function setTubuleMix(wH, wT) {
 function segPts(sid, pts, n) { return smoothSeg(pts, n, NB[sid][0], NB[sid][1]); }
 NB.prox = [null, DESC[1]]; NB.desc = [PROX[PROX.length - 2], LOOP[1]]; NB.loop = [DESC[DESC.length - 2], ASC[1]];
 NB.asc = [LOOP[LOOP.length - 2], DIST[1]]; NB.dist = [ASC[ASC.length - 2], COLL[1]]; NB.coll = [DIST[DIST.length - 2], null];
-seg('prox', PROX, 110, [0.30, 0.29, 0.27, 0.25, 0.23], 300, 300, 'Tubulus_proximalis', false, false);
-seg('desc', DESC, 55, [0.23, 0.16, 0.15, 0.15, 0.15], 300, 1150, 'Pars_descendens', false, false);
-seg('loop', LOOP, 34, [0.15, 0.15, 0.15], 1150, 1200, 'Ansa_nephroni', false, false);
-seg('asc', ASC, 70, [0.15, 0.20, 0.24, 0.24, 0.24], 1200, 110, 'Pars_ascendens', false, false);
-seg('dist', DIST, 55, [0.23, 0.22, 0.22, 0.23], 110, 300, 'Tubulus_distalis', false, false);
-seg('coll', COLL, 60, [0.23, 0.36, 0.40, 0.44, 0.46], 300, 1200, 'Ductus_colligens', false, true);
+seg('prox', PROX, 110, BD.RAD.prox, 300, 300, 'Tubulus_proximalis', false, false);
+seg('desc', DESC, 55, BD.RAD.desc, 300, 1150, 'Pars_descendens', false, false);
+seg('loop', LOOP, 34, BD.RAD.loop, 1150, 1200, 'Ansa_nephroni', false, false);
+seg('asc', ASC, 70, BD.RAD.asc, 1200, 110, 'Pars_ascendens', false, false);
+seg('dist', DIST, 55, BD.RAD.dist, 110, 300, 'Tubulus_distalis', false, false);
+seg('coll', COLL, 60, BD.RAD.coll, 300, 1200, 'Ductus_colligens', false, true);
 
 /* ---- Peritubulaeres Netz ----
    Die Kapillare laeuft mit deutlichem Abstand um den Tubulus, damit man
@@ -727,11 +782,11 @@ function tubeColsRB(n) {
 
 /* ---- Hintergrundtafel Rinde/Mark ---- */
 (function () {
-  var g = new THREE.PlaneGeometry(14.4, 18.2, 2, 40);
-  g.translate(0.5, -0.6, -2.6);
+  var g = new THREE.PlaneGeometry(TAFEL.b, TAFEL.h, 2, 40);
+  g.translate(TAFEL.mx, TAFEL.my, TAFEL.z);
   var pos = g.attributes.position, cols = [];
   for (var i = 0; i < pos.count; i++) {
-    var y = pos.getY(i), t = y >= 3 ? 0 : Math.min(1, (3 - y) / 12);
+    var y = pos.getY(i), t = y >= TAFEL.grenze ? 0 : Math.min(1, (TAFEL.grenze - y) / 12);
     cols.push.apply(cols, new THREE.Color(0x16262D).lerp(new THREE.Color(0x53332A), t).convertSRGBToLinear().toArray());
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
@@ -1391,7 +1446,7 @@ function applyScenarioVisuals() {
 })();
 
 var PRESETS = [
-  { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) },
+  { theta: START.theta, phi: START.phi, dist: START.dist, target: V(START.target[0], START.target[1], START.target[2]) },
   { theta: 0.30, phi: 1.42, dist: 7.0, target: V(0.2, 5.62, 0) },
   { theta: 0.20, phi: 1.50, dist: 9.5, target: V(1.3, -6.9, -0.3) },
   { theta: 0.55, phi: 1.50, dist: 15, target: V(5.3, -2.5, 0) }

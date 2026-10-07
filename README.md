@@ -15,10 +15,11 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 
 - `index.html#koerper` – Körper (Startansicht, auch ohne Zusatz)
 - `index.html#herz` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
-- `index.html#niere` – Niere (Frontalschnitt der linken Niere: Rinde, Mark, Nierenbecken und Gefäße; aufgeschnitten oder geschlossen, Export als GLB und STL, AR)
+- `index.html#niere` – Niere (Frontalschnitt der linken Niere: Rinde, Mark, Nierenbecken und Gefäße; aufgeschnitten oder geschlossen, Export als GLB und STL, AR); ein Nephron ist markiert, „Nephron ansehen“ fährt hinein
 - `index.html#niere/nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
 Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch: vom Nephron zur Niere, von der Niere zum Körper.
+Das Nephron ist eine Zoomstufe der Niere: In der Niere ist ein Nephron in der oberen Markpyramide markiert; sein Knopf „Nephron ansehen“ (Infokarte) fährt die Kamera in dieses Nephron und endet in der Startansicht des Nephron-Modells. Zurück zur Niere (Zurück-Knopf oder Browser) startet die Niere im Nahbild des Nephrons und fährt zur Übersicht zurück.
 
 Die alten Adressen `index.html#nephron` und `nephron.html` leiten auf `index.html#niere/nephron` weiter, `atlas.html` auf den Atlas.
 
