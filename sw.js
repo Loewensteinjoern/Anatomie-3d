@@ -8,7 +8,7 @@
    ========================================================================== */
 'use strict';
 
-var VERSION = 'fe95dd868af9';
+var VERSION = 'd9503801e05b';
 var SPEICHER = 'anatomie-' + VERSION;
 
 /* Dateien der App (relativ zum Ordner von sw.js) */
@@ -20,7 +20,7 @@ var DATEIEN = [
   'vendor/three.min.js', 'vendor/GLTFExporter.js',
   'organe/koerper/koerper.js', 'organe/koerper/koerper.css',
   'organe/herz/herz.js', 'organe/herz/herz.css',
-  'organe/niere/nephron.js', 'organe/niere/nephron.css'
+  'organe/niere/niere-form.js', 'organe/niere/nephron.js', 'organe/niere/nephron.css'
 ];
 
 /* Absolute Adressen der Dateien, einmal vorberechnet */
