@@ -78,7 +78,7 @@ var STRUKTUREN = [
     text: 'Der Dünndarm ist etwa 3–5 m lang und gliedert sich in Zwölffingerdarm, Leerdarm und Krummdarm. Hier wird die Nahrung fertig verdaut; über die Darmzotten gelangen Nährstoffe, Wasser und Elektrolyte ins Blut und in die Lymphe.' },
   { id: 'dickdarm', de: 'Dickdarm', lat: 'Intestinum crassum', system: 'verdauung', detail: false,
     text: 'Der etwa 1,5 m lange Dickdarm rahmt den Dünndarm ein: Blinddarm mit Wurmfortsatz, aufsteigender, querer und absteigender Teil, S-förmiges Sigma und Mastdarm. Er entzieht dem Darminhalt Wasser und Salze, dickt den Stuhl ein und beherbergt die Darmflora.' },
-  { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#niere/nephron', knopf: 'Nephron ansehen',
+  { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#niere', knopf: 'Niere öffnen',
     text: 'Die beiden bohnenförmigen Nieren liegen hinter dem Bauchfell beiderseits der Wirbelsäule auf H\u00f6he der untersten Rippen. Sie filtern das Blut, bilden den Harn und regeln Wasser-, Salz- und Säure-Basen-Haushalt sowie den Blutdruck. Funktionseinheit ist das Nephron.' },
   { id: 'harnleiter', de: 'Harnleiter', lat: 'Ureteres', system: 'harn', detail: false,
     text: 'Die beiden 25–30 cm langen Muskelschläuche führen vom Nierenbecken zur Harnblase und befördern den Urin durch Peristaltik. An drei natürlichen Engstellen können Nierensteine hängen bleiben und Koliken auslösen.' },
@@ -538,7 +538,7 @@ function sdfMagen(x, y, z) {
   d = smin(d, kap(x, y, z, 2.5, 100.2, 3.0, -2.0, 104.0, 3.2, 3.0, 1.7), 2);  // Antrum steigt zum Pfoertner
   return d;
 }
-/* Nieren aus dem Form-Baustein der Niere (organe/niere/niere-form.js; nur dieser Baustein wird nachgeladen): Promise der Form, Wert null = einfacher Ersatz.
+/* Nieren aus dem Form-Baustein der Niere (organe/niere/niere-form.js; er wird mit dem Niere-Modul nachgeladen): Promise der Form, Wert null = einfacher Ersatz.
    Die Form liegt in anatomischen Achsen um die Mitte der linken Niere; die rechte Niere ist die gespiegelte linke (x -> -x), damit der Hilus zur Mitte zeigt. */
 var nierenP = null;
 /* Mitte der Niere s (1 = links, -1 = rechts) */
@@ -753,8 +753,10 @@ async function organe() {
   if (abgebaut) return;
   als('nieren');
   var ni = mat('harn', 0x9C4A3A, { rough: 0.5, coat: 0.45 });
-  await sdfMesh('harn', ni, sdfNiere(-1, nform), nform ? nierenGrenzen(-1, nform) : b(-12, 94, -11, -3, 111, -1), 0.5);
+  var niR = mat('harn', 0x9C4A3A, { rough: 0.5, coat: 0.45 });   /* eigenes Material der rechten Niere: sie blendet bei der Fahrt zur linken Niere mit aus */
+  var nierR = await sdfMesh('harn', niR, sdfNiere(-1, nform), nform ? nierenGrenzen(-1, nform) : b(-12, 94, -11, -3, 111, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
+  nierR.userData.anschluss = true;   /* gehoert zur Struktur, aber nicht zum Detailmodell der linken Niere */
   await sdfMesh('harn', ni, sdfNiere(1, nform), nform ? nierenGrenzen(1, nform) : b(3, 96, -11, 12, 113, -1), 0.5);
   if (abgebaut) return; await weiter('Nieren');
   als('harnleiter');
@@ -781,8 +783,9 @@ async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
   herzP = Kern.organLaden('herz', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
-  /* Form der Niere: nur der Form-Baustein (nicht das Organ-Modul der Niere); Fehler werden erst beim Nieren-Schritt behandelt */
-  nierenP = Kern.formLaden('niere').then(function (f) { return f; }, function (e) { console.warn(e && e.message || e); return null; });
+  /* Niere-Modell nur als Skript nachladen (ohne Gestaltung; zuerst die Form, die der Koerper ohnehin braucht); ohne Modul bleibt die Form, ohne Form gilt der Ersatz */
+  nierenP = Kern.organLaden('niere', { ohneCss: true }).then(function () { return Kern.Formen.niere || null; },
+    function (e) { console.warn(e && e.message || e); return Kern.Formen && Kern.Formen.niere || null; });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1113,24 +1116,31 @@ function layoutLabels(w, h) {
 /* Ziel je Struktur: Kamera in Koerper-Koordinaten (cm); ext = Breite und Hoehe (cm), die im freien Bereich Platz finden sollen */
 var ZIELE = {
   herz: { theta: 0, phi: 1.52, dist: 34.5, target: [0.4 + HERZ_V[0], 1.0 + HERZ_V[1], -1.2 + HERZ_V[2]] },   /* Startansicht des Herz-Modells (Ersatz, wenn das Herz-Modul fehlt) */
-  nieren: { theta: PI, phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von hinten */
+  nieren: { phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von vorn, senkrecht auf die Schnittflaeche (Ersatz, wenn das Niere-Modul fehlt); theta s. zielFuer */
 };
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
   }
+  if (id === 'nieren' && ni && ni.start) {   /* Startansicht der Niere, um die Mitte der linken Niere im Koerper verschoben */
+    var sn = ni.start(w, h), nm = nierenMitte(1);
+    return { theta: sn.theta, phi: sn.phi, dist: sn.dist, target: V(sn.target[0] + nm[0], sn.target[1] + nm[1], sn.target[2] + nm[2]), versatz: sn.versatz };
+  }
+  var nf = Kern.Formen && Kern.Formen.niere;
+  if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', nephron: 'nieren' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
+  /* userData.anschluss: gehoert zur Struktur, aber nicht zum Detailmodell (Lungengefaessstummel, rechte Niere) - blendet mit aus */
   STR[id].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
   wurzel.traverse(function (o) {
     if (zielObj.has(o) || !o.material || !o.visible) return;

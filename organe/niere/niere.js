@@ -126,6 +126,39 @@ var MARKUP = `<div id="title">
   <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
+/* Startansicht (Kamera in anatomischen Achsen, cm, Nierenmitte = 0) und Bildbereich: gemeinsam fuer das Modell (aufbauen) und den
+   Andockpunkt organ.start (Kamerafahrt aus dem Koerper), damit Fahrt-Ende und Detailmodell zusammenpassen */
+var UEBERSICHT = { ext: [8.8, 14], halb: 4.4 };   /* Ausschnitt 'Uebersicht': Breite und Hoehe (cm) im freien Bereich */
+var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
+/* Freier Bereich fuer Niere und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
+function bereichFuer(w, h, toolsOben, toolsUnten) {
+  if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 30 };
+  return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil(toolsUnten) + 6), y1: h - 30, labW: 142, fit: 100 };
+}
+/* Kameraabstand (cm), bei dem ext (Breite, Hoehe in cm) in den Bereich r passt */
+function abstandFuer(ext, r, fov, h) {
+  var th = Math.tan(fov * Math.PI / 360);
+  var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
+  return h / (2 * th * Math.max(pxcm, 0.5));
+}
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 80, Handy 70 bei zwei Zeilen, je
+   32 mehr, wenn eine der beiden Reihen umbricht: Reihe 1 ab Breite 371, Reihe 2 ab 379); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
+function werkzeugRand(w, h) {
+  if (w <= 1000) {
+    var u = Math.round((h - (0.34 * h + 6)) * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), wie der Browser auf 1/64 px gerundet */
+    return { oben: u - (70 + (w < 371 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
+  }
+  return { oben: 18, unten: 18 + 80 };
+}
+/* Startansicht bei Fenstergroesse w x h: Kamera und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
+organ.start = function (w, h) {
+  var f = Kern.Formen && Kern.Formen.niere;
+  if (!f) throw new Error('Die Form der Niere ist nicht geladen.');
+  var t = werkzeugRand(w, h), r = bereichFuer(w, h, t.oben, t.unten);
+  return { theta: f.LAGE.dreh * (Math.PI / 180), phi: Math.PI / 2, dist: abstandFuer(UEBERSICHT.ext, r, KAMERA_FOV, h), target: [0, 0, 0],
+    versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] };
+};
 function aufbauen(umg) {
 var canvas = umg.canvas, renderer = umg.renderer, scene = umg.szene, camera = umg.kamera, envTex = umg.envTex;
 var S = Kern.SDF, form = Kern.Formen && Kern.Formen.niere;
@@ -600,7 +633,7 @@ var orbit = Kern.orbit(canvas, view, { minDist: 3, maxDist: 80 });
 /* ext = Breite und Hoehe (cm), die im freien Bereich ganz sichtbar sein sollen; halb = halbe Breite (cm), die die
    Beschriftungsspalten freilassen. Ziele in lokalen Achsen (Schnittebene z = 0), hier nach anatomisch gedreht. */
 var AUSSCHNITTE = [
-  { name: 'Übersicht', theta: DREH, phi: PI / 2, target: lokalAnat([0, -0.1, 0]), ext: [8.8, 14], halb: 4.4 },
+  { name: 'Übersicht', theta: DREH, phi: PI / 2, target: lokalAnat([0, -0.1, 0]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb },
   { name: 'Rinde und Mark', theta: DREH, phi: PI / 2, target: lokalAnat([2.0, 0.4, 0]), ext: [4.6, 4.4], halb: 2.3 },
   { name: 'Nierenbecken', theta: DREH, phi: PI / 2, target: lokalAnat([-1.3, -0.3, 0]), ext: [5.6, 8.2], halb: 2.8 },
   { name: 'Hilus', theta: DREH - 50 * DEG, phi: 1.45, target: lokalAnat([-2.3, -0.7, 0.3]), ext: [5.4, 6.6], halb: 2.7 }
@@ -608,16 +641,11 @@ var AUSSCHNITTE = [
 var aktiv = 0, fitDist = 0;
 /* Freier Bereich fuer Niere und Beschriftung (Pixel): Desktop rechts der Leiste, Handy zwischen Titel und Werkzeugleiste */
 function bereich(w, h) {
-  if (w < 1000) {
-    var tt = $('tools').getBoundingClientRect().top;
-    return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (tt > 100 ? tt : h * 0.6) - 6), labW: 104, fit: 30 };
-  }
-  return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil($('tools').getBoundingClientRect().bottom) + 6), y1: h - 30, labW: 142, fit: 100 };
+  var tr = $('tools').getBoundingClientRect();
+  return bereichFuer(w, h, tr.top, tr.bottom);
 }
 function distFuer(a, w, h) {
-  var r = bereich(w, h), th = Math.tan(camera.fov * PI / 360);
-  var pxcm = Math.min((r.y1 - r.y0) / a.ext[1], (r.x1 - r.x0 - 2 * r.fit) / a.ext[0]);
-  return h / (2 * th * Math.max(pxcm, 0.5));
+  return abstandFuer(a.ext, bereich(w, h), camera.fov, h);
 }
 function gehe(i) {
   var a = AUSSCHNITTE[i]; if (!a) return;
