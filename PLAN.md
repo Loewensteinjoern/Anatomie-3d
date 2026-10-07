@@ -135,7 +135,7 @@ organe/niere/             Niere + Nephron
   - Noch auf echten Geräten zu testen: Installation und Offline auf iPhone (Startbildschirm-App: AR Quick Look und Export-Downloads) und Android
 - [x] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
   - Neue Adresse: https://loewensteinjoern.github.io/Anatomie-3d/; Verweise im Repository (README.md, executor.md) angepasst, an der App selbst ändert sich nichts
-  - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); Weiterleitung ist noch offen
+  - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); eine Weiterleitung (eigenes Repository „Herz-3d“ nur mit Weiterleitungsseite) entfällt, weil die App noch nicht weitergegeben wurde – eigene Lesezeichen und Startbildschirm-Symbole neu anlegen
   - Bewusst nicht geändert: `creator: 'Herz 3D - …'` in der USDZ des Herzens (`organe/herz/herz.js`), das ist der Name des Herz-Modells; eine Änderung würde die Herz-USDZ verändern
 
 ### Phase 2 – Niere komplett
