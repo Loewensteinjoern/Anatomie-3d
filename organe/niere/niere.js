@@ -69,6 +69,19 @@ var STRUKTUREN = [
     txt: 'Hormondrüse, die der Niere oben aufsitzt, aber eigenständig arbeitet. Ihre Rinde bildet Aldosteron (hält Natrium und Wasser im Körper), Cortisol und Geschlechtshormone, ihr Mark Adrenalin und Noradrenalin. Aldosteron wirkt direkt auf die Niere – im distalen Tubulus und im Sammelrohr.',
     facts: { 'Rinde bildet': 'Aldosteron, Cortisol', 'Mark bildet': 'Adrenalin, Noradrenalin', 'Wirkt auf die Niere': 'Aldosteron (Na⁺ hinein, K⁺ hinaus)' } }
 ];
+/* Hilfekarten der Leiste: [Schluessel, Titel, Text, Merke] */
+var HILFE = [
+  ['aufgaben', 'Aufgaben der Niere', 'Die Nieren reinigen das Blut von Abfallstoffen wie Harnstoff, Kreatinin und vielen Medikamenten. Sie regeln Wasser- und Salzhaushalt, das Säure-Basen-Gleichgewicht und über Renin den Blutdruck. Außerdem bilden sie Hormone: Erythropoetin regt die Blutbildung an, und in der Niere wird Vitamin D aktiviert.',
+    'Die Niere ist Klärwerk, Wasserwerk und Hormondrüse zugleich.'],
+  ['harnbildung', 'Vom Blut zum Harn', 'Durch beide Nieren fließen etwa 1,2 Liter Blut pro Minute. In den Glomeruli wird daraus Primärharn abgepresst – rund 180 Liter am Tag. Davon holen die Tubuli etwa 99 Prozent zurück; übrig bleiben ungefähr 1,5 Liter Endharn.',
+    'Glomeruläre Filtrationsrate (GFR) normal ca. 120 ml/min – sie sinkt bei Nierenschwäche und im Alter.'],
+  ['harnweg', 'Der Weg des Harns', 'Vom Sammelrohr tropft der Harn auf der Papille in einen kleinen Nierenkelch, fließt über die großen Kelche ins Nierenbecken und wird vom Harnleiter mit peristaltischen Wellen zur Blase transportiert. Über die Harnröhre wird er ausgeschieden.',
+    'Der Harnleiter hat drei Engstellen – dort bleiben Nierensteine besonders oft hängen (Kolik).'],
+  ['durchblutung', 'Durchblutung der Niere', 'Die Nierenarterie verzweigt sich in Segment-, Zwischenlappen-, Bogen- und Rindenarterien. Von dort zieht je eine zuführende Arteriole zu einem Glomerulus; die abführende Arteriole versorgt danach als zweites Kapillarnetz die Tubuli. Das Blut fließt über die gleichnamigen Venen zur Nierenvene zurück.',
+    'Zwei Kapillarnetze hintereinander: erst filtern, dann zurückholen.'],
+  ['pflege', 'Pflege: Ausscheidung beobachten', 'Normal sind etwa 1 bis 2 Liter Urin am Tag. Unter 500 ml spricht man von Oligurie, unter 100 ml von Anurie, über 3 Liter von Polyurie. Beobachtet werden Menge, Farbe, Geruch und Beimengungen; bei Bedarf wird die Ein- und Ausfuhr bilanziert und das Gewicht täglich kontrolliert.',
+    'Weniger als 0,5 ml Urin pro kg Körpergewicht und Stunde über mehrere Stunden ist ein Warnzeichen – Arzt informieren.']
+];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
 var MARKUP = `<div id="title">
   <div class="kicker">Niere &middot; Ren</div>
@@ -84,6 +97,7 @@ var MARKUP = `<div id="title">
     <button id="cam2" class="gh">Nierenbecken</button>
     <button id="cam3" class="gh">Hilus</button>
     <span class="sep"></span>
+    <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Nierenpapille">Lupe</button>
     <button id="bAR" class="gh" title="Die Niere mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
@@ -134,6 +148,24 @@ var MARKUP = `<div id="title">
   <button class="gh" id="iOpen" style="display:none">Nephron ansehen</button>
 </div>
 
+<div class="panel" id="scard">
+  <button class="gh hbtn" id="sClose" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="sKick"></div>
+  <h3 id="sTitle"></h3>
+  <div class="lead" id="sLead"></div>
+  <div class="after" id="sAfter"></div>
+  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Nahansicht</div>
+  <h3 id="lpTitle">Nierenpapille &ndash; hier tropft der Harn ab</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-adh="1">mit ADH</button><button class="gh" data-adh="0">ohne ADH</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#3AA0FF"></i>Wasser</span><span><i style="background:#B98BD9"></i>gel&ouml;ste Teilchen (Salz)</span><span><i style="background:#E8B923"></i>Harn</span><span><i style="background:#C8372D"></i>Blut im Vas rectum</span></div>
+</div>
+
 <div id="arUI" aria-live="polite">
   <div class="ar-top"><span class="ar-title">Niere in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um die Niere hinzustellen.</div>
@@ -164,12 +196,12 @@ function abstandFuer(ext, r, fov, h) {
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
-   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 ab Breite 371, Reihe 2 ab 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 unter Breite 415, Reihe 2 unter 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (100 + (w < 371 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 415 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + 115 };
 }
@@ -567,6 +599,8 @@ async function bauen() {
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, lv = 0, inAR = false;   /* lv: Version fuer die Beschriftung */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
 var openK = 1, openZiel = 1;   /* 1 = aufgeschnitten (Deckel weg), 0 = geschlossen; laeuft weich */
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
+var LUPE = { mode: false, open: false, papille: 0, adh: 1, adhZiel: 1, vorher: null, ring: null, line: null, ctx: null, dpr: 1, W: 340, H: 236, dots: null };   /* Lupe an der Papille (Abschnitt 5c) */
 var DECKEL_WEG = 6;            /* so weit gleitet der Deckel nach vorn (cm) */
 
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
@@ -613,6 +647,8 @@ function setSelected(id) {
   lv++;
   var box = $('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (LUPE.open) lupeClose();
+  if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
   $('iDe').textContent = s.de;
@@ -628,8 +664,37 @@ function setSelected(id) {
 }
 
 (function leiste() {
+  /* Reiter wie beim Herz: Strukturen, Hilfekarten, Ueben */
+  var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
-  $('rail').appendChild(rail);
+  var paneH = document.createElement('div'); paneH.id = 'paneHelp';
+  var paneU = document.createElement('div'); paneU.id = 'paneUeben';
+  var panes = [rail, paneH, paneU];
+  ['Strukturen', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+    var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); panes.forEach(function (pn, pk) { pn.style.display = pk === k ? '' : 'none'; });
+    });
+    tabs.appendChild(b);
+  });
+  $('rail').appendChild(tabs);
+  panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Hilfekarten */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  HILFE.forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur an der Niere und tippe sie an. Die Beschriftung verschwindet solange.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  pb.appendChild(bq); paneU.appendChild(pb);
   var gruppen = [];
   ORDER.forEach(function (s) { if (gruppen.indexOf(s.grp) < 0) gruppen.push(s.grp); });
   var hex = function (c) { return c.toString(16).padStart(6, '0'); };
@@ -651,9 +716,9 @@ function setSelected(id) {
         applyVisibility();
       }
       sw.addEventListener('click', function (e) { e.stopPropagation(); flip(); });
-      row.addEventListener('click', function () { setSelected(s.id); });
+      row.addEventListener('click', function () { if (!quiz) setSelected(s.id); });
       row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); setSelected(s.id); }
+        if (e.key === 'Enter') { e.preventDefault(); if (!quiz) setSelected(s.id); }
         if (e.key === ' ') { e.preventDefault(); flip(); }
       });
       wrap.appendChild(row);
@@ -661,6 +726,75 @@ function setSelected(id) {
     rail.appendChild(wrap);
   });
 })();
+
+/* Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text (oder Liste), Abschnitt "Merke"; unten links wie die Infokarte */
+function showCard(kick, title, lead, after, istQuiz) {
+  if (LUPE.open) lupeClose();
+  $('sKick').textContent = kick; $('sTitle').textContent = title;
+  $('sLead').textContent = lead;
+  var A = $('sAfter'); A.innerHTML = '';
+  if (after) { var h5 = document.createElement('h5'); h5.textContent = after.h; var p = document.createElement('p'); p.textContent = after.t; A.appendChild(h5); A.appendChild(p); }
+  $('sQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  $('scard').classList.add('show');
+  $('info').classList.remove('show');
+  lv++;
+}
+function closeCard() {
+  $('scard').classList.remove('show');
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  lv++;
+}
+function openHelp(key) {
+  var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
+}
+/* Ueben: "Tippe auf: ..." - nur Strukturen, die in der aktuellen Ansicht (aufgeschnitten oder geschlossen) sichtbar sind */
+function quizPool() {
+  return ORDER.filter(function (s) { return s.meshes.length && enabled[s.id] && (openZiel || AUSSEN.indexOf(s.id) >= 0); }).map(function (s) { return s.id; });
+}
+function quizNext() {
+  var pool = quizPool(); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  showCard('\u00dcben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe die Niere, wenn du die Struktur nicht gleich siehst.', null, true);
+  $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizStart() {
+  setSelected(null); quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
+  $('bQuiz').classList.add('on'); $('bQuiz').textContent = '\u00dcben beenden';
+  lv++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+}
+function leuchte(id, an) {   /* Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte */
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = $('sLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben \u2013 die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+$('sClose').onclick = function () { if (quiz) quizEnd(); else closeCard(); };
+$('qNext').onclick = function () { if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); } };
+$('qStop').onclick = quizEnd;
 
 /* Aufgeschnitten / Geschlossen */
 var LEGNOTE = ['Die linke Niere von vorn, geschlossen. „Aufgeschnitten“ zeigt das Innere.', 'Schnitt durch die linke Niere von vorn; die vordere Hälfte ist abgehoben.'];
@@ -670,6 +804,7 @@ function offen(an) {
   $('bZu').classList.toggle('on', !an);
   $('legNote').textContent = LEGNOTE[an ? 1 : 0];
   lv++;
+  if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); }   /* andere Ansicht: neue Aufgabe aus den jetzt sichtbaren Strukturen */
 }
 $('bOffen').onclick = function () { offen(true); };
 $('bZu').onclick = function () { offen(false); };
@@ -729,7 +864,7 @@ function distFuer(a, w, h) {
 }
 function gehe(i) {
   var a = AUSSCHNITTE[i]; if (!a) return;
-  aktiv = i;
+  aktiv = i; LUPE.vorher = null;   /* wer bei offener Lupe einen Ausschnitt waehlt, behaelt ihn beim Schliessen */
   for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === i);
   var w = window.innerWidth, h = window.innerHeight, d = distFuer(a, w, h);
   /* kuerzester Weg beim Drehen */
@@ -766,12 +901,16 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, glas = null;
-  for (var i = 0; i < hits.length && !treffer; i++) {
+  var hits = ray.intersectObjects(root.children, true), treffer = null, glas = null, erster = null, durch = [], dicht = false;
+  for (var i = 0; i < hits.length && !(treffer && dicht); i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
-    if (seeThrough && GEWEBE.indexOf(sid) >= 0) glas = glas || sid; else treffer = sid;
+    erster = erster || hits[i].point;
+    if (!dicht) { durch.push(sid); dicht = !o.material.transparent; }
+    if (!treffer) { if (seeThrough && GEWEBE.indexOf(sid) >= 0) glas = glas || sid; else treffer = sid; }
   }
+  if (LUPE.mode) { if (erster) lupeWahl(erster); return; }   /* Lupe: Papille waehlen statt Strukturinfo */
+  if (quiz) { quizAntwort(treffer || glas || null, durch); return; }
   setSelected(treffer || glas || null);
 }
 canvas.addEventListener('click', canvasKlick);
@@ -845,7 +984,7 @@ LISTEN.forEach(function (l) {
 });
 var pv = new THREE.Vector3(), lastKey = '';
 function layoutLabels(w, h) {
-  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, openZiel].join('|');
+  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, openZiel, LUPE.open ? LUPE.papille : -1].join('|');
   if (key === lastKey) return;
   lastKey = key;
   var narrow = w < 1000, r = bereich(w, h), a = AUSSCHNITTE[aktiv], th = Math.tan(camera.fov * PI / 360);
@@ -854,13 +993,15 @@ function layoutLabels(w, h) {
   var colR = Math.max(cx + 20, Math.min(r.x1 - r.labW - 4, cx + a.halb * pxcm + 12));
   var topL = narrow ? r.y0 : 100, topR = narrow ? Math.max(r.y0, 214) : $('tools').getBoundingClientRect().bottom + 16;
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
-  if (!narrow && $('info').classList.contains('show')) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var unten = ['info', 'scard', 'lupe'].filter(function (id) { return $(id).classList.contains('show'); })[0];   /* Karte unten links: Beschriftung links darueber */
+  if (!narrow && unten) botL = Math.min(botL, h - 22 - $(unten).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !(narrow && selected)) {   /* Handy: die Infokarte deckt die Niere, ohne Beschriftung bleibt sie frei */
-    LISTEN[aktiv].forEach(function (id) {
+  if (showLabels && !quiz && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt die Niere, ohne Beschriftung bleibt sie frei; beim Ueben keine Beschriftung */
+    (LUPE.open ? ['papillen'] : LISTEN[aktiv]).forEach(function (id) {   /* bei offener Lupe nur die Papille der Lupe */
       if (!enabled[id] || (!openZiel && AUSSEN.indexOf(id) < 0)) return;
-      pv.copy(ANKER[id]).project(camera);
+      if (LUPE.open) papillenPunkt(LUPE.papille, pv); else pv.copy(ANKER[id]);
+      pv.project(camera);
       if (pv.z > 1) return;
       if ((id === 'nephron' || aktiv === 1) && (Math.abs(pv.x) > 1 || Math.abs(pv.y) > 1)) return;   /* ausserhalb des Bildes (Ausschnitt Rinde und Mark zeigt nur den oberen Pol): keine Beschriftung */
       items.push({ id: id, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
@@ -1133,6 +1274,277 @@ $('bPlay').onclick = function () {
 });
 
 /* =====================================================================
+   5c. Lupe: Laengsschnitt durch die Spitze einer Nierenpapille (Knopf "Lupe", Tippen auf eine Papille waehlt eine andere).
+   Eine Zeichnung im Panel #lupe (Canvas #lpCv), rein aus der Zeit berechnet (clock): kein Zufall, feste Muster.
+   Sammelrohre laufen von oben (Mark) zusammen und muenden auf der Papillenspitze (Area cribrosa); der Harn tropft in den Becher
+   des kleinen Kelchs, sammelt sich und fliesst seitlich ab. Daneben das salzige Mark (gegen die Spitze dichter) und das Vas rectum.
+   Schalter "mit ADH" / "ohne ADH": mit ADH tritt Wasser aus den Rohren ins Mark und ins Vas rectum ueber, der Harn wird dunkel
+   und tropft wenig; ohne ADH bleibt das Wasser im Rohr, der Harn ist hell und tropft reichlich.
+   ===================================================================== */
+var LP_W = '#3AA0FF', LP_S = '#B98BD9';
+var LP_GANG = [[86, 137], [142, 159], [198, 181], [254, 203]];   /* Sammelrohre: x oben, x an der Muendung */
+var LP_Y_OBEN = 6, LP_Y_KNICK = 64, LP_Y_SPITZE = 150;
+var LP_PERIODE = 8;                                              /* Sekunden je Tropfen (Rohr, Fall, Becken) */
+var LP_REIHE = [0, 3, 1, 4, 2, 5];                               /* Reihenfolge der Tropfen: mit ADH (wenige) liegen sie weit auseinander */
+function lpMix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+function lpRgb(c, al) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + al + ')'; }
+function lpFrac(v) { return v - Math.floor(v); }
+function lpTipY(x) { var t = (x - 112) / 116; return LP_Y_SPITZE + 24 * t * (1 - t); }   /* Papillenspitze (Kurve) */
+function lpGangX(j, y) { var g = LP_GANG[j]; return y <= LP_Y_KNICK ? g[0] : g[0] + (g[1] - g[0]) * (y - LP_Y_KNICK) / (lpTipY(g[1]) - LP_Y_KNICK); }
+function lpGangPos(j, s, o) {   /* Punkt auf Rohr j bei s = 0..1 (oben bis Muendung) */
+  var g = LP_GANG[j], ye = lpTipY(g[1]), l1 = LP_Y_KNICK - LP_Y_OBEN, dx = g[1] - g[0], dy = ye - LP_Y_KNICK, l2 = Math.sqrt(dx * dx + dy * dy), d = s * (l1 + l2);
+  if (d <= l1) { o.x = g[0]; o.y = LP_Y_OBEN + d; } else { var f = (d - l1) / l2; o.x = g[0] + dx * f; o.y = LP_Y_KNICK + dy * f; }
+  return o;
+}
+function lpVasPos(s, seite, o) {   /* Vas rectum: rote Schenkel hinab, Bogen, blauer Schenkel hinauf; seite 0 links, 1 rechts */
+  var l = 80, b = Math.PI * 8, d = s * (2 * l + b), x, y;
+  if (d <= l) { x = 48; y = 8 + d; } else if (d <= l + b) { var a = (d - l) / 8; x = 56 - 8 * Math.cos(a); y = 88 + 8 * Math.sin(a); } else { x = 64; y = 88 - (d - l - b); }
+  o.x = seite ? 340 - x : x; o.y = y; return o;
+}
+/* Salzteilchen im Mark: feste Lagen aus einer Hashfunktion, gegen die Spitze dichter; nicht im Rohr, nicht im Vas rectum */
+function lpDots() {
+  var out = [], i = 0, o = { x: 0, y: 0 };
+  function h(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+  while (out.length < 190 && i < 4000) {
+    var x = 38 + 264 * h(i, 1), y = 8 + 142 * Math.sqrt(h(i, 2)); i++;
+    var u = Math.max(0, Math.min(1, (y - 92) / 58)), kl = 34 + 78 * u * u * (3 - 2 * u);
+    if (x < kl + 6 || x > 340 - kl - 6) continue;                                   /* ausserhalb der Papille */
+    if (y < 104 && ((x > 38 && x < 74) || (x > 266 && x < 302))) continue;          /* Vas rectum */
+    var frei = true;
+    for (var j = 0; j < LP_GANG.length && frei; j++) {
+      for (var s = 0; s <= 1.0001; s += 0.04) { lpGangPos(j, s, o); if (Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8) { frei = false; break; } }
+    }
+    if (frei) out.push({ x: x, y: y, a: h(i, 3) * 6.28, b: h(i, 4) * 6.28 });
+  }
+  return out;
+}
+function lpBeschriftung(c, text, x, y, rechts) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+}
+function lpTropfen(c, x, y, r, col, al) {
+  c.globalAlpha = Math.max(0, Math.min(1, al)); c.fillStyle = col;
+  c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+  c.strokeStyle = 'rgba(40,24,0,0.55)'; c.lineWidth = 0.8; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+function lupeDraw(t) {
+  var c = LUPE.ctx; if (!c) return;
+  var adh = LUPE.adh, o = { x: 0, y: 0 }, W = LUPE.W, H = LUPE.H, j, k, i, s;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#0C1A20'; c.fillRect(0, 0, W, H);
+  var harn = lpMix([250, 240, 150], [214, 148, 18], adh), tief = lpMix([243, 238, 220], [174, 124, 28], adh);
+  var spiegel = 190 + 8 * adh;   /* Fuellstand im Becher: ohne ADH mehr Harn */
+  /* kleiner Nierenkelch (Becher mit Hals nach rechts) */
+  var kelch = new Path2D();
+  kelch.moveTo(20, 70); kelch.bezierCurveTo(20, 150, 48, 214, 112, 214); kelch.lineTo(340, 214); kelch.lineTo(340, 188); kelch.lineTo(298, 188);
+  kelch.bezierCurveTo(316, 176, 320, 128, 320, 70); kelch.closePath();
+  c.fillStyle = 'rgba(234,210,122,0.10)'; c.fill(kelch);
+  /* Papille (Mark): Gewebe, dazu Violett gegen die Spitze */
+  var pap = new Path2D();
+  pap.moveTo(34, 6); pap.lineTo(34, 92); pap.bezierCurveTo(34, 126, 72, 146, 112, 150); pap.quadraticCurveTo(170, 162, 228, 150);
+  pap.bezierCurveTo(268, 146, 306, 126, 306, 92); pap.lineTo(306, 6); pap.closePath();
+  var gr = c.createLinearGradient(0, 6, 0, 160);
+  gr.addColorStop(0, 'rgba(96,58,44,0.80)'); gr.addColorStop(1, 'rgba(112,60,86,0.92)');
+  c.fillStyle = gr; c.fill(pap);
+  c.save(); c.clip(pap);
+  var vg = c.createLinearGradient(0, 6, 0, 160);
+  vg.addColorStop(0, 'rgba(160,110,220,0.03)'); vg.addColorStop(1, 'rgba(160,110,220,0.34)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, 170);
+  /* salziges Mark: gelöste Teilchen, schwingen leicht */
+  if (!LUPE.dots) LUPE.dots = lpDots();
+  c.fillStyle = LP_S; c.strokeStyle = 'rgba(40,10,60,0.8)'; c.lineWidth = 0.8;
+  LUPE.dots.forEach(function (d) {
+    c.beginPath(); c.arc(d.x + 1.2 * Math.sin(t * 0.8 + d.a), d.y + 1.2 * Math.cos(t * 0.7 + d.b), 2.5, 0, 6.2832); c.fill(); c.stroke();
+  });
+  /* Wasser verlaesst die Rohre (nur mit ADH): quer durch das Mark ins Vas rectum, darin hinauf */
+  if (adh > 0.02) {
+    for (j = 0; j < LP_GANG.length; j++) {
+      var xl = j < 2 ? 64 : 276;
+      for (k = 0; k < 3; k++) {
+        var u = lpFrac(t / 6 + k / 3 + j * 0.13), y0 = 34 + 17 * k + 5 * j, px, py, al;
+        if (u < 0.55) { var q = u / 0.55, xd = lpGangX(j, y0); px = xd + (xl - xd) * q; py = y0 - 6 * q; al = Math.min(1, u * 12); }
+        else { var q2 = (u - 0.55) / 0.45; px = xl; py = y0 - 6 - (y0 - 6 - 10) * q2; al = Math.min(1, (1 - u) * 8); }
+        lpTropfen(c, px, py, 2.6, LP_W, al * adh);
+      }
+    }
+  }
+  c.restore();
+  /* Vas rectum: Haarnadel links und rechts, Blut rot hinab, blau hinauf */
+  [0, 1].forEach(function (sd) {
+    var st = new Path2D(), x1 = sd ? 292 : 48, x2 = sd ? 276 : 64, xm = (x1 + x2) / 2, dir = sd ? -1 : 1;
+    st.moveTo(x1, 8); st.lineTo(x1, 88); st.arc(xm, 88, 8, sd ? 0 : Math.PI, sd ? Math.PI : 0, !sd); st.lineTo(x2, 8);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = 'rgba(214,170,150,0.75)'; c.lineWidth = 8; c.stroke(st);
+    c.strokeStyle = 'rgba(40,18,24,0.95)'; c.lineWidth = 5; c.stroke(st);
+    for (i = 0; i < 7; i++) {
+      s = lpFrac(t / 9 + i / 7 + sd * 0.31); lpVasPos(s, sd, o);
+      var m = Math.max(0, Math.min(1, (s - 0.4) / 0.2)), col = lpMix([200, 55, 45], [63, 99, 181], m), gerade = s < 0.4 || s > 0.6;
+      c.fillStyle = lpRgb(col, 1); c.beginPath(); c.ellipse(o.x, o.y, gerade ? 2.2 : 3, gerade ? 3.3 : 2.4, 0, 0, 6.2832); c.fill();
+    }
+  });
+  /* Sammelrohre */
+  var rohr = LP_GANG.map(function (g, jj) { var pts = []; for (var q = 0; q <= 1.0001; q += 0.05) pts.push(lpGangPos(jj, q, { x: 0, y: 0 })); return pts; });
+  rohr.forEach(function (pts) {
+    var pf = new Path2D(); pts.forEach(function (p, n) { n ? pf.lineTo(p.x, p.y) : pf.moveTo(p.x, p.y); });
+    c.lineCap = 'butt'; c.lineJoin = 'round';
+    c.strokeStyle = 'rgba(232,206,176,0.9)'; c.lineWidth = 8; c.stroke(pf);
+    c.strokeStyle = lpRgb(lpMix([235, 228, 150], [196, 136, 20], adh), 1); c.lineWidth = 4.8; c.stroke(pf);
+  });
+  /* Wasser im Rohr: ohne ADH reichlich, mit ADH wenig (das meiste ist ins Mark uebergetreten) */
+  var nW = 8 - 5 * adh;
+  for (j = 0; j < LP_GANG.length; j++) for (i = 0; i < 8; i++) {
+    lpGangPos(j, lpFrac(t / 5 + i / 8 + j * 0.21), o);
+    lpTropfen(c, o.x + 1.3 * Math.sin(i * 2.1 + j), o.y, 1.6, LP_W, nW - i);
+  }
+  /* Papillenspitze mit den Muendungen */
+  c.strokeStyle = 'rgba(176,88,74,0.95)'; c.lineWidth = 2; c.stroke(pap);
+  var tip = new Path2D(); tip.moveTo(112, 150); tip.quadraticCurveTo(170, 162, 228, 150);
+  c.strokeStyle = 'rgba(244,214,190,0.95)'; c.lineWidth = 2.6; c.stroke(tip);
+  LP_GANG.forEach(function (g) { c.fillStyle = 'rgba(10,20,25,0.95)'; c.beginPath(); c.ellipse(g[1], lpTipY(g[1]), 3.4, 1.7, 0, 0, 6.2832); c.fill(); });
+  /* Harn im Becher */
+  c.save(); c.clip(kelch);
+  var fl = new Path2D(); fl.moveTo(0, spiegel);
+  for (i = 0; i <= 340; i += 6) fl.lineTo(i, spiegel + 1.2 * Math.sin(i * 0.09 + t * 2.2));
+  fl.lineTo(340, 240); fl.lineTo(0, 240); fl.closePath();
+  c.fillStyle = lpRgb(harn, 0.62); c.fill(fl);
+  c.restore();
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  var wand = new Path2D();
+  wand.moveTo(20, 70); wand.bezierCurveTo(20, 150, 48, 214, 112, 214); wand.lineTo(340, 214);
+  wand.moveTo(340, 188); wand.lineTo(298, 188); wand.bezierCurveTo(316, 176, 320, 128, 320, 70);
+  c.strokeStyle = 'rgba(234,210,122,0.95)'; c.lineWidth = 2.6; c.stroke(wand);
+  /* Tropfen: im Rohr, im freien Fall, im Becher; mit ADH wenige und dunkle, ohne ADH viele und helle */
+  var nT = 6 - 4 * adh, r = 3.6 - 0.9 * adh, dcol = lpRgb(harn, 1);
+  for (j = 0; j < LP_GANG.length; j++) {
+    var ox = LP_GANG[j][1], oy = lpTipY(ox);
+    for (k = 0; k < 6; k++) {
+      var v = lpFrac(t / LP_PERIODE + LP_REIHE[k] / 6 + j * 0.05), al = nT - k, px2, py2;
+      if (v < 0.56) { lpGangPos(j, v / 0.56, o); px2 = o.x; py2 = o.y; }
+      else if (v < 0.66) { var f = (v - 0.56) / 0.1; px2 = ox; py2 = oy + 2 + (spiegel + 3 - oy - 2) * f * f; }
+      else { var f2 = (v - 0.66) / 0.34; px2 = ox + (346 - ox) * f2; py2 = spiegel + 8 + 1.2 * Math.sin(px2 * 0.09 + t * 2.2); }
+      lpTropfen(c, px2, py2, r, dcol, al);
+    }
+  }
+  /* Beschriftung */
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(lpGangX(3, 118) + 4, 116); c.lineTo(228, 116); c.moveTo(224, 156); c.lineTo(236, 166); c.stroke();
+  lpBeschriftung(c, 'Sammelrohre', 230, 119, false);
+  lpBeschriftung(c, 'salziges Mark', 50, 134, false);
+  lpBeschriftung(c, 'Vas rectum', 38, 108, false);
+  lpBeschriftung(c, 'Papillenspitze', 236, 170, false);
+  lpBeschriftung(c, '(Area cribrosa)', 236, 181, false);
+  lpBeschriftung(c, 'kleiner', 48, 172, false);
+  lpBeschriftung(c, 'Nierenkelch', 48, 183, false);
+  c.font = '9px ui-monospace, monospace'; c.textAlign = 'right'; c.fillStyle = '#8DA7B1'; c.fillText('weiter zum großen Kelch →', 336, 230);
+}
+
+/* ---- Panel, Ring in der Niere, Verbindungslinie ---- */
+var LP_TEXT = 'Auf jeder Papille m\u00fcnden 10 bis 25 Sammelrohre. Was hier austritt, ist der fertige Harn: Er wird ab jetzt nicht mehr ver\u00e4ndert, nur noch abgeleitet. Wie konzentriert er ist, entscheidet sich kurz davor im Sammelrohr: Mit ADH (antidiuretisches Hormon) wird die Wand f\u00fcr Wasser durchl\u00e4ssig, das salzige Mark zieht Wasser heraus \u2013 wenig, konzentrierter Harn. Ohne ADH bleibt das Wasser im Rohr \u2013 viel, verd\u00fcnnter Harn.';
+var LP_WERTE = ['<b>Ohne ADH:</b> Harn bis 50 mosmol/l, bis 20 l/Tag (z.\u00a0B. Diabetes insipidus)', '<b>Mit ADH:</b> Harn bis 1200 mosmol/l, ca. 0,5\u20131,5 l/Tag'];
+function lupeText() {
+  var h = '<p>' + LP_TEXT + '</p><p class="lp-note">' + LP_WERTE[LUPE.adhZiel ? 1 : 0] + '</p><p class="lp-hint">Tippe im Modell auf eine andere Papille, um sie anzusehen.</p>';
+  $('lpText').innerHTML = h;
+}
+function lupeAdh(an) {
+  LUPE.adhZiel = an ? 1 : 0;
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', b.getAttribute('data-adh') === String(LUPE.adhZiel)); });
+  lupeText();
+}
+function papillenPunkt(i, o) { var P = PY[i]; return o.set(P.apexA[0] + P.uA[0] * 0.15, P.apexA[1] + P.uA[1] * 0.15, P.apexA[2] + P.uA[2] * 0.15); }
+/* Kamera: die Papille mit etwas Umgebung in die Mitte des freien Bereichs ueber dem Panel (Desktop: rechts des Panels, Handy: Panel unten) */
+function lupeKamera(i) {
+  var w = window.innerWidth, h = window.innerHeight, r = bereich(w, h), pr = $('lupe').getBoundingClientRect(), nar = w < 1000;
+  var fr = nar ? { x0: 0, x1: w, y0: 90, y1: pr.top - 6, fit: 12 } : { x0: r.x0, x1: r.x1, y0: 140, y1: pr.top - 10, fit: 30 };
+  fr.y1 = Math.max(fr.y1, fr.y0 + 80);
+  var dist = Math.max(7, Math.min(view.dist, abstandFuer([5.2, 5.2], fr, camera.fov, h)));
+  var k = 2 * dist * Math.tan(camera.fov * PI / 360) / h;   /* cm je Pixel im Abstand dist */
+  var dx = (fr.x0 + fr.x1) / 2 - (r.x0 + r.x1) / 2, dy = (fr.y0 + fr.y1) / 2 - (r.y0 + r.y1) / 2;
+  var rechts = V(1, 0, 0).applyQuaternion(camera.quaternion), oben = V(0, 1, 0).applyQuaternion(camera.quaternion);
+  var ziel = papillenPunkt(i, V(0, 0, 0)).addScaledVector(rechts, -dx * k).addScaledVector(oben, dy * k);
+  orbit.anim = Kern.fahrt(view, { theta: view.theta, phi: view.phi, dist: dist, target: ziel }, 700);
+}
+function lupeOeffnen(i) {
+  if (quiz) quizEnd();
+  closeCard();
+  if (!LUPE.open) {   /* Ansicht merken, beim Schliessen geht es dorthin zurueck */
+    var a = orbit.anim && orbit.anim.t;
+    LUPE.vorher = { theta: a ? a.theta : view.theta, phi: a ? a.phi : view.phi, dist: a ? a.dist : view.dist, target: (a ? a.target : view.target).clone(), fit: fitDist };
+  }
+  LUPE.papille = i; papillenPunkt(i, LUPE.ring.position);
+  LUPE.ring.visible = true;
+  if (!LUPE.open) { LUPE.adh = LUPE.adhZiel; lupeAdh(LUPE.adhZiel); }
+  LUPE.open = true; $('lupe').classList.add('show');
+  if (selected) setSelected(null);
+  $('info').classList.remove('show');
+  lupeKamera(i);
+  lv++;
+}
+/* wie: 'fahrt' (Standard) zurueck zur vorherigen Ansicht, 'sofort' ohne Fahrt (AR), 'nichts' Kamera bleibt (die Fahrt zum Nephron uebernimmt) */
+function lupeClose(wie) {
+  var v = LUPE.vorher; LUPE.vorher = null;
+  LUPE.open = false; LUPE.mode = false;
+  $('lupe').classList.remove('show'); LUPE.ring.visible = false; LUPE.line.style.display = 'none';
+  canvas.style.cursor = '';
+  $('bLupe').classList.remove('on');
+  if (v && wie !== 'nichts' && !fz) {
+    fitDist = v.fit;
+    if (wie === 'sofort') { view.theta = v.theta; view.phi = v.phi; view.dist = v.dist; view.target.copy(v.target); orbit.anim = null; }
+    else orbit.anim = Kern.fahrt(view, { theta: v.theta, phi: v.phi, dist: v.dist, target: v.target }, 700);
+  }
+  lv++;
+}
+function lupeWahl(p) {   /* naechste Papille zum angetippten Punkt */
+  var best = 0, bd = 1e9, q = new THREE.Vector3();
+  for (var i = 0; i < PY.length; i++) { var d = papillenPunkt(i, q).distanceToSquared(p); if (d < bd) { bd = d; best = i; } }
+  lupeOeffnen(best);
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { lupeAdh(b.getAttribute('data-adh') === '1'); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  /* Ring in der Niere: zeigt, welche Papille die Lupe zeigt */
+  LUPE.ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 48),
+    new THREE.MeshBasicMaterial({ color: 0xE0A94A, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide }));
+  LUPE.ring.renderOrder = 999; LUPE.ring.visible = false; LUPE.ring.raycast = function () {};
+  scene.add(LUPE.ring);
+  LUPE.line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  LUPE.line.setAttribute('class', 'lp-line'); LUPE.line.style.display = 'none';
+  leaderSvg.appendChild(LUPE.line);
+  $('bLupe').addEventListener('click', function () {
+    if (fz || inAR) return;
+    if (LUPE.mode || LUPE.open) { lupeClose(); return; }
+    LUPE.mode = true; this.classList.add('on'); canvas.style.cursor = 'zoom-in';
+    if (!openZiel) offen(true);   /* die Papillen liegen auf der Schnittflaeche */
+    lupeOeffnen(1);
+  });
+})();
+var _lpV = new THREE.Vector3();
+function lupeTick(dt) {
+  if (!LUPE.open) return;
+  var dz = LUPE.adhZiel - LUPE.adh;
+  if (dz) { LUPE.adh += dz * (1 - Math.exp(-dt * 4)); if (Math.abs(LUPE.adhZiel - LUPE.adh) < 0.003) LUPE.adh = LUPE.adhZiel; }
+  lupeDraw(clock);
+  LUPE.ring.quaternion.copy(camera.quaternion);
+  LUPE.ring.scale.setScalar(Math.max(0.35, view.dist / 30));
+  /* Linie vom Ring zum Panel */
+  _lpV.copy(LUPE.ring.position).project(camera);
+  var w = window.innerWidth, h = window.innerHeight, r = $('lupe').getBoundingClientRect();
+  if (_lpV.z < 1 && r.width > 0) {
+    var sx = (_lpV.x * 0.5 + 0.5) * w, sy = (-_lpV.y * 0.5 + 0.5) * h;
+    var bx = Math.max(r.left + 12, Math.min(r.right - 12, sx)), by = sy < r.top ? r.top : (sy > r.bottom ? r.bottom : r.top);
+    LUPE.line.setAttribute('x1', sx); LUPE.line.setAttribute('y1', sy);
+    LUPE.line.setAttribute('x2', bx); LUPE.line.setAttribute('y2', by);
+    LUPE.line.style.display = '';
+  } else LUPE.line.style.display = 'none';
+}
+
+/* =====================================================================
    6. Export (Kern.Export): GLB statisch und STL, jeweils der sichtbare Zustand (aufgeschnitten: ohne Deckel); GLB animiert mit der Stroemung
    ===================================================================== */
 var LAENGE_TXT = 'Niere ca. 11 cm lang';
@@ -1204,6 +1616,7 @@ var arCfg = {
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
+    if (LUPE.open) lupeClose('sofort');
     camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
     labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
     arTexte();
@@ -1308,6 +1721,8 @@ function ausblendVorbereiten() {
 }
 function nephronOeffnen() {
   if (fz || abgebaut || inAR) return;
+  if (LUPE.open) lupeClose('nichts');
+  if (quiz) quizEnd();
   var w = window.innerWidth, h = window.innerHeight, ziel = nephronZiel(w, h), r = bereich(w, h);
   var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
   if (!openZiel) offen(true);   /* der Deckel verdeckt das Nephron: abheben */
@@ -1383,6 +1798,7 @@ function loop(now, frame) {
   }
   if (playing) clock += dt * speed;
   stroemungBild();
+  lupeTick(dt);
   if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
@@ -1401,7 +1817,8 @@ organ.abbauen = function () {
   abgebaut = true;
   AR.abbauen(); ARL.abbauen();
   fz = null; canvas.style.pointerEvents = '';
-  clearTimeout(Kern.toast._t);
+  clearTimeout(Kern.toast._t); clearTimeout(quizT);
+  if (LUPE.line && LUPE.line.parentNode) LUPE.line.parentNode.removeChild(LUPE.line);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */

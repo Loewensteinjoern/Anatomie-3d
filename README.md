@@ -15,7 +15,7 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 
 - `index.html#koerper` – Körper (Startansicht, auch ohne Zusatz)
 - `index.html#herz` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
-- `index.html#niere` – Niere (Frontalschnitt der linken Niere: Rinde, Mark, Nierenbecken und Gefäße; aufgeschnitten oder geschlossen; Strömung: Durchblutung mit roten und blauen Blutteilchen, Harnbildung und Harnabfluss mit gelben Tropfen und einer peristaltischen Welle im Harnleiter, mit Pause und drei Tempi; Export als GLB (statisch und animiert) und STL, AR); ein Nephron ist markiert, „Nephron ansehen“ fährt hinein
+- `index.html#niere` – Niere (Frontalschnitt der linken Niere: Rinde, Mark, Nierenbecken und Gefäße; aufgeschnitten oder geschlossen; Strömung: Durchblutung mit roten und blauen Blutteilchen, Harnbildung und Harnabfluss mit gelben Tropfen und einer peristaltischen Welle im Harnleiter, mit Pause und drei Tempi; Lupe an der Nierenpapille (Sammelrohre, Harn tropft in den kleinen Kelch, mit und ohne ADH); Reiter Strukturen, Hilfekarten und Üben; Export als GLB (statisch und animiert) und STL, AR); ein Nephron ist markiert, „Nephron ansehen“ fährt hinein
 - `index.html#niere/nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
 Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch: vom Nephron zur Niere, von der Niere zum Körper.

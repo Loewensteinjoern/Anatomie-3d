@@ -29,7 +29,8 @@
    Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
    Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
    aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
-   „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen), handy, datei (file://), webxr (Deckel, Beschriftung und
+   „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
+   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel, Beschriftung und
    Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel und
    Beschriftung) und abbau.
 
@@ -465,11 +466,19 @@ const MODELLE = {
         await t.klick('#bCls'); await t.weiter(3000); await t.bild('stroemung');
         await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await t.weiter(1000); await t.bild('pause');   /* beide Bilder müssen gleich aussehen */
         await t.klick('#bPlay');
+        /* Lupe (Papille), Hilfekarten und Üben (neue Bilder am Ende) */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#lpChips button[data-adh="0"]'); await t.weiter(1500); await t.bild('lupe-ohne-adh');
+        await t.klick('#bLupeX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#qStop'); await t.weiter(300);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -494,6 +503,7 @@ const MODELLE = {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
         await t.klick('#cam0'); await t.klick('#bZu'); await t.weiter(1400); await t.bild('geschlossen');
         await t.klick('#bOffen'); await t.weiter(300);
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe bleibt offen: der Abbau muss Ring, Linie und Panel wegräumen */
       }) }
     }
   },
