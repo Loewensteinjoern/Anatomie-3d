@@ -588,7 +588,8 @@ MODELLE.atlas.kontexte['weiterleitung-datei'] = { opt: DESKTOP, lokal: true, ohn
    3. Aufnehmen
    ===================================================================== */
 const TYPEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary' };
+  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary',
+  '.webmanifest': 'application/manifest+json' };
 function server(wurzel) {
   return new Promise((res) => {
     const srv = http.createServer((q, r) => {
