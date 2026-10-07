@@ -994,7 +994,7 @@ var ANKER = {
   gehirn: [-3, 166, 1], schaedel: [-6.6, 168, 0], augen: [-3, 161.8, 8.4], rueckenmark: [0, 146, -6],
   schilddruese: [2.3, 145, 2.6], luftroehre: [0, 132, 0], speiseroehre: [1.5, 124, -2.5],
   herz: [3, 124, 5], herzkranz: [4.2, 121, 5], lunge: [-9, 128, 5], zwerchfell: [-8, 112, 8],
-  brustkorb: [-11, 134, 9], aorta: [2, 128, -2], hohlvenen: [-2.2, 132, 1],
+  brustkorb: [-11, 134, 9], aorta: [3.1, 128.9, 1.4], hohlvenen: [-2.2, 132, 1],
   leber: [-8, 110, 7], gallenblase: [-6.3, 100, 7.5], magen: [9, 106, 6], milz: [10, 108, -6],
   pankreas: [3, 101, 1], duenndarm: [-1, 92, 6], dickdarm: [-11, 93, 8], nieren: [8, 104, -6],
   harnleiter: [-4.5, 92, -1], harnblase: [0, 83, 5.5], wirbelsaeule: [0, 96, -8], becken: [-13.5, 88, 5]
@@ -1005,7 +1005,7 @@ var KURZ = { aorta: 'Aorta', luftroehre: 'Luftröhre', pankreas: 'Bauchspeicheld
 var LISTEN = [
   ['gehirn', 'schilddruese', 'herz', 'lunge', 'leber', 'magen', 'duenndarm', 'dickdarm', 'nieren', 'harnblase', 'wirbelsaeule', 'becken'],
   ['gehirn', 'augen', 'schaedel', 'rueckenmark', 'schilddruese', 'luftroehre', 'speiseroehre', ['aorta', -3.6, 148, 0.5], ['hohlvenen', -2.4, 140, 1]],
-  ['herz', 'lunge', 'luftroehre', 'speiseroehre', ['aorta', 4.5, 141, 0], 'hohlvenen', 'zwerchfell', 'brustkorb', 'herzkranz'],
+  ['herz', 'lunge', 'luftroehre', 'speiseroehre', ['aorta', 3.1, 128.9, 1.4], 'hohlvenen', 'zwerchfell', 'brustkorb', 'herzkranz'],
   ['leber', 'gallenblase', 'magen', 'milz', 'pankreas', 'duenndarm', 'dickdarm', 'nieren', ['aorta', 1.5, 100, -3]],
   ['harnblase', 'harnleiter', 'dickdarm', 'becken', 'wirbelsaeule'],
   ['wirbelsaeule', 'rueckenmark', 'nieren', 'milz', ['lunge', 8, 128, -6], 'becken']
