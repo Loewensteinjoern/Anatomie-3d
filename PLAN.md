@@ -132,7 +132,8 @@ organe/niere/             Niere + Nephron
   - `tools/version.js`: VERSION = SHA-256 (12 Hex) über alle Dateien in `DATEIEN`; `node tools/version.js` schreibt sie, `--pruefen` prüft sie und die Vollständigkeit der Liste (index.html, Manifest, `Kern.ORGANE`, Weiterleitungen); nach jeder Änderung an einer App-Datei ausführen
   - `tools/vergleich.js`: Atlas-Kontexte `offline`, `update`, `update-handy`, `offline-datei` und Versionsprüfung (`erg.version`); der Testserver liefert für Ordneradressen `index.html`
   - Mit dem Nutzer abgestimmt: Name „Anatomie-Atlas für Pflegeberufe“ (Kurzname „Anatomie“), Symbol Körper mit Herz, Update-Hinweis mit Knopf
-  - Noch auf echten Geräten zu testen: Installation und Offline auf iPhone (Startbildschirm-App: AR Quick Look und Export-Downloads) und Android
+  - Auf dem iPhone getestet: Installation als Startbildschirm-App und Offline-Betrieb funktionieren
+  - Noch auf echten Geräten zu testen: AR Quick Look und Export-Downloads in der Startbildschirm-App (iPhone) sowie Android
 - [x] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
   - Neue Adresse: https://loewensteinjoern.github.io/Anatomie-3d/; Verweise im Repository (README.md, executor.md) angepasst, an der App selbst ändert sich nichts
   - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); eine Weiterleitung (eigenes Repository „Herz-3d“ nur mit Weiterleitungsseite) entfällt, weil die App noch nicht weitergegeben wurde – eigene Lesezeichen und Startbildschirm-Symbole neu anlegen
@@ -142,6 +143,8 @@ organe/niere/             Niere + Nephron
 
 - [ ] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße)
 - [ ] Nephron als Zoomstufe innerhalb der Niere
+- [ ] Nephron: Schema (2D-Bild wie beim Herz, z. B. Filtration, Rückresorption und Sekretion entlang des Tubulus) – Bauplan-Lücke, Wunsch von Jörn
+- [ ] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
 
 ### Phase 3 und weiter – Organ für Organ
 
