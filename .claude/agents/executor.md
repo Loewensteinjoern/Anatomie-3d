@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
-Du bist der **Executor** für das Projekt *Herz-3d*: eine statische Webanwendung ohne Build-Schritt mit zwei 3D-Modellen auf Basis von three.js (r128) – dazu der Körper als Startansicht; Herz, Nephron und Körper auch in AR, alles erreichbar über den Anatomie-Atlas `index.html` (leer bzw. `#koerper` = Körper, `#herz`, `#nephron`). Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`). Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
+Du bist der **Executor** für das Projekt *Anatomie-3d* (bis Oktober 2026 „Herz-3d“): eine statische Webanwendung ohne Build-Schritt mit zwei 3D-Modellen auf Basis von three.js (r128) – dazu der Körper als Startansicht; Herz, Nephron und Körper auch in AR, alles erreichbar über den Anatomie-Atlas `index.html` (leer bzw. `#koerper` = Körper, `#herz`, `#nephron`). Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`). Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
 
 ## Arbeitsweise
 
@@ -37,7 +37,7 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 - Nur klassische Skripte (`<script src="…"></script>`), keine ES-Module (`type="module"`, `import`) und kein `fetch` auf lokale Dateien – beides scheitert, wenn die Seite lokal per `file://` geöffnet wird.
 - Reihenfolge der Skripte am Ende von `<body>`: zuerst `vendor/three.min.js`, dann die benötigten Zusätze aus `vendor/` (`GLTFExporter.js`, bei beiden Modellen), dann `core/kern.js`, dann `core/rahmen.js`, dann `core/export.js`, dann `core/ar.js` (falls AR), dann `core/szenarien.js` (falls Krankheitsbilder), dann `core/sdf.js`, zuletzt `core/atlas.js`. Organ-Skripte stehen nicht im HTML, sie werden über `Kern.ORGANE`/`Kern.organLaden` nachgeladen. Der Code nutzt das globale `THREE`, der App-Code zusätzlich `Kern`. CSS: `core/kern.css` vor der Organ-CSS laden; die Organ-CSS enthält nur Abweichendes.
 - Organ-Dateien lösen beim Laden nichts aus und erzeugen keine globalen Namen außer der Registrierung über `Kern.organ` (Ausnahme vorerst `window.HerzApp` und `window.KoerperApp` für tools/vergleich.js).
-- Pfade relativ angeben (`vendor/…`, `organe/…`), nie mit `/` am Anfang – auf GitHub Pages liegt die Seite in einem Unterordner (derzeit `/Herz-3d/`).
+- Pfade relativ angeben (`vendor/…`, `organe/…`), nie mit `/` am Anfang – auf GitHub Pages liegt die Seite in einem Unterordner (derzeit `/Anatomie-3d/`).
 - Neue Dateien nur, wenn die Aufgabe es verlangt: Organ-Code nach `organe/<organ>/`, Gemeinsames nach `core/`, Fremdbibliotheken unverändert nach `vendor/`.
 
 ## Prüfen nach Änderungen
