@@ -122,8 +122,12 @@ organe/niere/             Niere + Nephron
   - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB) mit Beschriftung; Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
   - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
   - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
+  - Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet
 - [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
-- [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
+- [x] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
+  - Neue Adresse: https://loewensteinjoern.github.io/Anatomie-3d/; Verweise im Repository (README.md, executor.md) angepasst, an der App selbst ändert sich nichts
+  - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); Weiterleitung ist noch offen
+  - Bewusst nicht geändert: `creator: 'Herz 3D - …'` in der USDZ des Herzens (`organe/herz/herz.js`), das ist der Name des Herz-Modells; eine Änderung würde die Herz-USDZ verändern
 
 ### Phase 2 – Niere komplett
 
