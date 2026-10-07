@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /* =====================================================================
-   Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz und Nephron
+   Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
 
    Prüft, ob die Modelle nach einer Änderung genauso aussehen und
-   funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz und
-   Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere/nephron).
+   funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz, Niere und
+   Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere, #niere/nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|nephron|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -14,9 +14,9 @@
    ist fest initialisiert. Bei unverändertem Verhalten sind die Bilder
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
-   und bei Körper, Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
+   und bei Körper, Herz, Niere und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
-   In den Modellen koerper, herz und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
+   In den Modellen koerper, herz, niere und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
    von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
 
@@ -26,7 +26,12 @@
    und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
    lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
-   Kontext abbau (Körper, Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
+   Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
+   Seitentext, Exporte GLB statisch und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht, aufgeschnitten,
+   ohne Beschriftung, Info), handy, datei (file://), webxr, quicklook (AR wie beim Nephron; Deckel und Beschriftung) und
+   abbau; kein animierter Export (keine Strömung).
+
+   Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
    Kern.organBeenden). Gemessen werden nach jedem Abbau Speicher, Szene, DOM und
    Listener (window, document, #cv); die drei Messungen müssen gleich sein. Die
@@ -48,7 +53,7 @@
 
    Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
    offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
-   neu laden: Körper, Herz und Nephron müssen bereit sein; Bilder nur anzusehen), update (neue Version der
+   neu laden: Körper, Herz, Nephron und Niere müssen bereit sein; Bilder nur anzusehen), update (neue Version der
    sw.js wird unterschoben: Hinweis #atlasUpdateBox, Kreuz, erneutes Laden, Klick auf „neu laden“ und
    Speicher der neuen Version; Warten in echter Zeit), update-handy (Lage des Hinweises auf dem Handy)
    und offline-datei (file://: keine Anmeldung, kein Hinweis, keine Konsolenfehler). Außerdem prüft
@@ -272,7 +277,7 @@ async function abbauAblauf(t, name, bedienung) {
       szene: R.szene.children.map((c) => c.type + (c.name ? ':' + c.name : '')),
       organ: kinder('organ'), labels: kinder('labels'), leaders: kinder('leaders'),
       bodyKinder: document.body.childElementCount, bodyKlasse: document.body.className,
-      herzApp: typeof window.HerzApp !== 'undefined', koerperApp: typeof window.KoerperApp !== 'undefined', listener: window.__listener()
+      herzApp: typeof window.HerzApp !== 'undefined', koerperApp: typeof window.KoerperApp !== 'undefined', niereApp: typeof window.NiereApp !== 'undefined', listener: window.__listener()
     };
   });
   const beenden = () => t.js(() => Kern.organBeenden());
@@ -437,6 +442,50 @@ const MODELLE = {
       }) }
     }
   },
+  niere: {
+    datei: 'index.html',
+    bereit: () => !!(window.NiereApp && window.NiereApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bStl', 'stl');
+        await t.ruhe(6000);
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('hilus');
+        await t.klick('#cam0'); await t.klick('#bZu'); await t.weiter(1400); await t.bild('geschlossen');
+        await t.klick('#bSee'); await t.weiter(600); await t.bild('geschlossen-durchsicht');
+        await t.klick('#bSee'); await t.klick('#bOffen'); await t.weiter(1400); await t.bild('aufgeschnitten');
+        await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
+        await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
+        await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arOffen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'niere', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
+        await t.klick('#cam0'); await t.klick('#bZu'); await t.weiter(1400); await t.bild('geschlossen');
+        await t.klick('#bOffen'); await t.weiter(300);
+      }) }
+    }
+  },
   nephron: {
     datei: 'index.html',
     bereit: () => document.getElementById('boot').classList.contains('gone'),
@@ -488,16 +537,17 @@ const MODELLE = {
 };
 
 /* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
-const ATLAS_ADRESSE = { koerper: '', herz: '#herz', nephron: '#niere/nephron' };
-/* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz und nephron auf #herz / #niere/nephron */
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron' };
+/* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz, niere und nephron auf #herz / #niere / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
   herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  niere: () => !!(window.NiereApp && window.NiereApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['koerper', 'herz', 'nephron']) {
+for (const organ of ['koerper', 'herz', 'niere', 'nephron']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
@@ -628,7 +678,7 @@ async function updateBisHinweis(t, s) {
   s.hinweisSichtbar = true;
   await t.weiter(300); await t.bild('hinweis');
 }
-/* Kontext offline: Speicher des Service Workers prüfen, ohne Netz neu laden, Körper/Herz/Nephron öffnen */
+/* Kontext offline: Speicher des Service Workers prüfen, ohne Netz neu laden, Körper/Herz/Nephron/Niere öffnen */
 MODELLE.atlas.kontexte.offline = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
   const sw = swQuelle(t.wurzel), soll = swDateien(sw), name = 'anatomie-' + swVersion(sw);
   await t.js(async () => { await navigator.serviceWorker.ready; });
@@ -651,11 +701,11 @@ MODELLE.atlas.kontexte.offline = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS
     await t.weiter(1500); await t.bild(n);
     organe[n] = await t.js(ATLAS_BEREIT(n)) === true;
   };
-  await oeffne('herz'); await oeffne('nephron');
+  await oeffne('herz'); await oeffne('nephron'); await oeffne('niere');
   await t.offline(false);
-  const ok = dateienOk && controller && organe.koerper && organe.herz && organe.nephron;
+  const ok = dateienOk && controller && organe.koerper && organe.herz && organe.nephron && organe.niere;
   t.erg.offline = { speicher: { namen: speicher.namen, anzahl: (speicher.eintraege[name] || []).length, erwartet: soll.length, fehlt: soll.filter((d) => !(speicher.eintraege[name] || []).includes(d)), zuviel: (speicher.eintraege[name] || []).filter((d) => !soll.includes(d)) }, dateienOk, controller, organe, ok };
-  process.stdout.write('  offline: ' + (ok ? 'Speicher ' + name + ' mit ' + soll.length + ' Dateien, offline Körper/Herz/Nephron bereit' : 'ABWEICHUNG ' + JSON.stringify(t.erg.offline)) + '\n');
+  process.stdout.write('  offline: ' + (ok ? 'Speicher ' + name + ' mit ' + soll.length + ' Dateien, offline Körper/Herz/Nephron/Niere bereit' : 'ABWEICHUNG ' + JSON.stringify(t.erg.offline)) + '\n');
 } };
 /* Kontext update: neue Version der sw.js unterschieben, Hinweis, Kreuz, erneutes Laden, Klick auf „neu laden“ */
 MODELLE.atlas.kontexte.update = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
@@ -1036,7 +1086,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|nephron|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }

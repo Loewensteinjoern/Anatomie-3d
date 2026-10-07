@@ -1,5 +1,5 @@
 # Anatomie-3d
-Anatomie-App in 3D: Körper-Atlas mit Organsystemen und Organen, Detailmodelle von Herz und Nephron, alles auch in AR.
+Anatomie-App in 3D: Körper-Atlas mit Organsystemen und Organen, Detailmodelle von Herz, Niere und Nephron, alles auch in AR.
 
 ## App
 
@@ -15,9 +15,10 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 
 - `index.html#koerper` – Körper (Startansicht, auch ohne Zusatz)
 - `index.html#herz` – Herz (Herzhöhlen, Klappen, Windkessel, Krankheitsbilder, AR)
+- `index.html#niere` – Niere (Frontalschnitt der linken Niere: Rinde, Mark, Nierenbecken und Gefäße; aufgeschnitten oder geschlossen, Export als GLB und STL, AR)
 - `index.html#niere/nephron` – Nephron (Nierenkörperchen und Tubulussystem, Strömung, Krankheitsbilder, AR)
 
-Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch, vom Nephron derzeit zum Körper.
+Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch: vom Nephron zur Niere, von der Niere zum Körper.
 
 Die alten Adressen `index.html#nephron` und `nephron.html` leiten auf `index.html#niere/nephron` weiter, `atlas.html` auf den Atlas.
 
@@ -38,14 +39,14 @@ Für Entwickler: Nach Änderungen an App-Dateien `node tools/version.js` ausfüh
 ### Dateien
 
 ```
-index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #niere/nephron)
+index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #niere, #niere/nephron)
 nephron.html, atlas.html   Weiterleitungen auf index.html
 sw.js, app.webmanifest     Service Worker (Offline-Speicher) und Web-App-Manifest
 icons/                     App-Symbol (symbol.svg, PNGs)
 core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, offline.js, export.js, ar.js, szenarien.js, sdf.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
 organe/koerper/            koerper.css, koerper.js – Gestaltung und App-Code des Körpers (Startansicht)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
-organe/niere/              niere-form.js, nephron.css, nephron.js – Form der Niere (eigener Baustein, den der Körper allein nachlädt), Gestaltung und App-Code des Nephrons
+organe/niere/              niere-form.js, niere.css, niere.js, nephron.css, nephron.js – Form der Niere (eigener Baustein, den der Körper allein nachlädt), Gestaltung und App-Code der Niere, Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
 tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen
