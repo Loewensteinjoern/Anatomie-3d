@@ -287,6 +287,7 @@ Kern.form('niere', {
   SCHNITT_N: anatomisch([0, 0, 1]),
   LY: LY, RINDE: RINDE, KM: KM, SC: SC,
   BECKEN: BECKEN, UR0: UR0, UR1: UR1, UR2: UR2, OBEN: OBEN, MITTE: MITTE, UNTEN: UNTEN,
+  URP: URP,   /* Mittellinie des Harnleiters in kurzen Stuecken (lokal), URP[0] = UR0, URP[10] = UR2 */
   /* Pyramiden (entstehen beim ersten Zugriff): { w, u, apex, basis, lang, rb, apexA, basisA, uA } (A = anatomisch) */
   get PYR() { return pyr(); },
   sinus: sinus, parenchym: parenchym, pyramide: pyramide,

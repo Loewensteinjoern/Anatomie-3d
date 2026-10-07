@@ -6,6 +6,8 @@
    hier wird sie vernetzt, eingefaerbt und bedient.
    Einheit cm; Achsen anatomisch wie im Koerper (x + links, y oben, z vorn),
    Mitte der Niere im Ursprung.
+   Strömung: rote und blaue Blutteilchen (Durchblutung), gelbe Harntropfen (Harnbildung und Abfluss, Welle im Harnleiter);
+   Pause und drei Tempi wie beim Nephron, Export "GLB animiert".
    Zoomstufe: In der oberen Polpyramide ist ein Nephron markiert (Bahnen aus dem Nephron-Modul,
    organe/niere/nephron.js); "Nephron ansehen" faehrt hinein (Adresse niere/nephron).
    ===================================================================== */
@@ -92,6 +94,13 @@ var MARKUP = `<div id="title">
     <button id="bSee" class="gh" title="Nierengewebe durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
     <button id="bLab" class="gh on">Beschriftung</button>
   </div>
+  <div class="trow">
+    <span class="cap">Str&ouml;mung</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bS0" class="gh">langsam</button>
+    <button id="bS1" class="gh on">normal</button>
+    <button id="bS2" class="gh">schnell</button>
+  </div>
 </div>
 
 <div class="panel" id="rail"></div>
@@ -103,10 +112,15 @@ var MARKUP = `<div id="title">
   <b style="color:#E3C75A">Gelb</b> Harnwege &ndash; Kelche, Becken und Harnleiter.<br>
   <b style="color:#FFC21A">Gold</b> das markierte Nephron (stark vergr&ouml;&szlig;ert).</p>
   <p class="note" id="legNote">Schnitt durch die linke Niere von vorn; die vordere H&auml;lfte ist abgehoben.</p>
+  <p class="note">Die Teilchen zeigen die Str&ouml;mung &ndash; symbolisch, nicht ma&szlig;st&auml;blich: rot Blut zur Niere, blau Blut zur&uuml;ck, gelb Harn.</p>
+  <p class="note kz">Durchblutung beider Nieren ca. 1,2 l Blut pro Minute (ein F&uuml;nftel des Herzzeitvolumens)<br>
+  daraus ca. 180 l Prim&auml;rharn pro Tag<br>
+  davon bleiben ca. 1,5 l Endharn</p>
 </div>
 
 <div class="panel" id="exp">
   <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
   <button id="bGlbS" class="gh">GLB &middot; statisch</button>
   <button id="bStl" class="gh">STL</button>
 </div>
@@ -129,6 +143,7 @@ var MARKUP = `<div id="title">
     <button class="ar-b" id="arSmall">Kleiner</button>
     <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
     <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
   </div>
   <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
@@ -148,15 +163,15 @@ function abstandFuer(ext, r, fov, h) {
   var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
-/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 80, Handy 70 bei zwei Zeilen, je
-   32 mehr, wenn eine der beiden Reihen umbricht: Reihe 1 ab Breite 371, Reihe 2 ab 379); aufbauen misst sie selbst, die Werte stimmen ueberein.
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
+   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 ab Breite 371, Reihe 2 ab 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
-    var u = Math.round((h - (0.34 * h + 6)) * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), wie der Browser auf 1/64 px gerundet */
-    return { oben: u - (70 + (w < 371 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
+    var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
+    return { oben: u - (100 + (w < 371 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
   }
-  return { oben: 18, unten: 18 + 80 };
+  return { oben: 18, unten: 18 + 115 };
 }
 /* Startansicht bei Fenstergroesse w x h: Kamera und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.start = function (w, h) {
@@ -219,11 +234,18 @@ MAT.kelcheKlein = mat(0xEAD27A, HOHL);
 MAT.kelcheGross = mat(0xDCC060, HOHL);
 MAT.becken = mat(0xD9B44A, HOHL);
 MAT.harnleiter = mat(0xC9A43A, HOHL);
-/* Gefaesse: Arterien rot, Venen blau; je Stufe ein Material je Art (gleiche Struktur-ID) */
+/* Gefaesse: Arterien rot, Venen blau; je Stufe ein Material je Art (gleiche Struktur-ID); leicht durchscheinend (Deckkraft 0.55,
+   depthWrite aus), damit man die Teilchen der Stroemung darin sieht; in der USDZ (ohne Teilchen) undurchsichtig */
 ['arterie', 'vene', 'interlobaer', 'bogen', 'interlobular'].forEach(function (sid) {
-  MAT[sid + 'A'] = mat(ROT, { rough: 0.4, coat: 0.3 });
-  MAT[sid + 'V'] = mat(BLAU, { rough: 0.4, coat: 0.3 });
+  MAT[sid + 'A'] = mat(ROT, { rough: 0.4, coat: 0.3, opacity: 0.55 });
+  MAT[sid + 'V'] = mat(BLAU, { rough: 0.4, coat: 0.3, opacity: 0.55 });
+  MAT[sid + 'A'].userData.usdzOp = MAT[sid + 'V'].userData.usdzOp = 1;
 });
+/* Teilchen der Stroemung: kraeftige Farben mit leichtem Leuchten (heben sich von den durchscheinenden Gefaessen ab) */
+MAT.blutRot = mat(0xFF4B3C, { rough: 0.35 }); MAT.blutRot.emissive.copy(srgb(0xB01808)).multiplyScalar(0.6);
+MAT.blutBlau = mat(0x5C8DFF, { rough: 0.35 }); MAT.blutBlau.emissive.copy(srgb(0x1B3FB0)).multiplyScalar(0.6);
+MAT.harn = mat(0xFFF03A, { rough: 0.3 }); MAT.harn.emissive.copy(srgb(0xFFD400)).multiplyScalar(0.75);
+['blutRot', 'blutBlau', 'harn'].forEach(function (k) { MAT[k].userData.baseEmissive = MAT[k].emissive.clone(); });
 MAT.nebenniere = mat(0xD8A13E, { rough: 0.55, coat: 0.2 });
 /* markiertes Nephron: kraeftiges Gold mit leichtem Leuchten (das Leuchten ist der Grundwert der Hervorhebung) */
 MAT.nephron = mat(0xFFC21A, { rough: 0.35, coat: 0.4 });
@@ -515,6 +537,8 @@ async function bauen() {
       tris.gefaesse += g.index.count / 3;
     });
   });
+  await setLoad(0.93, 'Strömung'); if (abgebaut) return;
+  stroemungBauen(L);
   await setLoad(0.95, 'Nephron'); if (abgebaut) return;
   var nform = await nephP; if (abgebaut) return;
   if (nform) {   /* ohne Nephron-Modell bleibt die Struktur ohne Netz (die Fahrt zum Nephron funktioniert trotzdem) */
@@ -546,8 +570,12 @@ var openK = 1, openZiel = 1;   /* 1 = aufgeschnitten (Deckel weg), 0 = geschloss
 var DECKEL_WEG = 6;            /* so weit gleitet der Deckel nach vorn (cm) */
 
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+/* Teilchen der Stroemung (userData.teilchen = 'blut' | 'harn'): sichtbar, solange eine Gefaess- bzw. Harnwegsebene sichtbar ist */
+var GEFAESS_SID = ['arterie', 'vene', 'interlobaer', 'bogen', 'interlobular'], HARN_SID = ['kelcheKlein', 'kelcheGross', 'becken', 'harnleiter'];
+function teilchenSichtbar(art) { return (art === 'blut' ? GEFAESS_SID : HARN_SID).some(function (sid) { return enabled[sid]; }); }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh) o.visible = enabled[o.userData.sid]; });
+  root.traverse(function (o) { if (o.isMesh) o.visible = o.userData.teilchen ? teilchenSichtbar(o.userData.teilchen) : enabled[o.userData.sid]; });
+  if (ST) ST.neu = true;
   lv++;
 }
 /* Gewebe: Glas (Durchsicht) und Ausblenden des Deckels; Material nur neu uebersetzen, wenn sich transparent oder side aendert */
@@ -860,7 +888,252 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
-   6. Export (Kern.Export): GLB statisch und STL, jeweils der sichtbare Zustand (aufgeschnitten: ohne Deckel)
+   5b. Stroemung: Blut (rot zur Niere hin, blau zurueck) und Harn (gelb) als Teilchen, dazu die Welle im Harnleiter.
+   Symbolisch, nicht massstaeblich. Alles ist eine reine Funktion von clock (Sekunden bei "normal") und dem Index des Teilchens:
+   kein Zufall, die Anzahl steht beim Aufbau fest. Je Art ein InstancedMesh (ein Zeichenaufruf).
+   Blut: Bahnen aus den Gefaesslinien der Form (Nierenarterie -> Segment- -> Zwischenlappen- -> Bogen- -> Rindenarterie bzw.
+   umgekehrt bei den Venen); das Tempo folgt dem Radius (gross = schnell). Alle Teilchen starten zu festen, gleichmaessig verteilten
+   Zeiten (Periode STR.P) und leben, bis sie das Ende der Bahn erreichen (Rinde bzw. Austritt aus der Niere).
+   Harn: aus jeder Papille tropfen Tropfen durch den kleinen und grossen Kelch ins Nierenbecken; dort sammelt sich alle STR.PW
+   Sekunden eine Portion, die in einer peristaltischen Welle (Verdickung vorn, Einschnuerung dahinter) den Harnleiter hinabwandert.
+   ===================================================================== */
+var playing = true, speed = 1, clock = 0;
+var STR = { P: 12, PW: 6, NKEY: 120 };   /* Periode der Blutstroemung (s), Periode der Harnportionen (s), Stuetzstellen je Periode im Export */
+var ST = null;                            /* nach dem Aufbau: Gruppen { im, list, pose, ... }, Harnleiter-Verformung */
+var STQ = { x: 0, y: 0, z: 0 };           /* Ergebnis von bahnPunkt */
+var STM = new THREE.Matrix4();
+
+/* Suche in einer aufsteigenden Tabelle A (n Werte): groesstes i <= n - 2 mit A[i] <= x */
+function finde(A, x, n) {
+  var lo = 0, hi = n - 1;
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (A[m] <= x) lo = m; else hi = m; }
+  return lo;
+}
+/* Punkt der Bahn b dort, wo die Tabelle A (b.S: Strecke, b.T: Zeit) den Wert x hat -> STQ; liefert den Radius der Bahn dort */
+function bahnPunkt(b, A, x, o) {
+  var i = finde(A, x, b.n), d = A[i + 1] - A[i], f = d > 1e-9 ? Math.max(0, Math.min(1, (x - A[i]) / d)) : 0, j = i * 3, P = b.P;
+  o.x = P[j] + (P[j + 3] - P[j]) * f; o.y = P[j + 1] + (P[j + 4] - P[j + 1]) * f; o.z = P[j + 2] + (P[j + 5] - P[j + 2]) * f;
+  return b.R ? b.R[i] + (b.R[i + 1] - b.R[i]) * f : 0;
+}
+function bahnEnde(b, ende, o) { var j = ende ? (b.n - 1) * 3 : 0; o.x = b.P[j]; o.y = b.P[j + 1]; o.z = b.P[j + 2]; }
+/* Bahn aus Proben { x, y, z, r }: Strecke, Radius und Laufzeit (Tempo nach dem Radius: gross = schnell) */
+function tempoFuerRadius(r) { return 0.5 + 2.0 * Math.max(0, Math.min(1, (r - 0.03) / 0.3)); }   /* cm/s vor der Normierung */
+function bahnAus(pr, mitTempo) {
+  var n = pr.length, b = { n: n, P: new Float32Array(n * 3), R: mitTempo ? new Float32Array(n) : null, S: new Float32Array(n), T: mitTempo ? new Float32Array(n) : null }, i;
+  for (i = 0; i < n; i++) {
+    b.P[i * 3] = pr[i].x; b.P[i * 3 + 1] = pr[i].y; b.P[i * 3 + 2] = pr[i].z;
+    if (mitTempo) b.R[i] = pr[i].r;
+    if (i) {
+      var d = Math.hypot(pr[i].x - pr[i - 1].x, pr[i].y - pr[i - 1].y, pr[i].z - pr[i - 1].z);
+      b.S[i] = b.S[i - 1] + d;
+      if (mitTempo) b.T[i] = b.T[i - 1] + d / ((tempoFuerRadius(pr[i].r) + tempoFuerRadius(pr[i - 1].r)) / 2);
+    }
+  }
+  b.L = b.S[n - 1]; b.W = mitTempo ? b.T[n - 1] : 0;
+  return b;
+}
+/* Bahn aus einer Kurve (gleichmaessig nach Bogenlaenge, ca. 0,04 cm Abstand) */
+function bahnAusKurve(punkte) {
+  var kurve = new THREE.CatmullRomCurve3(punkte.map(function (p) { return V(p[0], p[1], p[2]); }), false, 'centripetal'), n = Math.max(8, Math.ceil(kurve.getLength() / 0.04));
+  return bahnAus(kurve.getSpacedPoints(n), false);
+}
+
+/* ---- Blut: Gefaessketten ---- */
+/* Proben auf der Mittellinie einer Gefaesslinie (wie in rohre: CatmullRom durch die Punkte) zwischen den Bogenlaenge-Anteilen u0 und u1, Radius dazu */
+function linienKurve(l) { return new THREE.CatmullRomCurve3(l.pts.map(function (p) { return V(p[0], p[1], p[2]); }), false, 'catmullrom', 0.5); }
+function linienProben(l, u0, u1) {
+  var kurve = linienKurve(l), n = Math.max(2, Math.ceil(kurve.getLength() * Math.abs(u1 - u0) / 0.05)), out = [];
+  for (var i = 0; i <= n; i++) {
+    var u = u0 + (u1 - u0) * i / n, p = kurve.getPointAt(u);
+    out.push({ x: p.x, y: p.y, z: p.z, r: l.r * (l.rt ? radiusFaktor(l.rt, u) : 1) });
+  }
+  return out;
+}
+/* Anteil der Bogenlaenge bis zum Kontrollpunkt idx einer Linie (der Kontrollpunkt i liegt bei t = i / (n - 1)) */
+function anteilBeiPunkt(l, idx) {
+  var kurve = linienKurve(l), D = kurve.arcLengthDivisions, Ls = kurve.getLengths(D), k = idx / (l.pts.length - 1) * D, k0 = Math.min(D - 1, Math.floor(k));
+  return (Ls[k0] + (Ls[k0 + 1] - Ls[k0]) * (k - k0)) / Ls[D];
+}
+function abstand3(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+/* Ketten Nierenarterie/-vene -> Segment- -> Zwischenlappen- -> Bogen- -> Rindengefaess: je Rindengefaess eine Kette in Fliessrichtung der
+   Arterie (von aussen zur Rinde); die Venen laufen umgekehrt. Die Linien haengen ueber ihre End- und Anfangspunkte zusammen. */
+function gefaessKetten(L, art) {
+  var ls = L.filter(function (l) { return l.art === art; });
+  var haupt = ls.filter(function (l) { return l.stufe === art && !l.rt; })[0];
+  var segs = ls.filter(function (l) { return l.stufe === art && l.rt; });
+  var inter = ls.filter(function (l) { return l.stufe === 'interlobaer'; }), bogen = ls.filter(function (l) { return l.stufe === 'bogen'; });
+  var rinde = ls.filter(function (l) { return l.stufe === 'interlobular'; });
+  function naechsteEnde(liste, p) {   /* Linie, deren letzter Punkt p am naechsten liegt */
+    var best = null, dm = 1e9;
+    liste.forEach(function (l) { var d = abstand3(l.pts[l.pts.length - 1], p); if (d < dm) { dm = d; best = l; } });
+    return best;
+  }
+  return rinde.map(function (li) {
+    var q = li.pts[0], lb = null, ib = 0, dm = 1e9;
+    bogen.forEach(function (b) { b.pts.forEach(function (p, j) { var d = abstand3(p, q); if (d < dm) { dm = d; lb = b; ib = j; } }); });
+    var l2 = naechsteEnde(inter, lb.pts[0]), l1 = naechsteEnde(segs, l2.pts[0]);
+    var proben = linienProben(haupt, 0, 1);
+    [[l1, 0, 1], [l2, 0, 1], [lb, 0, anteilBeiPunkt(lb, ib)], [li, 0, 1]].forEach(function (a) { proben = proben.concat(linienProben(a[0], a[1], a[2]).slice(1)); });
+    return art === 'vene' ? proben.reverse() : proben;
+  });
+}
+
+/* ---- Harn: Bahnen durch das Hohlsystem ---- */
+function harnBahnen() {
+  var B = form.BECKEN, A = form.anatomisch, kelche = [];
+  form.PYR.forEach(function (P) {
+    var a = P.apex, u = P.u, z1 = P.w > 45 ? form.OBEN : (P.w < -45 ? form.UNTEN : form.MITTE);
+    var gk = z1 === form.OBEN ? [B[0] + 0.1, B[1] + 0.4, 0] : (z1 === form.UNTEN ? [B[0] + 0.1, B[1] - 0.4, 0] : [B[0] + 0.2, B[1], 0]);   /* Einmuendung des grossen Kelchs ins Becken */
+    var c1 = [a[0] - u[0] * 0.4, a[1] - u[1] * 0.4, 0];   /* Start knapp vor der Papillenspitze (die Spitze selbst liegt im Gewebe) */
+    kelche.push(bahnAusKurve([[a[0] - u[0] * 0.2, a[1] - u[1] * 0.2, 0], c1, [(c1[0] + z1[0]) / 2, (c1[1] + z1[1]) / 2, 0], z1, gk, B].map(A)));
+  });
+  /* Becken -> Harnleiter: Mittellinie URP (URP[0] = UR0) */
+  var ur = [B].concat(form.URP).map(A), hp = bahnAusKurve(ur), sBeginn = 0, dm = 1e9, u0 = A(form.UR0), i;
+  for (i = 0; i < hp.n; i++) { var d = Math.hypot(hp.P[i * 3] - u0[0], hp.P[i * 3 + 1] - u0[1], hp.P[i * 3 + 2] - u0[2]); if (d < dm) { dm = d; sBeginn = hp.S[i]; } }
+  hp.S0 = sBeginn;   /* Strecke, ab der der Harnleiter beginnt */
+  return { kelche: kelche, hp: hp };
+}
+var KELCH_V = 1.0;                 /* Tempo der Tropfen im Kelch (cm/s, im Mittel) */
+var WELLE = { SA: 1.0, V: 1.5, N: 3 };   /* Start der Portion im Becken (cm auf der Bahn), Tempo der Welle (cm/s), Tropfen je Portion */
+var WELLE_OFF = [[0.05, 0, 0.03], [-0.04, 0.02, 0], [0, -0.02, -0.05]];
+
+/* ---- Pose eines Teilchens zur Zeit c: Position nach STQ, Rueckgabe = Groesse (Radius in cm; 0 = unsichtbar, die Position gilt dann
+   als Parkplatz am naechsten Ende der Bahn) ---- */
+function poseBlut(p, c, o) {
+  var b = p.b, ph = c / STR.P - p.e; ph -= Math.floor(ph);
+  var tau = ph * STR.P;
+  if (tau >= b.W) { bahnEnde(b, tau - b.W <= STR.P - tau, o); return 0; }
+  var r = bahnPunkt(b, b.T, tau, o), en = sstep(0, 0.6, tau) * (1 - sstep(b.W - 0.6, b.W, tau));
+  return Math.min(0.1, Math.max(0.03, 0.62 * r)) * en;
+}
+function poseKelch(p, c, o) {
+  var b = p.b, ph = c / STR.PW - p.e; ph -= Math.floor(ph);
+  var tau = ph * STR.PW, w = b.L / KELCH_V;
+  if (tau >= w) { bahnEnde(b, tau - w <= STR.PW - tau, o); return 0; }
+  var u = tau / w;
+  bahnPunkt(b, b.S, b.L * (0.5 * u + 0.5 * u * u), o);   /* ein Tropfen faellt: erst langsam, dann schneller */
+  return 0.085 * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u));
+}
+/* Zustand der Welle zur Zeit c: Lage der Verdickung (cm auf der Bahn) und Staerke 0..1 (0 ausserhalb des Laufs) */
+function welleZustand(c) {
+  var ph = c / STR.PW - Math.floor(c / STR.PW), tau = ph * STR.PW, tw = ST.tw;
+  if (tau >= tw) return { s: WELLE.SA, a: 0, tau: tau, lauf: false };
+  return { s: WELLE.SA + WELLE.V * tau, a: sstep(0, 0.4, tau) * (1 - sstep(tw - 0.4, tw, tau)), tau: tau, lauf: true };
+}
+function posePortion(p, c, o) {
+  var hp = ST.hp, w = welleZustand(c), g;
+  var s = Math.max(0, Math.min(hp.L, w.s + 0.15 + (p.k - (WELLE.N - 1) / 2) * 0.2));
+  if (w.lauf) g = 1 - sstep(hp.L - 0.9, hp.L - 0.3, s);                       /* am Ende des Harnleiters (weiter zur Blase) ausblenden */
+  else g = sstep(ST.tw + 0.2, STR.PW - 0.1, w.tau);                           /* im Becken sammelt sich die naechste Portion */
+  bahnPunkt(hp, hp.S, s, o);
+  var f = WELLE_OFF[p.k % WELLE_OFF.length];
+  o.x += f[0]; o.y += f[1]; o.z += f[2];
+  return 0.1 * g;
+}
+function poseHarn(p, c, o) { return p.k >= 0 ? posePortion(p, c, o) : poseKelch(p, c, o); }
+
+/* ---- Harnleiter: Verformung je Bild ---- */
+/* Jeder Eckpunkt des Harnleiter-Netzes bekommt die Strecke s seines naechsten Punktes auf der Bahn und den Abstandsvektor dazu
+   (nur Eckpunkte nahe der Bahn und hinter dem Beginn des Harnleiters). Je Bild: Punkt = Ruhelage + Abstand * (Faktor - 1). */
+function welleVorbereiten(hp) {
+  var m = STRUCT.harnleiter.meshes[0];
+  if (!m) return null;
+  var pos = m.geometry.attributes.position, n = pos.count, ruhe = new Float32Array(pos.array), idx = [], sv = [], rv = [], i, k;
+  for (i = 0; i < n; i++) {
+    var x = ruhe[i * 3], y = ruhe[i * 3 + 1], z = ruhe[i * 3 + 2], best = 1e9, bs = 0, bx = 0, by = 0, bz = 0;
+    for (k = 0; k < hp.n - 1; k++) {
+      var ax = hp.P[k * 3], ay = hp.P[k * 3 + 1], az = hp.P[k * 3 + 2], dx = hp.P[k * 3 + 3] - ax, dy = hp.P[k * 3 + 4] - ay, dz = hp.P[k * 3 + 5] - az;
+      var l2 = dx * dx + dy * dy + dz * dz || 1e-12, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy + (z - az) * dz) / l2));
+      var cx = ax + dx * t, cy = ay + dy * t, cz = az + dz * t, d = (x - cx) * (x - cx) + (y - cy) * (y - cy) + (z - cz) * (z - cz);
+      if (d < best) { best = d; bs = hp.S[k] + (hp.S[k + 1] - hp.S[k]) * t; bx = x - cx; by = y - cy; bz = z - cz; }
+    }
+    if (best < 0.6 * 0.6 && bs > hp.S0 - 0.3) { idx.push(i); sv.push(bs); rv.push(bx, by, bz); }
+  }
+  m.frustumCulled = false;
+  return { mesh: m, attr: pos, ruhe: ruhe, idx: Int32Array.from(idx), s: Float32Array.from(sv), rad: Float32Array.from(rv) };
+}
+function welleSetzen(c) {
+  var W = ST.welle;
+  if (!W) return;
+  var hp = ST.hp, z = welleZustand(c), arr = W.attr.array, a = z.a, mitte = z.s + 0.15, hinten = mitte - 0.85, i, j;
+  arr.set(W.ruhe);
+  if (a > 0.001) {
+    for (i = 0; i < W.idx.length; i++) {
+      var s = W.s[i], e = sstep(hp.S0, hp.S0 + 0.5, s) * (1 - sstep(hp.L - 0.5, hp.L, s)), d1 = (s - mitte) / 0.4, d2 = (s - hinten) / 0.45;
+      var f = a * e * (0.6 * Math.exp(-d1 * d1) - 0.55 * Math.exp(-d2 * d2));   /* Verdickung vorn, Einschnuerung dahinter */
+      if (Math.abs(f) < 1e-4) continue;
+      j = W.idx[i] * 3;
+      arr[j] += W.rad[i * 3] * f; arr[j + 1] += W.rad[i * 3 + 1] * f; arr[j + 2] += W.rad[i * 3 + 2] * f;
+    }
+  }
+  W.attr.needsUpdate = true;
+}
+/* Harnleiter in die Ruhelage (vor Export und USDZ; das naechste Bild verformt wieder) */
+function welleZurueck() {
+  if (!ST || !ST.welle) return;
+  ST.welle.attr.array.set(ST.welle.ruhe); ST.welle.attr.needsUpdate = true;
+  ST.neu = true;
+}
+
+/* ---- Aufbau: Bahnen, Teilchen, Instanzen (nach dem Gefaess- und Hohlsystem-Netz) ---- */
+function stroemungBauen(L) {
+  var kette = { arterie: gefaessKetten(L, 'arterie'), vene: gefaessKetten(L, 'vene') }, bahnen = { arterie: [], vene: [] }, wmax = 0, art;
+  ['arterie', 'vene'].forEach(function (a) { kette[a].forEach(function (pr) { var b = bahnAus(pr, true); bahnen[a].push(b); wmax = Math.max(wmax, b.W); }); });
+  /* Laufzeit normieren: die laengste Bahn braucht 9,5 s (kleiner als die Periode von 12 s) */
+  var nf = 9.5 / wmax;
+  ['arterie', 'vene'].forEach(function (a) { bahnen[a].forEach(function (b) { for (var i = 0; i < b.n; i++) b.T[i] *= nf; b.W *= nf; }); });
+  var frac = function (x) { return x - Math.floor(x); }, PHI = 0.6180339887;
+  var gruppen = [], N_BLUT = 5;
+  [['arterie', 'blut', 'blutRot', 'Sanguis_arteriosus'], ['vene', 'blut', 'blutBlau', 'Sanguis_venosus']].forEach(function (g) {
+    var list = [];
+    bahnen[g[0]].forEach(function (b, k) { for (var j = 0; j < N_BLUT; j++) list.push({ b: b, e: frac((j + frac((k + (g[0] === 'vene' ? 0.5 : 0)) * PHI)) / N_BLUT) }); });
+    gruppen.push({ art: g[1], mat: g[2], name: g[3], list: list, pose: poseBlut });
+  });
+  var hb = harnBahnen(), list = [], N_TROPF = 3;
+  hb.kelche.forEach(function (b, i) { for (var j = 0; j < N_TROPF; j++) list.push({ b: b, k: -1, e: frac(j / N_TROPF + i * 0.17) }); });
+  for (var k = 0; k < WELLE.N; k++) list.push({ k: k });
+  gruppen.push({ art: 'harn', mat: 'harn', name: 'Urina', list: list, pose: poseHarn });
+  ST = { gruppen: gruppen, hp: hb.hp, tw: (hb.hp.L - WELLE.SA + 0.3) / WELLE.V, welle: welleVorbereiten(hb.hp), letzt: null, neu: true };
+  gruppen.forEach(function (g) {
+    var geo = new THREE.SphereGeometry(1, 10, 7);
+    var im = new THREE.InstancedMesh(geo, MAT[g.mat], g.list.length);
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    im.frustumCulled = false;
+    im.name = g.name; im.userData.teilchen = g.art; im.userData.noexport = true;
+    im.raycast = function () {};   /* Teilchen sind nicht anklickbar */
+    root.add(im); g.im = im; g.geo = geo;
+  });
+  stroemungBild();
+}
+/* je Bild: Teilchen und Welle setzen (nur wenn sich die Zeit geaendert hat oder die Sichtbarkeit) */
+function stroemungBild() {
+  if (!ST || (clock === ST.letzt && !ST.neu)) return;
+  ST.letzt = clock; ST.neu = false;
+  ST.gruppen.forEach(function (g) {
+    for (var i = 0; i < g.list.length; i++) {
+      var s = g.pose(g.list[i], clock, STQ);
+      STM.makeScale(s, s, s); STM.setPosition(STQ.x, STQ.y, STQ.z);
+      g.im.setMatrixAt(i, STM);
+    }
+    g.im.instanceMatrix.needsUpdate = true;
+  });
+  welleSetzen(clock);
+}
+$('bPlay').onclick = function () {
+  playing = !playing;
+  this.textContent = playing ? 'Pause' : 'Abspielen';
+  this.classList.toggle('on', playing);
+};
+[['bS0', 0.35], ['bS1', 1], ['bS2', 2.0]].forEach(function (b) {
+  $(b[0]).onclick = function () {
+    speed = b[1];
+    ['bS0', 'bS1', 'bS2'].forEach(function (id) { $(id).classList.remove('on'); });
+    this.classList.add('on');
+  };
+});
+
+/* =====================================================================
+   6. Export (Kern.Export): GLB statisch und STL, jeweils der sichtbare Zustand (aufgeschnitten: ohne Deckel); GLB animiert mit der Stroemung
    ===================================================================== */
 var LAENGE_TXT = 'Niere ca. 11 cm lang';
 var exCfg = {
@@ -869,24 +1142,49 @@ var exCfg = {
      y -7,00 bis 6,00, z -2,36 bis 4,46 -> x Mitte 0; y 1,5 cm unter der Unterkante (-8,5); z vorn (max z) */
   schild: [0, -8.5, 4.5],
   bereit: function () { return App.ready; },
-  gruppen: function () { return [root]; },
+  gruppen: function () { welleZurueck(); return [root]; },   /* der Harnleiter wird in Ruhelage exportiert (ohne die Welle) */
   toast: function (msg) { Kern.toast(msg); },
   transparenz: true,
+  /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Position und Groesse als Spuren ueber eine Periode (STR.P) */
+  animation: function (rootE) {
+    var times = new Float32Array(STR.NKEY + 1), tracks = [], nPart = 0, i;
+    for (i = 0; i <= STR.NKEY; i++) times[i] = i * STR.P / STR.NKEY;
+    ST.gruppen.forEach(function (g) {
+      if (!g.im.visible) return;
+      g.list.forEach(function (p, n) {
+        var node = new THREE.Mesh(g.geo, g.im.material); node.name = g.name + '_' + (n + 1);
+        var P = new Float32Array((STR.NKEY + 1) * 3), Sc = new Float32Array((STR.NKEY + 1) * 3);
+        for (i = 0; i <= STR.NKEY; i++) {
+          var e = g.pose(p, times[i], STQ);
+          P[i * 3] = STQ.x; P[i * 3 + 1] = STQ.y; P[i * 3 + 2] = STQ.z;
+          Sc[i * 3] = e; Sc[i * 3 + 1] = e; Sc[i * 3 + 2] = e;
+        }
+        node.position.set(P[0], P[1], P[2]); node.scale.set(Sc[0], Sc[1], Sc[2]);
+        rootE.add(node);
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc));
+        nPart++;
+      });
+    });
+    return { clips: [new THREE.AnimationClip('Niere_Stroemung', STR.P, tracks)], zusatz: 'normal', nPart: nPart };
+  },
   texte: {
     stlStart: 'STL wird erzeugt …',
     glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
     stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe: ' + LAENGE_TXT + '):', '- niere_ansicht.stl: alles, was beim Export sichtbar war (aufgeschnitten ohne die abgehobene vordere Hälfte)', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
     stlFertig: function (i) {
       return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe (' + LAENGE_TXT + ') – STL kennt keine Farbe.';
     },
     glbLiesmich: function (i) {
-      return [i.name + ': farbiges 3D-Modell der Niere in der Ansicht beim Export (aufgeschnitten oder geschlossen), ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter der Niere.'];
+      return [i.anim ? i.name + ': die Strömung von Blut und Harn (' + i.a.nPart + ' Teilchen, ' + STR.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich; die Welle im Harnleiter gibt es nur im Programm.' : i.name + ': farbiges 3D-Modell der Niere in der Ansicht beim Export (aufgeschnitten oder geschlossen), ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter der Niere.'];
     },
     glbFertig: function (i) {
-      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe (' + LAENGE_TXT + '), mit Farben, ohne Bewegung.';
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe (' + LAENGE_TXT + '), mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (STR.NKEY + 1) + ' Keyframes, ' + STR.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
     }
   }
 };
+$('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
 $('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
 $('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
 
@@ -902,13 +1200,14 @@ var arCfg = {
   fuss: 0,                                          /* Unterkante (Harnleiter-Ende) steht auf der Flaeche; wird nach dem Aufbau gesetzt */
   hintergrund: 0x0b171c,
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
-  knoepfe: ['arEnd', 'arOffen', 'arLab', 'arSmall', 'arBig', 'arPlace'],
+  knoepfe: ['arEnd', 'arOffen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
     camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
     labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
     arTexte();
+    $('arPause').textContent = playing ? 'Pause' : 'Weiter';
   },
   beimEnde: function () {
     inAR = false;
@@ -929,6 +1228,7 @@ function arTexte() {
 }
 $('arOffen').onclick = function () { offen(!openZiel); arTexte(); };
 $('arLab').onclick = function () { $('bLab').click(); arTexte(); };
+$('arPause').onclick = function () { $('bPlay').click(); this.textContent = playing ? 'Pause' : 'Weiter'; };
 $('bAR').onclick = function () { if (fz) return; AR.start(); };
 AR.check();
 /* ---- Beschriftung in AR: Schilder mit Fuehrungslinien (Kern.AR.schilder), Strukturen der aktuellen Ansicht ---- */
@@ -952,6 +1252,7 @@ var ARL = Kern.AR.schilder({
 });
 /* ---- USDZ fuer AR Quick Look: Momentaufnahme der Niere in der aktuellen Ansicht ---- */
 function usdzBuild() {
+  welleZurueck();   /* Harnleiter in Ruhelage, die USDZ hat keine Teilchen und keine Welle */
   return Kern.AR.usdz({
     name: 'Niere', creator: 'Niere 3D - ' + Kern.WM, datei: 'niere.usda', skala: AR_SKALA,
     gruppen: [root],
@@ -1080,6 +1381,8 @@ function loop(now, frame) {
     openK = Math.max(0, Math.min(1, openK + Math.sign(openZiel - openK) * dt / 0.6));
     applyLook();
   }
+  if (playing) clock += dt * speed;
+  stroemungBild();
   if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
@@ -1102,7 +1405,8 @@ organ.abbauen = function () {
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
-  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });   /* auch die Instanzen und Materialien der Teilchen */
+  ST = null;
   camera.clearViewOffset();
   camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
   /* DOM */

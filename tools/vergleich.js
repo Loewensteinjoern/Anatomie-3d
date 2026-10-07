@@ -27,9 +27,11 @@
    lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
    Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
-   Seitentext, Exporte GLB statisch und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht, aufgeschnitten,
-   ohne Beschriftung, Info), handy, datei (file://), webxr, quicklook (AR wie beim Nephron; Deckel und Beschriftung) und
-   abbau; kein animierter Export (keine Strömung).
+   Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
+   aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
+   „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen), handy, datei (file://), webxr (Deckel, Beschriftung und
+   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel und
+   Beschriftung) und abbau.
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -448,7 +450,7 @@ const MODELLE = {
     kontexte: {
       desktop: { opt: DESKTOP, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
-        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bStl', 'stl');
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
         await t.ruhe(6000);
         await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
@@ -459,6 +461,10 @@ const MODELLE = {
         await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
         await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(600); await t.bild('auswahl-nephron');   /* Infokarte mit dem Knopf „Nephron ansehen“ */
+        /* Strömung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben) */
+        await t.klick('#bCls'); await t.weiter(3000); await t.bild('stroemung');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await t.weiter(1000); await t.bild('pause');   /* beide Bilder müssen gleich aussehen */
+        await t.klick('#bPlay');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -473,6 +479,10 @@ const MODELLE = {
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
         await t.klick('#arOffen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },
