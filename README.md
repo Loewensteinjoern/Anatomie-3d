@@ -19,17 +19,35 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 
 Die alten Adressen `nephron.html` und `atlas.html` leiten auf den Atlas weiter.
 
+### Als App installieren (offline)
+
+Die App lässt sich als installierbare Web-App nutzen:
+
+1. Einmal über https://loewensteinjoern.github.io/Anatomie-3d/ öffnen.
+2. iPhone/iPad: Safari → Teilen → „Zum Home-Bildschirm“. Android: Chrome → Menü → „App installieren“ bzw. „Zum Startbildschirm hinzufügen“.
+3. Danach läuft sie auch ohne Internet, einschließlich der noch nicht geöffneten Organe.
+
+Updates: Gibt es eine neue Version, erscheint der Hinweis „Neue Version verfügbar – neu laden“. Ohne Klick gilt die neue Version beim nächsten Start.
+
+Der Ordner bzw. die ZIP-Datei per `file://` funktioniert weiterhin, aber ohne Offline-Speicher und ohne Installation.
+
+Für Entwickler: Nach Änderungen an App-Dateien `node tools/version.js` ausführen (aktualisiert die Version des Offline-Speichers in `sw.js`; `--pruefen` prüft nur).
+
 ### Dateien
 
 ```
 index.html                 Atlas: HTML-Rahmen, lädt die Ansicht per Adresse (leer/#koerper, #herz, #nephron)
 nephron.html, atlas.html   Weiterleitungen auf index.html
-core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, export.js, ar.js, szenarien.js, sdf.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
+sw.js, app.webmanifest     Service Worker (Offline-Speicher) und Web-App-Manifest
+icons/                     App-Symbol (symbol.svg, PNGs)
+core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, offline.js, export.js, ar.js, szenarien.js, sdf.js – gemeinsamer Kern und Atlas-Steuerung (Gestaltung, Licht, Material, Kamera, Beschriftung, Export, AR-USDZ, Krankheitsbilder)
 organe/koerper/            koerper.css, koerper.js – Gestaltung und App-Code des Körpers (Startansicht)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
 organe/niere/              nephron.css, nephron.js – Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
+tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen
+tools/symbole.js           PNG-Symbole aus icons/symbol.svg erzeugen
 ```
 
 Den Plan für die Anatomie-App beschreibt `PLAN.md`.

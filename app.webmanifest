@@ -1,0 +1,19 @@
+{
+  "name": "Anatomie-Atlas für Pflegeberufe",
+  "short_name": "Anatomie",
+  "lang": "de",
+  "dir": "ltr",
+  "description": "3D-Anatomie: Körper mit Organsystemen, Herz und Nephron mit Funktion, Krankheitsbildern und AR.",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B171C",
+  "theme_color": "#0B171C",
+  "icons": [
+    { "src": "icons/symbol-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/symbol-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/symbol-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

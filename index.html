@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Anatomie-Atlas</title>
+<link rel="manifest" href="app.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/symbol-192.png">
+<link rel="apple-touch-icon" href="icons/symbol-180.png">
+<meta name="theme-color" content="#0B171C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Anatomie">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="stylesheet" href="core/kern.css">
 <link rel="stylesheet" href="core/atlas.css">
 </head>
@@ -26,6 +34,7 @@
   <button type="button" class="gh" id="atlasFehlerZurueck">Zum K&ouml;rper</button>
 </div>
 <button type="button" id="atlasZurueck" class="gh" hidden>&larr; K&ouml;rper</button>
+<div id="atlasUpdateBox" hidden><button type="button" id="atlasUpdate" class="gh">Neue Version verf&uuml;gbar &ndash; neu laden</button><button type="button" id="atlasUpdateZu" class="gh" aria-label="Sp&auml;ter">&times;</button></div>
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/GLTFExporter.js"></script>
@@ -36,5 +45,6 @@
 <script src="core/szenarien.js"></script>
 <script src="core/sdf.js"></script>
 <script src="core/atlas.js"></script>
+<script src="core/offline.js"></script>
 </body>
 </html>

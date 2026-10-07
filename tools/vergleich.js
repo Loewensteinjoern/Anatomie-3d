@@ -44,6 +44,15 @@
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
    Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
    früheren atlas-herz-desktop usw.), meldet `vergleichen` als entfallen.
+
+   Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
+   offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
+   neu laden: Körper, Herz und Nephron müssen bereit sein; Bilder nur anzusehen), update (neue Version der
+   sw.js wird unterschoben: Hinweis #atlasUpdateBox, Kreuz, erneutes Laden, Klick auf „neu laden“ und
+   Speicher der neuen Version; Warten in echter Zeit), update-handy (Lage des Hinweises auf dem Handy)
+   und offline-datei (file://: keine Anmeldung, kein Hinweis, keine Konsolenfehler). Außerdem prüft
+   `aufnehmen` einmal tools/version.js (Version in sw.js aktuell, Liste vollständig); Ergebnis erg.version.
+   Fehlt sw.js in der Quelle (alter Stand), werden diese Kontexte übersprungen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path'), http = require('http'), crypto = require('crypto');
@@ -584,17 +593,128 @@ const WEITERLEITUNG = { async ablauf(t) {
 MODELLE.atlas.kontexte.weiterleitung = { opt: DESKTOP, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
 MODELLE.atlas.kontexte['weiterleitung-datei'] = { opt: DESKTOP, lokal: true, ohneStart: true, ablauf: WEITERLEITUNG.ablauf };
 
+/* Web-App: Service Worker (sw.js), Offline-Speicher, Hinweis auf neue Version (core/offline.js); alle ohne Referenz */
+const swQuelle = (wurzel) => fs.readFileSync(path.join(wurzel, 'sw.js'), 'utf8');
+const swDateien = (sw) => { const l = /var DATEIEN = \[([\s\S]*?)\];/.exec(sw); const r = [], re = /'([^']+)'/g; let m; while ((m = re.exec(l[1]))) r.push(m[1]); return r; };
+const swVersion = (sw) => /var VERSION = '([^']*)';/.exec(sw)[1];
+const UPDATE_SICHTBAR = () => { const b = document.getElementById('atlasUpdateBox'); return !!b && !b.hidden && b.getBoundingClientRect().width > 0 && getComputedStyle(b).display !== 'none'; };
+/* in echter Zeit warten, bis fn() im Browser wahr ist (die virtuelle Zeit steht; Fehler beim Neuladen werden übergangen) */
+async function echtWarten(t, fn, was, ms) {
+  const t0 = Date.now();
+  for (;;) {
+    let w = false; try { w = await t.js(fn); } catch (e) { /* Seite lädt gerade */ }
+    if (w) return;
+    if (Date.now() - t0 > (ms || 30000)) throw new Error('Zeitüberschreitung: ' + was);
+    await t.echt(100);
+  }
+}
+const WORKER_BEREIT = (t) => t.js(async () => { await navigator.serviceWorker.ready; return true; });
+const KOERPER_BEREIT = (t) => t.warteAuf(ATLAS_BEREIT('koerper'), 'koerper');
+/* Gemeinsamer Anfang von update/update-handy: Worker bereit, neu laden (kontrolliert), neue Version unterschieben, Hinweis abwarten */
+async function updateBisHinweis(t, s) {
+  await WORKER_BEREIT(t);
+  await t.neuLaden(); await KOERPER_BEREIT(t);
+  s.controller = await t.js(() => !!navigator.serviceWorker.controller);
+  s.hinweisAnfangs = !(await t.js(UPDATE_SICHTBAR));
+  const sw = swQuelle(t.wurzel), neu = sw.replace(/var VERSION = '[^']*';/, "var VERSION = '" + swVersion(sw) + "-neu';");
+  s.versionNeu = neu !== sw;
+  t.swErsetzen(neu);
+  await t.js(async () => { const reg = await navigator.serviceWorker.getRegistration(); await reg.update(); });
+  await echtWarten(t, UPDATE_SICHTBAR, 'Hinweis auf neue Version');
+  s.hinweisSichtbar = true;
+  await t.weiter(300); await t.bild('hinweis');
+}
+/* Kontext offline: Speicher des Service Workers prüfen, ohne Netz neu laden, Körper/Herz/Nephron öffnen */
+MODELLE.atlas.kontexte.offline = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
+  const sw = swQuelle(t.wurzel), soll = swDateien(sw), name = 'anatomie-' + swVersion(sw);
+  await t.js(async () => { await navigator.serviceWorker.ready; });
+  const speicher = await t.js(async () => {
+    const namen = await caches.keys(), basis = location.pathname.replace(/[^/]*$/, ''), r = {};
+    for (const n of namen) {
+      const c = await caches.open(n), ks = await c.keys();
+      r[n] = ks.map((q) => { const p = new URL(q.url).pathname; return p === basis ? './' : p.slice(basis.length); }).sort();
+    }
+    return { namen, eintraege: r };
+  });
+  const dateienOk = JSON.stringify(speicher.namen) === JSON.stringify([name]) && JSON.stringify(speicher.eintraege[name]) === JSON.stringify(soll.slice().sort());
+  await t.offline(true); await t.neuLaden(); await KOERPER_BEREIT(t);
+  const controller = await t.js(() => !!navigator.serviceWorker.controller);
+  await t.weiter(1500); await t.bild('koerper');
+  const organe = { koerper: true };
+  const oeffne = async (n) => {
+    await t.js((h) => { location.hash = h; }, '#' + n);
+    await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); await t.warteAuf(ATLAS_BEREIT(n), n);
+    await t.weiter(1500); await t.bild(n);
+    organe[n] = await t.js(ATLAS_BEREIT(n)) === true;
+  };
+  await oeffne('herz'); await oeffne('nephron');
+  await t.offline(false);
+  const ok = dateienOk && controller && organe.koerper && organe.herz && organe.nephron;
+  t.erg.offline = { speicher: { namen: speicher.namen, anzahl: (speicher.eintraege[name] || []).length, erwartet: soll.length, fehlt: soll.filter((d) => !(speicher.eintraege[name] || []).includes(d)), zuviel: (speicher.eintraege[name] || []).filter((d) => !soll.includes(d)) }, dateienOk, controller, organe, ok };
+  process.stdout.write('  offline: ' + (ok ? 'Speicher ' + name + ' mit ' + soll.length + ' Dateien, offline Körper/Herz/Nephron bereit' : 'ABWEICHUNG ' + JSON.stringify(t.erg.offline)) + '\n');
+} };
+/* Kontext update: neue Version der sw.js unterschieben, Hinweis, Kreuz, erneutes Laden, Klick auf „neu laden“ */
+MODELLE.atlas.kontexte.update = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
+  const s = {};
+  await updateBisHinweis(t, s);
+  await t.js(() => { window.__merker = 1; });
+  await t.klick('#atlasUpdateZu');
+  s.kreuzVerbirgt = !(await t.js(UPDATE_SICHTBAR));
+  s.kreuzOhneNeuladen = (await t.js(() => window.__merker === 1));
+  await t.neuLaden(); await KOERPER_BEREIT(t);
+  await echtWarten(t, UPDATE_SICHTBAR, 'Hinweis nach erneutem Laden');
+  s.hinweisNachNeuladen = true;
+  await t.js(() => { window.__merker = 1; });
+  await t.klick('#atlasUpdate');
+  await echtWarten(t, () => window.__merker === undefined, 'Neuladen nach Klick');
+  await KOERPER_BEREIT(t);
+  const name = 'anatomie-' + swVersion(swQuelle(t.wurzel)) + '-neu';
+  await echtWarten(t, async () => (await caches.keys()).length === 1, 'alter Speicher gelöscht');
+  s.speicherNeu = JSON.stringify(await t.js(() => caches.keys())) === JSON.stringify([name]);
+  s.hinweisWeg = !(await t.js(UPDATE_SICHTBAR));
+  t.swErsetzen(null);
+  const ok = Object.values(s).every((v) => v === true);
+  t.erg.update = { schritte: s, ok };
+  process.stdout.write('  update: ' + (ok ? 'alle Schritte in Ordnung' : 'ABWEICHUNG ' + JSON.stringify(s)) + '\n');
+} };
+/* Kontext update-handy: Lage des Hinweises auf dem Handy (nur bis zum Bild) */
+MODELLE.atlas.kontexte['update-handy'] = { opt: HANDY, braucht: 'sw.js', bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
+  const s = {};
+  await updateBisHinweis(t, s);
+  s.imBild = await t.js(() => { const r = document.getElementById('atlasUpdateBox').getBoundingClientRect(); return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; });
+  t.swErsetzen(null);
+  const ok = Object.values(s).every((v) => v === true);
+  t.erg.updateHandy = { schritte: s, ok };
+  process.stdout.write('  update-handy: ' + (ok ? 'Hinweis sichtbar und im Bild' : 'ABWEICHUNG ' + JSON.stringify(s)) + '\n');
+} };
+/* Kontext offline-datei: per file:// keine Anmeldung, kein Hinweis, keine Konsolenfehler (die Konsole wird aufgezeichnet) */
+MODELLE.atlas.kontexte['offline-datei'] = { opt: DESKTOP, lokal: true, bereit: ATLAS_BEREIT('koerper'), async ablauf(t) {
+  await t.weiter(500);
+  const z = await t.js(() => ({
+    anmeldungNull: Kern.Offline.anmeldung === null,
+    hinweisVerborgen: !(() => { const b = document.getElementById('atlasUpdateBox'); return !!b && !b.hidden && b.getBoundingClientRect().width > 0; })(),
+    manifest: !!document.querySelector('link[rel=manifest]'),
+    kontrolliert: !!(navigator.serviceWorker && navigator.serviceWorker.controller)
+  }));
+  const ok = z.anmeldungNull && z.hinweisVerborgen && !z.kontrolliert;
+  t.erg.offlineDatei = Object.assign({ ok }, z);
+  process.stdout.write('  offline-datei: ' + (ok ? 'keine Anmeldung, kein Hinweis' : 'ABWEICHUNG ' + JSON.stringify(z)) + '\n');
+} };
+
 /* =====================================================================
    3. Aufnehmen
    ===================================================================== */
 const TYPEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary' };
+  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary',
+  '.webmanifest': 'application/manifest+json' };
+let swErsatz = null;   /* Text, den der Server statt sw.js liefert (Kontext update); context.route erfasst den Abruf des Service Workers nicht */
 function server(wurzel) {
   return new Promise((res) => {
     const srv = http.createServer((q, r) => {
       const url = decodeURIComponent(q.url.split('?')[0]);
       if (url === '/favicon.ico') { r.writeHead(204); r.end(); return; }
-      const p = path.join(wurzel, url);
+      if (swErsatz !== null && url === '/sw.js') { r.writeHead(200, { 'Content-Type': TYPEN['.js'], 'Cache-Control': 'no-cache' }); r.end(swErsatz); return; }
+      const p = path.join(wurzel, url.endsWith('/') ? url + 'index.html' : url);   /* './' im Offline-Speicher */
       if (!p.startsWith(wurzel)) { r.writeHead(403); r.end(); return; }
       fs.readFile(p, (e, b) => {
         if (e) { r.writeHead(404); r.end(); return; }
@@ -609,6 +729,7 @@ function normLog(s) { return s.replace(/\[\.WebGL-[^\]]*\]/g, '[.WebGL]').replac
 const RAUSCHEN = /GPU stall due to ReadPixels|Automatic fallback to software WebGL|GroupMarkerNotSet/;
 
 async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K, erg) {
+  swErsatz = null;
   const ctx = await browser.newContext(Object.assign({ locale: 'de-DE', timezoneId: 'Europe/Berlin', reducedMotion: 'no-preference' }, K.opt));
   await ctx.addInitScript(initZeit, { epoch: Date.UTC(2026, 0, 15, 9, 30, 0), seed: 0x2F6FB5, kerne: 8 });
   await ctx.addInitScript(initDownloads);
@@ -626,7 +747,12 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   let nr = 0;
   const weiter = (ms, frameMs) => page.evaluate(([a, b]) => window.__zeit.weiter(a, b), [ms, frameMs || 50]);
   const t = {
-    erg, kname,
+    erg, kname, wurzel,
+    offline: (an) => ctx.setOffline(an),
+    neuLaden: () => page.reload(),
+    route: (muster, fn) => page.context().route(muster, fn),      /* Kontext-Route: erfasst auch den Service Worker */
+    unroute: (muster) => page.context().unroute(muster),
+    swErsetzen: (text) => { swErsatz = text; },    /* sw.js vom Server ersetzen (null = Datei der Quelle) */
     gehe: (rel) => page.goto((K.lokal ? 'file://' + wurzel + '/' : basis) + rel),
     url: () => page.url().replace(K.lokal ? 'file://' + wurzel + '/' : basis, ''),
     warteUrl: (re) => page.waitForURL(re),
@@ -713,6 +839,15 @@ async function aufnehmen(ziel, wurzel, nur) {
   /* mit --nur wird in ein vorhandenes Ergebnis hineingemischt (Einzelseite und Atlas getrennt aufnehmen) */
   const alt = path.join(ziel, 'ergebnis.json');
   if (nur && fs.existsSync(alt)) { erg = JSON.parse(fs.readFileSync(alt, 'utf8')); erg.quelle = wurzel; erg.browser = browser.version(); }
+  /* Version des Service Workers (nur wenn die Quelle tools/version.js hat) */
+  const vd = path.join(wurzel, 'tools', 'version.js');
+  if ((!nurM || nurM === 'atlas') && fs.existsSync(vd) && fs.existsSync(path.join(wurzel, 'sw.js'))) {
+    try {
+      const v = require(vd).pruefen();
+      erg.version = { ok: !!v.ok, version: v.version, erwartet: v.erwartet, fehler: v.fehler };
+    } catch (e) { erg.version = { ok: false, version: null, erwartet: null, fehler: [e.message] }; }
+    process.stdout.write('version.js: ' + (erg.version.ok ? 'Version ' + erg.version.version + ' aktuell' : 'ABWEICHUNG ' + JSON.stringify(erg.version)) + '\n');
+  }
   try {
     for (const mname of Object.keys(MODELLE)) {
       if (nurM && nurM !== mname) continue;
@@ -721,6 +856,7 @@ async function aufnehmen(ziel, wurzel, nur) {
       const e = erg.modelle[mname] || (erg.modelle[mname] = { bilder: {}, exporte: {}, ar: {}, text: {}, konsole: {}, abbruch: {} });
       for (const kname of Object.keys(M.kontexte)) {
         if (nurK && nurK !== kname) continue;
+        if (M.kontexte[kname].braucht && !fs.existsSync(path.join(wurzel, M.kontexte[kname].braucht))) { process.stdout.write(mname + ' · ' + kname + ' · übersprungen (' + M.kontexte[kname].braucht + ' fehlt)\n'); continue; }
         for (const k of Object.keys(e.bilder)) if (k.startsWith(kname + '-') && !Object.keys(M.kontexte).some((x) => x !== kname && x.startsWith(kname + '-') && k.startsWith(x + '-'))) delete e.bilder[k];   /* frühere Aufnahme dieses Kontexts ersetzen */
         delete e.text[kname]; delete e.abbruch[kname]; if (e.erwartet) delete e.erwartet[kname];
         process.stdout.write(mname + ' · ' + kname + '\n');
@@ -764,6 +900,10 @@ async function vergleichen(va, vb) {
   const A = JSON.parse(fs.readFileSync(path.join(va, 'ergebnis.json'), 'utf8'));
   const B = JSON.parse(fs.readFileSync(path.join(vb, 'ergebnis.json'), 'utf8'));
   const probleme = [], ok = [];
+  if (B.version) {
+    if (!B.version.ok) probleme.push('Version des Service Workers veraltet oder Liste unvollständig – node tools/version.js\n    ' + JSON.stringify(B.version));
+    else ok.push('Version des Service Workers: aktuell (' + B.version.version + ')');
+  }
   let page = null, browser = null;
   const durl = (dir, f) => 'data:image/png;base64,' + fs.readFileSync(path.join(dir, 'bilder', f)).toString('base64');
   const diffBild = async (ka, kb, name, titel) => {   /* zwei Bilder aus <nachher> vergleichen; Diff nach diff/<name>.png */
@@ -816,6 +956,11 @@ async function vergleichen(va, vb) {
       if (!w.gleich) probleme.push(m + ' Weiterleitung ' + k + ': falsches Ziel\n    ' + JSON.stringify(w.ziele));
       else if (a.weiterleitung && a.weiterleitung[k] && JSON.stringify(a.weiterleitung[k].ziele) !== JSON.stringify(w.ziele)) probleme.push(m + ' Weiterleitung ' + k + ': Ziele anders');
       else ok.push(m + ' Weiterleitung ' + k + ': Ziele stimmen');
+    }
+    for (const [k, tx] of [['offline', 'Offline'], ['update', 'Update'], ['updateHandy', 'Update (Handy)'], ['offlineDatei', 'Offline (file://)']]) {
+      if (!b[k]) continue;
+      if (!b[k].ok) probleme.push(m + ' ' + tx + ': ' + JSON.stringify(b[k]));
+      else ok.push(m + ' ' + tx + ': in Ordnung');
     }
     if (b.abbau) {
       if (b.abbau.gleich === false) probleme.push(m + ' Abbau: Messwerte unterscheiden sich\n    ' + JSON.stringify(b.abbau));
