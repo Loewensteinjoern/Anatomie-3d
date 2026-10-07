@@ -112,7 +112,16 @@ organe/niere/             Niere + Nephron
   - Organe ohne Detailmodell: ausgegrauter Knopf „Detailmodell in Arbeit“ in der Infokarte; Organe mit Detailmodell tragen in der Strukturliste das Zeichen „3D“
   - Verworfen: Körper-Renderer mit `alpha` (wie das Herz), damit beim Wechsel kein neuer WebGL-Kontext nötig wäre; die Handy-Aufnahmen des Körpers waren damit nicht bytegleich (Skalierung des Canvas mit Alphakanal, bis 15/255). Beim Wechsel Körper ↔ Herz legt der Rahmen weiter Canvas und Renderer neu an, das Standbild verdeckt das
   - `tools/vergleich.js`: `atlas:uebergaenge` mit Bildern `fahrt-herz` und `rueckfahrt` und Prüfung des Endzustands (Standbild weg, keine inline-Styles an `#organ`-Kindern); neuer Kontext `atlas:uebergaenge-nephron` (Körper → Nephron → zurück); `atlas:fehler` mit Fall „Ladefehler nach der Fahrt“ (`herz.css` blockiert)
-- [ ] AR für den ganzen Körper
+  - Kamerafahrt zum Herz: die Anschluss-Stummel der rechten Lungenarterie/-venen (Struktur `herz`, Markierung `userData.anschluss`) blenden bei der Fahrt mit aus; vorher standen sie am Übergang als Geisterbild neben dem Detail-Herz (der scheinbare „Versatz auf dem Handy“, die Kamera traf auf < 1 px)
+- [x] AR für den ganzen Körper
+  - WebXR über `Kern.AR.xr`, `root` = `wurzel`, Füße auf der Fläche (`fuss` aus der Bounding Box)
+  - Größenstufen 27/45/72/108/180 cm, Start als Tischfigur mit 45 cm, bei lebensgroß ein Hinweis
+  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“
+  - Kamera in AR mit near/far in Metern (0.01/100), danach wieder 2/1200
+  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht
+  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB) mit Beschriftung; Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
+  - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
+  - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
 - [ ] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
 - [ ] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
 

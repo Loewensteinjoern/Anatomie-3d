@@ -14,7 +14,7 @@
    ist fest initialisiert. Bei unverändertem Verhalten sind die Bilder
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
-   und bei Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
+   und bei Körper, Herz und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
    In den Modellen koerper, herz und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
@@ -22,7 +22,8 @@
 
    Modell koerper (index.html ohne Adresse, Startansicht): desktop (Ganzkörper, die Ausschnitte
    #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
-   datei (file://) und abbau; keine Exporte und kein AR (hat der Körper noch nicht). Der Körper
+   datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut und Beschriftung, größer)
+   und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
    lädt das Herz-Skript im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
    Kontext abbau (Körper, Herz und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
@@ -310,6 +311,20 @@ const MODELLE = {
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arHaut'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('ohne-haut-ohne-beschriftung');
+        await t.klick('#arLab');
+        await t.klick('#arBig'); await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'koerper', async (t) => {
         await t.klick('#cam3'); await t.weiter(900); await t.bild('bauch');

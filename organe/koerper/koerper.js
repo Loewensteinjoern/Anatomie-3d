@@ -103,6 +103,8 @@ var MARKUP = `<div id="title">
     <button id="cam4" class="gh">Becken</button>
     <button id="cam5" class="gh">R&uuml;cken</button>
     <button id="bLab" class="gh on">Beschriftung</button>
+    <span class="sep"></span>
+    <button id="bAR" class="gh" title="Den K&ouml;rper mit der Kamera in den Raum stellen">AR</button>
   </div>
 </div>
 
@@ -115,6 +117,19 @@ var MARKUP = `<div id="title">
   <span class="lat" id="iLat"></span>
   <p id="iTx"></p>
   <button class="gh" id="iOpen" style="display:none"></button>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">K&ouml;rper in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Ger&auml;t langsam &uuml;ber den Boden oder Tisch, bis ein Ring erscheint &ndash; dann tippen, um den K&ouml;rper hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arHaut">Haut aus</button>
+    <button class="ar-b" id="arLab" hidden>Beschriftung aus</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 function aufbauen(umg) {
@@ -643,10 +658,12 @@ async function organe() {
     rohr('kreislauf', blau, [[-1.65, 130.1, 1.6], [-1.9, 134, 0.9], [-2.1, 141, -0.2]], 1.0, 14);                      // obere Hohlvene nach oben
     rohr('kreislauf', blau, [[-1.65, 119.2, 0.65], [-1.9, 115, -0.3], [-2.2, 106, -2.2], [-2.4, 98, -2.4], [-2.0, 92, -1.6]], 1.1, 30);   // untere Hohlvene nach unten
     als('herz');
+    var anschlussAb = STR.herz.meshes.length;   /* Stummel (samt Endkugeln) gehoeren nicht zum Detail-Herz */
     rohr('kreislauf', mat('kreislauf', 0x4F6CBF, { rough: 0.45, coat: 0.4 }), [[-2.3, 127.4, -1.15], [-5.5, 126.9, -1.6]], 0.9, 10);      // rechte Lungenarterie bis zum Hilus
     var pvm = mat('kreislauf', 0xC04C43, { rough: 0.45, coat: 0.4 });
     rohr('kreislauf', pvm, [[1.7, 126, -1.55], [-1.5, 125.4, -1.9], [-5.6, 123.8, -1.9]], 0.62, 16);                    // rechte Lungenvenen
     rohr('kreislauf', pvm, [[1.7, 124.1, -1.6], [-1.2, 124.3, -2.0]], 0.62, 10);
+    STR.herz.meshes.slice(anschlussAb).forEach(function (o) { o.userData.anschluss = true; });
   } else {
     als('herz');
     await sdfMesh('kreislauf', rot, sdfHerz, b(-6, 108, -3, 14, 132, 10), h);
@@ -741,7 +758,7 @@ async function organe() {
    ===================================================================== */
 var t0;
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
-var App = window.KoerperApp = { ready: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, oeffnen: oeffnen, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
+var App = window.KoerperApp = { ready: false, ar: false, aufbauMs: 0, modus: systemModus, systemModus: systemModus, waehle: waehle, oeffnen: oeffnen, ansicht: ansicht, ansichtWaehlen: function (i) { gehe(i); } };
 async function bauen() {
   await setLoad(0.02, 'Körperhülle wird geformt'); if (abgebaut) return;
   /* Herz-Modell nur als Skript nachladen (ohne Gestaltung); Fehler werden erst beim Herz-Schritt behandelt */
@@ -948,6 +965,7 @@ function gehe(i) {
 for (var ci = 0; ci < AUSSCHNITTE.length; ci++) (function (i) { $('cam' + i).onclick = function () { gehe(i); }; })(ci);
 
 function groesse(w, h) {
+  if (inAR) return;   /* in AR bestimmt die Sitzung die Kamera */
   var r = bereich(w, h), a = AUSSCHNITTE[aktiv];
   camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
   camera.updateProjectionMatrix();
@@ -1012,8 +1030,8 @@ LISTEN.forEach(function (l) {
 $('bLab').onclick = function () {
   zeigeLabels = !zeigeLabels;
   this.classList.toggle('on', zeigeLabels);
-  labelBox.style.display = zeigeLabels ? '' : 'none';
-  leaderSvg.style.display = zeigeLabels ? '' : 'none';
+  labelBox.style.display = (zeigeLabels && !inAR) ? '' : 'none';   /* in AR bleibt die HTML-Ebene aus */
+  leaderSvg.style.display = (zeigeLabels && !inAR) ? '' : 'none';
   lv++;
 };
 
@@ -1093,7 +1111,7 @@ var VON = { herz: 'herz', nephron: 'nieren' };
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
-  STR[id].meshes.forEach(function (m) { m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  STR[id].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
   wurzel.traverse(function (o) {
     if (zielObj.has(o) || !o.material || !o.visible) return;
     var ms = [].concat(o.material), frei = true;
@@ -1172,7 +1190,107 @@ function fahrtBild(now) {
   return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
 }
 
-function loop(now) {
+/* =====================================================================
+   9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
+   Beschriftung in AR und AR Quick Look (iPhone) kommen spaeter dazu.
+   ===================================================================== */
+var inAR = false, hautAlt = 'glas', arBigAlt = false;
+var arCfg = {
+  renderer: renderer, scene: scene, camera: camera, root: wurzel,
+  stufen: [0.0015, 0.0025, 0.004, 0.006, 0.01], skala: 0.0025,   /* 27 / 45 / 72 / 108 / 180 cm; 0.01 = lebensgross */
+  fuss: 0,                                                      /* Fusssohlen unter dem Ursprung; wird nach dem Aufbau gesetzt */
+  hintergrund: 0x0b171c,
+  quickLook: function () { arQuickLook(); },
+  ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+  knoepfe: ['arEnd', 'arHaut', 'arLab', 'arSmall', 'arBig', 'arPlace'],
+  beimStart: function () {
+    inAR = true; App.ar = true;
+    camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
+    labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+    arHautText(); arLabText();
+  },
+  beimEnde: function () {
+    inAR = false; App.ar = false;
+    ARL.ausblenden();
+    camera.near = 2; camera.far = 1200;
+    labelBox.style.display = zeigeLabels ? '' : 'none'; leaderSvg.style.display = zeigeLabels ? '' : 'none';
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    groesse(w, h);
+    lv++;
+  }
+};
+var AR = Kern.AR.xr(arCfg);
+function arHautText() { $('arHaut').textContent = SYS.haut.modus === 'aus' ? 'Haut an' : 'Haut aus'; }
+$('arHaut').onclick = function () {
+  if (SYS.haut.modus === 'aus') systemModus('haut', hautAlt);
+  else { hautAlt = SYS.haut.modus; systemModus('haut', 'aus'); }
+  arHautText();
+};
+function arLabText() { $('arLab').textContent = zeigeLabels ? 'Beschriftung aus' : 'Beschriftung an'; }
+$('arLab').hidden = false;
+$('arLab').onclick = function () { $('bLab').click(); arLabText(); };
+/* ---- Beschriftung in AR: Schilder mit Fuehrungslinien (Kern.AR.schilder), Strukturen der Ganzkoerperansicht ---- */
+var ARL_EINTR = LISTEN[0].map(function (e) {
+  var id = typeof e === 'string' ? e : e[0], d = STR[id].def;
+  return { a: { s: { id: id, de: KURZ[id] || d.de, lat: d.lat } }, id: id, p: typeof e === 'string' ? ANKER[id] : [e[1], e[2], e[3]] };
+});
+var ARL = Kern.AR.schilder({
+  root: wurzel, renderer: renderer, camera: camera, xr: AR,
+  name: 'Koerper', anzahl: LISTEN[0].length,
+  masse: { mitte: 0, spalte: 52, hoehe: 7.5, abstand: 9, z: 12, oben: 172, unten: 70, px: 128,
+    knick: 4, luecke: 0.6, punkt: 0.7, band: 0.15, punktBand: 0.6, anker: 0.2, schwelle: 2 },
+  liste: function () {
+    var out = [];
+    if (!zeigeLabels) return out;
+    ARL_EINTR.forEach(function (e) {
+      if (SYS[STR[e.id].def.system].modus !== 'aus') out.push({ a: e.a, p: e.p });
+    });
+    return out;
+  },
+  auswahl: function () { return gewaehlt; }
+});
+$('arBig').addEventListener('click', function () {
+  var max = AR.scale === arCfg.stufen[arCfg.stufen.length - 1];
+  if (max && !arBigAlt) Kern.toast('Lebensgro\u00df \u2013 am besten auf den Boden stellen.');
+  arBigAlt = max;
+});
+$('arSmall').addEventListener('click', function () { arBigAlt = false; });
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme des Koerpers ---- */
+function usdzBuild() {
+  /* Glas ist nur im Shader durchsichtig (opacity 1): in der USDZ Deckkraft ueber userData.usdzOp */
+  var gesetzt = [];
+  Object.keys(SYS).forEach(function (k) {
+    SYS[k].mats.forEach(function (x) {
+      if (!x.userData.gu) return;
+      x.userData.usdzOp = SYS[k].modus === 'glas' ? 0.15 : 0.3;
+      gesetzt.push(x);
+    });
+  });
+  try {
+    return Kern.AR.usdz({
+      name: 'Koerper', creator: 'Koerper 3D - ' + Kern.WM, datei: 'koerper.usda', skala: 0.0025,
+      gruppen: [wurzel],
+      beschriftung: function (f4) {
+        var v = new THREE.Vector3();
+        wurzel.updateWorldMatrix(true, false);
+        return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(wurzel.matrixWorld); return [v.x * 0.0025, v.y * 0.0025, v.z * 0.0025]; });
+      }
+    });
+  } finally {
+    gesetzt.forEach(function (x) { delete x.userData.usdzOp; });
+  }
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Der K\u00f6rper \u00f6ffnet sich in AR Quick Look. Mit zwei Fingern l\u00e4sst er sich vergr\u00f6\u00dfern und drehen.' });
+}
+App.usdzBuild = usdzBuild;
+$('bAR').onclick = function () { if (fz) return; AR.start(); };
+AR.check();
+
+function loop(now, frame) {
+  if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -1188,6 +1306,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  AR.abbauen(); ARL.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   orbit.loesen();
   canvas.removeEventListener('click', canvasKlick);
@@ -1207,6 +1326,7 @@ organ.abbauen = function () {
 return bauen().then(function () {
   if (abgebaut) return;
   App.aufbauMs = Math.round(performance.now() - t0);
+  arCfg.fuss = -new THREE.Box3().setFromObject(wurzel).min.y;   /* Fusssohlen stehen auf der Flaeche */
   if (umg.von && VON[umg.von] && STR[VON[umg.von]]) rueckkehr(VON[umg.von]);   /* Rueckweg aus einem Detailmodell */
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
