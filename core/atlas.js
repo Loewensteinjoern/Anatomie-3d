@@ -1,10 +1,14 @@
 /* ==========================================================================
    Gemeinsamer Kern - Atlas: Adresssteuerung der Rahmenseite index.html
    Klassisches Skript (kein Modul). Liest den Teil nach # der Adresse
-   (#herz, #nephron, #koerper), laedt das Organ per Kern.organLaden nach,
-   startet es im Rahmen und baut es beim Wechsel wieder ab. Leere Adresse
-   und #koerper zeigen den Koerper (Startansicht); die Adresse wird dafuer
-   nicht veraendert. Zurueck zum Koerper: location.hash = '' (neuer
+   (#herz, #niere/nephron, #koerper; die Adressen der Organe stehen in
+   Kern.ORGANE), laedt das Organ per Kern.organLaden nach, startet es im
+   Rahmen und baut es beim Wechsel wieder ab. Leere Adresse und #koerper
+   zeigen den Koerper (Startansicht); die Adresse wird dafuer nicht
+   veraendert. Eine alte Adresse (#nephron) wird sofort per location.replace
+   auf die aktuelle umgeleitet (kein neuer Verlaufseintrag). Der
+   Zurueck-Knopf geht eine Ebene hoch (uebergeordnetes Organ laut Adresse,
+   sonst Koerper): location.hash = Adresse bzw. '' fuer den Koerper (neuer
    Verlaufseintrag, daher fuehrt auch der Zurueck-Knopf des Browsers sauber
    zum vorigen Organ). Beim Wechsel zwischen Organen bleibt das letzte Bild des
    alten Organs als Standbild (#uebergang) stehen, bis das neue aufgebaut ist,
@@ -66,8 +70,12 @@
   }
 
   function route() {
-    var name = decodeURIComponent(location.hash.replace(/^#/, '')) || 'koerper';
-    if (name === aktuell && $('atlasFehler').hasAttribute('hidden')) return;   /* gleiche Ansicht (z. B. '' und #koerper) */
+    var adresse = decodeURIComponent(location.hash.replace(/^#/, '')) || K.organAdresse('koerper');
+    var z = K.organZuAdresse(adresse);
+    /* alte Adresse: vor allem anderen (kein Zaehler, kein Standbild, kein Abbau) auf die aktuelle umleiten, ohne neuen Verlaufseintrag; das hashchange danach ruft route erneut auf */
+    if (z && z.alt) { location.replace('#' + K.organAdresse(z.name)); return; }
+    var name = z && z.name;   /* Name des Organs, null bei unbekannter Adresse */
+    if (name && name === aktuell && $('atlasFehler').hasAttribute('hidden')) return;   /* gleiche Ansicht (z. B. '' und #koerper) */
     var nr = ++zaehler;
     var u = $('uebergang');
     var standbild = !u.hasAttribute('hidden');   /* schneller Wechsel im Aufbau: Standbild steht schon */
@@ -81,8 +89,8 @@
     beenden();
     zeige($('atlasFehler'), false);
     zeige($('atlasZurueck'), false);
-    var e = Object.prototype.hasOwnProperty.call(K.ORGANE, name) ? K.ORGANE[name] : null;
-    if (!e) { fehler(new Error('Unbekanntes Organ: ' + name), nr); return; }
+    var e = name ? K.ORGANE[name] : null;
+    if (!e) { fehler(new Error('Unbekanntes Organ: ' + adresse), nr); return; }
     $('boot').querySelector('span').textContent = e.titel + ' wird aufgebaut';
     $('bootBar').style.width = '0';
     $('bootSt').textContent = '';
@@ -93,6 +101,7 @@
       if (nr !== zaehler) return;
       $('organ').className = 'organ-' + name;
       document.title = e.seitentitel;
+      $('atlasZurueck').textContent = '\u2190 ' + K.ORGANE[zurueckZiel(name)].titel;   /* Beschriftung nach dem Ziel (eine Ebene hoch) */
       zeige($('atlasZurueck'), name !== 'koerper');   /* im Koerper selbst gibt es kein Zurueck */
       return K.organStarten(name, { von: vorher });
     }).then(function () {
@@ -107,7 +116,17 @@
     else location.hash = '';
   }
 
-  $('atlasZurueck').addEventListener('click', zumKoerper);
+  function zurueckZiel(name) {   /* Ziel des Zurueck-Knopfs: uebergeordnetes Organ (Adresse eine Ebene hoeher), sonst der Koerper */
+    return K.organEltern(name) || 'koerper';
+  }
+
+  function zurueck() {   /* eine Ebene hoch */
+    var ziel = aktuell ? zurueckZiel(aktuell) : 'koerper';
+    if (ziel === 'koerper') zumKoerper();
+    else location.hash = K.organAdresse(ziel);   /* neuer Verlaufseintrag, wie zumKoerper */
+  }
+
+  $('atlasZurueck').addEventListener('click', zurueck);
   $('atlasFehlerZurueck').addEventListener('click', zumKoerper);
   window.addEventListener('hashchange', route);
   K.Atlas = { route: route };

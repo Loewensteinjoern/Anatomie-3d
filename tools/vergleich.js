@@ -4,7 +4,7 @@
 
    Prüft, ob die Modelle nach einer Änderung genauso aussehen und
    funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz und
-   Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #nephron).
+   Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere/nephron).
 
      node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|nephron|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
@@ -39,7 +39,8 @@
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-nephron (Fahrt zur Niere,
    Standbild, Rückfahrt) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
-   alten Adressen nephron.html, atlas.html#herz und atlas.html: Ziel-Adresse muss stimmen,
+   alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
+   #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
    Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
@@ -486,7 +487,9 @@ const MODELLE = {
   }
 };
 
-/* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz und nephron auf #herz / #nephron */
+/* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', nephron: '#niere/nephron' };
+/* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz und nephron auf #herz / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
   herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
@@ -496,7 +499,7 @@ const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.cont
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
 for (const organ of ['koerper', 'herz', 'nephron']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
-  for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = organ === 'koerper' ? '' : '#' + organ; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
+  for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
 MODELLE.atlas = { datei: 'index.html', kontexte: {} };
 /* Endzustand nach einem Übergang (im Browser): Standbild verborgen und ohne Breite, keine inline-Styles auf Organ-Kindern und Canvas */
@@ -527,9 +530,9 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   await t.js(() => window.KoerperApp.waehle('herz')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-herz'); await t.bisAdresse('#herz'); await organ('herz'); await t.weiter(1500); await t.bild('herz');
   await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
   const m1 = await messen();
-  await t.js(() => { location.hash = 'nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
+  await t.js(() => { location.hash = 'niere/nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');
   await t.js(() => { location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-nach-nephron');
-  await t.js(() => { location.hash = 'nephron'; location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-schnell');
+  await t.js(() => { location.hash = 'niere/nephron'; location.hash = 'herz'; }); await organ('herz'); await t.bild('herz-schnell');
   await t.js(() => { location.hash = ''; }); await organ('koerper'); await t.weiter(2200);
   const m2 = await messen();
   const felder = Object.keys(m1).filter((k) => JSON.stringify(m1[k]) !== JSON.stringify(m2[k]));
@@ -542,7 +545,7 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
 MODELLE.atlas.kontexte['uebergaenge-nephron'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
-  await t.js(() => window.KoerperApp.waehle('nieren')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nieren'); await t.bisAdresse('#nephron');
+  await t.js(() => window.KoerperApp.waehle('nieren')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nieren'); await t.bisAdresse('#niere/nephron');
   await organ('nephron'); await t.bild('standbild');
   await t.weiter(1500); await t.bild('nephron');
   await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt'); await t.weiter(1200); await t.bild('koerper-zurueck');
@@ -576,9 +579,10 @@ MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: 
     await t.freigeben('**/organe/herz/herz.css');
     await t.klick('#atlasFehlerZurueck'); await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'koerper', 'koerper'); await t.weiter(500); await t.bild('koerper-nach-fahrtfehler');
   } };
-/* Kontexte weiterleitung / weiterleitung-datei: die alten Adressen leiten auf index.html weiter */
+/* Kontexte weiterleitung / weiterleitung-datei: die alten Adressen leiten auf die aktuellen in index.html weiter */
 const WEITERLEITUNG = { async ablauf(t) {
-  const faelle = [['nephron.html', 'index.html#nephron', 'nephron', 'nephron'], ['atlas.html#herz', 'index.html#herz', 'herz', 'herz'], ['atlas.html', 'index.html', 'koerper', 'koerper']];
+  const faelle = [['nephron.html', 'index.html#niere/nephron', 'nephron', 'nephron'], ['atlas.html#herz', 'index.html#herz', 'herz', 'herz'], ['atlas.html', 'index.html', 'koerper', 'koerper'],
+    ['index.html#nephron', 'index.html#niere/nephron', 'nephron', 'nephron-alte-adresse']];   /* alte Adresse im Atlas selbst; am Ende, damit die Bildnummern der übrigen Fälle gleich bleiben */
   const res = {}; let gleich = true;
   for (const [von, soll, organ, bild] of faelle) {
     await t.gehe(von);
@@ -642,7 +646,7 @@ MODELLE.atlas.kontexte.offline = { opt: DESKTOP, braucht: 'sw.js', bereit: ATLAS
   await t.weiter(1500); await t.bild('koerper');
   const organe = { koerper: true };
   const oeffne = async (n) => {
-    await t.js((h) => { location.hash = h; }, '#' + n);
+    await t.js((h) => { location.hash = h; }, ATLAS_ADRESSE[n]);
     await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); await t.warteAuf(ATLAS_BEREIT(n), n);
     await t.weiter(1500); await t.bild(n);
     organe[n] = await t.js(ATLAS_BEREIT(n)) === true;
@@ -753,7 +757,13 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
     route: (muster, fn) => page.context().route(muster, fn),      /* Kontext-Route: erfasst auch den Service Worker */
     unroute: (muster) => page.context().unroute(muster),
     swErsetzen: (text) => { swErsatz = text; },    /* sw.js vom Server ersetzen (null = Datei der Quelle) */
-    gehe: (rel) => page.goto((K.lokal ? 'file://' + wurzel + '/' : basis) + rel),
+    /* ändert sich nur das Fragment (#…), wäre es eine Navigation im selben Dokument ohne Neuladen; dann erst über about:blank,
+       damit die Seite frisch lädt (wie ein Lesezeichen) */
+    async gehe(rel) {
+      const adr = (K.lokal ? 'file://' + wurzel + '/' : basis) + rel;
+      if (page.url().split('#')[0] === new URL(adr).href.split('#')[0]) await page.goto('about:blank');
+      return page.goto(adr);
+    },
     url: () => page.url().replace(K.lokal ? 'file://' + wurzel + '/' : basis, ''),
     warteUrl: (re) => page.waitForURL(re),
     weiter: (ms) => weiter(ms, 50),
