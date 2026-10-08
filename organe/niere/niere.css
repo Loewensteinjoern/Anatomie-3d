@@ -75,6 +75,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
     border-radius:0;border-left:0;border-right:0;border-bottom:0}
   #legend{display:none}
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 92px)}
+  body:has(#info.show) #atlasZurueck{display:none}   /* offene Infokarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   #lupe{left:0;right:0;width:auto;top:auto;bottom:0;max-height:62vh;overflow-y:auto;border-radius:3px 3px 0 0;border-bottom:0}
   .lp-main{flex-direction:column}
   #lpCv{width:100%;height:auto;flex:none;aspect-ratio:340/236}
