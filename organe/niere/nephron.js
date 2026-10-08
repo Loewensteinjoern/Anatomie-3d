@@ -168,7 +168,7 @@ organ.start = function (w, h) {
 };
 /* Form fuer die Niere (Kern.Organe.nephron.form): Mittellinien der Bahnen aus denselben Kontrollpunkten wie das Modell (bahnenDef).
    Jede Bahn: id, pts (Punktliste [x, y, z] in Nephron-Koordinaten), r (Radien gleichmaessig ueber die Laenge). glomerulus: Mitte und
-   Radius der Kugel (Nierenkoerperchen). tafel: Grenzen der Hintergrundtafel (x0, x1, y0, y1, z, grenze = Rinde/Mark). Kein Zufall. */
+   Radius der Kugel (Nierenkoerperchen); vasa: Vasa recta (gleiche Form wie linien). tafel: Grenzen der Hintergrundtafel (x0, x1, y0, y1, z, grenze = Rinde/Mark). Kein Zufall. */
 organ.form = {
   START: START,
   tafel: { x0: TAFEL.mx - TAFEL.b / 2, x1: TAFEL.mx + TAFEL.b / 2, y0: TAFEL.my - TAFEL.h / 2, y1: TAFEL.my + TAFEL.h / 2, z: TAFEL.z, grenze: TAFEL.grenze },
@@ -190,7 +190,8 @@ organ.form = {
         bahn('asc', B.ASC, B.LOOP[B.LOOP.length - 2], B.DIST[1], B.RAD.asc),
         bahn('dist', B.DIST, B.ASC[B.ASC.length - 2], B.COLL[1], B.RAD.dist),
         bahn('coll', B.COLL, B.DIST[B.DIST.length - 2], null, B.RAD.coll)
-      ]
+      ],
+      vasa: [bahn('vasa', B.VASA, null, null, [0.13, 0.14, 0.15, 0.16, 0.17])]   /* Vasa recta (rot nach blau), fuer die Niere */
     };
   }
 };

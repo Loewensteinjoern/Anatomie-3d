@@ -10,8 +10,10 @@
    Pause und drei Tempi wie beim Nephron, Export "GLB animiert".
    Krankheitsbilder (Harnstau durch Nierenstein, Nierenarterienstenose) und Medikamente (Ramipril, Ibuprofen): Reiter und Erklaerkarte
    (Kern.Szenarien); Wirkung ueber weich ueberblendete Wirkgroessen (Abschnitt 5d).
-   Zoomstufe: In der oberen Polpyramide ist ein Nephron markiert (Bahnen aus dem Nephron-Modul,
-   organe/niere/nephron.js); "Nephron ansehen" faehrt hinein (Adresse niere/nephron).
+   Zoomstufe: Das Nephron erscheint erst beim Heranzoomen (Bahnen aus dem Nephron-Modul, organe/niere/nephron.js): Wer Rinde, Saeulen,
+   Pyramiden oder Papillen antippt, bekommt in der Infokarte "Nephron hier ansehen" (der Punkt bestimmt Pyramide und Lage); der Knopf
+   "Nephron" faehrt an eine feste Stelle der oberen Polpyramide. Die Niere dreht sich dabei um die Schnittnormale, bis die Achse der
+   Pyramide senkrecht steht (Adresse niere/nephron).
    ===================================================================== */
 (function () {
 'use strict';
@@ -37,9 +39,6 @@ var STRUKTUREN = [
   { id: 'papillen', de: 'Nierenpapillen', lat: 'Papillae renales', grp: 'Nierengewebe', col: 0xB0584A,
     txt: 'Die Spitze jeder Pyramide ragt als Papille in einen kleinen Nierenkelch. Auf ihr münden die Sammelrohre mit vielen feinen Öffnungen: Hier tropft der fertige Harn ins Hohlsystem. Ab hier wird er nicht mehr verändert, nur noch abgeleitet.',
     facts: { 'Mündungen': 'Sammelrohre', 'Ab hier': 'Harn wird nur noch abgeleitet', 'Gefährdet durch': 'Schmerzmittel-Missbrauch (Papillennekrose)' } },
-  { id: 'nephron', de: 'Nephron', lat: 'Nephronum', grp: 'Nierengewebe', col: 0xFFC21A,
-    txt: 'Funktionseinheit der Niere: Nierenkörperchen und Tubulus. Jede Niere hat rund eine Million Nephrone; das markierte ist hier stark vergrößert dargestellt. Über „Nephron ansehen“ geht es in die Nahansicht.',
-    facts: { 'Anzahl': 'ca. 1 Million je Niere', 'Länge': 'ca. 3–5 cm', 'Lage': 'Rinde und Mark' } },
   { id: 'kelcheKlein', de: 'Kleine Nierenkelche', lat: 'Calices renales minores', grp: 'Harnableitung', col: 0xEAD27A,
     txt: 'Becherförmige Teile des Hohlsystems, die je eine Papille umfassen und den abtropfenden Harn auffangen. Mehrere kleine Kelche vereinigen sich zu einem großen Kelch. Glatte Muskulatur in ihrer Wand schiebt den Harn weiter.',
     facts: { 'Anzahl': 'ca. 8–10', 'Fängt auf': 'Harn einer Papille', 'Wand': 'glatte Muskulatur, Urothel' } },
@@ -158,10 +157,10 @@ var MARKUP = `<div id="title">
   <h4>Lesehilfe</h4>
   <p><b style="color:#E0584C">Rot</b> Arterien &ndash; bringen das Blut zur Niere.<br>
   <b style="color:#6F93E0">Blau</b> Venen &ndash; f&uuml;hren es zur&uuml;ck.<br>
-  <b style="color:#E3C75A">Gelb</b> Harnwege &ndash; Kelche, Becken und Harnleiter.<br>
-  <b style="color:#FFC21A">Gold</b> das markierte Nephron (stark vergr&ouml;&szlig;ert).</p>
+  <b style="color:#E3C75A">Gelb</b> Harnwege &ndash; Kelche, Becken und Harnleiter.</p>
   <p class="note" id="legNote">Schnitt durch die linke Niere von vorn; die vordere H&auml;lfte ist abgehoben.</p>
-  <p class="note">Die Teilchen zeigen die Str&ouml;mung &ndash; symbolisch, nicht ma&szlig;st&auml;blich: rot Blut zur Niere, blau Blut zur&uuml;ck, gelb Harn.</p>
+  <p class="note">Die Teilchen zeigen die Str&ouml;mung &ndash; symbolisch, nicht ma&szlig;st&auml;blich: rot Blut zur Niere, blau Blut zur&uuml;ck, gelb Harn.<br>
+  Nephron: Rinde oder Mark antippen &rarr; &bdquo;Nephron hier ansehen&ldquo;.</p>
   <p class="note kz">Durchblutung beider Nieren ca. 1,2 l Blut pro Minute (ein F&uuml;nftel des Herzzeitvolumens)<br>
   daraus ca. 180 l Prim&auml;rharn pro Tag<br>
   davon bleiben ca. 1,5 l Endharn</p>
@@ -180,7 +179,7 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
-  <button class="gh" id="iOpen" style="display:none">Nephron ansehen</button>
+  <button class="gh" id="iOpen" style="display:none">Nephron hier ansehen</button>
 </div>
 
 <div class="panel" id="scard">
@@ -247,20 +246,25 @@ organ.start = function (w, h) {
   return { theta: f.LAGE.dreh * (Math.PI / 180), phi: Math.PI / 2, dist: abstandFuer(UEBERSICHT.ext, r, KAMERA_FOV, h), target: [0, 0, 0],
     versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] };
 };
-/* Markiertes Nephron (Zoomstufe): Lage in der oberen Polpyramide und Startansicht des Nephron-Modells (Ersatz, wenn dessen Skript fehlt).
-   Hoehe der Hintergrundtafel des Nephron-Modells (Rinde oben, Mark unten) in Nephron-Koordinaten wie organe/niere/nephron.js (TAFEL) */
+/* Nephron (Zoomstufe): Lage in einer Pyramide und Startansicht des Nephron-Modells (Ersatz, wenn dessen Skript fehlt).
+   Hoehe der Hintergrundtafel des Nephron-Modells (Rinde oben, Mark unten) in Nephron-Koordinaten wie organe/niere/nephron.js (TAFEL):
+   sie reicht in der Niere von der Kapsel ueber der Pyramide bis zur Papille */
 var NE_TAFEL = [-9.7, 8.5];
-var NE_DX = 0.6;      /* Nephron-Ursprung seitlich der Papille (cm in der Schnittebene): so liegt es ganz im Gewebe des oberen Pols */
-var NE_Z = 0.25;      /* Nephron-Ursprung vor der Schnittflaeche (cm): das hinterste Rohr liegt knapp (ca. 0,02 cm) davor */
-var NE_GC = [0, 5.80, 0];   /* Mitte des Nierenkoerperchens (Nephron-Koordinaten) */
+var NE_ZR = 1.42;     /* Nephron-Ursprung vor der Schnittflaeche (in Nephron-Einheiten, mal Massstab): das hinterste Rohr liegt knapp (ca. 0,02 cm) davor */
 var NE_START = { theta: 0.26, phi: 1.46, dist: 27, target: [1.2, -0.5, 0], versatz: [0, 0] };
+/* Standardstelle (Knopf "Nephron", Auswahl ueber die Strukturliste, Rueckfahrt nach Neuladen): obere Polpyramide, Nierenkoerperchen
+   0,6 cm seitlich der Pyramidenachse. Eine Wahl ist { py: Nummer der Pyramide, q: seitlicher Abstand von der Achse (cm, in der Schnittebene) } */
+var NE_STANDARD = { py: 0, q: 0.6 };
+var neLetzte = null;   /* zuletzt gewaehlte Stelle (fuer die Rueckfahrt aus dem Nephron-Modell; nur im Speicher der Seite) */
+var NE_STRUKTUREN = ['rinde', 'saeulen', 'pyramiden', 'papillen'];   /* Strukturen, deren Infokarte "Nephron hier ansehen" zeigt */
 function aufbauen(umg) {
 var canvas = umg.canvas, renderer = umg.renderer, scene = umg.szene, camera = umg.kamera, envTex = umg.envTex;
 var S = Kern.SDF, form = Kern.Formen && Kern.Formen.niere;
 if (!form) throw new Error('Die Form der Niere ist nicht geladen.');
 umg.bereich.innerHTML = MARKUP;
-/* Nephron-Modell nur als Skript nachladen (ohne Gestaltung): liefert die Bahnen des markierten Nephrons und die Startansicht der Fahrt; ohne Modul fehlt das Nephron, die Fahrt bleibt moeglich */
+/* Nephron-Modell nur als Skript nachladen (ohne Gestaltung): liefert die Bahnen des Nephrons und die Startansicht der Fahrt; ohne Modul fehlt das Nephron, die Fahrt bleibt moeglich */
 var nephP = Kern.organLaden('nephron', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
+var nform = null;   /* Form des Nephron-Modells (Bahnen), nach dem Aufbau gesetzt */
 
 var abgebaut = false;
 var $ = function (id) { return document.getElementById(id); };
@@ -313,9 +317,6 @@ MAT.blutBlau = mat(0x5C8DFF, { rough: 0.35 }); MAT.blutBlau.emissive.copy(srgb(0
 MAT.harn = mat(0xFFF03A, { rough: 0.3 }); MAT.harn.emissive.copy(srgb(0xFFD400)).multiplyScalar(0.75);
 ['blutRot', 'blutBlau', 'harn'].forEach(function (k) { MAT[k].userData.baseEmissive = MAT[k].emissive.clone(); });
 MAT.nebenniere = mat(0xD8A13E, { rough: 0.55, coat: 0.2 });
-/* markiertes Nephron: kraeftiges Gold mit leichtem Leuchten (das Leuchten ist der Grundwert der Hervorhebung) */
-MAT.nephron = mat(0xFFC21A, { rough: 0.35, coat: 0.4 });
-MAT.nephron.emissive.copy(srgb(0xFFB020)).multiplyScalar(0.3); MAT.nephron.userData.baseEmissive = MAT.nephron.emissive.clone();
 /* Krankheitsbilder: Nierenstein (gelblich weiss, matt) und Renin-Markierungen (leuchtendes Orange) */
 MAT.stein = mat(0xF6F1E0, { rough: 0.85 }); MAT.stein.emissive.copy(srgb(0xFFF4D0)).multiplyScalar(0.18); MAT.stein.userData.baseEmissive = MAT.stein.emissive.clone();
 MAT.renin = mat(0xFF9A2E, { rough: 0.4 }); MAT.renin.emissive.copy(srgb(0xFF6A00)).multiplyScalar(0.9); MAT.renin.userData.baseEmissive = MAT.renin.emissive.clone();
@@ -516,7 +517,7 @@ function radiusFaktor(rt, t) {
 }
 /* Rohre entlang der Gefaesslinien (anatomisch), je Gruppe zu einer Geometrie zusammengefasst; Enden mit Kappe */
 function rohre(linien) {
-  var pos = [], nor = [], idx = [];
+  var pos = [], nor = [], idx = [], col = [];   /* col: nur bei Linien mit farbe (Funktion t = 0..1 -> [r, g, b], linear) */
   linien.forEach(function (l) {
     var kurve = new THREE.CatmullRomCurve3(l.pts.map(function (p) { return V(p[0], p[1], p[2]); }), false, 'catmullrom', 0.5);
     var rad = l.seiten || (l.r > 0.2 ? 12 : l.r > 0.09 ? 8 : l.r > 0.04 ? 6 : 5), tub = Math.max(6, l.pts.length * 4);
@@ -527,12 +528,15 @@ function rohre(linien) {
         for (j = 0; j <= rad; j++) { var v0 = i * (rad + 1) + j; p.setXYZ(v0, c0.x + (p.getX(v0) - c0.x) * f, c0.y + (p.getY(v0) - c0.y) * f, c0.z + (p.getZ(v0) - c0.z) * f); }
       }
     }
-    for (i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); }
+    for (i = 0; i < p.count; i++) {
+      pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i));
+      if (l.farbe) { var fc = l.farbe(Math.floor(i / (rad + 1)) / tub); col.push(fc[0], fc[1], fc[2]); }
+    }
     for (i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
     [[0, -1, 0], [1, 1, tub * (rad + 1)]].forEach(function (e) {   /* [Ort auf der Kurve, Richtung der Kappe, Ring im Rohr] */
-      var c = kurve.getPointAt(e[0]), T = kurve.getTangentAt(e[0]), b0 = pos.length / 3;
-      pos.push(c.x, c.y, c.z); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]);
-      for (j = 0; j < rad; j++) { var v = e[2] + j; pos.push(p.getX(v), p.getY(v), p.getZ(v)); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); }
+      var c = kurve.getPointAt(e[0]), T = kurve.getTangentAt(e[0]), b0 = pos.length / 3, fk = l.farbe ? l.farbe(e[0]) : null;
+      pos.push(c.x, c.y, c.z); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); if (fk) col.push(fk[0], fk[1], fk[2]);
+      for (j = 0; j < rad; j++) { var v = e[2] + j; pos.push(p.getX(v), p.getY(v), p.getZ(v)); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); if (fk) col.push(fk[0], fk[1], fk[2]); }
       for (j = 0; j < rad; j++) {
         var a = b0 + 1 + j, b = b0 + 1 + (j + 1) % rad;
         var ax = pos[a * 3] - c.x, ay = pos[a * 3 + 1] - c.y, az = pos[a * 3 + 2] - c.z, bx = pos[b * 3] - c.x, by = pos[b * 3 + 1] - c.y, bz = pos[b * 3 + 2] - c.z;
@@ -545,12 +549,13 @@ function rohre(linien) {
   var geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  if (col.length) geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(idx);
   return geo;
 }
 
 /* Aufbau: Gewebe -> Hohlsystem -> Nebenniere -> Gefaesse (asynchron mit Ladebalken; nach jedem await prueft abgebaut) */
-var tris = { gewebe: 0, hohl: 0, gefaesse: 0, nebenniere: 0, nephron: 0 };
+var tris = { gewebe: 0, hohl: 0, gefaesse: 0, nebenniere: 0 };
 async function bauen() {
   await setLoad(0.02, 'Nierengewebe wird geformt'); if (abgebaut) return;
   /* Gewebe: ein Feld, daraus zwei Haelften (hinten: max(Gewebe, z), vorn: max(Gewebe, -z); die Schnittebene liegt auf z = 0) */
@@ -610,30 +615,14 @@ async function bauen() {
   stroemungBauen(L);
   szenarioBauen(L);
   await setLoad(0.95, 'Nephron'); if (abgebaut) return;
-  var nform = await nephP; if (abgebaut) return;
-  if (nform) {   /* ohne Nephron-Modell bleibt die Struktur ohne Netz (die Fahrt zum Nephron funktioniert trotzdem) */
-    var nb2 = nform.bahnen(), nl = [];
-    nb2.linien.forEach(function (l) {
-      var rr = l.r.map(function (r) { return Math.max(0.03, r * NE.s); }), rm = Math.max.apply(null, rr), pts = l.pts.map(function (q) { var v = nephPunkt(q); return [v.x, v.y, v.z]; }), a0 = 0, a1 = pts.length;
-      /* Anfang und Ende ausserhalb der Niere weglassen (die zufuehrende Arteriole kommt von aussen) */
-      while (a0 < a1 - 2 && form.aussen(pts[a0][0], pts[a0][1], pts[a0][2]) > 0) a0++;
-      while (a1 - 2 > a0 && form.aussen(pts[a1 - 1][0], pts[a1 - 1][1], pts[a1 - 1][2]) > 0) a1--;
-      var f0 = a0 / (pts.length - 1), f1 = (a1 - 1) / (pts.length - 1);
-      var rt = rr.map(function (r, i) { return [(i / (rr.length - 1) - f0) / (f1 - f0), r / rm]; }).filter(function (q) { return q[0] >= 0 && q[0] <= 1; });
-      nl.push({ pts: pts.slice(a0, a1), r: rm, seiten: 10, rt: rt.length ? rt : undefined });
-    });
-    var ng = rohre(nl);
-    addMesh(root, 'nephron', ng, MAT.nephron, STRUCT.nephron.de + ' (Tubulus)', 0); tris.nephron += ng.index.count / 3;
-    var kg = new THREE.SphereGeometry(NE.s * nb2.glomerulus.r, 28, 18), km = nephPunkt(nb2.glomerulus.mitte);
-    kg.translate(km.x, km.y, km.z);
-    addMesh(root, 'nephron', kg, MAT.nephron, STRUCT.nephron.de + ' (Nierenkörperchen)', 0); tris.nephron += kg.index.count / 3;
-  }
+  nform = await nephP; if (abgebaut) return;   /* das Nephron selbst entsteht erst bei der Kamerafahrt */
   await setLoad(0.97, 'Beschriftung'); if (abgebaut) return;
 }
 
 /* =====================================================================
    3. Zustand, Bedienung
    ===================================================================== */
+var neWahl = null;   /* Stelle der letzten Auswahl mit Punkt ({ py, q }); ohne Punkt gilt NE_STANDARD */
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, lv = 0, inAR = false;   /* lv: Version fuer die Beschriftung */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
 var openK = 1, openZiel = 1;   /* 1 = aufgeschnitten (Deckel weg), 0 = geschlossen; laeuft weich */
@@ -678,8 +667,10 @@ function applyLook() {
   });
   /* Hohlsystem und Gefaesse laufen im Glas-Modus nach dem Gewebe */
 }
-function setSelected(id) {
+/* punkt (optional, Vector3 oder [x, y, z] im Raum der Niere): wo die Struktur angetippt wurde; bestimmt die Stelle fuer "Nephron hier ansehen" */
+function setSelected(id, punkt) {
   selected = id;
+  neWahl = id && punkt ? wahlAusPunkt(punkt.length === 3 ? { x: punkt[0], y: punkt[1], z: punkt[2] } : punkt) : null;
   var brass = srgb(0xE0A94A);
   ORDER.forEach(function (s) {
     var em = (s.id === id) ? 0.28 : 0;
@@ -705,7 +696,7 @@ function setSelected(id) {
     var dd = document.createElement('dd'); dd.textContent = s.facts[k];
     dl.appendChild(dt); dl.appendChild(dd);
   });
-  $('iOpen').style.display = id === 'nephron' ? '' : 'none';   /* Knopf "Nephron ansehen" nur in der Infokarte des Nephrons */
+  $('iOpen').style.display = NE_STRUKTUREN.indexOf(id) >= 0 ? '' : 'none';   /* Knopf "Nephron hier ansehen" nur bei Rinde, Saeulen, Pyramiden und Papillen */
   box.classList.add('show');
   szWeichen();
 }
@@ -924,19 +915,83 @@ $('bLab').onclick = function () {
 var kamAlt = { near: camera.near, far: camera.far };   /* Kamera ausserhalb von AR */
 var DREH = form.LAGE.dreh * DEG;   /* Blickrichtung senkrecht auf die Schnittflaeche (n) */
 function lokalAnat(p) { var q = form.anatomisch(p); return V(q[0], q[1], q[2]); }
-/* Markiertes Nephron: Nephron-Koordinaten -> Niere (anatomisch). Nur Drehung um die senkrechte Achse (Nephron-z = Normale der
-   Schnittebene), Massstab NE.s und Verschiebung NE.p0; die Hoehe der Hintergrundtafel des Nephron-Modells reicht von der Kapsel
-   bis zur Papille der oberen Polpyramide (PY[0]), die Rinden-Mark-Grenze des Nephrons liegt dann etwa auf der der Pyramide. */
+/* Nephron: Nephron-Koordinaten -> Niere (anatomisch). Das Nephron liegt entlang der Achse einer Pyramide (Nephron-y von der Papille
+   zur Rinde, Nephron-z = Normale der Schnittebene, Nephron-x = y x z); die Hoehe der Hintergrundtafel des Nephron-Modells reicht von
+   der Papille bis zur Kapsel ueber der Pyramide, die Rinden-Mark-Grenze des Nephrons liegt dann etwa auf der der Pyramide.
+   Die Niere dreht sich bei der Fahrt um die Normale (Achse durch den Nephron-Ursprung c), bis die Pyramidenachse senkrecht steht: dann
+   gilt in Weltachsen immer dieselbe Lage wie im Nephron-Modell (Nephron-y = oben, Nephron-z = Normale n). */
 var cDr = Math.cos(DREH), sDr = Math.sin(DREH);
-var NE = (function () {
-  var P = PY[0], u = P.uA, b = P.basisA, t = 0, nn = form.SCHNITT_N;
-  while (form.aussen(b[0] + u[0] * t, b[1] + u[1] * t, b[2] + u[2] * t) < 0) t += 0.005;   /* Kapsel ueber der Basis */
-  var yk = b[1] + u[1] * t, ya = P.apexA[1], s = (yk - ya) / (NE_TAFEL[1] - NE_TAFEL[0]);
-  var x0 = P.apexA[0] * cDr - P.apexA[2] * sDr + NE_DX;   /* Papille in der Ebene (Richtung ex = (cos, 0, -sin)) */
-  var y0 = (yk + ya) / 2 - s * (NE_TAFEL[0] + NE_TAFEL[1]) / 2;
-  return { s: s, p0: V(x0 * cDr + NE_Z * nn[0], y0, -x0 * sDr + NE_Z * nn[2]) };
-})();
-function nephPunkt(p) { return V(NE.p0.x + NE.s * (p[0] * cDr + p[2] * sDr), NE.p0.y + NE.s * p[1], NE.p0.z + NE.s * (-p[0] * sDr + p[2] * cDr)); }
+var NE = null;        /* aktuelle Lage: { s, c, ex, u, n (Niere), exW (Welt), alpha } */
+var nephB = null;     /* Bahnen des Nephron-Modells (einmal berechnet) */
+var _neQ = new THREE.Quaternion(), _neV = new THREE.Vector3();
+/* Pyramide und seitlicher Abstand zur Achse fuer einen angetippten Punkt (Raum der Niere): die Pyramide, deren Achse (Papille bis Basis)
+   am naechsten liegt; die Hoehe des Punktes spielt keine Rolle. rang: alle Pyramiden nach Abstand der Achse (fuer das Ausweichen) */
+function wahlAusPunkt(p) {
+  var l = form.lokal([p.x, p.y, p.z]);
+  var rang = PY.map(function (P, i) {
+    var ax = P.basis[0] - P.apex[0], ay = P.basis[1] - P.apex[1], t = Math.max(0, Math.min(1, ((l[0] - P.apex[0]) * ax + (l[1] - P.apex[1]) * ay) / (ax * ax + ay * ay)));
+    return { py: i, abstand: Math.hypot(l[0] - P.apex[0] - ax * t, l[1] - P.apex[1] - ay * t), q: (l[0] - P.apex[0]) * P.u[1] - (l[1] - P.apex[1]) * P.u[0] };
+  }).sort(function (a, b) { return a.abstand - b.abstand || a.py - b.py; });
+  return { py: rang[0].py, q: rang[0].q, rang: rang };
+}
+/* Lage des Nephrons fuer eine Wahl { py, q }: Massstab aus Papille bis Kapsel der Pyramide; der seitliche Abstand folgt q (Nierenkoerperchen
+   unter dem angetippten Punkt), wird aber so verschoben, dass die Rohre moeglichst im Nierengewebe bleiben (Rinde, Saeulen, Pyramide).
+   Ragen sie in der gewaehlten Pyramide mehr als NE_GRENZE cm heraus (schmale, seitliche Pyramiden, in denen das breite Nephron nicht Platz
+   hat), weicht die Lage auf die naechste Pyramide aus (nach Abstand der Achse zum Punkt, sonst nach Nummer), in der es passt. Ergebnis
+   u. a. py = tatsaechlich genutzte Pyramide. */
+var NE_GRENZE = 0.05;
+function nephronLage(wahl) {
+  var kand = wahl.rang || PY.map(function (P, i) { return { py: i, q: wahl.q }; }).sort(function (a, b) { return Math.abs(a.py - wahl.py) - Math.abs(b.py - wahl.py) || a.py - b.py; }), erg = null;
+  if (nform) nephB = nephB || nform.bahnen();
+  for (var k = 0; k < kand.length && !(erg && erg.rest <= NE_GRENZE); k++) {
+    var e = nephronStelle(kand[k].py, kand[k].q);
+    if (!erg || e.rest < erg.rest) erg = e;
+    if (!nform) break;   /* ohne Nephron-Modell gibt es nichts zu pruefen */
+  }
+  return erg;
+}
+function nephronStelle(py, q) {
+  var P = PY[py], u = P.u, t = 0;
+  while (form.aussenLokal(P.basis[0] + u[0] * t, P.basis[1] + u[1] * t, 0) < 0) t += 0.005;   /* Kapsel ueber der Basis */
+  var s = (P.lang + t) / (NE_TAFEL[1] - NE_TAFEL[0]), ex = [u[1], -u[0]];
+  var ort = function (d) {   /* Ursprung des Nephrons (lokale Achsen) bei seitlichem Abstand d */
+    return [P.apex[0] - u[0] * s * NE_TAFEL[0] + ex[0] * d, P.apex[1] - u[1] * s * NE_TAFEL[0] + ex[1] * d, s * NE_ZR];
+  };
+  var d = Math.max(-0.3, Math.min(0.3, q)), rest = 0;
+  if (nephB) {
+    var verletzung = function (d) {   /* groesste Ueberschreitung des Gewebes (cm, <= 0: alle Rohre innen); die ganz knappen Stellen zaehlen als gleich gut */
+      var o = ort(d), w = -1e9;
+      nephB.linien.concat(nephB.vasa || []).forEach(function (l) {
+        var n1 = l.pts.length - 1, n2 = l.r.length - 1, von = l.id === 'afferens' || l.id === 'vasa';   /* diese kommen von aussen */
+        l.pts.forEach(function (p, k) {
+          var x = o[0] + s * (p[0] * ex[0] + p[1] * u[0]), y = o[1] + s * (p[0] * ex[1] + p[1] * u[1]), z = o[2] + s * p[2];
+          if (von && form.aussenLokal(x, y, z) > 0) return;
+          w = Math.max(w, form.parenchym(x, y, z) + l.r[Math.round(k / n1 * n2)] * s);
+        });
+      });
+      return w;
+    };
+    var werte = [], i, best = 1e9;
+    for (i = 0; i <= 48; i++) { werte.push(verletzung(-1.2 + i * 0.05)); best = Math.min(best, werte[i]); }
+    var dist = 1e9;
+    for (i = 0; i <= 48; i++) if (werte[i] <= Math.max(best, 0.02) + 0.03 && Math.abs(-1.2 + i * 0.05 - q) < dist) { dist = Math.abs(-1.2 + i * 0.05 - q); d = -1.2 + i * 0.05; rest = werte[i]; }
+  }
+  var c = form.anatomisch(ort(d)), uA = form.anatomisch([u[0], u[1], 0]), exA = form.anatomisch([ex[0], ex[1], 0]), nA = form.SCHNITT_N;
+  var uV = V(uA[0], uA[1], uA[2]), nV = V(nA[0], nA[1], nA[2]);
+  /* Drehwinkel um n, der uA in die Senkrechte (Welt-y) bringt */
+  var alpha = Math.atan2(nV.dot(new THREE.Vector3().crossVectors(uV, V(0, 1, 0))), uV.y);
+  _neQ.setFromAxisAngle(nV, alpha);
+  return { py: py, rest: rest, s: s, c: V(c[0], c[1], c[2]), ex: V(exA[0], exA[1], exA[2]), u: uV, n: nV, exW: V(exA[0], exA[1], exA[2]).applyQuaternion(_neQ), alpha: alpha };
+}
+/* Nephron-Punkt in der Niere (vor der Drehung) und in der Welt (nach der Drehung, wie im Nephron-Modell) */
+function nephPunkt(p) { return new THREE.Vector3().copy(NE.c).addScaledVector(NE.ex, NE.s * p[0]).addScaledVector(NE.u, NE.s * p[1]).addScaledVector(NE.n, NE.s * p[2]); }
+function nephWelt(p) { return new THREE.Vector3().copy(NE.c).addScaledVector(NE.exW, NE.s * p[0]).addScaledVector(V(0, 1, 0), NE.s * p[1]).addScaledVector(NE.n, NE.s * p[2]); }
+/* Die ganze Niere um die Achse durch c (parallel n) drehen: f = 0 ohne Drehung, 1 mit der Pyramidenachse senkrecht; c bleibt dabei an seinem Platz */
+function neDrehung(f) {
+  _neQ.setFromAxisAngle(NE.n, NE.alpha * f);
+  root.quaternion.copy(_neQ);
+  root.position.copy(NE.c).sub(_neV.copy(NE.c).applyQuaternion(_neQ));
+}
 var view = { theta: DREH, phi: PI / 2, dist: 28, target: V(0, 0, 0) };
 var orbit = Kern.orbit(canvas, view, { minDist: 3, maxDist: 80 });
 /* ext = Breite und Hoehe (cm), die im freien Bereich ganz sichtbar sein sollen; halb = halbe Breite (cm), die die
@@ -1002,17 +1057,17 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, glas = null, erster = null, durch = [], dicht = false;
+  var hits = ray.intersectObjects(root.children, true), treffer = null, glas = null, erster = null, durch = [], dicht = false, punkt = null, glasPunkt = null;
   for (var i = 0; i < hits.length && !(treffer && dicht); i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
     erster = erster || hits[i].point;
     if (!dicht) { durch.push(sid); dicht = !o.material.transparent; }
-    if (!treffer) { if (seeThrough && GEWEBE.indexOf(sid) >= 0) glas = glas || sid; else treffer = sid; }
+    if (!treffer) { if (seeThrough && GEWEBE.indexOf(sid) >= 0) { if (!glas) { glas = sid; glasPunkt = hits[i].point; } } else { treffer = sid; punkt = hits[i].point; } }
   }
   if (LUPE.mode) { if (erster) lupeWahl(erster); return; }   /* Lupe: Papille waehlen statt Strukturinfo */
   if (quiz) { quizAntwort(treffer || glas || null, durch); return; }
-  setSelected(treffer || glas || null);
+  setSelected(treffer || glas || null, treffer ? punkt : glasPunkt);
 }
 canvas.addEventListener('click', canvasKlick);
 
@@ -1061,15 +1116,14 @@ var ANKER = {};
     nebenniere: [-1.78, 5.28, 0.15]
   };
   Object.keys(a).forEach(function (id) { ANKER[id] = lokalAnat(a[id]); });
-  ANKER.nephron = nephPunkt(NE_GC);   /* Nierenkoerperchen des markierten Nephrons (anatomische Achsen) */
 })();
 var AUSSEN = ['kapsel', 'arterie', 'vene', 'harnleiter', 'becken', 'nebenniere'];   /* geschlossen von aussen sichtbar */
 var KURZ = { pyramiden: 'Nierenpyramiden', interlobaer: 'Zwischenlappengefäße', interlobular: 'Rindengefäße' };
 var HANDYNAME = { interlobaer: 'Interlobärgefäße', kelcheKlein: 'Kleine Kelche', kelcheGross: 'Große Kelche' };   /* kürzere Namen, wo die Spalte auf dem Handy schmal ist */
 /* je Ausschnitt: Strukturen in der Beschriftung */
 var LISTEN = [
-  ['kapsel', 'rinde', 'saeulen', 'pyramiden', 'papillen', 'nephron', 'kelcheKlein', 'kelcheGross', 'becken', 'harnleiter', 'arterie', 'vene', 'interlobaer', 'bogen', 'interlobular', 'nebenniere'],
-  ['kapsel', 'rinde', 'saeulen', 'pyramiden', 'papillen', 'nephron', 'interlobaer', 'bogen', 'interlobular'],
+  ['kapsel', 'rinde', 'saeulen', 'pyramiden', 'papillen', 'kelcheKlein', 'kelcheGross', 'becken', 'harnleiter', 'arterie', 'vene', 'interlobaer', 'bogen', 'interlobular', 'nebenniere'],
+  ['kapsel', 'rinde', 'saeulen', 'pyramiden', 'papillen', 'interlobaer', 'bogen', 'interlobular'],
   ['pyramiden', 'papillen', 'kelcheKlein', 'kelcheGross', 'becken', 'harnleiter', 'arterie', 'vene', 'interlobaer'],
   ['arterie', 'vene', 'becken', 'harnleiter', 'kapsel']
 ];
@@ -1105,7 +1159,7 @@ function layoutLabels(w, h) {
       if (LUPE.open) papillenPunkt(LUPE.papille, pv); else pv.copy(ANKER[id]);
       pv.project(camera);
       if (pv.z > 1) return;
-      if ((id === 'nephron' || aktiv === 1) && (Math.abs(pv.x) > 1 || Math.abs(pv.y) > 1)) return;   /* ausserhalb des Bildes (Ausschnitt Rinde und Mark zeigt nur den oberen Pol): keine Beschriftung */
+      if (aktiv === 1 && (Math.abs(pv.x) > 1 || Math.abs(pv.y) > 1)) return;   /* ausserhalb des Bildes (Ausschnitt Rinde und Mark zeigt nur den oberen Pol): keine Beschriftung */
       items.push({ id: id, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
     });
   }
@@ -1898,23 +1952,26 @@ function arQuickLook() {
 }
 
 /* =====================================================================
-   7b. Kamerafahrt zum markierten Nephron (Knopf "Nephron ansehen"): alles ausser dem Nephron und dem Gewebe blendet aus, die Kamera
-   landet in der Startansicht des Nephron-Modells (umgerechnet in Nieren-Koordinaten), dann wird die Adresse gesetzt. Beim Zurueckkommen
-   (umg.von === 'nephron') steht die Niere im Nahbild des Nephrons und faehrt nach 450 ms zur Uebersicht zurueck.
+   7b. Kamerafahrt zum Nephron (Infokarte "Nephron hier ansehen" bei Rinde, Saeulen, Pyramiden und Papillen, Knopf "Nephron"): Das Nephron
+   entsteht erst bei der Fahrt und blendet in ihrer zweiten Haelfte ein; das Gewebe bleibt als Hintergrund, alles andere blendet aus.
+   Die Niere dreht sich dabei um die Schnittnormale, bis die Achse der Pyramide senkrecht steht. Die Kamera landet in der Startansicht des
+   Nephron-Modells (umgerechnet in Welt-Koordinaten), dann wird die Adresse gesetzt. Beim Zurueckkommen (umg.von === 'nephron') steht die
+   Niere gedreht im Nahbild des Nephrons und faehrt nach 450 ms zur Uebersicht zurueck (Drehung zurueck, Nephron blendet aus).
    ===================================================================== */
 var fz = null;   /* laufende Fahrt */
-/* Startansicht des Nephron-Modells in Nieren-Koordinaten: gleiche Blickrichtung (um die Drehung der Schnittebene gedreht), Abstand und Ziel
+var nephG = null, nephM = [];   /* Gruppe des Nephrons (Kind von root) und seine Materialien [{ m, op }] */
+/* Startansicht des Nephron-Modells in Welt-Koordinaten: gleiche Blickrichtung (um die Drehung der Schnittebene gedreht), Abstand und Ziel
    mit dem Massstab und der Lage des Nephrons umgerechnet, Versatz des Bildbereichs wie im Modell */
 function nephronZiel(w, h) {
   var ne = Kern.Organe && Kern.Organe.nephron, st = ne && ne.start ? ne.start(w, h) : NE_START;
-  return { theta: st.theta + DREH, phi: st.phi, dist: NE.s * st.dist, target: nephPunkt(st.target), versatz: st.versatz };
+  return { theta: st.theta + DREH, phi: st.phi, dist: NE.s * st.dist, target: nephWelt(st.target), versatz: st.versatz };
 }
 function imDeckel(o) { while (o) { if (o === deckel) return true; o = o.parent; } return false; }
-/* Alles ausser dem Nephron und dem Gewebe zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte. Der Deckel
+/* Alles ausser dem Gewebe und dem Nephron zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte. Der Deckel
    gehoert nicht dazu (er ist bei der Fahrt abgehoben). */
 function ausblendVorbereiten() {
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
-  ['nephron'].concat(GEWEBE).forEach(function (sid) {
+  GEWEBE.forEach(function (sid) {
     STRUCT[sid].meshes.forEach(function (m) {
       if (imDeckel(m)) return;
       zielObj.add(m);
@@ -1922,7 +1979,7 @@ function ausblendVorbereiten() {
     });
   });
   root.traverse(function (o) {
-    if (zielObj.has(o) || !o.material || !o.visible || imDeckel(o)) return;
+    if (zielObj.has(o) || !o.material || !o.visible || imDeckel(o) || (nephG && o.parent === nephG)) return;
     var ms = [].concat(o.material), frei = true;
     ms.forEach(function (x) { if (keep.has(x)) frei = false; });
     if (!frei) { o.visible = false; sofort.push(o); return; }   /* teilt ein Material mit dem Zielgewebe: sofort weg */
@@ -1936,30 +1993,87 @@ function ausblendVorbereiten() {
   labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
   return { mats: ausMat, altT: altT, obj: ausObj, sofort: sofort, ui: ui, altUi: altUi, fertig: false };
 }
-function nephronOeffnen() {
+/* Das Nephron als Rohre in der Niere (vor der Drehung), Farben wie im Nephron-Modell: Tubulus cremefarben bis ocker nach der
+   Konzentration im Rohr, Arteriolen rot, Vasa recta von rot nach blau-violett, Nierenkoerperchen rosa. Anfang und Ende ausserhalb der
+   Niere fehlen (die zufuehrende Arteriole kommt von aussen). Unsichtbar bis zum Einblenden; ohne Nephron-Modell bleibt die Gruppe leer. */
+var NE_KONZ = { prox: [300, 300], desc: [300, 1150], loop: [1150, 1200], asc: [1200, 110], dist: [110, 300], coll: [300, 1200] };   /* Konzentration (mosmol/l) am Anfang und Ende, wie im Nephron-Modell */
+function neKonz(m) {   /* Farbe (linear) fuer die Konzentration m: von creme (verduennt) nach ocker (konzentriert) */
+  var t = Math.pow(Math.max(0, Math.min(1, (m - 100) / 1100)), 0.78);
+  var c = new THREE.Color(0xF3EEDC).lerp(new THREE.Color(0xAE7C1C), t).convertSRGBToLinear();
+  return [c.r, c.g, c.b];
+}
+function neMischen(a, b, t) { var c = new THREE.Color(a).lerp(new THREE.Color(b), t).convertSRGBToLinear(); return [c.r, c.g, c.b]; }
+function neBauen() {
+  nephG = new THREE.Group(); nephG.name = 'Nephron'; nephG.userData.noexport = true; nephG.visible = false; root.add(nephG);
+  nephM = [];
+  if (!nform) return;
+  nephB = nephB || nform.bahnen();
+  var tub = mat(0xffffff, { rough: 0.5, coat: 0.4, vc: true });
+  var art = mat(0xD65A4A, { rough: 0.3, env: 0.45 }), eff = mat(0xA8453A, { rough: 0.3, env: 0.45 }), vas = mat(0xffffff, { rough: 0.3, env: 0.5, vc: true });
+  var kug = mat(0xE39088, { rough: 0.3, env: 0.4 });
+  [tub, art, eff, vas, kug].forEach(function (m) { m.transparent = true; m.opacity = 0; nephM.push({ m: m, op: 1 }); });
+  function linie(l, material, farbe, nameDe, klipp) {
+    var rr = l.r.map(function (r) { return Math.max(0.03, r * NE.s); }), rm = Math.max.apply(null, rr), pts = l.pts.map(function (q) { var v = nephPunkt(q); return [v.x, v.y, v.z]; }), a0 = 0, a1 = pts.length;
+    if (klipp) {   /* Anfang und Ende ausserhalb der Niere weglassen */
+      while (a0 < a1 - 2 && form.aussen(pts[a0][0], pts[a0][1], pts[a0][2]) > 0) a0++;
+      while (a1 - 2 > a0 && form.aussen(pts[a1 - 1][0], pts[a1 - 1][1], pts[a1 - 1][2]) > 0) a1--;
+    }
+    var f0 = a0 / (pts.length - 1), f1 = (a1 - 1) / (pts.length - 1);
+    var rt = rr.map(function (r, i) { return [(i / (rr.length - 1) - f0) / (f1 - f0), r / rm]; }).filter(function (q) { return q[0] >= 0 && q[0] <= 1; });
+    var m = new THREE.Mesh(rohre([{ pts: pts.slice(a0, a1), r: rm, seiten: 10, rt: rt.length ? rt : undefined, farbe: farbe && function (t) { return farbe(f0 + t * (f1 - f0)); } }]), material);
+    m.name = nameDe; m.renderOrder = 0; nephG.add(m);
+  }
+  nephB.linien.forEach(function (l) {
+    var k = NE_KONZ[l.id];
+    if (k) linie(l, tub, function (t) { return neKonz(k[0] + (k[1] - k[0]) * t); }, 'Nephron (' + l.id + ')');
+    else linie(l, l.id === 'afferens' ? art : eff, null, 'Nephron (' + l.id + ')', l.id === 'afferens');
+  });
+  (nephB.vasa || []).forEach(function (l) { linie(l, vas, function (t) { return neMischen(0xC8605E, 0x6F98C8, Math.pow(t, 1.25)); }, 'Nephron (Vasa recta)', true); });
+  var kg = new THREE.SphereGeometry(NE.s * nephB.glomerulus.r, 28, 18), km = nephPunkt(nephB.glomerulus.mitte);
+  kg.translate(km.x, km.y, km.z);
+  var ks = new THREE.Mesh(kg, kug); ks.name = 'Nephron (Nierenkörperchen)'; nephG.add(ks);
+}
+function neDeckkraft(f) {   /* Deckkraft des Nephrons 0..1 */
+  nephM.forEach(function (e) { e.m.opacity = e.op * f; });
+  nephG.visible = f > 0.002;
+}
+function neAbbau() {   /* Nephron entsorgen, Niere in die Ausgangslage (genau wie frisch aufgebaut) */
+  if (NE) neDrehung(0);
+  if (nephG) Kern.entsorgen(nephG, envTex);
+  nephG = null; nephM = [];
+}
+/* Fahrt zum Nephron an der Stelle wahl ({ py, q }; ohne Angabe die Standardstelle) */
+function nephronOeffnen(wahl) {
   if (fz || abgebaut || inAR) return;
+  neLetzte = wahl = wahl || NE_STANDARD;
   if (LUPE.open) lupeClose('nichts');
   if (quiz) quizEnd();
   if (SZ.aktiv) { SZ.direkt(null); szenarioWirkung(); }   /* Krankheitsbild/Medikament aus: die Karte schliesst sich, Stein und Markierungen verschwinden sofort */
+  NE = nephronLage(wahl);
   var w = window.innerWidth, h = window.innerHeight, ziel = nephronZiel(w, h), r = bereich(w, h);
   var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
   if (!openZiel) offen(true);   /* der Deckel verdeckt das Nephron: abheben */
   ORDER.forEach(function (d) { d.meshes.forEach(function (m) { var mt = m.material; if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)); }); });   /* Hervorhebung weg */
+  neBauen();
   var f = ausblendVorbereiten();
   orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);
   f.hin = true; f.adresse = Kern.organAdresse('nephron'); f.a = orbit.anim;
   f.von = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2]; f.nach = ziel.versatz;
   fz = f;
 }
-$('iOpen').onclick = nephronOeffnen;
-$('bNephron').onclick = nephronOeffnen;
-/* Rueckkehr aus dem Nephron-Modell: die Niere steht im Nahbild des Nephrons, alles andere ist ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
+$('iOpen').onclick = function () { nephronOeffnen(neWahl); };
+$('bNephron').onclick = function () { nephronOeffnen(null); };
+/* Rueckkehr aus dem Nephron-Modell: die Niere steht gedreht im Nahbild des Nephrons (an der zuletzt gewaehlten Stelle), das Nephron ist
+   sichtbar, alles andere ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
 function rueckkehr() {
+  NE = nephronLage(neLetzte || NE_STANDARD);
   var w = window.innerWidth, h = window.innerHeight, ziel = nephronZiel(w, h), r = bereich(w, h);
+  neBauen();
   var f = ausblendVorbereiten();
   f.mats.forEach(function (op, m) { m.opacity = 0; });
   f.ui.forEach(function (e) { e.style.opacity = '0'; });
   f.obj.forEach(function (o) { o.visible = false; });
+  neDrehung(1); neDeckkraft(1);
   view.theta = ziel.theta; view.phi = ziel.phi; view.dist = ziel.dist; view.target.copy(ziel.target);
   orbit.anim = null;
   f.hin = false; f.a = null; f.warte = performance.now() + 450;
@@ -1976,6 +2090,7 @@ function rueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
   fz.ui.forEach(function (e, i) { e.style.opacity = fz.altUi[i].op; e.style.pointerEvents = fz.altUi[i].pe; });
   canvas.style.pointerEvents = '';
   labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+  neAbbau();
   view.theta = DREH; view.phi = PI / 2; view.dist = d; view.target.set(0, 0, 0);
   orbit.anim = null;
   camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
@@ -1985,7 +2100,7 @@ function rueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
   lv++;
   fz = null;
 }
-/* je Bild waehrend der Fahrt: Bildbereich und Deckkraft mit derselben Glaettung wie die Kamera */
+/* je Bild waehrend der Fahrt: Bildbereich, Deckkraft und Drehung der Niere mit derselben Glaettung wie die Kamera */
 function fahrtBild(now) {
   if (!fz.a && now >= fz.warte) {   /* Rueckfahrt beginnt: zur Uebersicht, kuerzester Weg beim Drehen */
     var w0 = window.innerWidth, h0 = window.innerHeight, a0 = AUSSCHNITTE[0];
@@ -1999,7 +2114,10 @@ function fahrtBild(now) {
   camera.updateProjectionMatrix();
   fz.mats.forEach(function (op, m) { m.opacity = op * f; });
   fz.ui.forEach(function (e) { e.style.opacity = String(f); });
-  if (!fz.hin) { if (t >= 1) rueckEnde(); return false; }
+  if (!fz.hin) { if (t >= 1) { rueckEnde(); return false; } }
+  neDrehung(1 - f);                                                   /* hin: 0 -> 1, zurueck: 1 -> 0 */
+  neDeckkraft(fz.hin ? sstep(0.5, 1, s) : 1 - sstep(0, 0.5, s));      /* erscheint in der zweiten Haelfte der Hinfahrt, geht in der ersten der Rueckfahrt */
+  if (!fz.hin) return false;
   if (t >= 1 && !fz.fertig) { fz.fertig = true; fz.obj.forEach(function (o) { o.visible = false; }); return false; }
   return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
 }
@@ -2008,7 +2126,7 @@ function fahrtBild(now) {
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
-var App = window.NiereApp = { ready: false, aufbauMs: 0, szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, waehle: setSelected, nephron: nephronOeffnen, gehe: gehe, offen: offen, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris };
+var App = window.NiereApp = { ready: false, aufbauMs: 0, szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, waehle: setSelected, nephron: function () { nephronOeffnen(null); }, gehe: gehe, offen: offen, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris };
 function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (openK !== openZiel) {   /* Deckel gleitet weich (ca. 600 ms) */

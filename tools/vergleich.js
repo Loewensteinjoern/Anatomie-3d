@@ -46,7 +46,7 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das markierte Nephron und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
@@ -460,7 +460,7 @@ const MODELLE = {
         await t.klick('#bSee'); await t.klick('#bOffen'); await t.weiter(1400); await t.bild('aufgeschnitten');
         await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
-        await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(600); await t.bild('auswahl-nephron');   /* Infokarte mit dem Knopf „Nephron ansehen“ */
+        await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(600); await t.bild('auswahl-rinde');   /* Rinde angetippt (fester Punkt über der unteren seitlichen Pyramide): Infokarte mit dem Knopf „Nephron hier ansehen“ */
         /* Strömung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben) */
         await t.klick('#bCls'); await t.weiter(3000); await t.bild('stroemung');
         await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await t.weiter(1000); await t.bild('pause');   /* beide Bilder müssen gleich aussehen */
@@ -472,7 +472,10 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
         await t.klick('#qStop'); await t.weiter(300);
-        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“ in der Werkzeugleiste: Kamerafahrt ins markierte Nephron */
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“ in der Werkzeugleiste: Kamerafahrt zur Standardstelle (obere Polpyramide) */
+        /* zurück (Niere startet gedreht im Nahbild, Rückfahrt), dann „Nephron hier ansehen“ an der angetippten Stelle: Bild mitten in der Fahrt (Niere gedreht, Nephron blendet ein) */
+        await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'nephron', 'nephron'); await t.zurueck(); await t.echt(100); await t.warteAuf(ATLAS_BEREIT('niere'), 'niere'); await t.weiter(2200);
+        await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron-mitte'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-rinde');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -480,7 +483,7 @@ const MODELLE = {
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
         await t.klick('#bLupeX'); await t.weiter(300);
-        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“: Kamerafahrt ins markierte Nephron */
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“: Kamerafahrt zur Standardstelle */
       } },
       szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder und Medikamente: Bild 4 s nach dem Einschalten, dazu ein zweiter Ausschnitt; animierter GLB (Harnstau) */
         const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';
@@ -643,8 +646,8 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
 } };
 /* Kontext uebergaenge-niere: Körper, Niere wählen, Kamerafahrt, Standbild beim Aufbau der Niere, Rückfahrt; dann Nephron über die Adresse
-   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das markierte Nephron (Knopf „Nephron ansehen“, Kamerafahrt,
-   Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
+   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das Nephron an einer angetippten Stelle der Rinde (Knopf
+   „Nephron hier ansehen“, Kamerafahrt mit Drehung der Niere, Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
 MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
@@ -657,8 +660,8 @@ MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListene
   await t.klick('#atlasZurueck'); await organ('niere'); await t.weiter(1500); await t.bild('niere-von-nephron');
   await t.weiter(1500);   /* Rückfahrt der Niere ist zu Ende */
   const z2 = await t.js(ATLAS_ENDZUSTAND);
-  /* Zoomstufe: markiertes Nephron in der Niere wählen, „Nephron ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet im Nahbild, Rückfahrt) */
-  await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
+  /* Zoomstufe: Rinde antippen (fester Punkt), „Nephron hier ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet gedreht im Nahbild, Rückfahrt) */
+  await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
   await organ('nephron'); await t.bild('standbild-nephron');
   await t.weiter(1500); await t.bild('nephron-von-niere');
   await t.zurueck(); await organ('niere'); await t.weiter(1000); await t.bild('rueckfahrt-niere'); await t.weiter(1200); await t.bild('niere-zurueck');
