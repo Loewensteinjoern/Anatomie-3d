@@ -124,7 +124,6 @@ var MARKUP = `<div id="title">
   <div class="ar-hint" id="arHint">Bewege das Ger&auml;t langsam &uuml;ber den Boden oder Tisch, bis ein Ring erscheint &ndash; dann tippen, um den K&ouml;rper hinzustellen.</div>
   <div class="ar-bot">
     <button class="ar-b" id="arHaut">Haut aus</button>
-    <button class="ar-b" id="arLab" hidden>Beschriftung aus</button>
     <button class="ar-b" id="arSmall">Kleiner</button>
     <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
     <button class="ar-b" id="arPlace">Neu hinstellen</button>
@@ -1222,7 +1221,7 @@ function fahrtBild(now) {
 
 /* =====================================================================
    9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
-   Beschriftung in AR und AR Quick Look (iPhone) kommen spaeter dazu.
+   AR Quick Look (iPhone) ueber eine USDZ-Momentaufnahme; in AR gibt es keine Beschriftung.
    ===================================================================== */
 var inAR = false, hautAlt = 'glas', arBigAlt = false;
 var arCfg = {
@@ -1232,16 +1231,15 @@ var arCfg = {
   hintergrund: 0x0b171c,
   quickLook: function () { arQuickLook(); },
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
-  knoepfe: ['arEnd', 'arHaut', 'arLab', 'arSmall', 'arBig', 'arPlace'],
+  knoepfe: ['arEnd', 'arHaut', 'arSmall', 'arBig', 'arPlace'],
   beimStart: function () {
     inAR = true; App.ar = true;
     camera.near = 0.01; camera.far = 100;   /* Meter statt cm */
     labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
-    arHautText(); arLabText();
+    arHautText();
   },
   beimEnde: function () {
     inAR = false; App.ar = false;
-    ARL.ausblenden();
     camera.near = 2; camera.far = 1200;
     labelBox.style.display = zeigeLabels ? '' : 'none'; leaderSvg.style.display = zeigeLabels ? '' : 'none';
     var w = window.innerWidth, h = window.innerHeight;
@@ -1258,29 +1256,6 @@ $('arHaut').onclick = function () {
   else { hautAlt = SYS.haut.modus; systemModus('haut', 'aus'); }
   arHautText();
 };
-function arLabText() { $('arLab').textContent = zeigeLabels ? 'Beschriftung aus' : 'Beschriftung an'; }
-$('arLab').hidden = false;
-$('arLab').onclick = function () { $('bLab').click(); arLabText(); };
-/* ---- Beschriftung in AR: Schilder mit Fuehrungslinien (Kern.AR.schilder), Strukturen der Ganzkoerperansicht ---- */
-var ARL_EINTR = LISTEN[0].map(function (e) {
-  var id = typeof e === 'string' ? e : e[0], d = STR[id].def;
-  return { a: { s: { id: id, de: KURZ[id] || d.de, lat: d.lat } }, id: id, p: typeof e === 'string' ? ANKER[id] : [e[1], e[2], e[3]] };
-});
-var ARL = Kern.AR.schilder({
-  root: wurzel, renderer: renderer, camera: camera, xr: AR,
-  name: 'Koerper', anzahl: LISTEN[0].length,
-  masse: { mitte: 0, spalte: 52, hoehe: 7.5, abstand: 9, z: 12, oben: 172, unten: 70, px: 128,
-    knick: 4, luecke: 0.6, punkt: 0.7, band: 0.15, punktBand: 0.6, anker: 0.2, schwelle: 2 },
-  liste: function () {
-    var out = [];
-    if (!zeigeLabels) return out;
-    ARL_EINTR.forEach(function (e) {
-      if (SYS[STR[e.id].def.system].modus !== 'aus') out.push({ a: e.a, p: e.p });
-    });
-    return out;
-  },
-  auswahl: function () { return gewaehlt; }
-});
 $('arBig').addEventListener('click', function () {
   var max = AR.scale === arCfg.stufen[arCfg.stufen.length - 1];
   if (max && !arBigAlt) Kern.toast('Lebensgro\u00df \u2013 am besten auf den Boden stellen.');
@@ -1301,12 +1276,7 @@ function usdzBuild() {
   try {
     return Kern.AR.usdz({
       name: 'Koerper', creator: 'Koerper 3D - ' + Kern.WM, datei: 'koerper.usda', skala: 0.0025,
-      gruppen: [wurzel],
-      beschriftung: function (f4) {
-        var v = new THREE.Vector3();
-        wurzel.updateWorldMatrix(true, false);
-        return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(wurzel.matrixWorld); return [v.x * 0.0025, v.y * 0.0025, v.z * 0.0025]; });
-      }
+      gruppen: [wurzel]
     });
   } finally {
     gesetzt.forEach(function (x) { delete x.userData.usdzOp; });
@@ -1320,7 +1290,7 @@ $('bAR').onclick = function () { if (fz) return; AR.start(); };
 AR.check();
 
 function loop(now, frame) {
-  if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -1336,7 +1306,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  AR.abbauen(); ARL.abbauen();
+  AR.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   orbit.loesen();
   canvas.removeEventListener('click', canvasKlick);

@@ -76,7 +76,6 @@ var MARKUP = `<div id="title">
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Nephron hinzustellen.</div>
   <div class="ar-bot">
     <button class="ar-b" id="arSee">Undurchsichtig</button>
-    <button class="ar-b" id="arLab">Beschriftung aus</button>
     <button class="ar-b" id="arSmall">Kleiner</button>
     <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
     <button class="ar-b" id="arPlace">Neu hinstellen</button>
@@ -2095,53 +2094,30 @@ var AR = Kern.AR.xr({
   fuss: 9.1,                                        /* Unterkante des Modells steht auf der Fläche */
   hintergrund: 0x0b171c,
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
-  knoepfe: ['arEnd', 'arSee', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+  knoepfe: ['arEnd', 'arSee', 'arSmall', 'arBig', 'arPlace', 'arPause'],
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
     applyVisibility();
     document.getElementById('arSee').textContent = seeThrough ? 'Undurchsichtig' : 'Durchsichtig';
-    document.getElementById('arLab').textContent = showLabels ? 'Beschriftung aus' : 'Beschriftung an';
     document.getElementById('arPause').textContent = playing ? 'Pause' : 'Weiter';
   },
   beimEnde: function () {
     inAR = false;
     applyVisibility();
-    ARL.ausblenden();
     resize();
     lastLabelKey = '';
   }
 });
 document.getElementById('arSee').onclick = function () { document.getElementById('bSee').click(); this.textContent = seeThrough ? 'Undurchsichtig' : 'Durchsichtig'; };
-document.getElementById('arLab').onclick = function () { document.getElementById('bLab').click(); this.textContent = showLabels ? 'Beschriftung aus' : 'Beschriftung an'; };
 document.getElementById('arPause').onclick = function () { document.getElementById('bPlay').click(); this.textContent = playing ? 'Pause' : 'Weiter'; };
 document.getElementById('bAR').onclick = function () { if (schemaOn) setSchema(false); AR.start(); };
 AR.check();
-/* ---- Beschriftung im AR: Schilder mit Führungslinien (Kern.AR.schilder) ---- */
-var ARL = Kern.AR.schilder({
-  root: root, renderer: renderer, camera: camera, xr: AR,
-  name: 'Nephron', anzahl: ANCHORS.length,
-  masse: { mitte: 1.0, spalte: 8.6, hoehe: 1.3, abstand: 1.75, z: 2.2, oben: 7.6, unten: -8.2, px: 128 },
-  liste: function () {
-    var out = [];
-    ANCHORS.forEach(function (a) {
-      a.s = STRUCT[a.sid];
-      if (showLabels && enabled[a.sid]) out.push({ a: a, p: [a.p.x, a.p.y, a.p.z] });
-    });
-    return out;
-  },
-  auswahl: function () { return selected; }
-});
 /* ---- USDZ für AR Quick Look: Momentaufnahme des Modells (ohne Teilchen) ---- */
 function usdzBuild() {
   return Kern.AR.usdz({
     name: 'Nephron', creator: 'Nephron 3D - ' + Kern.WM, datei: 'nephron.usda', skala: 0.0175,
-    gruppen: [root],
-    beschriftung: function (f4) {
-      var v = new THREE.Vector3();
-      root.updateWorldMatrix(true, false);
-      return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.0175, v.y * 0.0175, v.z * 0.0175]; });
-    }
+    gruppen: [root]
   });
 }
 function arQuickLook() {
@@ -2526,7 +2502,7 @@ function loop(now, frame) {
   updateParticles();
   if (schemaOn) schemaTick();
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
-  if (inAR) { ARL.update(); renderer.render(scene, camera); return; }
+  if (inAR) { renderer.render(scene, camera); return; }
   updateCamera();
   if (!schemaOn) renderer.render(scene, camera);
   lupeTick(dt);
@@ -2541,7 +2517,7 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   if (bereitT !== null) { clearTimeout(bereitT); bereitT = null; bereitOk(); }
   clearTimeout(Kern.toast._t);
-  AR.abbauen(); ARL.abbauen();
+  AR.abbauen();
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   SZ.abbauen();

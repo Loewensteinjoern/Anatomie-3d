@@ -18,7 +18,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) |
 | Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – |
 | Export GLB/STL mit Signatur | ✓ | ✓ | ✓ |
-| AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ | ✓ |
+| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ |
 | Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper |
 
@@ -118,10 +118,10 @@ organe/niere/             Niere + Nephron
 - [x] AR für den ganzen Körper
   - WebXR über `Kern.AR.xr`, `root` = `wurzel`, Füße auf der Fläche (`fuss` aus der Bounding Box)
   - Größenstufen 27/45/72/108/180 cm, Start als Tischfigur mit 45 cm, bei lebensgroß ein Hinweis
-  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“
+  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“ (die AR-Beschriftung ist später entfallen, siehe Phase 2)
   - Kamera in AR mit near/far in Metern (0.01/100), danach wieder 2/1200
-  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht
-  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB) mit Beschriftung; Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
+  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht (entfallen, siehe Phase 2)
+  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB; die Beschriftung darin ist später entfallen, siehe Phase 2); Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
   - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
   - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
   - Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet
@@ -145,6 +145,9 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
 
 - [x] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
   - nur in AR (WebXR und AR Quick Look): Tubulus bei Durchsicht 60 % statt 32 % deckend; Glomerulus, Arteriolen, peritubuläre Kapillaren und Vasa recta 80 % statt 46–60 %; am Bildschirm unverändert
+- [x] AR-Beschriftung entfällt in allen Modellen (Körper, Herz, Niere, Nephron) – Rückmeldung von Jörn nach dem Test auf dem iPhone (Oktober 2026): In AR sieht man nicht, welches Schild zu welchem Teil gehört, die Verbindungslinien und Pfeile sind kaum zu erkennen
+  - weder in WebXR noch in der USDZ für AR Quick Look; die Knöpfe „Beschriftung aus/an“ in der AR-Leiste entfallen; `Kern.AR.schilder` und die Option `beschriftung` von `Kern.AR.usdz` sind aus `core/ar.js` entfernt; am Bildschirm bleibt die Beschriftung unverändert
+  - die AR-Bilder in `tools/vergleich.js` heißen jetzt `ohne-haut` (Körper), `geschlossen` (Herz, Niere) und `undurchsichtig` (Nephron); die AR-Referenzen sind daher neu aufzunehmen
 - [x] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
 - [x] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
 - [x] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan

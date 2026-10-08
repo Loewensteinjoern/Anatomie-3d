@@ -144,9 +144,7 @@ var Kern = window.Kern = window.Kern || {};
   };
 
   /* USDZ fuer AR Quick Look: Momentaufnahme der aktuellen Ansicht.
-     cfg: name, creator, datei, gruppen, skala, beschriftung(f4) (optional,
-     liefert { mats, meshes, png } oder null; Rueckruf laeuft nach den
-     Teilen und darf Welt-Matrizen vorher aktualisieren).
+     cfg: name, creator, datei, gruppen, skala.
      Material mit userData.usdzOp (Zahl): Der Wert gilt in der USDZ als Deckkraft
      (ersetzt op); mit usdzOp wird ein Material nur bei usdzOp <= 0 weggelassen,
      die Schwelle opacity < 0.3 gilt nur ohne usdzOp. Z. B. fuer Glas, das nur
@@ -188,9 +186,7 @@ var Kern = window.Kern = window.Kern || {};
       });
     });
     txt.push('#usda 1.0\n(\n    customLayerData = { string creator = "' + cfg.creator + '" }\n    defaultPrim = "' + name + '"\n    metersPerUnit = 1\n    upAxis = "Y"\n)\n\ndef Xform "' + name + '" (\n    assetInfo = { string name = "' + name + '" }\n    kind = "component"\n)\n{\n');
-    var lab = cfg.beschriftung ? cfg.beschriftung(f4) : null;
     txt.push('    def Scope "Materialien"\n    {\n');
-    if (lab) txt.push(lab.mats);
     mats.forEach(function (M, i) {
       var c = M.c.map(function (x) { return Math.max(0, Math.min(1, x)).toFixed(4); }).join(', ');
       txt.push('        def Material "M' + i + '"\n        {\n            token outputs:surface.connect = </' + name + '/Materialien/M' + i + '/Oberflaeche.outputs:surface>\n            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (' + c + ')\n                float inputs:roughness = ' + M.r.toFixed(2) + '\n                float inputs:metallic = 0\n                float inputs:opacity = ' + M.op.toFixed(2) + '\n                token outputs:surface\n            }\n        }\n');
@@ -202,199 +198,9 @@ var Kern = window.Kern = window.Kern || {};
       if (o.N.length) txt.push('        normal3f[] normals = [' + o.N.join(', ') + '] (\n            interpolation = "vertex"\n        )\n');
       txt.push('        uniform token subdivisionScheme = "none"\n        rel material:binding = </' + name + '/Materialien/M' + o.m + '>\n    }\n');
     });
-    if (lab) txt.push(lab.meshes);
     txt.push('}\n');
     var files = [{ name: cfg.datei, data: new TextEncoder().encode(txt.join('')) }];
-    if (lab) files.push({ name: 'beschriftung.png', data: lab.png });
     return AR.usdzZip(files);
-  };
-
-  /* AR-Beschriftung: Schilder mit Fuehrungslinien als 3D-Objekte (WebXR) und
-     als Beschriftungsbild fuer die USDZ-Datei. Im AR gibt es keine HTML-Ebene
-     ueber dem Bild. Die Schilder stehen deshalb in Modellkoordinaten in zwei
-     Spalten links und rechts neben dem Modell und drehen sich (WebXR) mit,
-     sodass sie immer zum Betrachter zeigen.
-     Liefert { update(), usd(f4, xf), ausblenden(), abbauen() }. Die Gruppe entsteht erst
-     beim ersten update(), beim Laden und in schilder() selbst entsteht nichts.
-     cfg:
-       root, renderer, camera, xr (Steuer-Zustand aus AR.xr, nur .placed)
-       name     Prim-Name fuer die Materialpfade der USDZ-Datei (/<name>/Materialien/...)
-       masse    Laengen in Modelleinheiten; Vorgaben (Herz, cm) in M unten:
-                mitte (x-Lage der senkrechten Achse, um die sich die Schilder
-                drehen und an der die Seiten geteilt werden; Vorgabe 0),
-                spalte (Abstand der Spalten von der Mitte), hoehe (Schildhoehe),
-                abstand (Zeilenabstand), z (Tiefe der Schilder), oben/unten
-                (Bereich der Zeilen), px (Texturhoehe in Pixeln), knick (Weg der
-                Linie bis zum Knick), luecke (Abstand Linienende-Schild), punkt
-                (Radius des Ankerpunkts), band/punktBand (Halbbreiten in der
-                USDZ-Datei), anker (Versatz des Ankers in z, USDZ), schwelle
-                (Seiten-Schwelle), dim (Deckkraft nicht gewaehlter Schilder)
-       anzahl   Hoechstzahl Schilder (Linienpuffer), Zahl oder Funktion
-                (wird erst beim ersten update() gelesen)
-       liste()  gewuenschte Schilder als Array { a, p }: p = Ankerpunkt [x, y, z]
-                in Modellkoordinaten, a = Eintrag mit a.s.id, a.s.de (Titel) und
-                a.s.lat (Untertitel). Der Kern speichert am Eintrag a das Bild
-                (a.arC) und Mesh/Punkt (a.ar) zwischen.
-       auswahl()  aktuell gewaehlte Struktur-ID (a.s.id) oder leer; alle
-                anderen Schilder werden abgedunkelt */
-  AR.schilder = function (cfg) {
-    var M = { mitte: 0, spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128,
-      knick: 0.9, luecke: 0.12, punkt: 0.14, band: 0.035, punktBand: 0.13, anker: 0.05, schwelle: 0.4, dim: 0.4 };
-    for (var key in cfg.masse) M[key] = cfg.masse[key];
-    var root = cfg.root, ARL = { g: null, lines: null, side: {}, items: [], eintraege: [] };
-    var V = null;
-
-    function canvas(a) {
-      if (a.arC) return a.arC;
-      var px = M.px, c = document.createElement('canvas'), x = c.getContext('2d');
-      var f1 = '600 ' + Math.round(px * 0.34) + 'px "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
-      var f2 = 'italic ' + Math.round(px * 0.28) + 'px Georgia, "Times New Roman", serif';
-      x.font = f1; var w1 = x.measureText(a.s.de).width; x.font = f2; var w2 = x.measureText(a.s.lat).width;
-      var pad = px * 0.15, W = Math.ceil(Math.max(w1, w2) + 2 * pad);
-      c.width = W; c.height = px;
-      x.fillStyle = 'rgba(11,23,28,0.84)'; x.fillRect(0, 0, W, px);
-      x.strokeStyle = '#9C7530'; x.lineWidth = 3; x.strokeRect(1.5, 1.5, W - 3, px - 3);
-      x.font = f1; x.fillStyle = '#E7EFF0'; x.fillText(a.s.de, pad, px * 0.46);
-      x.font = f2; x.fillStyle = '#E0A94A'; x.fillText(a.s.lat, pad, px * 0.82);
-      a.arC = c;
-      return c;
-    }
-    /* Anordnung in einem um die Hochachse gedrehten Rahmen (Blick des Betrachters = +z),
-       Ergebnis in Modellkoordinaten: Ankerpunkt, Knick, Linienende und Schildmitte */
-    function layout(list, yaw, sides) {
-      var c = Math.cos(yaw), sn = Math.sin(yaw);
-      var back = function (x, y, z) { return [x * c + z * sn + M.mitte, y, -x * sn + z * c]; };
-      list.forEach(function (it) {
-        var p = it.p, xr = (p[0] - M.mitte) * c - p[2] * sn, prev = sides[it.a.s.id + it.a.s.de];
-        it.side = xr < -M.schwelle ? 'l' : (xr > M.schwelle ? 'r' : (prev || (xr < 0 ? 'l' : 'r')));
-        sides[it.a.s.id + it.a.s.de] = it.side;
-        var cv = canvas(it.a); it.w = M.hoehe * cv.width / cv.height;
-      });
-      ['l', 'r'].forEach(function (side) {
-        var g = list.filter(function (it) { return it.side === side; }).sort(function (p, q) { return q.p[1] - p.p[1]; });
-        var gap = M.abstand, y = M.oben;
-        if (g.length > 1 && (g.length - 1) * gap > M.oben - M.unten) gap = Math.max(M.hoehe * 1.02, (M.oben - M.unten) / (g.length - 1));
-        g.forEach(function (it) { it.ly = Math.min(y, Math.max(M.unten, it.p[1])); y = it.ly - gap; });
-        var over = M.unten - (y + gap);
-        if (over > 0) g.forEach(function (it) { it.ly = Math.min(M.oben, it.ly + over); });
-      });
-      list.forEach(function (it) {
-        var sg = it.side === 'l' ? -1 : 1, ex = sg * M.spalte;
-        it.k = back(ex - sg * M.knick, it.ly, M.z);
-        it.e = back(ex, it.ly, M.z);
-        it.m = back(ex + sg * (M.luecke + it.w / 2), it.ly, M.z + 0.01);
-      });
-      return list;
-    }
-    function init() {
-      ARL.g = new THREE.Group(); ARL.g.visible = false; root.add(ARL.g);
-      var n = (typeof cfg.anzahl === 'function' ? cfg.anzahl() : cfg.anzahl) * 4, geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-      ARL.lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true }));
-      ARL.lines.renderOrder = 998; ARL.lines.frustumCulled = false; ARL.g.add(ARL.lines);
-      ARL.dotGeo = new THREE.SphereGeometry(M.punkt, 10, 8);
-      ARL.dotMat = new THREE.MeshBasicMaterial({ color: 0xE0A94A, depthTest: false, transparent: true });
-      V = new THREE.Vector3();
-    }
-    function item(a) {
-      if (a.ar) return a.ar;
-      var cv = canvas(a), tex = new THREE.CanvasTexture(cv);
-      tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
-      var mesh = new THREE.Mesh(new THREE.PlaneGeometry(M.hoehe * cv.width / cv.height, M.hoehe),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-      mesh.renderOrder = 1000;
-      var dot = new THREE.Mesh(ARL.dotGeo, ARL.dotMat); dot.renderOrder = 999;
-      ARL.g.add(mesh); ARL.g.add(dot);
-      a.ar = { mesh: mesh, dot: dot };
-      ARL.items.push(a.ar); ARL.eintraege.push(a);
-      return a.ar;
-    }
-
-    var S = {};
-    S.update = function () {
-      if (!ARL.g) init();
-      var list = cfg.xr.placed ? cfg.liste() : [];
-      ARL.g.visible = list.length > 0;
-      ARL.items.forEach(function (o) { o.mesh.visible = false; o.dot.visible = false; });
-      if (!list.length) return;
-      V.setFromMatrixPosition(cfg.renderer.xr.getCamera(cfg.camera).matrixWorld); root.worldToLocal(V);
-      var yaw = Math.atan2(V.x, V.z);
-      layout(list, yaw, ARL.side);
-      var pos = ARL.lines.geometry.attributes.position, k = 0, sel = cfg.auswahl();
-      list.forEach(function (it) {
-        var o = item(it.a), dim = sel && it.a.s.id !== sel ? M.dim : 1;
-        o.mesh.visible = true; o.mesh.position.set(it.m[0], it.m[1], it.m[2]); o.mesh.rotation.set(0, yaw, 0);
-        o.mesh.material.opacity = dim;
-        o.dot.visible = true; o.dot.position.set(it.p[0], it.p[1], it.p[2]);
-        [it.p, it.k, it.k, it.e].forEach(function (q) { pos.setXYZ(k++, q[0], q[1], q[2]); });
-      });
-      for (var i = k; i < pos.count; i++) pos.setXYZ(i, 0, 0, 0);
-      pos.needsUpdate = true;
-      ARL.lines.geometry.setDrawRange(0, k);
-    };
-    S.ausblenden = function () { if (ARL.g) ARL.g.visible = false; };
-    /* Schilder samt Bildern, Linien und Punkt-Geometrie freigeben */
-    S.abbauen = function () {
-      ARL.items.forEach(function (o) { o.mesh.material.map.dispose(); o.mesh.material.dispose(); o.mesh.geometry.dispose(); });
-      ARL.eintraege.forEach(function (a) { delete a.ar; delete a.arC; });
-      if (ARL.lines) { ARL.lines.geometry.dispose(); ARL.lines.material.dispose(); }
-      if (ARL.dotGeo) { ARL.dotGeo.dispose(); ARL.dotMat.dispose(); }
-      if (ARL.g && ARL.g.parent) ARL.g.parent.remove(ARL.g);
-      ARL.g = null; ARL.lines = null; ARL.items = []; ARL.eintraege = []; ARL.side = {};
-    };
-
-    /* Beschriftung fuer die USDZ-Datei: ein Bild mit allen Schildern (Atlas),
-       je Schild ein Rechteck, Fuehrungslinien als schmale Baender.
-       f4: Zahlenformat, xf(x, y, z): Modell- in USDZ-Koordinaten [x, y, z].
-       Liefert { mats, meshes, png } oder null (keine Schilder). */
-    S.usd = function (f4, xf) {
-      var list = cfg.liste();
-      if (!list.length) return null;
-      layout(list, 0, {});
-      var AW = 0, AH = 0;
-      list.forEach(function (it) { var cv = canvas(it.a); it.ay = AH; AH += cv.height; AW = Math.max(AW, cv.width); });
-      var atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
-      var ax = atlas.getContext('2d');
-      list.forEach(function (it) { ax.drawImage(canvas(it.a), 0, it.ay); });
-      var bin = atob(atlas.toDataURL('image/png').split(',')[1]), png = new Uint8Array(bin.length);
-      for (var i = 0; i < bin.length; i++) png[i] = bin.charCodeAt(i);
-      var pt = function (q) { var v = xf(q[0], q[1], q[2]); return '(' + f4(v[0]) + ', ' + f4(v[1]) + ', ' + f4(v[2]) + ')'; };
-      var P = [], ST = [], I = [], LP = [], LI = [];
-      list.forEach(function (it) {
-        var cv = canvas(it.a), hw = it.w / 2, hh = M.hoehe / 2, m = it.m, b = P.length;
-        P.push(pt([m[0] - hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] - hh, m[2]]), pt([m[0] + hw, m[1] + hh, m[2]]), pt([m[0] - hw, m[1] + hh, m[2]]));
-        var u1 = cv.width / AW, v0 = 1 - (it.ay + cv.height) / AH, v1 = 1 - it.ay / AH;
-        ST.push('(0, ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v0) + ')', '(' + f4(u1) + ', ' + f4(v1) + ')', '(0, ' + f4(v1) + ')');
-        I.push(b, b + 1, b + 2, b, b + 2, b + 3);
-        /* Linien als Baender, Punkt am Anker als kleines Quadrat */
-        var band = function (a, c, w) {
-          var dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w, o = LP.length;
-          LP.push(pt([a[0] - nx, a[1] - ny, a[2]]), pt([a[0] + nx, a[1] + ny, a[2]]), pt([c[0] + nx, c[1] + ny, c[2]]), pt([c[0] - nx, c[1] - ny, c[2]]));
-          LI.push(o, o + 1, o + 2, o, o + 2, o + 3);
-        };
-        var an = [it.p[0], it.p[1], it.p[2] + M.anker];
-        band(an, it.k, M.band); band(it.k, it.e, M.band);
-        band([an[0] - M.punktBand, an[1], an[2]], [an[0] + M.punktBand, an[1], an[2]], M.punktBand);
-      });
-      var mat0 = '/' + cfg.name + '/Materialien/';
-      var mesh = function (name, Pt, Ix, mat, st) {
-        var t = '    def Mesh "' + name + '"\n    {\n        uniform bool doubleSided = 1\n        int[] faceVertexCounts = [' + new Array(Ix.length / 3).fill(3).join(', ') + ']\n        int[] faceVertexIndices = [' + Ix.join(', ') + ']\n        point3f[] points = [' + Pt.join(', ') + ']\n';
-        if (st) t += '        texCoord2f[] primvars:st = [' + st.join(', ') + '] (\n            interpolation = "vertex"\n        )\n';
-        return t + '        uniform token subdivisionScheme = "none"\n        rel material:binding = <' + mat0 + mat + '>\n    }\n';
-      };
-      var mats = '        def Material "Schild"\n        {\n            token outputs:surface.connect = <' + mat0 + 'Schild/Oberflaeche.outputs:surface>\n' +
-        '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0, 0, 0)\n' +
-        '                color3f inputs:emissiveColor.connect = <' + mat0 + 'Schild/Bild.outputs:rgb>\n                float inputs:opacity.connect = <' + mat0 + 'Schild/Bild.outputs:a>\n' +
-        '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n' +
-        '            def Shader "Uv"\n            {\n                uniform token info:id = "UsdPrimvarReader_float2"\n                token inputs:varname = "st"\n                float2 inputs:fallback = (0, 0)\n                float2 outputs:result\n            }\n' +
-        '            def Shader "Bild"\n            {\n                uniform token info:id = "UsdUVTexture"\n                asset inputs:file = @beschriftung.png@\n                float2 inputs:st.connect = <' + mat0 + 'Schild/Uv.outputs:result>\n' +
-        '                token inputs:sourceColorSpace = "sRGB"\n                token inputs:wrapS = "clamp"\n                token inputs:wrapT = "clamp"\n                float3 outputs:rgb\n                float outputs:a\n            }\n        }\n' +
-        '        def Material "Linie"\n        {\n            token outputs:surface.connect = <' + mat0 + 'Linie/Oberflaeche.outputs:surface>\n' +
-        '            def Shader "Oberflaeche"\n            {\n                uniform token info:id = "UsdPreviewSurface"\n                color3f inputs:diffuseColor = (0.878, 0.663, 0.290)\n                color3f inputs:emissiveColor = (0.6, 0.45, 0.2)\n' +
-        '                float inputs:roughness = 1\n                float inputs:metallic = 0\n                token outputs:surface\n            }\n        }\n';
-      return { mats: mats, meshes: mesh('Schilder', P, I, 'Schild', ST) + mesh('Linien', LP, LI, 'Linie'), png: png };
-    };
-    return S;
   };
 
   /* AR Quick Look oeffnen. cfg: bauen() -> Blob, link (<a rel="ar">),

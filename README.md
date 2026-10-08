@@ -21,6 +21,8 @@ Bis Oktober 2026 hieß das Repository „Herz-3d“; die alte Adresse `https://l
 Die Adressen sind gestuft (`niere/nephron` liegt unter der Niere); der Zurück-Knopf des Atlas geht eine Ebene hoch: vom Nephron zur Niere, von der Niere zum Körper.
 Das Nephron ist eine Zoomstufe der Niere: In der Niere ist ein Nephron in der oberen Markpyramide markiert; sein Knopf „Nephron ansehen“ (Infokarte) fährt die Kamera in dieses Nephron und endet in der Startansicht des Nephron-Modells. Zurück zur Niere (Zurück-Knopf oder Browser) startet die Niere im Nahbild des Nephrons und fährt zur Übersicht zurück.
 
+AR (Körper, Herz, Niere, Nephron) zeigt das Modell ohne Beschriftung, weil sich Schilder und Teile dort nicht gut zuordnen ließen; am Bildschirm bleibt die Beschriftung unverändert.
+
 Die alten Adressen `index.html#nephron` und `nephron.html` leiten auf `index.html#niere/nephron` weiter, `atlas.html` auf den Atlas.
 
 ### Als App installieren (offline)

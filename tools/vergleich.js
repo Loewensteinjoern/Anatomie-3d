@@ -23,7 +23,7 @@
 
    Modell koerper (index.html ohne Adresse, Startansicht): desktop (Ganzkörper, die Ausschnitte
    #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
-   datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut und Beschriftung, größer)
+   datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut, größer; AR ohne Beschriftung)
    und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
    lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
@@ -31,9 +31,8 @@
    Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
    aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
    „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
-   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel, Beschriftung und
-   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel und
-   Beschriftung) und abbau.
+   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel und
+   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau.
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -335,8 +334,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arHaut'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('ohne-haut-ohne-beschriftung');
-        await t.klick('#arLab');
+        await t.klick('#arHaut'); await t.weiter(1400); await t.bild('ohne-haut');
         await t.klick('#arBig'); await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
@@ -429,7 +427,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arOpen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        await t.klick('#arOpen'); await t.weiter(1400); await t.bild('geschlossen');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },
@@ -513,7 +511,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arOffen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        await t.klick('#arOffen'); await t.weiter(1400); await t.bild('geschlossen');
         const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
         await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
         await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
@@ -571,7 +569,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arSee'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('undurchsichtig-ohne-beschriftung');
+        await t.klick('#arSee'); await t.weiter(1400); await t.bild('undurchsichtig');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },

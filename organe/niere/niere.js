@@ -206,7 +206,6 @@ var MARKUP = `<div id="title">
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um die Niere hinzustellen.</div>
   <div class="ar-bot">
     <button class="ar-b" id="arOffen">Geschlossen</button>
-    <button class="ar-b" id="arLab">Beschriftung aus</button>
     <button class="ar-b" id="arSmall">Kleiner</button>
     <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
     <button class="ar-b" id="arPlace">Neu hinstellen</button>
@@ -1857,7 +1856,7 @@ var arCfg = {
   fuss: 0,                                          /* Unterkante (Harnleiter-Ende) steht auf der Flaeche; wird nach dem Aufbau gesetzt */
   hintergrund: 0x0b171c,
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
-  knoepfe: ['arEnd', 'arOffen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+  knoepfe: ['arEnd', 'arOffen', 'arSmall', 'arBig', 'arPlace', 'arPause'],
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
@@ -1869,7 +1868,6 @@ var arCfg = {
   },
   beimEnde: function () {
     inAR = false;
-    ARL.ausblenden();
     camera.near = kamAlt.near; camera.far = kamAlt.far;
     labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
     var w = window.innerWidth, h = window.innerHeight;
@@ -1882,43 +1880,17 @@ var arCfg = {
 var AR = Kern.AR.xr(arCfg);
 function arTexte() {
   $('arOffen').textContent = openZiel ? 'Geschlossen' : 'Aufgeschnitten';
-  $('arLab').textContent = showLabels ? 'Beschriftung aus' : 'Beschriftung an';
 }
 $('arOffen').onclick = function () { offen(!openZiel); arTexte(); };
-$('arLab').onclick = function () { $('bLab').click(); arTexte(); };
 $('arPause').onclick = function () { $('bPlay').click(); this.textContent = playing ? 'Pause' : 'Weiter'; };
 $('bAR').onclick = function () { if (fz) return; AR.start(); };
 AR.check();
-/* ---- Beschriftung in AR: Schilder mit Fuehrungslinien (Kern.AR.schilder), Strukturen der aktuellen Ansicht ---- */
-var ARL_EINTR = {};
-Object.keys(LAB).forEach(function (id) { var d = STRUCT[id]; ARL_EINTR[id] = { s: { id: id, de: KURZ[id] || d.de, lat: d.lat } }; });
-var ARL = Kern.AR.schilder({
-  root: root, renderer: renderer, camera: camera, xr: AR,
-  name: 'Niere', anzahl: Object.keys(ARL_EINTR).length,
-  masse: { mitte: 0, spalte: 6.4, hoehe: 1.1, abstand: 1.3, z: 5.0, oben: 6.6, unten: -7.0, px: 128 },
-  liste: function () {
-    var out = [];
-    if (!showLabels) return out;
-    LISTEN[aktiv].forEach(function (id) {
-      if (!enabled[id] || (!openZiel && AUSSEN.indexOf(id) < 0)) return;
-      var p = ANKER[id];
-      out.push({ a: ARL_EINTR[id], p: [p.x, p.y, p.z] });
-    });
-    return out;
-  },
-  auswahl: function () { return selected; }
-});
 /* ---- USDZ fuer AR Quick Look: Momentaufnahme der Niere in der aktuellen Ansicht ---- */
 function usdzBuild() {
   welleZurueck();   /* Harnleiter in Ruhelage, die USDZ hat keine Teilchen und keine Welle */
   return Kern.AR.usdz({
     name: 'Niere', creator: 'Niere 3D - ' + Kern.WM, datei: 'niere.usda', skala: AR_SKALA,
-    gruppen: [root],
-    beschriftung: function (f4) {
-      var v = new THREE.Vector3();
-      root.updateWorldMatrix(true, false);
-      return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * AR_SKALA, v.y * AR_SKALA, v.z * AR_SKALA]; });
-    }
+    gruppen: [root]
   });
 }
 function arQuickLook() {
@@ -2047,7 +2019,7 @@ function loop(now, frame) {
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Anteile weich ueberblenden, auch in der Pause */
   stroemungBild();
   lupeTick(dt);
-  if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -2063,7 +2035,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  AR.abbauen(); ARL.abbauen(); SZ.abbauen();
+  AR.abbauen(); SZ.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   clearTimeout(Kern.toast._t); clearTimeout(quizT);
   if (LUPE.line && LUPE.line.parentNode) LUPE.line.parentNode.removeChild(LUPE.line);
