@@ -53,6 +53,10 @@
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
    Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
    früheren atlas-herz-desktop usw.), meldet `vergleichen` als entfallen.
+   Bei jedem abweichenden Bild nennt `vergleichen` neben der Zahl der geänderten Pixel den Bereich der
+   Unterschiede: das umschließende Rechteck aller geänderten Pixel in Bildpixeln (x und y einschließlich,
+   z. B. „Bereich x 519–1182, y 18–98“). So lässt sich einordnen, ob die Abweichung im erwarteten Bereich
+   liegt (z. B. nur in der Werkzeugleiste). Bei anderer Bildgröße gibt es keinen Bereich.
 
    Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
    offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
@@ -1009,18 +1013,25 @@ async function pixelDiff(page, a, b) {
     const W = A.width, H = A.height, ca = new OffscreenCanvas(W, H), cb = new OffscreenCanvas(W, H);
     const xa = ca.getContext('2d'), xb = cb.getContext('2d'); xa.drawImage(A, 0, 0); xb.drawImage(B, 0, 0);
     const da = xa.getImageData(0, 0, W, H), db = xb.getImageData(0, 0, W, H), o = xb.createImageData(W, H);
-    let n = 0;
+    let n = 0, x0 = W, x1 = -1, y0 = H, y1 = -1;      /* n = geänderte Pixel, x0..y1 = umschließendes Rechteck (einschließlich) */
     for (let i = 0; i < da.data.length; i += 4) {
       const d = da.data[i] !== db.data[i] || da.data[i + 1] !== db.data[i + 1] || da.data[i + 2] !== db.data[i + 2] || da.data[i + 3] !== db.data[i + 3];
-      if (d) n++;
+      if (d) {
+        n++;
+        const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
+        if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+      }
       o.data[i] = d ? 255 : db.data[i] * 0.3; o.data[i + 1] = d ? 0 : db.data[i + 1] * 0.3; o.data[i + 2] = d ? 0 : db.data[i + 2] * 0.3; o.data[i + 3] = 255;
     }
     xb.putImageData(o, 0, 0);
     const blob = await cb.convertToBlob({ type: 'image/png' });
     const url = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-    return { anders: n, gesamt: W * H, bild: url };
+    return { anders: n, gesamt: W * H, bereich: n ? { x0, x1, y0, y1 } : null, bild: url };
   }, [a, b]);
 }
+
+/* Text für die Meldung: „363 von 1024000 Pixeln anders, Bereich x 519–1182, y 18–98 (diff/…png)“ */
+const anders = (d, diff) => d.anders + ' von ' + d.gesamt + ' Pixeln anders' + (d.bereich ? ', Bereich x ' + d.bereich.x0 + '–' + d.bereich.x1 + ', y ' + d.bereich.y0 + '–' + d.bereich.y1 : '') + ' (' + diff + ')';
 
 async function vergleichen(va, vb) {
   const A = JSON.parse(fs.readFileSync(path.join(va, 'ergebnis.json'), 'utf8'));
@@ -1038,7 +1049,7 @@ async function vergleichen(va, vb) {
     if (d.anders < 0) { probleme.push(titel + ': andere Bildgröße ' + d.groesse.join('×')); return; }
     fs.mkdirSync(path.join(vb, 'diff'), { recursive: true });
     fs.writeFileSync(path.join(vb, 'diff', name + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
-    probleme.push(titel + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + name + '.png)');
+    probleme.push(titel + ': ' + anders(d, 'diff/' + name + '.png'));
   };
   for (const m of new Set(Object.keys(A.modelle).concat(Object.keys(B.modelle)))) {
     const neuM = !A.modelle[m] && !!B.modelle[m];       /* Modell nur in <nachher>: keine Referenz */
@@ -1062,7 +1073,7 @@ async function vergleichen(va, vb) {
       if (d.anders < 0) { probleme.push(m + '-' + k + ': andere Bildgröße ' + d.groesse.join('×')); continue; }
       fs.mkdirSync(path.join(vb, 'diff'), { recursive: true });
       fs.writeFileSync(path.join(vb, 'diff', m + '-' + k + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
-      probleme.push(m + '-' + k + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + m + '-' + k + '.png)');
+      probleme.push(m + '-' + k + ': ' + anders(d, 'diff/' + m + '-' + k + '.png'));
     }
     /* Kontexte ohne Aufnahme in <vorher> (z. B. abbau, oder dort ohne Bilder aufgenommen) haben keine Referenz: nur listen */
     const kontextVon = (k) => { const n = Object.keys((MODELLE[m] || { kontexte: {} }).kontexte).filter((x) => k.startsWith(x + '-')).sort((x, y) => y.length - x.length)[0]; return n || k.split('-')[0]; };
