@@ -2458,12 +2458,30 @@ function schemaPick(info, e) {
   }
   if (STRUCT[info]) setSelected(info);
 }
+/* Handy: Hoehe der Werkzeugleiste als --wz (das Schema und die Infokarte enden darueber); aendert sich die Leiste (Umbruch), misst der Beobachter neu */
+var schemaWz = null;
+function schemaMessen() {
+  if (!window.matchMedia('(max-width:1000px)').matches) { schemaWzLoeschen(); return; }   /* Desktop: nichts setzen */
+  document.body.style.setProperty('--wz', Math.ceil(document.getElementById('tools').getBoundingClientRect().height) + 'px');
+}
+function schemaWzLoeschen() {
+  document.body.style.removeProperty('--wz');
+  if (!document.body.getAttribute('style')) document.body.removeAttribute('style');
+}
+function schemaWzEnde() {
+  if (schemaWz) { schemaWz.disconnect(); schemaWz = null; }
+  schemaWzLoeschen();
+}
 function setSchema(on) {
   schemaOn = on;
   document.getElementById('bSchema').classList.toggle('on', on);
   if (on) { SCH.build(document.getElementById('schemaBox'), schemaPick); SCH.update(selected, enabled, visVersion); }
   document.getElementById('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
+  if (on) {
+    schemaMessen();
+    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe(document.getElementById('tools')); }
+  } else schemaWzEnde();
   canvas.style.visibility = on ? 'hidden' : '';
   if (!on) { schemaZu = null; if (schemaKarte) { schemaKarte = false; document.body.classList.remove('schkarte'); } }
   lastLabelKey = '';
@@ -2526,6 +2544,7 @@ organ.abbauen = function () {
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
   canvas.style.cursor = ''; canvas.style.visibility = '';
   SCH.abbauen();
+  schemaWzEnde();
   document.body.classList.remove('schema', 'schkarte');
   /* DOM */
   if (LUPE.box.parentNode) LUPE.box.parentNode.removeChild(LUPE.box);

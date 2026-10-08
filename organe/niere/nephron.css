@@ -77,6 +77,12 @@ body.schema #labels,body.schema #leaders{display:none}
   #schema{background:rgba(18,34,41,.98)}
   body.schema #atlasZurueck{display:none}
   body.schkarte #schema{right:12px}
+  /* offenes Schema: Leiste weg, Werkzeugleiste ganz unten, Schema/Infokarte/Hinweis darüber (--wz = gemessene Höhe der Werkzeugleiste) */
+  body.schema #rail{display:none}
+  body.schema #tools{bottom:6px}
+  body.schema #schema{bottom:calc(var(--wz,190px) + 12px)}
+  body.schema #info{bottom:calc(var(--wz,190px) + 12px)}
+  body.schema #toast{bottom:calc(var(--wz,190px) + 14px)}
   #schema .sch-hint{display:none}
   #wm{bottom:calc(34vh + 90px);white-space:normal;text-align:center;width:92vw;font-size:9.5px}
   #title .sub{display:none}
