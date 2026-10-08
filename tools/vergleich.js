@@ -474,12 +474,15 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
         await t.klick('#qStop'); await t.weiter(300);
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“ in der Werkzeugleiste: Kamerafahrt ins markierte Nephron */
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
+        await t.klick('#bLupeX'); await t.weiter(300);
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“: Kamerafahrt ins markierte Nephron */
       } },
       szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder und Medikamente: Bild 4 s nach dem Einschalten, dazu ein zweiter Ausschnitt; animierter GLB (Harnstau) */
         const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';

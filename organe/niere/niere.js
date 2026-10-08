@@ -130,6 +130,7 @@ var MARKUP = `<div id="title">
     <button id="cam1" class="gh">Rinde und Mark</button>
     <button id="cam2" class="gh">Nierenbecken</button>
     <button id="cam3" class="gh">Hilus</button>
+    <button id="bNephron" class="gh" title="In ein Nephron hineinzoomen">Nephron</button>
     <span class="sep"></span>
     <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Nierenpapille">Lupe</button>
     <button id="bAR" class="gh" title="Die Niere mit der Kamera in den Raum stellen">AR</button>
@@ -230,12 +231,12 @@ function abstandFuer(ext, r, fov, h) {
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
-   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 unter Breite 415, Reihe 2 unter 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 unter Breite 479 (zweite Zeile) und unter 294 (dritte), Reihe 2 unter 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (100 + (w < 415 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 479 ? 32 : 0) + (w < 294 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + 115 };
 }
@@ -1979,6 +1980,7 @@ function nephronOeffnen() {
   fz = f;
 }
 $('iOpen').onclick = nephronOeffnen;
+$('bNephron').onclick = nephronOeffnen;
 /* Rueckkehr aus dem Nephron-Modell: die Niere steht im Nahbild des Nephrons, alles andere ist ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
 function rueckkehr() {
   var w = window.innerWidth, h = window.innerHeight, ziel = nephronZiel(w, h), r = bereich(w, h);
