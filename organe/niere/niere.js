@@ -8,6 +8,8 @@
    Mitte der Niere im Ursprung.
    Strömung: rote und blaue Blutteilchen (Durchblutung), gelbe Harntropfen (Harnbildung und Abfluss, Welle im Harnleiter);
    Pause und drei Tempi wie beim Nephron, Export "GLB animiert".
+   Krankheitsbilder (Harnstau durch Nierenstein, Nierenarterienstenose) und Medikamente (Ramipril, Ibuprofen): Reiter und Erklaerkarte
+   (Kern.Szenarien); Wirkung ueber weich ueberblendete Wirkgroessen (Abschnitt 5d).
    Zoomstufe: In der oberen Polpyramide ist ein Nephron markiert (Bahnen aus dem Nephron-Modul,
    organe/niere/nephron.js); "Nephron ansehen" faehrt hinein (Adresse niere/nephron).
    ===================================================================== */
@@ -81,6 +83,38 @@ var HILFE = [
     'Zwei Kapillarnetze hintereinander: erst filtern, dann zurückholen.'],
   ['pflege', 'Pflege: Ausscheidung beobachten', 'Normal sind etwa 1 bis 2 Liter Urin am Tag. Unter 500 ml spricht man von Oligurie, unter 100 ml von Anurie, über 3 Liter von Polyurie. Beobachtet werden Menge, Farbe, Geruch und Beimengungen; bei Bedarf wird die Ein- und Ausfuhr bilanziert und das Gewicht täglich kontrolliert.',
     'Weniger als 0,5 ml Urin pro kg Körpergewicht und Stunde über mehrere Stunden ist ein Warnzeichen – Arzt informieren.']
+];
+/* Krankheitsbilder und Medikamente (Reiter "Krankheiten" und "Medikamente", Erklaerkarte rechts): Felder wie bei Kern.Szenarien;
+   wirkung = Zielwerte der Wirkgroessen (Abschnitt 5d), alles andere bleibt neutral; datei = Namensteil der Exportdatei */
+var SZENARIEN = [
+  { id: 'stein', kind: 'disease', datei: 'harnstau', name: 'Harnstau durch Nierenstein',
+    short: 'Ein Stein im Harnleiter staut den Harn zurück – Kolik und erweitertes Nierenbecken', kicker: 'Krankheitsbild · Urolithiasis',
+    lead: 'Ein Stein ist aus dem Nierenbecken in den Harnleiter gerutscht und bleibt an der ersten Engstelle hängen. Der Harn kann nicht mehr abfließen und staut sich zurück.',
+    values: [['Schmerz', 'wellenförmig, Flanke bis Leiste'], ['Urin', 'oft Blut (Hämaturie)'], ['Nierenbecken', 'erweitert (Ultraschall)'], ['Gefahr', 'Infektion – Urosepsis']],
+    steps: [['Der Stein klemmt.', 'Er steckt im oberen Harnleiter kurz unter dem Abgang aus dem Nierenbecken.'], ['Der Harnleiter kämpft.', 'Die peristaltischen Wellen werden stärker und krampfen gegen den Stein – das ist der Kolikschmerz.'], ['Der Harn staut sich.', 'Die Niere bildet weiter Harn, doch er kommt nicht vorbei: Nierenbecken und Kelche füllen sich und weiten sich (Hydronephrose).'], ['Druck auf die Niere.', 'Der Gegendruck bremst die Filtration; hält der Stau lange an, nimmt das Nierengewebe Schaden.']],
+    after: [['Behandlung', 'Schmerzmittel und krampflösende Mittel (z. B. Metamizol, Butylscopolamin), viel trinken, Bewegung; kleine Steine gehen oft spontan ab. Große oder infizierte Staus werden entlastet (Harnleiterschiene, Nierenfistel) oder der Stein wird zertrümmert bzw. entfernt.'], ['Pflege beobachtet', 'Schmerz (Stärke, Verlauf), Temperatur und Vitalzeichen – Fieber bei Harnstau ist ein Notfall –, Urinmenge und -farbe; Urin sieben, um den Stein aufzufangen; Ein- und Ausfuhr.']],
+    note: 'Im Modell ist der Stein vergrößert und der Stau stärker gezeigt, damit man ihn gut sieht.', wirkung: { stein: 1, stau: 1, harn: 1, blut: 0.9 } },
+  { id: 'stenose', kind: 'disease', datei: 'nierenarterienstenose', name: 'Nierenarterienstenose',
+    short: 'Die Nierenarterie ist verengt – die Niere schlägt Alarm und treibt den Blutdruck hoch', kicker: 'Krankheitsbild · renovaskuläre Hypertonie',
+    lead: 'Die Nierenarterie ist verengt, meist durch Arteriosklerose. Hinter der Engstelle kommt weniger Blut an – die Niere hält das für einen zu niedrigen Blutdruck.',
+    values: [['Blutdruck', 'erhöht, oft schwer einstellbar'], ['Renin', 'erhöht'], ['Durchblutung', 'vermindert'], ['Ursache', 'meist Arteriosklerose']],
+    steps: [['Die Arterie ist eng.', 'An der Engstelle schnürt sich die Nierenarterie ein; dahinter fließt weniger Blut in die Niere.'], ['Die Niere misst zu wenig Druck.', 'Die Zellen an den zuführenden Arteriolen spüren den niedrigen Druck und schütten Renin aus.'], ['Renin startet eine Kette.', 'Renin bildet Angiotensin I, das ACE wandelt es in Angiotensin II um: Die Gefäße im ganzen Körper ziehen sich zusammen, Aldosteron hält Salz und Wasser zurück.'], ['Der Blutdruck steigt.', 'So erzwingt die Niere mehr Druck – für den übrigen Körper ist er zu hoch (Hypertonie).']],
+    after: [['Behandlung', 'Blutdrucksenkung, Behandlung der Arteriosklerose (Statine, Thrombozytenhemmer, Rauchstopp), bei hochgradiger Stenose ggf. Aufdehnung mit Stent.'], ['Pflege beobachtet', 'Blutdruck regelmäßig und unter gleichen Bedingungen messen, Nierenwerte (Kreatinin) und Kalium im Blick behalten, besonders nach Beginn eines ACE-Hemmers.']],
+    note: 'Im Modell ist die Engstelle deutlich sichtbar gezeichnet; die verminderte Durchblutung zeigt sich an weniger und langsameren Blutteilchen.', wirkung: { stenose: 1, blut: 0.45, harn: 0.75, renin: 1 } },
+  { id: 'ramipril', kind: 'drug', datei: 'ramipril', name: 'Delix® (Ramipril)',
+    short: 'ACE-Hemmer: weniger Angiotensin II – Gefäße weit, Blutdruck sinkt', kicker: 'Medikament · ACE-Hemmer',
+    lead: 'Ramipril hemmt das Enzym ACE. Dadurch entsteht weniger Angiotensin II – die Gefäße bleiben weit, und Aldosteron sinkt.',
+    values: [['Wirkung', 'Blutdruck ↓, Herz entlastet'], ['Niere', 'Druck im Glomerulus ↓'], ['Kontrolle', 'Kreatinin und Kalium'], ['Nebenwirkung', 'trockener Reizhusten']],
+    steps: [['ACE wird blockiert.', 'Aus Angiotensin I entsteht kaum noch Angiotensin II.'], ['Die Gefäße entspannen sich.', 'Im ganzen Körper sinkt der Widerstand; in der Niere weitet sich vor allem die abführende Arteriole.'], ['Weniger Druck im Knäuel.', 'Der Filtrationsdruck im Glomerulus nimmt etwas ab – das schont die Niere bei Diabetes und Bluthochdruck langfristig.'], ['Weniger Aldosteron.', 'Es wird weniger Salz und Wasser zurückgehalten; Kalium kann ansteigen.']],
+    after: [['Achtung', 'Bei beidseitiger Nierenarterienstenose kann die Filtration stark abfallen; zusammen mit NSAR und Diuretika steigt das Risiko eines akuten Nierenversagens.'], ['Pflege beobachtet', 'Blutdruck (besonders nach der ersten Gabe: Schwindel, Sturzgefahr), Kreatinin und Kalium, Reizhusten, sehr selten Schwellungen im Gesicht (Angioödem – Notfall).']],
+    note: 'Die Wirkung im Modell ist vereinfacht: etwas weniger Druck im Knäuel, etwas weniger Primärharn.', wirkung: { blut: 1, harn: 0.9, renin: 0 } },
+  { id: 'ibuprofen', kind: 'drug', datei: 'ibuprofen', name: 'Ibuprofen (NSAR)',
+    short: 'Schmerzmittel, das die Nierendurchblutung drosseln kann', kicker: 'Medikament · nichtsteroidales Antirheumatikum',
+    lead: 'Ibuprofen hemmt die Bildung von Prostaglandinen. In der Niere halten Prostaglandine die zuführenden Arteriolen weit – fehlen sie, wird die Niere schlechter durchblutet.',
+    values: [['Wirkung', 'Schmerz, Fieber, Entzündung ↓'], ['Niere', 'Durchblutung und Filtration ↓'], ['Risiko', 'bei Flüssigkeitsmangel, Alter'], ['Folge', 'Wasser- und Salzretention']],
+    steps: [['Prostaglandine fehlen.', 'Ibuprofen blockiert das Enzym, das sie bildet.'], ['Die zuführende Arteriole wird eng.', 'Gerade wenn der Körper wenig Flüssigkeit hat, verlässt sich die Niere auf Prostaglandine – ohne sie zieht sich die Arteriole zusammen.'], ['Weniger Blut, weniger Filtrat.', 'Im Modell kommen weniger Blutteilchen in die Rinde, an den Papillen tropft weniger Harn.'], ['Salz und Wasser bleiben im Körper.', 'Ödeme und ein höherer Blutdruck sind möglich.']],
+    after: [['Achtung', 'Besonders gefährlich bei Exsikkose, Herzschwäche, Nierenschwäche und hohem Alter – und in der Kombination mit ACE-Hemmer und Diuretikum („triple whammy“).'], ['Pflege beobachtet', 'Trinkmenge und Urinmenge, Ödeme, Gewicht, Nierenwerte; an Alternativen denken (z. B. Paracetamol oder Metamizol nach ärztlicher Anordnung).']],
+    note: 'Der Effekt ist im Modell verstärkt dargestellt.', wirkung: { blut: 0.55, harn: 0.5 } }
 ];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
 var MARKUP = `<div id="title">
@@ -282,6 +316,9 @@ MAT.nebenniere = mat(0xD8A13E, { rough: 0.55, coat: 0.2 });
 /* markiertes Nephron: kraeftiges Gold mit leichtem Leuchten (das Leuchten ist der Grundwert der Hervorhebung) */
 MAT.nephron = mat(0xFFC21A, { rough: 0.35, coat: 0.4 });
 MAT.nephron.emissive.copy(srgb(0xFFB020)).multiplyScalar(0.3); MAT.nephron.userData.baseEmissive = MAT.nephron.emissive.clone();
+/* Krankheitsbilder: Nierenstein (gelblich weiss, matt) und Renin-Markierungen (leuchtendes Orange) */
+MAT.stein = mat(0xF6F1E0, { rough: 0.85 }); MAT.stein.emissive.copy(srgb(0xFFF4D0)).multiplyScalar(0.18); MAT.stein.userData.baseEmissive = MAT.stein.emissive.clone();
+MAT.renin = mat(0xFF9A2E, { rough: 0.4 }); MAT.renin.emissive.copy(srgb(0xFF6A00)).multiplyScalar(0.9); MAT.renin.userData.baseEmissive = MAT.renin.emissive.clone();
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
 
 var root = new THREE.Group(); root.name = 'Niere'; scene.add(root);
@@ -571,6 +608,7 @@ async function bauen() {
   });
   await setLoad(0.93, 'Strömung'); if (abgebaut) return;
   stroemungBauen(L);
+  szenarioBauen(L);
   await setLoad(0.95, 'Nephron'); if (abgebaut) return;
   var nform = await nephP; if (abgebaut) return;
   if (nform) {   /* ohne Nephron-Modell bleibt die Struktur ohne Netz (die Fahrt zum Nephron funktioniert trotzdem) */
@@ -602,13 +640,21 @@ var openK = 1, openZiel = 1;   /* 1 = aufgeschnitten (Deckel weg), 0 = geschloss
 var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
 var LUPE = { mode: false, open: false, papille: 0, adh: 1, adhZiel: 1, vorher: null, ring: null, line: null, ctx: null, dpr: 1, W: 340, H: 236, dots: null };   /* Lupe an der Papille (Abschnitt 5c) */
 var DECKEL_WEG = 6;            /* so weit gleitet der Deckel nach vorn (cm) */
+/* Wirkgroessen der Krankheitsbilder und Medikamente (Abschnitt 5d); neutral = ohne Szenario, das Modell sieht dann aus wie ohne diese Funktion */
+var WIRKNEUTRAL = { blut: 1, harn: 1, stau: 0, stein: 0, stenose: 0, renin: 0 };
+var FAKT = { blut: 1, harn: 1, stau: 0, stein: 0, stenose: 0, renin: 0, tempo: 1 };   /* tempo: Tempo der Blutteilchen, folgt aus blut */
+var SZ = null, SZG = null;     /* Szenarien (Zustand und Karte), Geometrie dazu (nach dem Aufbau) */
+var kartePlatz = 0;            /* 1 = Szenariokarte rechts offen (Desktop): der Bildbereich ist um ihre Breite schmaler */
+var KARTE_B = 352;             /* Breite der Karte mit Rand (Pixel) */
 
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 /* Teilchen der Stroemung (userData.teilchen = 'blut' | 'harn'): sichtbar, solange eine Gefaess- bzw. Harnwegsebene sichtbar ist */
 var GEFAESS_SID = ['arterie', 'vene', 'interlobaer', 'bogen', 'interlobular'], HARN_SID = ['kelcheKlein', 'kelcheGross', 'becken', 'harnleiter'];
 function teilchenSichtbar(art) { return (art === 'blut' ? GEFAESS_SID : HARN_SID).some(function (sid) { return enabled[sid]; }); }
+/* Stein und Renin-Markierungen: nur beim passenden Szenario, solange die Ebene des Harnleiters bzw. der Rindengefaesse sichtbar ist */
+function szSichtbar(k) { return k === 'stein' ? FAKT.stein > 0.001 && !!enabled.harnleiter : FAKT.renin > 0.001 && !!enabled.interlobular; }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh) o.visible = o.userData.teilchen ? teilchenSichtbar(o.userData.teilchen) : enabled[o.userData.sid]; });
+  root.traverse(function (o) { if (o.isMesh) o.visible = o.userData.sz ? szSichtbar(o.userData.sz) : (o.userData.teilchen ? teilchenSichtbar(o.userData.teilchen) : enabled[o.userData.sid]); });
   if (ST) ST.neu = true;
   lv++;
 }
@@ -646,7 +692,7 @@ function setSelected(id) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (LUPE.open) lupeClose();
   if (!quiz) closeCard();
   var s = STRUCT[id];
@@ -661,16 +707,59 @@ function setSelected(id) {
   });
   $('iOpen').style.display = id === 'nephron' ? '' : 'none';   /* Knopf "Nephron ansehen" nur in der Infokarte des Nephrons */
   box.classList.add('show');
+  szWeichen();
+}
+
+/* Krankheitsbilder und Medikamente: Reiter, Erklaerkarte rechts (id kcard) und weiches Ueberblenden der Wirkgroessen (Abschnitt 5d) */
+SZ = Kern.Szenarien({
+  daten: SZENARIEN, karte: 'kcard', dauer: 1.5,
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info, Lupe und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    if (id && window.innerWidth <= 1000) szWeichen();   /* Handy: die Karte deckt die Niere, sie beginnt eingeklappt (Titelzeile) */
+    else kartenLage();
+    szenarioWirkung();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) {                                    /* wieder aufgeklappt: die anderen Karten weichen */
+      if (quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+    }
+    kartenLage();
+  }
+});
+/* Szenariokarte klappt ein, wenn Hilfekarte, Info, Lupe oder Ueben aufgehen; das Szenario bleibt aktiv */
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+  kartenLage();
+}
+/* Karte "weg", solange eine andere Karte offen ist; auf dem Desktop macht die offene Karte rechts Platz (schmalerer Bildbereich) */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  var andere = $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show');
+  SZ.el.classList.toggle('weg', andere && !SZ.offen);
+  var platz = (SZ.aktiv && SZ.offen && window.innerWidth > 1000) ? 1 : 0;
+  if (platz !== kartePlatz) { kartePlatz = platz; groesse(window.innerWidth, window.innerHeight); }
+  lv++;
 }
 
 (function leiste() {
-  /* Reiter wie beim Herz: Strukturen, Hilfekarten, Ueben */
+  /* Reiter wie beim Herz: Strukturen, Krankheiten, Medikamente, Hilfekarten, Ueben */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+  var panes = [rail, paneD, paneM, paneH, paneU];
+  ['Strukturen', 'Krankheiten', 'Medikamente', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -680,6 +769,9 @@ function setSelected(id) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Krankheiten, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Die Niere ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'Schalte ein Medikament ein: Die Niere zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
   /* Hilfekarten */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
   HILFE.forEach(function (c) {
@@ -738,11 +830,13 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  szWeichen();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -856,8 +950,9 @@ var AUSSCHNITTE = [
 var aktiv = 0, fitDist = 0;
 /* Freier Bereich fuer Niere und Beschriftung (Pixel): Desktop rechts der Leiste, Handy zwischen Titel und Werkzeugleiste */
 function bereich(w, h) {
-  var tr = $('tools').getBoundingClientRect();
-  return bereichFuer(w, h, tr.top, tr.bottom);
+  var tr = $('tools').getBoundingClientRect(), r = bereichFuer(w, h, tr.top, tr.bottom);
+  if (kartePlatz) r.x1 -= KARTE_B;   /* Szenariokarte rechts offen (Desktop): Niere und Beschriftung rutschen nach links */
+  return r;
 }
 function distFuer(a, w, h) {
   return abstandFuer(a.ext, bereich(w, h), camera.fov, h);
@@ -883,7 +978,13 @@ function groesse(w, h) {
   if (!fitDist || (!orbit.anim && Math.abs(view.dist - fitDist) < 1e-6)) view.dist = d;
   fitDist = d;
   Kern.linienFlaeche($('leaders'), w, h);
+  railHoehe(w);
   lv++;
+}
+/* Desktop: die Leiste endet ueber der Lesehilfe (sonst liegt diese ueber den unteren Zeilen, die dann nicht anklickbar sind) */
+function railHoehe(w) {
+  var rail = $('rail'), lg = $('legend').getBoundingClientRect(), rt = rail.getBoundingClientRect().top;
+  rail.style.maxHeight = (w > 1000 && lg.height > 0 && lg.top > rt + 160) ? Math.floor(lg.top - 12 - rt) + 'px' : '';
 }
 function ansicht(theta, phi, dist, target) {
   if (theta !== undefined) view.theta = theta * DEG;
@@ -994,10 +1095,11 @@ function layoutLabels(w, h) {
   var topL = narrow ? r.y0 : 100, topR = narrow ? Math.max(r.y0, 214) : $('tools').getBoundingClientRect().bottom + 16;
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
   var unten = ['info', 'scard', 'lupe'].filter(function (id) { return $(id).classList.contains('show'); })[0];   /* Karte unten links: Beschriftung links darueber */
+  var szKarte = !!(SZ.aktiv && SZ.offen);   /* Szenariokarte: Desktop rechts (der Bildbereich ist schon schmaler), Handy oben ueber der Niere */
   if (!narrow && unten) botL = Math.min(botL, h - 22 - $(unten).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !quiz && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt die Niere, ohne Beschriftung bleibt sie frei; beim Ueben keine Beschriftung */
+  if (showLabels && !quiz && !(narrow && (selected || unten || szKarte))) {   /* Handy: die Karte deckt die Niere, ohne Beschriftung bleibt sie frei; beim Ueben keine Beschriftung */
     (LUPE.open ? ['papillen'] : LISTEN[aktiv]).forEach(function (id) {   /* bei offener Lupe nur die Papille der Lupe */
       if (!enabled[id] || (!openZiel && AUSSEN.indexOf(id) < 0)) return;
       if (LUPE.open) papillenPunkt(LUPE.papille, pv); else pv.copy(ANKER[id]);
@@ -1038,7 +1140,7 @@ function layoutLabels(w, h) {
    Harn: aus jeder Papille tropfen Tropfen durch den kleinen und grossen Kelch ins Nierenbecken; dort sammelt sich alle STR.PW
    Sekunden eine Portion, die in einer peristaltischen Welle (Verdickung vorn, Einschnuerung dahinter) den Harnleiter hinabwandert.
    ===================================================================== */
-var playing = true, speed = 1, clock = 0;
+var playing = true, speed = 1, clock = 0, clockB = 0;   /* clockB: Uhr der Blutteilchen (laeuft mit FAKT.tempo langsamer, sonst gleich clock) */
 var STR = { P: 12, PW: 6, NKEY: 120 };   /* Periode der Blutstroemung (s), Periode der Harnportionen (s), Stuetzstellen je Periode im Export */
 var ST = null;                            /* nach dem Aufbau: Gruppen { im, list, pose, ... }, Harnleiter-Verformung */
 var STQ = { x: 0, y: 0, z: 0 };           /* Ergebnis von bahnPunkt */
@@ -1138,6 +1240,12 @@ var KELCH_V = 1.0;                 /* Tempo der Tropfen im Kelch (cm/s, im Mitte
 var WELLE = { SA: 1.0, V: 1.5, N: 3 };   /* Start der Portion im Becken (cm auf der Bahn), Tempo der Welle (cm/s), Tropfen je Portion */
 var WELLE_OFF = [[0.05, 0, 0.03], [-0.04, 0.02, 0], [0, -0.02, -0.05]];
 
+/* Anteil sichtbarer Teilchen: Teilchen mit Rang u (0..1, fest verteilt) sind sichtbar, solange u unter dem Faktor f liegt (weich ausgeblendet);
+   f >= 1 = alle, ohne Rechnung (unveraendert) */
+function sichtAnteil(u, f) { return f >= 1 ? 1 : Math.max(0, Math.min(1, (f * 1.15 - u) / 0.15)); }
+/* Harnstau: Grenze (cm auf der Bahn) vor dem Stein; s wird mit dem Stau darauf begrenzt (stein 0..1) */
+function steinSperre(s, grenze) { return FAKT.stein > 0 ? s + (Math.min(s, grenze) - s) * FAKT.stein : s; }
+
 /* ---- Pose eines Teilchens zur Zeit c: Position nach STQ, Rueckgabe = Groesse (Radius in cm; 0 = unsichtbar, die Position gilt dann
    als Parkplatz am naechsten Ende der Bahn) ---- */
 function poseBlut(p, c, o) {
@@ -1145,7 +1253,8 @@ function poseBlut(p, c, o) {
   var tau = ph * STR.P;
   if (tau >= b.W) { bahnEnde(b, tau - b.W <= STR.P - tau, o); return 0; }
   var r = bahnPunkt(b, b.T, tau, o), en = sstep(0, 0.6, tau) * (1 - sstep(b.W - 0.6, b.W, tau));
-  return Math.min(0.1, Math.max(0.03, 0.62 * r)) * en;
+  var gr = Math.min(0.1, Math.max(0.03, 0.62 * r)) * en;
+  return FAKT.blut < 1 ? gr * sichtAnteil(p.u, FAKT.blut) : gr;
 }
 function poseKelch(p, c, o) {
   var b = p.b, ph = c / STR.PW - p.e; ph -= Math.floor(ph);
@@ -1153,7 +1262,8 @@ function poseKelch(p, c, o) {
   if (tau >= w) { bahnEnde(b, tau - w <= STR.PW - tau, o); return 0; }
   var u = tau / w;
   bahnPunkt(b, b.S, b.L * (0.5 * u + 0.5 * u * u), o);   /* ein Tropfen faellt: erst langsam, dann schneller */
-  return 0.085 * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u));
+  var gr = 0.085 * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u));
+  return FAKT.harn < 1 ? gr * sichtAnteil(p.u, FAKT.harn) : gr;
 }
 /* Zustand der Welle zur Zeit c: Lage der Verdickung (cm auf der Bahn) und Staerke 0..1 (0 ausserhalb des Laufs) */
 function welleZustand(c) {
@@ -1166,6 +1276,11 @@ function posePortion(p, c, o) {
   var s = Math.max(0, Math.min(hp.L, w.s + 0.15 + (p.k - (WELLE.N - 1) / 2) * 0.2));
   if (w.lauf) g = 1 - sstep(hp.L - 0.9, hp.L - 0.3, s);                       /* am Ende des Harnleiters (weiter zur Blase) ausblenden */
   else g = sstep(ST.tw + 0.2, STR.PW - 0.1, w.tau);                           /* im Becken sammelt sich die naechste Portion */
+  if (FAKT.stein > 0) {                                                       /* Stein: die Portionen stauen sich davor und kommen nicht vorbei */
+    s = steinSperre(s, ST.steinS - 0.65 - (WELLE.N - 1 - p.k) * 0.14);
+    if (w.lauf) g *= 1 - FAKT.stein * sstep(ST.tw - 1.0, ST.tw - 0.3, w.tau);
+  }
+  if (FAKT.harn < 1) g *= sichtAnteil(p.u, FAKT.harn);
   bahnPunkt(hp, hp.S, s, o);
   var f = WELLE_OFF[p.k % WELLE_OFF.length];
   o.x += f[0]; o.y += f[1]; o.z += f[2];
@@ -1196,7 +1311,9 @@ function welleVorbereiten(hp) {
 function welleSetzen(c) {
   var W = ST.welle;
   if (!W) return;
-  var hp = ST.hp, z = welleZustand(c), arr = W.attr.array, a = z.a, mitte = z.s + 0.15, hinten = mitte - 0.85, i, j;
+  var hp = ST.hp, z = welleZustand(c), arr = W.attr.array, a = z.a, mitte = z.s + 0.15, hinten, i, j;
+  if (FAKT.stein > 0) { mitte = steinSperre(mitte, ST.steinS - 0.55); a *= 1 + 0.4 * FAKT.stein; }   /* Stein: die Welle drueckt vor dem Stein, kraeftiger (Kolik) */
+  hinten = mitte - 0.85;
   arr.set(W.ruhe);
   if (a > 0.001) {
     for (i = 0; i < W.idx.length; i++) {
@@ -1227,14 +1344,15 @@ function stroemungBauen(L) {
   var gruppen = [], N_BLUT = 5;
   [['arterie', 'blut', 'blutRot', 'Sanguis_arteriosus'], ['vene', 'blut', 'blutBlau', 'Sanguis_venosus']].forEach(function (g) {
     var list = [];
-    bahnen[g[0]].forEach(function (b, k) { for (var j = 0; j < N_BLUT; j++) list.push({ b: b, e: frac((j + frac((k + (g[0] === 'vene' ? 0.5 : 0)) * PHI)) / N_BLUT) }); });
+    /* u = Rang des Teilchens (0..1, gleichmaessig verteilt) fuer den sichtbaren Anteil bei den Krankheitsbildern und Medikamenten */
+    bahnen[g[0]].forEach(function (b, k) { for (var j = 0; j < N_BLUT; j++) list.push({ b: b, e: frac((j + frac((k + (g[0] === 'vene' ? 0.5 : 0)) * PHI)) / N_BLUT), u: frac((list.length + 1) * PHI) }); });
     gruppen.push({ art: g[1], mat: g[2], name: g[3], list: list, pose: poseBlut });
   });
   var hb = harnBahnen(), list = [], N_TROPF = 3;
-  hb.kelche.forEach(function (b, i) { for (var j = 0; j < N_TROPF; j++) list.push({ b: b, k: -1, e: frac(j / N_TROPF + i * 0.17) }); });
-  for (var k = 0; k < WELLE.N; k++) list.push({ k: k });
+  hb.kelche.forEach(function (b, i) { for (var j = 0; j < N_TROPF; j++) list.push({ b: b, k: -1, e: frac(j / N_TROPF + i * 0.17), u: frac((list.length + 1) * PHI) }); });
+  for (var k = 0; k < WELLE.N; k++) list.push({ k: k, u: (k + 0.5) / WELLE.N * 0.8 });
   gruppen.push({ art: 'harn', mat: 'harn', name: 'Urina', list: list, pose: poseHarn });
-  ST = { gruppen: gruppen, hp: hb.hp, tw: (hb.hp.L - WELLE.SA + 0.3) / WELLE.V, welle: welleVorbereiten(hb.hp), letzt: null, neu: true };
+  ST = { gruppen: gruppen, hp: hb.hp, tw: (hb.hp.L - WELLE.SA + 0.3) / WELLE.V, welle: welleVorbereiten(hb.hp), letzt: null, neu: true, steinS: hb.hp.S0 + 0.9 };
   gruppen.forEach(function (g) {
     var geo = new THREE.SphereGeometry(1, 10, 7);
     var im = new THREE.InstancedMesh(geo, MAT[g.mat], g.list.length);
@@ -1251,14 +1369,16 @@ function stroemungBild() {
   if (!ST || (clock === ST.letzt && !ST.neu)) return;
   ST.letzt = clock; ST.neu = false;
   ST.gruppen.forEach(function (g) {
+    var c = g.art === 'blut' ? clockB : clock;
     for (var i = 0; i < g.list.length; i++) {
-      var s = g.pose(g.list[i], clock, STQ);
+      var s = g.pose(g.list[i], c, STQ);
       STM.makeScale(s, s, s); STM.setPosition(STQ.x, STQ.y, STQ.z);
       g.im.setMatrixAt(i, STM);
     }
     g.im.instanceMatrix.needsUpdate = true;
   });
   welleSetzen(clock);
+  reninBild();
 }
 $('bPlay').onclick = function () {
   playing = !playing;
@@ -1272,6 +1392,125 @@ $('bPlay').onclick = function () {
     this.classList.add('on');
   };
 });
+
+/* =====================================================================
+   5d. Krankheitsbilder und Medikamente: Wirkgroessen (FAKT), weich ueberblendet nach SZ.anteil (Zielwerte je Szenario in SZENARIEN.wirkung)
+     blut     Anzahl und Tempo der Blutteilchen (1 = normal)         harn    Anzahl der Harntropfen und -portionen (1 = normal)
+     stau     0..1 Hohlsystem erweitert (Hydronephrose)              stein   0..1 Nierenstein im oberen Harnleiter, Harn staut sich davor
+     stenose  0..1 Taille in der Nierenarterie                       renin   0..1 leuchtende Markierungen an den Rindengefaessen
+   Neutral (kein Szenario) bleibt das Modell unveraendert: Stein und Markierungen sind unsichtbar, Stau und Taille 0, Teilchen wie sonst.
+   Alles ist eine reine Funktion der Anteile und der Uhr - kein Zufall.
+   ===================================================================== */
+var WIRKFELDER = Object.keys(WIRKNEUTRAL);
+function szenarioWirkung() {
+  WIRKFELDER.forEach(function (f) {
+    var n = WIRKNEUTRAL[f], v = n;
+    SZENARIEN.forEach(function (sc) { if (sc.wirkung && sc.wirkung[f] !== undefined && SZ.anteil[sc.id] > 0) v += SZ.anteil[sc.id] * (sc.wirkung[f] - n); });
+    FAKT[f] = v;
+  });
+  FAKT.tempo = FAKT.blut >= 1 ? 1 : 0.35 + 0.65 * Math.max(0, FAKT.blut);   /* weniger Blut = langsamer */
+  szenarioAnwenden();
+}
+/* aktives Szenario (Anteil > 0,5) fuer den Export, sonst null */
+function szenarioExport() {
+  var r = null;
+  SZENARIEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+/* Geometrie der Szenarien (nach dem Aufbau der Stroemung, braucht Harnleiterbahn und Welle):
+   - Stau: jeder Eckpunkt des Hohlsystems rueckt entlang seiner Normale nach aussen (am Becken 0,45 cm, an den kleinen Kelchen etwa 0,25 cm,
+     im Harnleiter nur bis zum Stein), Verschiebung = Normale * Weite * stau
+   - Stenose: Eckpunkte der Nierenarterie nahe der Stelle kurz vor dem Hilus ruecken zur Mittellinie (Taille, 70 % schmaler)
+   - Stein: kantig (flach schattiertes Netz aus einem Ikosaeder, Eckpunkte nach der Lage gestoert), liegt in der Bahn des Harnleiters
+   - Renin: kleine leuchtende Kugeln mitten auf einem Teil der Rindenarterien */
+function szenarioBauen(L) {
+  var hp = ST.hp, W = ST.welle, steinS = ST.steinS, i, k;
+  SZG = { hohl: [], sten: null, stein: null, renin: [], stau: 0, stenose: 0, sicht: '' };
+  /* Stau */
+  var Bc = form.anatomisch(form.BECKEN), sV = null;
+  if (W) { sV = new Float32Array(W.attr.count).fill(-1); for (i = 0; i < W.idx.length; i++) sV[W.idx[i]] = W.s[i]; }
+  HARN_SID.forEach(function (sid) {
+    var m = STRUCT[sid].meshes[0]; if (!m) return;
+    var pos = m.geometry.attributes.position, nor = m.geometry.attributes.normal, n = pos.count, ist = !!(W && m === W.mesh);
+    var delta = new Float32Array(n * 3), ruhe = new Float32Array(ist ? W.ruhe : pos.array);
+    for (i = 0; i < n; i++) {
+      var d = 0.2 + 0.25 * (1 - sstep(1.0, 4.0, Math.hypot(ruhe[i * 3] - Bc[0], ruhe[i * 3 + 1] - Bc[1], ruhe[i * 3 + 2] - Bc[2])));
+      if (ist && sV[i] >= 0) d *= 1 - sstep(steinS - 0.5, steinS + 0.2, sV[i]);   /* unterhalb des Steins ist der Harnleiter nicht erweitert */
+      delta[i * 3] = nor.getX(i) * d; delta[i * 3 + 1] = nor.getY(i) * d; delta[i * 3 + 2] = nor.getZ(i) * d;
+    }
+    SZG.hohl.push({ m: m, pos: pos, ruhe: ruhe, delta: delta, welle: ist });
+  });
+  /* Stenose */
+  var haupt = L.filter(function (l) { return l.stufe === 'arterie' && l.art === 'arterie' && !l.rt; })[0], mA = STRUCT.arterie.meshes[0];
+  if (haupt && mA) {
+    var kurve = linienKurve(haupt), len = kurve.getLength(), NS = 240, cs = [], pa = mA.geometry.attributes.position, seg = len / 12;
+    var s0 = Math.round(1.0 / seg) * seg;   /* Mitte der Taille auf einen Ring des Rohrs (12 Abschnitte) gelegt: dort ist sie am tiefsten */
+    for (i = 0; i <= NS; i++) cs.push(kurve.getPointAt(i / NS));
+    var idx = [], dv = [];
+    for (i = 0; i < pa.count; i++) {
+      var x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), bj = 0, bd = 1e9;
+      for (k = 0; k <= NS; k++) { var dd = (cs[k].x - x) * (cs[k].x - x) + (cs[k].y - y) * (cs[k].y - y) + (cs[k].z - z) * (cs[k].z - z); if (dd < bd) { bd = dd; bj = k; } }
+      var sl = bj / NS * len, gs = Math.exp(-Math.pow((sl - s0) / 0.55, 2));
+      if (gs < 0.01 || Math.sqrt(bd) > haupt.r * 1.35) continue;
+      idx.push(i); dv.push((x - cs[bj].x) * -0.7 * gs, (y - cs[bj].y) * -0.7 * gs, (z - cs[bj].z) * -0.7 * gs);
+    }
+    SZG.sten = { m: mA, pos: pa, ruhe: new Float32Array(pa.array), idx: Int32Array.from(idx), delta: Float32Array.from(dv) };
+  }
+  /* Stein */
+  var sg = new THREE.IcosahedronGeometry(1, 1), sp = sg.attributes.position;
+  for (i = 0; i < sp.count; i++) {
+    var vx = sp.getX(i), vy = sp.getY(i), vz = sp.getZ(i), vl = Math.hypot(vx, vy, vz), f = 1 + 0.2 * (rausch(vx * 3, vy * 3, vz * 3) - 0.5) * 2;
+    sp.setXYZ(i, vx / vl * f * 0.62, vy / vl * f * 0.46, vz / vl * f * 0.46);
+  }
+  sg.computeVertexNormals();
+  var stein = new THREE.Mesh(sg, MAT.stein); stein.name = 'Nierenstein'; stein.renderOrder = 2; stein.userData.sz = 'stein'; stein.visible = false;
+  var P0 = new THREE.Vector3(), P1 = new THREE.Vector3(), P2 = new THREE.Vector3();
+  bahnPunkt(hp, hp.S, steinS, STQ); P0.set(STQ.x, STQ.y, STQ.z);
+  bahnPunkt(hp, hp.S, steinS - 0.1, STQ); P1.set(STQ.x, STQ.y, STQ.z);
+  bahnPunkt(hp, hp.S, steinS + 0.1, STQ); P2.set(STQ.x, STQ.y, STQ.z);
+  stein.position.copy(P0); stein.quaternion.setFromUnitVectors(V(1, 0, 0), P2.sub(P1).normalize());
+  root.add(stein); SZG.stein = stein;
+  /* Renin */
+  var rg = new THREE.SphereGeometry(1, 12, 8), rl = L.filter(function (l) { return l.stufe === 'interlobular' && l.art === 'arterie'; });
+  for (i = 0; i < rl.length; i += 3) {
+    var rm = new THREE.Mesh(rg, MAT.renin), q = rl[i].pts[1];
+    rm.name = 'Renin_' + (SZG.renin.length + 1); rm.userData.sz = 'renin'; rm.position.set(q[0], q[1], q[2]); rm.visible = false; rm.scale.setScalar(0.001);
+    rm.raycast = function () {};
+    root.add(rm); SZG.renin.push(rm);
+  }
+  szenarioAnwenden();
+}
+/* Wirkgroessen auf die Geometrie uebertragen (nur was sich geaendert hat) */
+function szenarioAnwenden() {
+  if (!SZG || !ST) return;
+  if (FAKT.stau !== SZG.stau) {
+    SZG.stau = FAKT.stau;
+    SZG.hohl.forEach(function (h) {
+      var dst = h.welle ? ST.welle.ruhe : h.pos.array, a = h.ruhe, d = h.delta, n = a.length, i;   /* der Harnleiter laeuft ueber seine Ruhelage (welleSetzen) */
+      for (i = 0; i < n; i++) dst[i] = a[i] + d[i] * SZG.stau;
+      h.pos.needsUpdate = true; h.m.geometry.boundingSphere = null;
+    });
+  }
+  if (SZG.sten && FAKT.stenose !== SZG.stenose) {
+    SZG.stenose = FAKT.stenose;
+    var S2 = SZG.sten, arr = S2.pos.array, j, v;
+    arr.set(S2.ruhe);
+    if (SZG.stenose > 0) for (j = 0; j < S2.idx.length; j++) { v = S2.idx[j] * 3; arr[v] += S2.delta[j * 3] * SZG.stenose; arr[v + 1] += S2.delta[j * 3 + 1] * SZG.stenose; arr[v + 2] += S2.delta[j * 3 + 2] * SZG.stenose; }
+    S2.pos.needsUpdate = true; S2.m.geometry.boundingSphere = null;
+  }
+  SZG.stein.scale.setScalar(Math.max(0.001, FAKT.stein));   /* der Stein waechst beim Einblenden */
+  var sicht = (FAKT.stein > 0.001 ? 's' : '') + (FAKT.renin > 0.001 ? 'r' : '');
+  if (sicht !== SZG.sicht) { SZG.sicht = sicht; applyVisibility(); }
+  ST.neu = true;
+}
+/* Renin: die Markierungen pulsieren (aus der Uhr), je Markierung versetzt */
+function reninBild() {
+  if (!SZG || FAKT.renin <= 0.001) return;
+  for (var i = 0; i < SZG.renin.length; i++) {
+    var p = 0.5 + 0.5 * Math.sin(2 * PI * (clock / 1.1 + i * 0.17));
+    SZG.renin[i].scale.setScalar(0.1 * FAKT.renin * (0.75 + 0.45 * p));
+  }
+}
 
 /* =====================================================================
    5c. Lupe: Laengsschnitt durch die Spitze einer Nierenpapille (Knopf "Lupe", Tippen auf eine Papille waehlt eine andere).
@@ -1480,6 +1719,7 @@ function lupeOeffnen(i) {
   LUPE.open = true; $('lupe').classList.add('show');
   if (selected) setSelected(null);
   $('info').classList.remove('show');
+  szWeichen();
   lupeKamera(i);
   lv++;
 }
@@ -1488,6 +1728,7 @@ function lupeClose(wie) {
   var v = LUPE.vorher; LUPE.vorher = null;
   LUPE.open = false; LUPE.mode = false;
   $('lupe').classList.remove('show'); LUPE.ring.visible = false; LUPE.line.style.display = 'none';
+  kartenLage();
   canvas.style.cursor = '';
   $('bLupe').classList.remove('on');
   if (v && wie !== 'nichts' && !fz) {
@@ -1555,6 +1796,7 @@ var exCfg = {
   schild: [0, -8.5, 4.5],
   bereit: function () { return App.ready; },
   gruppen: function () { welleZurueck(); return [root]; },   /* der Harnleiter wird in Ruhelage exportiert (ohne die Welle) */
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },   /* aktives Krankheitsbild bzw. Medikament im Dateinamen */
   toast: function (msg) { Kern.toast(msg); },
   transparenz: true,
   /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Position und Groesse als Spuren ueber eine Periode (STR.P) */
@@ -1564,6 +1806,7 @@ var exCfg = {
     ST.gruppen.forEach(function (g) {
       if (!g.im.visible) return;
       g.list.forEach(function (p, n) {
+        if (p.u !== undefined && sichtAnteil(p.u, g.art === 'blut' ? FAKT.blut : FAKT.harn) <= 0) return;   /* Szenario: ausgeblendete Teilchen gar nicht erst aufnehmen */
         var node = new THREE.Mesh(g.geo, g.im.material); node.name = g.name + '_' + (n + 1);
         var P = new Float32Array((STR.NKEY + 1) * 3), Sc = new Float32Array((STR.NKEY + 1) * 3);
         for (i = 0; i <= STR.NKEY; i++) {
@@ -1578,7 +1821,8 @@ var exCfg = {
         nPart++;
       });
     });
-    return { clips: [new THREE.AnimationClip('Niere_Stroemung', STR.P, tracks)], zusatz: 'normal', nPart: nPart };
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Niere_Stroemung', STR.P, tracks)], zusatz: sz ? sz.datei : 'normal', nPart: nPart };
   },
   texte: {
     stlStart: 'STL wird erzeugt …',
@@ -1723,6 +1967,7 @@ function nephronOeffnen() {
   if (fz || abgebaut || inAR) return;
   if (LUPE.open) lupeClose('nichts');
   if (quiz) quizEnd();
+  if (SZ.aktiv) { SZ.direkt(null); szenarioWirkung(); }   /* Krankheitsbild/Medikament aus: die Karte schliesst sich, Stein und Markierungen verschwinden sofort */
   var w = window.innerWidth, h = window.innerHeight, ziel = nephronZiel(w, h), r = bereich(w, h);
   var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
   if (!openZiel) offen(true);   /* der Deckel verdeckt das Nephron: abheben */
@@ -1789,14 +2034,15 @@ function fahrtBild(now) {
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
-var App = window.NiereApp = { ready: false, aufbauMs: 0, waehle: setSelected, nephron: nephronOeffnen, gehe: gehe, offen: offen, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris };
+var App = window.NiereApp = { ready: false, aufbauMs: 0, szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, waehle: setSelected, nephron: nephronOeffnen, gehe: gehe, offen: offen, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris };
 function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (openK !== openZiel) {   /* Deckel gleitet weich (ca. 600 ms) */
     openK = Math.max(0, Math.min(1, openK + Math.sign(openZiel - openK) * dt / 0.6));
     applyLook();
   }
-  if (playing) clock += dt * speed;
+  if (playing) { clock += dt * speed; clockB += dt * speed * FAKT.tempo; }
+  if (SZ.schritt(dt)) szenarioWirkung();                  /* Anteile weich ueberblenden, auch in der Pause */
   stroemungBild();
   lupeTick(dt);
   if (inAR) { AR.frame(frame); ARL.update(); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
@@ -1815,7 +2061,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  AR.abbauen(); ARL.abbauen();
+  AR.abbauen(); ARL.abbauen(); SZ.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   clearTimeout(Kern.toast._t); clearTimeout(quizT);
   if (LUPE.line && LUPE.line.parentNode) LUPE.line.parentNode.removeChild(LUPE.line);
@@ -1823,7 +2069,7 @@ organ.abbauen = function () {
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });   /* auch die Instanzen und Materialien der Teilchen */
-  ST = null;
+  ST = null; SZG = null;
   camera.clearViewOffset();
   camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
   /* DOM */

@@ -15,7 +15,8 @@
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Körper, Herz, Niere und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
-   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
+   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB);
+   Niere-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Harnstau, Stenose, Ramipril, Ibuprofen, GLB).
    In den Modellen koerper, herz, niere und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
    von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
@@ -470,8 +471,8 @@ const MODELLE = {
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
         await t.klick('#lpChips button[data-adh="0"]'); await t.weiter(1500); await t.bild('lupe-ohne-adh');
         await t.klick('#bLupeX'); await t.weiter(300);
-        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
-        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
         await t.klick('#qStop'); await t.weiter(300);
       } },
       handy: { opt: HANDY, async ablauf(t) {
@@ -479,6 +480,28 @@ const MODELLE = {
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
+      } },
+      szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder und Medikamente: Bild 4 s nach dem Einschalten, dazu ein zweiter Ausschnitt; animierter GLB (Harnstau) */
+        const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(4000); await t.bild('harnstau');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('harnstau-nierenbecken');
+        await t.klick('#cam0'); await t.export('#bGlbA', 'glb-animiert-harnstau');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(3500);
+        await t.klick(zeile('Nierenarterienstenose')); await t.weiter(4000); await t.bild('nierenarterienstenose');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('nierenarterienstenose-hilus');
+        await t.klick('#cam0'); await t.klick(zeile('Nierenarterienstenose')); await t.weiter(1500);
+        await t.klick('#rail .tabs .tab:text-is("Medikamente")');
+        for (const [name, datei] of [['Delix® (Ramipril)', 'ramipril'], ['Ibuprofen (NSAR)', 'ibuprofen']]) {
+          await t.klick(zeile(name)); await t.weiter(4000); await t.bild(datei);
+          await t.klick(zeile(name)); await t.weiter(1500);
+        }
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")'); await t.weiter(300); await t.bild('zurueck');   /* alles wieder neutral */
+      } },
+      'szenarien-handy': { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick('#rail .dis:has(b:text-is("Harnstau durch Nierenstein"))'); await t.weiter(4000); await t.bild('harnstau-eingeklappt');   /* Handy: die Karte beginnt eingeklappt */
+        await t.klick('#bCardMin'); await t.weiter(900); await t.bild('harnstau');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
