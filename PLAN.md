@@ -16,7 +16,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ |
 | Hilfekarten und Üben (Quiz) | ✓ | (✓) |
 | Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) |
-| Schema (2D-Kreislaufbild) | ✓ | – |
+| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) |
 | Export GLB/STL mit Signatur | ✓ | ✓ |
 | AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ |
@@ -156,7 +156,7 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - Körper → Niere: Kamerafahrt wie zum Herz (`organ.start` der Niere, Rückfahrt aus Niere und Nephron ins Nahbild der linken Niere; die rechte Niere blendet mit aus); die Infokarte der Nieren im Körper zeigt „Niere öffnen“ statt „Nephron ansehen“
 - [ ] Nephron als Zoomstufe innerhalb der Niere
   - markiertes Nephron in einer Pyramide; Knopf „Nephron ansehen“ in der Niere und Antippen des Nephrons; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt wie beim Körper
-- [ ] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
+- [x] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
   - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
 
 ### Phase 3 und weiter – Organ für Organ

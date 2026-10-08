@@ -549,11 +549,17 @@ const MODELLE = {
         await t.klick('#bLupeX'); await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('hyperglykaemie');
         await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#paneMed .dis >> nth=0'); await t.weiter(1500); await t.bild('torasemid');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('torasemid-lupe');
+        /* Schema (flaches Bild mit denselben Teilchen): Lupe zu, Torasemid aus; neutral, dann Hyperglykämie, dann Torasemid; Schema zu */
+        await t.klick('#bLupe'); await t.klick('#paneMed .dis >> nth=0'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
+        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-hyperglykaemie');
+        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#paneMed .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-torasemid');
+        await t.klick('#bSchemaX');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam1'); await t.weiter(900); await t.bild('nierenkoerperchen');
         await t.klick('#cam0'); await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#bLupeX'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');   /* Lupe-Fenster deckt die Werkzeugleiste: mit × schließen; Schema zu: Seite wird danach verworfen */
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
