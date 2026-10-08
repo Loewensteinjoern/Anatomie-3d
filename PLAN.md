@@ -18,7 +18,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) |
 | Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – |
 | Export GLB/STL mit Signatur | ✓ | ✓ | ✓ |
-| AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ | ✓ |
+| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ |
 | Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper |
 
@@ -118,10 +118,10 @@ organe/niere/             Niere + Nephron
 - [x] AR für den ganzen Körper
   - WebXR über `Kern.AR.xr`, `root` = `wurzel`, Füße auf der Fläche (`fuss` aus der Bounding Box)
   - Größenstufen 27/45/72/108/180 cm, Start als Tischfigur mit 45 cm, bei lebensgroß ein Hinweis
-  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“
+  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“ (die AR-Beschriftung ist später entfallen, siehe Phase 2)
   - Kamera in AR mit near/far in Metern (0.01/100), danach wieder 2/1200
-  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht
-  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB) mit Beschriftung; Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
+  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht (entfallen, siehe Phase 2)
+  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB; die Beschriftung darin ist später entfallen, siehe Phase 2); Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
   - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
   - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
   - Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet
@@ -145,6 +145,9 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
 
 - [x] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
   - nur in AR (WebXR und AR Quick Look): Tubulus bei Durchsicht 60 % statt 32 % deckend; Glomerulus, Arteriolen, peritubuläre Kapillaren und Vasa recta 80 % statt 46–60 %; am Bildschirm unverändert
+- [x] AR-Beschriftung entfällt in allen Modellen (Körper, Herz, Niere, Nephron) – Rückmeldung von Jörn nach dem Test auf dem iPhone (Oktober 2026): In AR sieht man nicht, welches Schild zu welchem Teil gehört, die Verbindungslinien und Pfeile sind kaum zu erkennen
+  - weder in WebXR noch in der USDZ für AR Quick Look; die Knöpfe „Beschriftung aus/an“ in der AR-Leiste entfallen; `Kern.AR.schilder` und die Option `beschriftung` von `Kern.AR.usdz` sind aus `core/ar.js` entfernt; am Bildschirm bleibt die Beschriftung unverändert
+  - die AR-Bilder in `tools/vergleich.js` heißen jetzt `ohne-haut` (Körper), `geschlossen` (Herz, Niere) und `undurchsichtig` (Nephron); die AR-Referenzen sind daher neu aufzunehmen
 - [x] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
 - [x] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
 - [x] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan
@@ -155,7 +158,8 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - Krankheitsbilder: Harnstau durch Nierenstein, Nierenarterienstenose (Renin, Bluthochdruck); Medikamente: Ramipril (ACE-Hemmer), Ibuprofen (NSAR, drosselt die Nierendurchblutung); Reiter und Erklärkarte über `Kern.Szenarien` wie beim Herz, Wirkung über weich überblendete Größen (Blut, Harn, Stau, Stein, Stenose, Renin) in der Strömung und an der Geometrie (erweitertes Hohlsystem, Stein im Harnleiter, Taille in der Nierenarterie, Renin-Markierungen); `tools/vergleich.js`: Kontexte `szenarien` und `szenarien-handy`
   - Körper → Niere: Kamerafahrt wie zum Herz (`organ.start` der Niere, Rückfahrt aus Niere und Nephron ins Nahbild der linken Niere; die rechte Niere blendet mit aus); die Infokarte der Nieren im Körper zeigt „Niere öffnen“ statt „Nephron ansehen“
 - [x] Nephron als Zoomstufe innerhalb der Niere
-  - markiertes Nephron in einer Pyramide; Knopf „Nephron ansehen“ in der Niere und Antippen des Nephrons; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt wie beim Körper
+  - zuerst ein dauerhaft markiertes (goldenes) Nephron in der oberen Pyramide; Rückmeldung von Jörn: wirkt zu groß und vermittelt einen falschen Eindruck
+  - neu (Oktober 2026): Die Niere zeigt im Normalzustand kein Nephron. Rinde, Säulen, Pyramiden oder Papillen antippen → Infokarte mit „Nephron hier ansehen“; der Punkt bestimmt die Pyramide (nächste Achse Papille–Basis) und die seitliche Lage (so verschoben, dass die Rohre im Nierengewebe bleiben); in den schmalen seitlichen Pyramiden (1, 2 und 4) passt das breite Nephron nicht ins Gewebe, dann weicht die Lage auf die nächste passende Pyramide aus (`NE_GRENZE` 0,05 cm); der Knopf „Nephron“ in der Werkzeugleiste fährt an die Standardstelle (obere Polpyramide). Das Nephron entsteht erst bei der Fahrt (Farben wie im Nephron-Modell, Maßstab: Kapsel bis Papille der Pyramide) und blendet in der zweiten Hälfte ein; die Niere dreht sich um die Schnittnormale, bis die Pyramidenachse senkrecht steht; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt (Drehung zurück, Nephron blendet aus) wie beim Körper; die zuletzt gewählte Stelle merkt sich die Seite nur im Speicher
 - [x] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
   - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
 - Umsetzung: Schritte 1–4 als #23–#26, Schritt 5 als #27, Schritte 6–10 zusammen in einem Pull Request (Wunsch von Jörn); nach einem Container-Neustart zeichnete Chromium minimal anders (ca. 110 Pixel), ab Schritt 9 wurde daher gegen eine neu aufgenommene Referenz verglichen
@@ -200,3 +204,4 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 
 - Planung und Prüfung im Hauptgespräch; Umsetzung einzelner Schritte durch den Executor-Subagenten (`.claude/agents/executor.md`, Sonnet). Commit und Push nur durch den Aufrufer.
 - Änderungen über Pull Requests nach `main`; veröffentlicht über GitHub Pages.
+- Prüfen mit `tools/vergleich.js`: Während der Arbeit an einem Pull Request genügt es, die betroffenen Modelle zu prüfen (`--nur <modell>`); sobald gemeinsamer Code (`core/`, `sw.js`, `index.html`, `tools/`) geändert ist, werden alle Modelle geprüft. **Vor jedem Pull Request immer ein vollständiger Lauf gegen die Referenz von `main`** – ohne ihn kein Pull Request. Abweichungen werden mit dem gemeldeten Bereich (umschließendes Rechteck der geänderten Pixel) eingeordnet: Liegt er im erwarteten Bereich, z. B. nur in der Werkzeugleiste? Vergleichsläufe und andere Browserprüfungen nie gleichzeitig laufen lassen. Nach einem Neustart der Umgebung die Referenz neu aufnehmen.

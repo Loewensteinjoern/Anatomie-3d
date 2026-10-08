@@ -23,7 +23,7 @@
 
    Modell koerper (index.html ohne Adresse, Startansicht): desktop (Ganzkörper, die Ausschnitte
    #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
-   datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut und Beschriftung, größer)
+   datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut, größer; AR ohne Beschriftung)
    und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
    lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
@@ -31,9 +31,8 @@
    Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
    aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
    „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
-   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel, Beschriftung und
-   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel und
-   Beschriftung) und abbau.
+   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel und
+   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau.
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -47,13 +46,17 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das markierte Nephron und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
    gesondert gezählt. Mit --nur wird in ein vorhandenes Ziel hineingemischt.
    Kontexte, die nur in <vorher> stehen und im Werkzeug nicht mehr vorkommen (z. B. die
    früheren atlas-herz-desktop usw.), meldet `vergleichen` als entfallen.
+   Bei jedem abweichenden Bild nennt `vergleichen` neben der Zahl der geänderten Pixel den Bereich der
+   Unterschiede: das umschließende Rechteck aller geänderten Pixel in Bildpixeln (x und y einschließlich,
+   z. B. „Bereich x 519–1182, y 18–98“). So lässt sich einordnen, ob die Abweichung im erwarteten Bereich
+   liegt (z. B. nur in der Werkzeugleiste). Bei anderer Bildgröße gibt es keinen Bereich.
 
    Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
    offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
@@ -335,8 +338,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arHaut'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('ohne-haut-ohne-beschriftung');
-        await t.klick('#arLab');
+        await t.klick('#arHaut'); await t.weiter(1400); await t.bild('ohne-haut');
         await t.klick('#arBig'); await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
@@ -429,7 +431,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arOpen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        await t.klick('#arOpen'); await t.weiter(1400); await t.bild('geschlossen');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },
@@ -462,7 +464,7 @@ const MODELLE = {
         await t.klick('#bSee'); await t.klick('#bOffen'); await t.weiter(1400); await t.bild('aufgeschnitten');
         await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
-        await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(600); await t.bild('auswahl-nephron');   /* Infokarte mit dem Knopf „Nephron ansehen“ */
+        await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(600); await t.bild('auswahl-rinde');   /* Rinde angetippt (fester Punkt über der unteren seitlichen Pyramide): Infokarte mit dem Knopf „Nephron hier ansehen“ */
         /* Strömung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben) */
         await t.klick('#bCls'); await t.weiter(3000); await t.bild('stroemung');
         await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await t.weiter(1000); await t.bild('pause');   /* beide Bilder müssen gleich aussehen */
@@ -474,7 +476,10 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
         await t.klick('#qStop'); await t.weiter(300);
-        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“ in der Werkzeugleiste: Kamerafahrt ins markierte Nephron */
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“ in der Werkzeugleiste: Kamerafahrt zur Standardstelle (obere Polpyramide) */
+        /* zurück (Niere startet gedreht im Nahbild, Rückfahrt), dann „Nephron hier ansehen“ an der angetippten Stelle: Bild mitten in der Fahrt (Niere gedreht, Nephron blendet ein) */
+        await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, 'nephron', 'nephron'); await t.zurueck(); await t.echt(100); await t.warteAuf(ATLAS_BEREIT('niere'), 'niere'); await t.weiter(2200);
+        await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron-mitte'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-rinde');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -482,7 +487,7 @@ const MODELLE = {
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
         await t.klick('#bLupeX'); await t.weiter(300);
-        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“: Kamerafahrt ins markierte Nephron */
+        await t.klick('#bNephron'); await t.bisAdresse('#niere/nephron'); await t.bild('nephron-per-knopf');   /* Knopf „Nephron“: Kamerafahrt zur Standardstelle */
       } },
       szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder und Medikamente: Bild 4 s nach dem Einschalten, dazu ein zweiter Ausschnitt; animierter GLB (Harnstau) */
         const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';
@@ -513,7 +518,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arOffen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        await t.klick('#arOffen'); await t.weiter(1400); await t.bild('geschlossen');
         const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
         await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
         await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
@@ -571,7 +576,7 @@ const MODELLE = {
         await t.weiter(1500);
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
-        await t.klick('#arSee'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('undurchsichtig-ohne-beschriftung');
+        await t.klick('#arSee'); await t.weiter(1400); await t.bild('undurchsichtig');
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },
@@ -645,8 +650,8 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
 } };
 /* Kontext uebergaenge-niere: Körper, Niere wählen, Kamerafahrt, Standbild beim Aufbau der Niere, Rückfahrt; dann Nephron über die Adresse
-   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das markierte Nephron (Knopf „Nephron ansehen“, Kamerafahrt,
-   Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
+   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das Nephron an einer angetippten Stelle der Rinde (Knopf
+   „Nephron hier ansehen“, Kamerafahrt mit Drehung der Niere, Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
 MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
@@ -659,8 +664,8 @@ MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListene
   await t.klick('#atlasZurueck'); await organ('niere'); await t.weiter(1500); await t.bild('niere-von-nephron');
   await t.weiter(1500);   /* Rückfahrt der Niere ist zu Ende */
   const z2 = await t.js(ATLAS_ENDZUSTAND);
-  /* Zoomstufe: markiertes Nephron in der Niere wählen, „Nephron ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet im Nahbild, Rückfahrt) */
-  await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
+  /* Zoomstufe: Rinde antippen (fester Punkt), „Nephron hier ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet gedreht im Nahbild, Rückfahrt) */
+  await t.js(() => window.NiereApp.waehle('rinde', [2.76, -2.12, -1.29])); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
   await organ('nephron'); await t.bild('standbild-nephron');
   await t.weiter(1500); await t.bild('nephron-von-niere');
   await t.zurueck(); await organ('niere'); await t.weiter(1000); await t.bild('rueckfahrt-niere'); await t.weiter(1200); await t.bild('niere-zurueck');
@@ -1008,18 +1013,25 @@ async function pixelDiff(page, a, b) {
     const W = A.width, H = A.height, ca = new OffscreenCanvas(W, H), cb = new OffscreenCanvas(W, H);
     const xa = ca.getContext('2d'), xb = cb.getContext('2d'); xa.drawImage(A, 0, 0); xb.drawImage(B, 0, 0);
     const da = xa.getImageData(0, 0, W, H), db = xb.getImageData(0, 0, W, H), o = xb.createImageData(W, H);
-    let n = 0;
+    let n = 0, x0 = W, x1 = -1, y0 = H, y1 = -1;      /* n = geänderte Pixel, x0..y1 = umschließendes Rechteck (einschließlich) */
     for (let i = 0; i < da.data.length; i += 4) {
       const d = da.data[i] !== db.data[i] || da.data[i + 1] !== db.data[i + 1] || da.data[i + 2] !== db.data[i + 2] || da.data[i + 3] !== db.data[i + 3];
-      if (d) n++;
+      if (d) {
+        n++;
+        const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
+        if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+      }
       o.data[i] = d ? 255 : db.data[i] * 0.3; o.data[i + 1] = d ? 0 : db.data[i + 1] * 0.3; o.data[i + 2] = d ? 0 : db.data[i + 2] * 0.3; o.data[i + 3] = 255;
     }
     xb.putImageData(o, 0, 0);
     const blob = await cb.convertToBlob({ type: 'image/png' });
     const url = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-    return { anders: n, gesamt: W * H, bild: url };
+    return { anders: n, gesamt: W * H, bereich: n ? { x0, x1, y0, y1 } : null, bild: url };
   }, [a, b]);
 }
+
+/* Text für die Meldung: „363 von 1024000 Pixeln anders, Bereich x 519–1182, y 18–98 (diff/…png)“ */
+const anders = (d, diff) => d.anders + ' von ' + d.gesamt + ' Pixeln anders' + (d.bereich ? ', Bereich x ' + d.bereich.x0 + '–' + d.bereich.x1 + ', y ' + d.bereich.y0 + '–' + d.bereich.y1 : '') + ' (' + diff + ')';
 
 async function vergleichen(va, vb) {
   const A = JSON.parse(fs.readFileSync(path.join(va, 'ergebnis.json'), 'utf8'));
@@ -1037,7 +1049,7 @@ async function vergleichen(va, vb) {
     if (d.anders < 0) { probleme.push(titel + ': andere Bildgröße ' + d.groesse.join('×')); return; }
     fs.mkdirSync(path.join(vb, 'diff'), { recursive: true });
     fs.writeFileSync(path.join(vb, 'diff', name + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
-    probleme.push(titel + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + name + '.png)');
+    probleme.push(titel + ': ' + anders(d, 'diff/' + name + '.png'));
   };
   for (const m of new Set(Object.keys(A.modelle).concat(Object.keys(B.modelle)))) {
     const neuM = !A.modelle[m] && !!B.modelle[m];       /* Modell nur in <nachher>: keine Referenz */
@@ -1061,7 +1073,7 @@ async function vergleichen(va, vb) {
       if (d.anders < 0) { probleme.push(m + '-' + k + ': andere Bildgröße ' + d.groesse.join('×')); continue; }
       fs.mkdirSync(path.join(vb, 'diff'), { recursive: true });
       fs.writeFileSync(path.join(vb, 'diff', m + '-' + k + '.png'), Buffer.from(d.bild.slice(d.bild.indexOf(',') + 1), 'base64'));
-      probleme.push(m + '-' + k + ': ' + d.anders + ' von ' + d.gesamt + ' Pixeln anders (diff/' + m + '-' + k + '.png)');
+      probleme.push(m + '-' + k + ': ' + anders(d, 'diff/' + m + '-' + k + '.png'));
     }
     /* Kontexte ohne Aufnahme in <vorher> (z. B. abbau, oder dort ohne Bilder aufgenommen) haben keine Referenz: nur listen */
     const kontextVon = (k) => { const n = Object.keys((MODELLE[m] || { kontexte: {} }).kontexte).filter((x) => k.startsWith(x + '-')).sort((x, y) => y.length - x.length)[0]; return n || k.split('-')[0]; };

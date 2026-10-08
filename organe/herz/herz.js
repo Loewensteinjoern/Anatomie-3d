@@ -2384,7 +2384,6 @@ var MARKUP = `<div id="title">
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Herz hinzustellen.</div>
   <div class="ar-bot">
     <button class="ar-b" id="arOpen">Geschlossen</button>
-    <button class="ar-b" id="arLab">Beschriftung aus</button>
     <button class="ar-b" id="arSmall">Kleiner</button>
     <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
     <button class="ar-b" id="arPlace">Neu hinstellen</button>
@@ -3095,58 +3094,26 @@ var AR = Kern.AR.xr({
   fuss: 6.9,                                        /* Herzspitze steht auf der Fläche */
   hintergrund: 0x0b171c,
   ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
-  knoepfe: ['arEnd', 'arOpen', 'arLab', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+  knoepfe: ['arEnd', 'arOpen', 'arSmall', 'arBig', 'arPlace', 'arPause'],
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     App.ar = true;
     $('arOpen').textContent = App.opened ? 'Geschlossen' : 'Geöffnet';
-    $('arLab').textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an';
   },
   beimEnde: function () {
     App.ar = false;
-    ARL.ausblenden();
     resize();
   }
 });
 function arUIbind() {
   $('arOpen').onclick = function () { App.opened = !App.opened; onOff('bOpen', App.opened); onOff('bClosed', !App.opened); this.textContent = App.opened ? 'Geschlossen' : 'Geöffnet'; };
-  $('arLab').onclick = function () { App.labels = !App.labels; onOff('bLab', App.labels); this.textContent = App.labels ? 'Beschriftung aus' : 'Beschriftung an'; };
   $('arPause').onclick = function () { engine.S.laufen = !engine.S.laufen; this.textContent = engine.S.laufen ? 'Pause' : 'Weiter'; onOff('bPlay', engine.S.laufen); $('bPlay').textContent = engine.S.laufen ? 'Pause' : 'Abspielen'; };
-}
-/* ---- Beschriftung im AR: Schilder mit Führungslinien (Kern.AR.schilder) ---- */
-var ARL = Kern.AR.schilder({
-  root: root, renderer: renderer, camera: camera, xr: AR,
-  name: 'Herz', anzahl: function () { return LABELS.length; },
-  masse: { spalte: 7.4, hoehe: 1.15, abstand: 1.4, z: 3.2, oben: 8.8, unten: -7.2, px: 128 },
-  liste: function () { return arlWanted(); },
-  auswahl: function () { return App.sel; }
-});
-/* dieselben Regeln wie bei der Bildschirm-Beschriftung, nur ohne Bildschirmplatz */
-function arlWanted() {
-  var out = [];
-  if (!App.labels || App.quiz) return out;
-  LABELS.forEach(function (a) {
-    var s = a.s, p = App.openK > 0.5 ? s.aOpen : s.aClosed, show = !!(p && s.on);
-    if (s.station) show = App.impulse && STRUCT.erl.on;
-    else if (App.impulse) show = false;
-    else if (show && App.focus && FOCUS[App.focus].indexOf(s.id) < 0) show = false;
-    if (show && s.minor && s.id !== App.sel) show = false;
-    if (show && s.id === 'myo' && App.openK < 0.5) show = false;
-    if (show && vesFade < 0.1 && App.openK > 0.5 && ['aorta', 'pt', 'svc', 'ivc', 'pv', 'lig'].indexOf(s.id) >= 0) show = false;
-    if (show) out.push({ a: a, p: p });
-  });
-  return out;
 }
 /* ---- USDZ für AR Quick Look: Momentaufnahme der aktuellen Ansicht ---- */
 function usdzBuild() {
   return Kern.AR.usdz({
     name: 'Herz', creator: 'Herz 3D - ' + WATERMARK, datei: 'herz.usda', skala: 0.01,
-    gruppen: App.openK > 0.5 ? [backG] : [backG, lidG],
-    beschriftung: function (f4) {
-      var v = new THREE.Vector3();
-      root.updateWorldMatrix(true, false);
-      return ARL.usd(f4, function (x, y, z) { v.set(x, y, z).applyMatrix4(root.matrixWorld); return [v.x * 0.01, v.y * 0.01, v.z * 0.01]; });
-    }
+    gruppen: App.openK > 0.5 ? [backG] : [backG, lidG]
   });
 }
 function arQuickLook() {
@@ -3990,7 +3957,7 @@ function loop(now, frame) {
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   root.updateMatrixWorld();
   CLIP.copy(CLIP0).applyMatrix4(root.matrixWorld); CLIP_PV.copy(CLIP_PV0).applyMatrix4(root.matrixWorld); CLIP_ERL.copy(CLIP_ERL0).applyMatrix4(root.matrixWorld);
-  if (App.ar) { if (App.ready) { ARL.update(); renderer.render(scene, camera); } return; }
+  if (App.ar) { if (App.ready) { renderer.render(scene, camera); } return; }
   updateCamera();
   if (App.ready && !App.schema) { applyOffset(); renderer.render(scene, camera); layoutLabels(window.innerWidth, window.innerHeight); }
 }
@@ -4009,7 +3976,6 @@ organ.abbauen = function () {
   window.removeEventListener('keydown', escTaste);
   orbit.loesen();
   HerzSchema.abbauen(); HerzLupe.abbauen();
-  ARL.abbauen();
   SZ.abbauen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
