@@ -15,7 +15,8 @@
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
    und bei Körper, Herz, Niere und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
-   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB).
+   AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB);
+   Niere-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Harnstau, Stenose, Ramipril, Ibuprofen, GLB).
    In den Modellen koerper, herz, niere und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
    von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
@@ -27,9 +28,12 @@
    lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
    Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
-   Seitentext, Exporte GLB statisch und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht, aufgeschnitten,
-   ohne Beschriftung, Info), handy, datei (file://), webxr, quicklook (AR wie beim Nephron; Deckel und Beschriftung) und
-   abbau; kein animierter Export (keine Strömung).
+   Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
+   aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
+   „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
+   die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel, Beschriftung und
+   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel und
+   Beschriftung) und abbau.
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -43,7 +47,7 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das markierte Nephron und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
@@ -448,7 +452,7 @@ const MODELLE = {
     kontexte: {
       desktop: { opt: DESKTOP, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
-        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bStl', 'stl');
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
         await t.ruhe(6000);
         await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
@@ -458,11 +462,46 @@ const MODELLE = {
         await t.klick('#bSee'); await t.klick('#bOffen'); await t.weiter(1400); await t.bild('aufgeschnitten');
         await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(600); await t.bild('auswahl-nephron');   /* Infokarte mit dem Knopf „Nephron ansehen“ */
+        /* Strömung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben) */
+        await t.klick('#bCls'); await t.weiter(3000); await t.bild('stroemung');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await t.weiter(1000); await t.bild('pause');   /* beide Bilder müssen gleich aussehen */
+        await t.klick('#bPlay');
+        /* Lupe (Papille), Hilfekarten und Üben (neue Bilder am Ende) */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#lpChips button[data-adh="0"]'); await t.weiter(1500); await t.bild('lupe-ohne-adh');
+        await t.klick('#bLupeX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#qStop'); await t.weiter(300);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('nierenbecken');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe an der Papille, neues Bild am Ende */
+      } },
+      szenarien: { opt: DESKTOP, async ablauf(t) {     /* Krankheitsbilder und Medikamente: Bild 4 s nach dem Einschalten, dazu ein zweiter Ausschnitt; animierter GLB (Harnstau) */
+        const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(4000); await t.bild('harnstau');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('harnstau-nierenbecken');
+        await t.klick('#cam0'); await t.export('#bGlbA', 'glb-animiert-harnstau');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(3500);
+        await t.klick(zeile('Nierenarterienstenose')); await t.weiter(4000); await t.bild('nierenarterienstenose');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('nierenarterienstenose-hilus');
+        await t.klick('#cam0'); await t.klick(zeile('Nierenarterienstenose')); await t.weiter(1500);
+        await t.klick('#rail .tabs .tab:text-is("Medikamente")');
+        for (const [name, datei] of [['Delix® (Ramipril)', 'ramipril'], ['Ibuprofen (NSAR)', 'ibuprofen']]) {
+          await t.klick(zeile(name)); await t.weiter(4000); await t.bild(datei);
+          await t.klick(zeile(name)); await t.weiter(1500);
+        }
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")'); await t.weiter(300); await t.bild('zurueck');   /* alles wieder neutral */
+      } },
+      'szenarien-handy': { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick('#rail .dis:has(b:text-is("Harnstau durch Nierenstein"))'); await t.weiter(4000); await t.bild('harnstau-eingeklappt');   /* Handy: die Karte beginnt eingeklappt */
+        await t.klick('#bCardMin'); await t.weiter(900); await t.bild('harnstau');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -472,6 +511,10 @@ const MODELLE = {
         await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
         await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
         await t.klick('#arOffen'); await t.klick('#arLab'); await t.weiter(1400); await t.bild('geschlossen-ohne-beschriftung');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
         await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
         t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
       } },
@@ -483,6 +526,7 @@ const MODELLE = {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('rinde-mark');
         await t.klick('#cam0'); await t.klick('#bZu'); await t.weiter(1400); await t.bild('geschlossen');
         await t.klick('#bOffen'); await t.weiter(300);
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe bleibt offen: der Abbau muss Ring, Linie und Panel wegräumen */
       }) }
     }
   },
@@ -505,11 +549,17 @@ const MODELLE = {
         await t.klick('#bLupeX'); await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('hyperglykaemie');
         await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#paneMed .dis >> nth=0'); await t.weiter(1500); await t.bild('torasemid');
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('torasemid-lupe');
+        /* Schema (flaches Bild mit denselben Teilchen): Lupe zu, Torasemid aus; neutral, dann Hyperglykämie, dann Torasemid; Schema zu */
+        await t.klick('#bLupe'); await t.klick('#paneMed .dis >> nth=0'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
+        await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-hyperglykaemie');
+        await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#paneMed .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-torasemid');
+        await t.klick('#bSchemaX');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam1'); await t.weiter(900); await t.bild('nierenkoerperchen');
         await t.klick('#cam0'); await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#bLupeX'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');   /* Lupe-Fenster deckt die Werkzeugleiste: mit × schließen; Schema zu: Seite wird danach verworfen */
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -592,7 +642,8 @@ MODELLE.atlas.kontexte.uebergaenge = { opt: DESKTOP, init: [initListener], berei
   for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k]]) + '\n');
 } };
 /* Kontext uebergaenge-niere: Körper, Niere wählen, Kamerafahrt, Standbild beim Aufbau der Niere, Rückfahrt; dann Nephron über die Adresse
-   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; Endzustand prüfen */
+   (Zurück-Knopf „← Niere“) und mit dem Zurück-Knopf des Atlas zurück zur Niere; dann das markierte Nephron (Knopf „Nephron ansehen“, Kamerafahrt,
+   Nephron, Browser-Zurück mit Rückfahrt der Niere); Endzustand prüfen */
 MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListener], bereit: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'), async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
   await t.weiter(500);
@@ -603,10 +654,17 @@ MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListene
   const z1 = await t.js(ATLAS_ENDZUSTAND);
   await t.js(() => { location.hash = 'niere/nephron'; }); await organ('nephron'); await t.weiter(1500); await t.bild('nephron');   /* Zurück-Knopf zeigt „← Niere“ */
   await t.klick('#atlasZurueck'); await organ('niere'); await t.weiter(1500); await t.bild('niere-von-nephron');
+  await t.weiter(1500);   /* Rückfahrt der Niere ist zu Ende */
   const z2 = await t.js(ATLAS_ENDZUSTAND);
-  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2);
-  t.erg.uebergaengeNiere = { endzustand: [z1, z2], ok };
-  process.stdout.write('  uebergaenge-niere: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2])) + '\n');
+  /* Zoomstufe: markiertes Nephron in der Niere wählen, „Nephron ansehen“ (Kamerafahrt in das Nephron), Nephron, Browser-Zurück (Niere startet im Nahbild, Rückfahrt) */
+  await t.js(() => window.NiereApp.waehle('nephron')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-nephron'); await t.bisAdresse('#niere/nephron');
+  await organ('nephron'); await t.bild('standbild-nephron');
+  await t.weiter(1500); await t.bild('nephron-von-niere');
+  await t.zurueck(); await organ('niere'); await t.weiter(1000); await t.bild('rueckfahrt-niere'); await t.weiter(1200); await t.bild('niere-zurueck');
+  const z3 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && ATLAS_ENDZUSTAND_OK(z3);
+  t.erg.uebergaengeNiere = { endzustand: [z1, z2, z3], ok };
+  process.stdout.write('  uebergaenge-niere: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, z3])) + '\n');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,

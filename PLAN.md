@@ -6,23 +6,23 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 
 ✓ = vorhanden, – = fehlt, (✓) = teilweise
 
-| Baustein | Herz | Nephron |
-|---|---|---|
-| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ |
-| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ |
-| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ |
-| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ |
-| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) |
-| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ |
-| Hilfekarten und Üben (Quiz) | ✓ | (✓) |
-| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) |
-| Schema (2D-Kreislaufbild) | ✓ | – |
-| Export GLB/STL mit Signatur | ✓ | ✓ |
-| AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ |
-| Einheitliches Design und Handy-Layout | ✓ | ✓ |
-| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | – (Niere folgt in Phase 2) |
+| Baustein | Herz | Nephron | Niere |
+|---|---|---|---|
+| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ |
+| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ |
+| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ |
+| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ |
+| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik |
+| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) |
+| Hilfekarten und Üben (Quiz) | ✓ | (✓) | ✓ |
+| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) |
+| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – |
+| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ |
+| AR (WebXR und AR Quick Look) inkl. Beschriftung | ✓ | ✓ | ✓ |
+| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper |
 
-Beide Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+Alle Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
 Eine Form je Organ: Jedes Organ-Modul liefert seine Form als eigenen Baustein (`organe/<organ>/<organ>-form.js`). Körper-Atlas und Detailmodell nutzen dieselbe Form (im Körper gröber gerastert); so passen Körper und Organ zusammen, und jede Verbesserung am Organ zeigt sich auch im Körper. Der Körper lädt nur die Form-Bausteine, nicht den übrigen Organ-Code. Organe ohne Detailmodell erscheinen im Körper vorerst als vereinfachte Platzhalter und werden ersetzt, sobald ihr Modul fertig ist. Das Herz stellt seine Form vorerst über `organ.form` in `herz.js` bereit; die Auslagerung nach `herz-form.js` folgt, wenn sie sich lohnt.
 
@@ -143,21 +143,23 @@ organe/niere/             Niere + Nephron
 
 Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des Nephrons, Adressen, Form-Baustein der Niere, Niere (Grundgerüst), Körper → Niere, Niere → Nephron, Funktion, Lupe und Hilfe, Krankheitsbilder und Medikamente, Nephron-Schema. Jeder Schritt ist ein eigener Pull Request und wird mit `tools/vergleich.js` gegen die Referenz von `main` geprüft; Abweichungen nur, wo vereinbart.
 
-- [ ] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
+- [x] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
   - nur in AR (WebXR und AR Quick Look): Tubulus bei Durchsicht 60 % statt 32 % deckend; Glomerulus, Arteriolen, peritubuläre Kapillaren und Vasa recta 80 % statt 46–60 %; am Bildschirm unverändert
-- [ ] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
-- [ ] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
-- [ ] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan
+- [x] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
+- [x] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
+- [x] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan
   - Frontalschnitt wie im Lehrbuch (aufgeschnitten oder geschlossen), ca. 11 cm groß
   - Strukturen: Nierenkapsel, Rinde, Mark mit Pyramiden, Nierensäulen, Papillen, kleine und große Kelche, Nierenbecken, Anfang des Harnleiters, Nierenarterie und -vene mit Segment-, Interlobär-, Bogen- und Interlobulargefäßen, Nebenniere; ohne Fettkapsel
   - Funktion als Simulation: Durchblutung (Arterie → Rinde → Vene) und Harnabfluss (Papille → Kelche → Becken → Harnleiter) als Teilchen, Tempo wie beim Nephron, Kennzahlen (ca. 1,2 l Blut/min, 180 l Primärharn → 1,5 l Harn am Tag)
   - Lupe: Papille (Sammelrohre münden, Harn tropft in den Kelch); Hilfekarten
-  - Krankheitsbilder: Harnstau durch Nierenstein, Nierenarterienstenose (Renin, Bluthochdruck); Medikamente: Ramipril (ACE-Hemmer), Ibuprofen (NSAR, drosselt die Nierendurchblutung)
+  - Krankheitsbilder: Harnstau durch Nierenstein, Nierenarterienstenose (Renin, Bluthochdruck); Medikamente: Ramipril (ACE-Hemmer), Ibuprofen (NSAR, drosselt die Nierendurchblutung); Reiter und Erklärkarte über `Kern.Szenarien` wie beim Herz, Wirkung über weich überblendete Größen (Blut, Harn, Stau, Stein, Stenose, Renin) in der Strömung und an der Geometrie (erweitertes Hohlsystem, Stein im Harnleiter, Taille in der Nierenarterie, Renin-Markierungen); `tools/vergleich.js`: Kontexte `szenarien` und `szenarien-handy`
   - Körper → Niere: Kamerafahrt wie zum Herz (`organ.start` der Niere, Rückfahrt aus Niere und Nephron ins Nahbild der linken Niere; die rechte Niere blendet mit aus); die Infokarte der Nieren im Körper zeigt „Niere öffnen“ statt „Nephron ansehen“
-- [ ] Nephron als Zoomstufe innerhalb der Niere
+- [x] Nephron als Zoomstufe innerhalb der Niere
   - markiertes Nephron in einer Pyramide; Knopf „Nephron ansehen“ in der Niere und Antippen des Nephrons; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt wie beim Körper
-- [ ] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
+- [x] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
   - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
+- Umsetzung: Schritte 1–4 als #23–#26, Schritt 5 als #27, Schritte 6–10 zusammen in einem Pull Request (Wunsch von Jörn); nach einem Container-Neustart zeichnete Chromium minimal anders (ca. 110 Pixel), ab Schritt 9 wurde daher gegen eine neu aufgenommene Referenz verglichen
+- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema überdeckt dort die Werkzeugleiste, Kennzahlen der Niere stehen nur in der Lesehilfe am Desktop)
 
 ### Phase 3 und weiter – Organ für Organ
 

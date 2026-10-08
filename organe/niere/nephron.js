@@ -20,6 +20,7 @@ var MARKUP = `<div id="title">
     <button id="cam2" class="gh">Henle-Schleife</button>
     <button id="cam3" class="gh">Sammelrohr</button>
     <span class="sep"></span>
+    <button id="bSchema" class="gh" title="Das Nephron als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
     <button id="bLupe" class="gh" title="Lupe: Nahansicht eines Abschnitts">Lupe</button>
     <button id="bAR" class="gh" title="Das Nephron mit der Kamera in den Raum stellen">AR</button>
   </div>
@@ -36,6 +37,12 @@ var MARKUP = `<div id="title">
 </div>
 
 <div class="panel" id="rail"></div>
+
+<div class="panel" id="schema" aria-label="Schema des Nephrons">
+  <div class="sch-head"><span class="kick">Schema &middot; Nephron</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, von vorn.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
+  <div id="schemaBox"></div>
+</div>
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
@@ -77,18 +84,6 @@ var MARKUP = `<div id="title">
   </div>
   <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
-var organ = { renderer: {}, aufbauen: aufbauen };
-function aufbauen(umg) {
-umg.bereich.innerHTML = MARKUP;
-
-var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
-var DEG = Math.PI / 180;
-var DUR = 12.0;    // Sekunden pro Umlauf
-var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
-
-/* =====================================================================
-   1. Geometrie-Werkzeuge
-   ===================================================================== */
 function smooth(pts, n) {
   return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5).getSpacedPoints(n);
 }
@@ -105,6 +100,112 @@ function smoothSeg(pts, n, prev, next) {
   for (var i = 0; i <= n; i++) out.push(c.getPointAt(u0 + (u1 - u0) * i / n));
   return out;
 }
+/* ---------------------------------------------------------------------
+   Bahnen des Nephrons: Kontrollpunkte und Radien in Nephron-Koordinaten (Einheit = Modelleinheit, Nephron ca. 17 lang). Reine Funktion
+   (kein Zufall, keine three.js-Objekte ausser Vektoren): das Modell (aufbauen) und organ.form.bahnen (Niere) nutzen dieselben Werte.
+   --------------------------------------------------------------------- */
+function bahnenDef() {
+var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
+var DEG = Math.PI / 180;
+var GC = V(0, 5.80, 0), GR = 1.45, RO = GR + 0.05, RI = GR - 0.05;
+var POLE = V(-1.42, 5.78, 0);
+var AX = V(0.880, -0.440, 0.180).normalize();               // Achse zum Harnpol
+var AU = V(0, 0, 1).addScaledVector(AX, -AX.z).normalize(); // Fenster zeigt nach vorn
+var AW = new THREE.Vector3().crossVectors(AX, AU).normalize();
+var TH0 = 27 * DEG, NECK_L = 1.02, NECK_R = 0.30, WALL = 0.048;
+var MOUTH = GC.clone().addScaledVector(AX, RO * Math.cos(TH0) + NECK_L);
+var WIN = 66 * DEG;                                           // halbe Fensterbreite
+
+/* Gefaesspol: hier tritt die zufuehrende Arteriole ein und teilt sich,
+   daneben verlaesst die abfuehrende Arteriole das Knaeuel. */
+var HUB = GC.clone().add(V(-1.18, 0, 0));
+var HA = HUB.clone().add(V(0, 0.13, 0.04));
+var HE = HUB.clone().add(V(0, -0.15, -0.04));
+
+var AFF = [V(-5.40, 7.60, 0.50), V(-3.60, 7.00, 0.30), V(-2.40, 6.32, 0.10), V(-1.66, 6.00, 0.06), HA.clone()];
+var EFF = [HE.clone(), V(-1.66, 5.58, -0.08), V(-2.22, 5.16, -0.20), V(-2.92, 4.48, -0.35)];
+var VASA = [
+  V(-2.92, 4.48, -0.35), V(-1.70, 3.70, -0.95), V(0.40, 2.75, -1.05), V(2.30, 1.75, -1.02),
+  V(3.02, -0.50, -0.98), V(3.10, -3.50, -0.96), V(3.05, -6.50, -0.94),
+  V(2.55, -8.55, -0.92), V(1.40, -8.95, -0.92), V(0.25, -8.45, -0.92),
+  V(-0.15, -6.00, -0.94), V(-0.20, -3.00, -0.96), V(-0.25, 0.00, -0.96),
+  V(-0.38, 2.60, -0.98), V(-1.00, 4.35, -1.60), V(-2.05, 6.25, -1.52), V(-3.65, 7.65, -1.15)
+];
+/* Windungen so weich, dass das Rohr sich nirgends selbst durchdringt
+   (engste Kurve 1,09-mal so weit wie der Rohrradius). */
+var PROX = [MOUTH.clone(), V(2.56, 4.52, 0.54), V(3.10, 4.72, 0.72), V(3.60, 5.28, 0.40), V(4.14, 5.30, -0.12),
+            V(4.56, 4.74, -0.08), V(4.38, 4.10, 0.25), V(3.74, 3.78, 0.32), V(3.10, 3.55, -0.02),
+            V(2.62, 3.06, 0.14), V(2.30, 2.55, 0)];
+var DESC = [V(2.30, 2.55, 0), V(2.20, 0.60, 0.10), V(2.10, -1.80, 0), V(2.02, -4.20, 0.08), V(1.96, -6.40, 0)];
+var LOOP = [V(1.96, -6.40, 0), V(1.90, -7.45, 0), V(1.42, -8.05, 0), V(0.85, -7.55, 0), V(0.72, -6.55, 0)];
+var ASC = [V(0.72, -6.55, 0), V(0.72, -4.20, -0.08), V(0.76, -1.60, 0), V(0.82, 1.00, 0.06),
+           V(0.95, 3.20, -0.18), V(0.10, 4.10, -0.95), V(-0.90, 4.35, -1.05), V(-1.50, 5.28, -0.86)];
+var DIST = [V(-1.50, 5.28, -0.86), V(-1.55, 6.30, -1.05), V(-0.60, 7.30, -0.95), V(0.90, 7.35, -0.95),
+            V(2.60, 7.50, -0.60), V(4.12, 6.90, -0.62), V(5.50, 5.85, -0.32)];
+var COLL = [V(5.50, 5.85, -0.32), V(5.85, 4.90, -0.12), V(5.92, 2.50, 0), V(5.96, -0.50, 0),
+            V(5.98, -3.50, 0), V(6.00, -6.50, 0), V(6.02, -8.90, 0)];
+/* Aufsteigendes Vas rectum neben dem Sammelrohr: nimmt das Wasser aus dem
+   Mark auf und bringt es nach oben zurueck in den Kreislauf. */
+var CAPC = [V(5.12, -8.55, -0.52), V(5.10, -6.00, -0.56), V(5.08, -3.00, -0.58), V(5.06, 0.00, -0.58),
+            V(5.04, 2.10, -0.62), V(4.92, 3.30, -1.05), V(4.80, 3.75, -2.25)];
+/* Rohrradien je Abschnitt (gleichmaessig ueber die Laenge verteilt) */
+var RAD = { afferens: [0.25, 0.24, 0.22, 0.2, 0.17], efferens: [0.13, 0.14, 0.145, 0.15],
+  prox: [0.30, 0.29, 0.27, 0.25, 0.23], desc: [0.23, 0.16, 0.15, 0.15, 0.15], loop: [0.15, 0.15, 0.15], asc: [0.15, 0.20, 0.24, 0.24, 0.24],
+  dist: [0.23, 0.22, 0.22, 0.23], coll: [0.23, 0.36, 0.40, 0.44, 0.46] };
+return { GC: GC, GR: GR, RO: RO, RI: RI, POLE: POLE, AX: AX, AU: AU, AW: AW, TH0: TH0, NECK_L: NECK_L, NECK_R: NECK_R, WALL: WALL, MOUTH: MOUTH, WIN: WIN,
+  HUB: HUB, HA: HA, HE: HE, AFF: AFF, EFF: EFF, VASA: VASA, PROX: PROX, DESC: DESC, LOOP: LOOP, ASC: ASC, DIST: DIST, COLL: COLL, CAPC: CAPC, RAD: RAD };
+}
+
+/* Startansicht des Modells (Kamera in Nephron-Koordinaten, ohne Versatz des Bildbereichs): gemeinsam fuer das Modell (aufbauen) und den
+   Andockpunkt organ.start (Kamerafahrt aus der Niere), damit Fahrt-Ende und Modell zusammenpassen */
+var START = { theta: 0.26, phi: 1.46, dist: 27, target: [1.2, -0.5, 0], versatz: [0, 0] };
+/* Hintergrundtafel Rinde/Mark: Breite, Hoehe, Mitte (x, y), Tiefe z; grenze = y der Grenze Rinde/Mark */
+var TAFEL = { b: 14.4, h: 18.2, mx: 0.5, my: -0.6, z: -2.6, grenze: 3 };
+var organ = { renderer: {}, aufbauen: aufbauen };
+/* Startansicht bei Fenstergroesse w x h: die Werte, mit denen aufbauen die Uebersicht zeigt (hier unabhaengig von der Fenstergroesse,
+   kein Versatz des Bildbereichs) */
+organ.start = function (w, h) {
+  return { theta: START.theta, phi: START.phi, dist: START.dist, target: START.target.slice(), versatz: START.versatz.slice() };
+};
+/* Form fuer die Niere (Kern.Organe.nephron.form): Mittellinien der Bahnen aus denselben Kontrollpunkten wie das Modell (bahnenDef).
+   Jede Bahn: id, pts (Punktliste [x, y, z] in Nephron-Koordinaten), r (Radien gleichmaessig ueber die Laenge). glomerulus: Mitte und
+   Radius der Kugel (Nierenkoerperchen). tafel: Grenzen der Hintergrundtafel (x0, x1, y0, y1, z, grenze = Rinde/Mark). Kein Zufall. */
+organ.form = {
+  START: START,
+  tafel: { x0: TAFEL.mx - TAFEL.b / 2, x1: TAFEL.mx + TAFEL.b / 2, y0: TAFEL.my - TAFEL.h / 2, y1: TAFEL.my + TAFEL.h / 2, z: TAFEL.z, grenze: TAFEL.grenze },
+  bahnen: function () {
+    var B = bahnenDef(), arr = function (p) { return [p.x, p.y, p.z]; };
+    function laenge(pts) { var l = 0; for (var i = 1; i < pts.length; i++) l += pts[i].distanceTo(pts[i - 1]); return l; }
+    function bahn(id, pts, prev, next, r) {   /* geglaettet wie im Modell (smoothSeg), etwa alle 0,4 Einheiten ein Punkt */
+      var n = Math.max(6, Math.ceil(laenge(pts) / 0.4));
+      return { id: id, pts: smoothSeg(pts, n, prev, next).map(arr), r: r.slice() };
+    }
+    return {
+      glomerulus: { mitte: arr(B.GC), r: B.GR },
+      linien: [
+        bahn('afferens', B.AFF, null, null, B.RAD.afferens),
+        bahn('efferens', B.EFF, null, null, B.RAD.efferens),
+        bahn('prox', B.PROX, null, B.DESC[1], B.RAD.prox),
+        bahn('desc', B.DESC, B.PROX[B.PROX.length - 2], B.LOOP[1], B.RAD.desc),
+        bahn('loop', B.LOOP, B.DESC[B.DESC.length - 2], B.ASC[1], B.RAD.loop),
+        bahn('asc', B.ASC, B.LOOP[B.LOOP.length - 2], B.DIST[1], B.RAD.asc),
+        bahn('dist', B.DIST, B.ASC[B.ASC.length - 2], B.COLL[1], B.RAD.dist),
+        bahn('coll', B.COLL, B.DIST[B.DIST.length - 2], null, B.RAD.coll)
+      ]
+    };
+  }
+};
+function aufbauen(umg) {
+umg.bereich.innerHTML = MARKUP;
+
+var V = function (x, y, z) { return new THREE.Vector3(x, y, z); };
+var DEG = Math.PI / 180;
+var DUR = 12.0;    // Sekunden pro Umlauf
+var NKEY = 120;    // Stuetzstellen, teilbar durch alle Teilchenzahlen
+
+/* =====================================================================
+   1. Geometrie-Werkzeuge
+   ===================================================================== */
 /* Laplace-Glaettung mit festen Enden: nimmt engen Kurven die Schaerfe */
 function relax(pts, iters, lam) {
   var p = pts.map(function (q) { return q.clone(); }), n = p.length, i, it;
@@ -314,7 +415,7 @@ var renderer = umg.renderer;
 
 var scene = umg.szene;
 var camera = umg.kamera;
-var view = { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) };
+var view = { theta: START.theta, phi: START.phi, dist: START.dist, target: V(START.target[0], START.target[1], START.target[2]) };
 
 var envTex = umg.envTex;
 
@@ -458,47 +559,8 @@ reg('flowDrug', { de: 'Torasemid', lat: 'Torasemidum', grp: 'Str\u00f6mung', col
 /* =====================================================================
    4. Bahnen und Bauteile
    ===================================================================== */
-var GC = V(0, 5.80, 0), GR = 1.45, RO = GR + 0.05, RI = GR - 0.05;
-var POLE = V(-1.42, 5.78, 0);
-var AX = V(0.880, -0.440, 0.180).normalize();               // Achse zum Harnpol
-var AU = V(0, 0, 1).addScaledVector(AX, -AX.z).normalize(); // Fenster zeigt nach vorn
-var AW = new THREE.Vector3().crossVectors(AX, AU).normalize();
-var TH0 = 27 * DEG, NECK_L = 1.02, NECK_R = 0.30, WALL = 0.048;
-var MOUTH = GC.clone().addScaledVector(AX, RO * Math.cos(TH0) + NECK_L);
-var WIN = 66 * DEG;                                           // halbe Fensterbreite
-
-/* Gefaesspol: hier tritt die zufuehrende Arteriole ein und teilt sich,
-   daneben verlaesst die abfuehrende Arteriole das Knaeuel. */
-var HUB = GC.clone().add(V(-1.18, 0, 0));
-var HA = HUB.clone().add(V(0, 0.13, 0.04));
-var HE = HUB.clone().add(V(0, -0.15, -0.04));
-
-var AFF = [V(-5.40, 7.60, 0.50), V(-3.60, 7.00, 0.30), V(-2.40, 6.32, 0.10), V(-1.66, 6.00, 0.06), HA.clone()];
-var EFF = [HE.clone(), V(-1.66, 5.58, -0.08), V(-2.22, 5.16, -0.20), V(-2.92, 4.48, -0.35)];
-var VASA = [
-  V(-2.92, 4.48, -0.35), V(-1.70, 3.70, -0.95), V(0.40, 2.75, -1.05), V(2.30, 1.75, -1.02),
-  V(3.02, -0.50, -0.98), V(3.10, -3.50, -0.96), V(3.05, -6.50, -0.94),
-  V(2.55, -8.55, -0.92), V(1.40, -8.95, -0.92), V(0.25, -8.45, -0.92),
-  V(-0.15, -6.00, -0.94), V(-0.20, -3.00, -0.96), V(-0.25, 0.00, -0.96),
-  V(-0.38, 2.60, -0.98), V(-1.00, 4.35, -1.60), V(-2.05, 6.25, -1.52), V(-3.65, 7.65, -1.15)
-];
-/* Windungen so weich, dass das Rohr sich nirgends selbst durchdringt
-   (engste Kurve 1,09-mal so weit wie der Rohrradius). */
-var PROX = [MOUTH.clone(), V(2.56, 4.52, 0.54), V(3.10, 4.72, 0.72), V(3.60, 5.28, 0.40), V(4.14, 5.30, -0.12),
-            V(4.56, 4.74, -0.08), V(4.38, 4.10, 0.25), V(3.74, 3.78, 0.32), V(3.10, 3.55, -0.02),
-            V(2.62, 3.06, 0.14), V(2.30, 2.55, 0)];
-var DESC = [V(2.30, 2.55, 0), V(2.20, 0.60, 0.10), V(2.10, -1.80, 0), V(2.02, -4.20, 0.08), V(1.96, -6.40, 0)];
-var LOOP = [V(1.96, -6.40, 0), V(1.90, -7.45, 0), V(1.42, -8.05, 0), V(0.85, -7.55, 0), V(0.72, -6.55, 0)];
-var ASC = [V(0.72, -6.55, 0), V(0.72, -4.20, -0.08), V(0.76, -1.60, 0), V(0.82, 1.00, 0.06),
-           V(0.95, 3.20, -0.18), V(0.10, 4.10, -0.95), V(-0.90, 4.35, -1.05), V(-1.50, 5.28, -0.86)];
-var DIST = [V(-1.50, 5.28, -0.86), V(-1.55, 6.30, -1.05), V(-0.60, 7.30, -0.95), V(0.90, 7.35, -0.95),
-            V(2.60, 7.50, -0.60), V(4.12, 6.90, -0.62), V(5.50, 5.85, -0.32)];
-var COLL = [V(5.50, 5.85, -0.32), V(5.85, 4.90, -0.12), V(5.92, 2.50, 0), V(5.96, -0.50, 0),
-            V(5.98, -3.50, 0), V(6.00, -6.50, 0), V(6.02, -8.90, 0)];
-/* Aufsteigendes Vas rectum neben dem Sammelrohr: nimmt das Wasser aus dem
-   Mark auf und bringt es nach oben zurueck in den Kreislauf. */
-var CAPC = [V(5.12, -8.55, -0.52), V(5.10, -6.00, -0.56), V(5.08, -3.00, -0.58), V(5.06, 0.00, -0.58),
-            V(5.04, 2.10, -0.62), V(4.92, 3.30, -1.05), V(4.80, 3.75, -2.25)];
+var BD = bahnenDef();
+var GC = BD.GC, GR = BD.GR, RO = BD.RO, RI = BD.RI, POLE = BD.POLE, AX = BD.AX, AU = BD.AU, AW = BD.AW, TH0 = BD.TH0, NECK_L = BD.NECK_L, NECK_R = BD.NECK_R, WALL = BD.WALL, MOUTH = BD.MOUTH, WIN = BD.WIN, HUB = BD.HUB, HA = BD.HA, HE = BD.HE, AFF = BD.AFF, EFF = BD.EFF, VASA = BD.VASA, PROX = BD.PROX, DESC = BD.DESC, LOOP = BD.LOOP, ASC = BD.ASC, DIST = BD.DIST, COLL = BD.COLL, CAPC = BD.CAPC;
 
 /* ---- Kapsel und Trichter zum Tubulus: ein durchgehendes Stueck ---- */
 (function () {
@@ -606,9 +668,9 @@ var CAP_R = 0.10;
 
 /* ---- Arteriolen (durchscheinend) und Vasa recta ---- */
 (function () {
-  add('afferens', tube(smooth(AFF, 48), lerpArr([0.25, 0.24, 0.22, 0.2, 0.17], 48), 20, true, false),
+  add('afferens', tube(smooth(AFF, 48), lerpArr(BD.RAD.afferens, 48), 20, true, false),
     MAT.afferens, 'Arteriola_afferens');
-  add('efferens', tube(smooth(EFF, 30), lerpArr([0.13, 0.14, 0.145, 0.15], 30), 18, false, false),
+  add('efferens', tube(smooth(EFF, 30), lerpArr(BD.RAD.efferens, 30), 18, false, false),
     MAT.efferens, 'Arteriola_efferens');
   var p = smooth(VASA, 90), cols = [], i;
   for (i = 0; i <= 90; i++)
@@ -622,6 +684,8 @@ var NB = {};                                   /* Nachbarpunkte je Abschnitt */
 /* Krankheitsbilder aendern die Konzentration im Rohr. Jeder Abschnitt kennt zwei
    Farbreihen (normal / Hyperglykaemie) und wird stufenlos zwischen ihnen gemischt. */
 var TUBE_MESHES = [];
+/* Konzentration (mosmol/l) am Anfang und Ende jedes Abschnitts: normal, Hyperglykaemie, Torasemid - auch das Schema faerbt danach */
+var N_CONC = { prox: [300, 300], desc: [300, 1150], loop: [1150, 1200], asc: [1200, 110], dist: [110, 300], coll: [300, 1200] };
 var HG_CONC = { prox: [300, 300], desc: [300, 700], loop: [700, 720], asc: [720, 180], dist: [180, 300], coll: [300, 450] };
 /* Torasemid: ohne Salzpumpe kein Gradient - der Harn bleibt fast isoton */
 var LT_CONC = { prox: [300, 300], desc: [300, 420], loop: [420, 430], asc: [430, 310], dist: [310, 300], coll: [300, 320] };
@@ -648,12 +712,12 @@ function setTubuleMix(wH, wT) {
 function segPts(sid, pts, n) { return smoothSeg(pts, n, NB[sid][0], NB[sid][1]); }
 NB.prox = [null, DESC[1]]; NB.desc = [PROX[PROX.length - 2], LOOP[1]]; NB.loop = [DESC[DESC.length - 2], ASC[1]];
 NB.asc = [LOOP[LOOP.length - 2], DIST[1]]; NB.dist = [ASC[ASC.length - 2], COLL[1]]; NB.coll = [DIST[DIST.length - 2], null];
-seg('prox', PROX, 110, [0.30, 0.29, 0.27, 0.25, 0.23], 300, 300, 'Tubulus_proximalis', false, false);
-seg('desc', DESC, 55, [0.23, 0.16, 0.15, 0.15, 0.15], 300, 1150, 'Pars_descendens', false, false);
-seg('loop', LOOP, 34, [0.15, 0.15, 0.15], 1150, 1200, 'Ansa_nephroni', false, false);
-seg('asc', ASC, 70, [0.15, 0.20, 0.24, 0.24, 0.24], 1200, 110, 'Pars_ascendens', false, false);
-seg('dist', DIST, 55, [0.23, 0.22, 0.22, 0.23], 110, 300, 'Tubulus_distalis', false, false);
-seg('coll', COLL, 60, [0.23, 0.36, 0.40, 0.44, 0.46], 300, 1200, 'Ductus_colligens', false, true);
+seg('prox', PROX, 110, BD.RAD.prox, N_CONC.prox[0], N_CONC.prox[1], 'Tubulus_proximalis', false, false);
+seg('desc', DESC, 55, BD.RAD.desc, N_CONC.desc[0], N_CONC.desc[1], 'Pars_descendens', false, false);
+seg('loop', LOOP, 34, BD.RAD.loop, N_CONC.loop[0], N_CONC.loop[1], 'Ansa_nephroni', false, false);
+seg('asc', ASC, 70, BD.RAD.asc, N_CONC.asc[0], N_CONC.asc[1], 'Pars_ascendens', false, false);
+seg('dist', DIST, 55, BD.RAD.dist, N_CONC.dist[0], N_CONC.dist[1], 'Tubulus_distalis', false, false);
+seg('coll', COLL, 60, BD.RAD.coll, N_CONC.coll[0], N_CONC.coll[1], 'Ductus_colligens', false, true);
 
 /* ---- Peritubulaeres Netz ----
    Die Kapillare laeuft mit deutlichem Abstand um den Tubulus, damit man
@@ -727,11 +791,11 @@ function tubeColsRB(n) {
 
 /* ---- Hintergrundtafel Rinde/Mark ---- */
 (function () {
-  var g = new THREE.PlaneGeometry(14.4, 18.2, 2, 40);
-  g.translate(0.5, -0.6, -2.6);
+  var g = new THREE.PlaneGeometry(TAFEL.b, TAFEL.h, 2, 40);
+  g.translate(TAFEL.mx, TAFEL.my, TAFEL.z);
   var pos = g.attributes.position, cols = [];
   for (var i = 0; i < pos.count; i++) {
-    var y = pos.getY(i), t = y >= 3 ? 0 : Math.min(1, (3 - y) / 12);
+    var y = pos.getY(i), t = y >= TAFEL.grenze ? 0 : Math.min(1, (TAFEL.grenze - y) / 12);
     cols.push.apply(cols, new THREE.Color(0x16262D).lerp(new THREE.Color(0x53332A), t).convertSRGBToLinear().toArray());
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
@@ -1217,7 +1281,7 @@ function updateParticles() {
     if (!S.mesh.visible) return;
     for (var i = 0; i < S.list.length; i++) {
       var p = S.list[i], mu = scenMul(p), r = mu > 0.002 ? sample(p, ((base + p.off) % 1 + 1) % 1) : null;
-      if (r) { p.last.copy(r.pos); _sc.setScalar(r.s * mu); } else _sc.setScalar(0);
+      if (r) { p.last.copy(r.pos); p.vis = r.s * mu; _sc.setScalar(p.vis); } else { p.vis = 0; _sc.setScalar(0); }   /* vis: Groesse fuers Schema */
       _m4.compose(p.last, p.rot, _sc);
       S.mesh.setMatrixAt(i, _m4);
     }
@@ -1391,7 +1455,7 @@ function applyScenarioVisuals() {
 })();
 
 var PRESETS = [
-  { theta: 0.26, phi: 1.46, dist: 27, target: V(1.2, -0.5, 0) },
+  { theta: START.theta, phi: START.phi, dist: START.dist, target: V(START.target[0], START.target[1], START.target[2]) },
   { theta: 0.30, phi: 1.42, dist: 7.0, target: V(0.2, 5.62, 0) },
   { theta: 0.20, phi: 1.50, dist: 9.5, target: V(1.3, -6.9, -0.3) },
   { theta: 0.55, phi: 1.50, dist: 15, target: V(5.3, -2.5, 0) }
@@ -2051,7 +2115,7 @@ var AR = Kern.AR.xr({
 document.getElementById('arSee').onclick = function () { document.getElementById('bSee').click(); this.textContent = seeThrough ? 'Undurchsichtig' : 'Durchsichtig'; };
 document.getElementById('arLab').onclick = function () { document.getElementById('bLab').click(); this.textContent = showLabels ? 'Beschriftung aus' : 'Beschriftung an'; };
 document.getElementById('arPause').onclick = function () { document.getElementById('bPlay').click(); this.textContent = playing ? 'Pause' : 'Weiter'; };
-document.getElementById('bAR').onclick = function () { AR.start(); };
+document.getElementById('bAR').onclick = function () { if (schemaOn) setSchema(false); AR.start(); };
 AR.check();
 /* ---- Beschriftung im AR: Schilder mit Führungslinien (Kern.AR.schilder) ---- */
 var ARL = Kern.AR.schilder({
@@ -2085,6 +2149,359 @@ function arQuickLook() {
 }
 
 /* =====================================================================
+   12. Schema - das Nephron als flaches Bild
+   Dieselben Bahnen wie das 3D-Modell (organ.form.bahnen, dazu Vasa recta, Kapillaren und Knaeuel), von vorn auf x/y projiziert: so
+   sieht man sie in der Startansicht. Dieselben Teilchen (Position, Groesse und Sichtbarkeit kommen aus updateParticles), dieselbe
+   Konzentrationsfarbe im Rohr, dieselben Pfeile. Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall.
+   ===================================================================== */
+var SCH = (function () {
+  var NS = 'http://www.w3.org/2000/svg', K = 30, TF = organ.form.tafel;
+  var X0 = TF.x0, Y1 = TF.y1, W = Math.round((TF.x1 - TF.x0) * K), H = Math.round((TF.y1 - TF.y0) * K), YG = Math.round((Y1 - TF.grenze) * K * 10) / 10;
+  var BRASS = '#E0A94A', DIM = '#8DA7B1', INK = '#E7EFF0', FAINT = '#5E7883', DARK = '#0B171C';
+  var svg = null, built = false, onPick = null, SG = {}, SUBS = [], POOL = {}, CHIPS = {}, DYN = {}, PTS = {}, bahn = null;
+  var seen = { vis: -1, hg: -1, lt: -1 }, AROPA = {};
+  function f1(v) { return Math.round(v * 10) / 10; }
+  function X(x) { return f1((x - X0) * K); }
+  function Y(y) { return f1((Y1 - y) * K); }
+  function E(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function toA(list) { return list.map(function (p) { return Array.isArray(p) ? p : [p.x, p.y, p.z]; }); }
+  function pd(pts, i0, i1) {
+    var s = '';
+    for (var i = i0; i <= i1; i++) s += (i === i0 ? 'M' : 'L') + X(pts[i][0]) + ' ' + Y(pts[i][1]);
+    return s;
+  }
+  function radAt(r, f) {
+    var t = Math.max(0, Math.min(1, f)) * (r.length - 1), i0 = Math.min(r.length - 2, Math.floor(t));
+    return r.length < 2 ? r[0] : r[i0] + (r[i0 + 1] - r[i0]) * (t - i0);
+  }
+  function hexMix(a, b, t) { return '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString(); }
+  /* Gruppe je Struktur: wird bei Auswahl und beim Ein-/Ausblenden der Ebenen gedimmt bzw. versteckt */
+  function grp(parent, sid) {
+    var g = E('g', null, parent);
+    (SG[sid] = SG[sid] || []).push(g);
+    return g;
+  }
+  /* Rohr als Linienzug aus kurzen Stuecken mit eigener Breite (und Farbe): erst alle Umrisse, dann alle Fuellungen.
+     col: Farbe oder f -> Farbe; sid/Abschnitt: wird bei Szenarien neu gefaerbt (SUBS) */
+  function rohr(g, pts, r, col, o) {
+    o = o || {};
+    var n = pts.length, step = o.step || 2, k, outl = o.umriss === false ? null : E('g', { fill: 'none', stroke: DARK, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    var fill = E('g', { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g), jobs = [];
+    for (k = 0; k < n - 1; k += step) {
+      var k1 = Math.min(n - 1, k + step), f = (k + k1) / 2 / (n - 1), w = 2 * K * radAt(r, f), d = pd(pts, k, k1);
+      if (outl) E('path', { d: d, 'stroke-width': f1(w + 3.4) }, outl);
+      var el = E('path', { d: d, 'stroke-width': f1(w), stroke: typeof col === 'function' ? col(f) : col }, fill);
+      if (o.sid) SUBS.push({ el: el, sid: o.sid, f: f });
+    }
+  }
+  /* Farbe der Konzentration an Stelle f des Abschnitts sid, gemischt wie die Rohrfarben im 3D-Modell */
+  function concStyle(sid, f, wH, wT) {
+    var a = N_CONC[sid], b = HG_CONC[sid], c = LT_CONC[sid];
+    var n = conc(a[0] + (a[1] - a[0]) * f), h = conc(b[0] + (b[1] - b[0]) * f), t = conc(c[0] + (c[1] - c[0]) * f);
+    var o = new THREE.Color(n.r + (h.r - n.r) * wH + (t.r - n.r) * wT, n.g + (h.g - n.g) * wH + (t.g - n.g) * wT, n.b + (h.b - n.b) * wH + (t.b - n.b) * wT);
+    return '#' + o.convertLinearToSRGB().getHexString();
+  }
+  function recolor() {
+    SUBS.forEach(function (s) { s.el.setAttribute('stroke', concStyle(s.sid, s.f, SW.hg, SW.lt)); });
+  }
+  /* Pfeil von (x0,y0) nach (x1,y1) in Bildpunkten: Linie mit Spitze */
+  function pfeil(g, x0, y0, x1, y1, col, w, kopf) {
+    var dx = x1 - x0, dy = y1 - y0, l = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / l, uy = dy / l, hk = kopf || 5.5, hb = hk * 0.55;
+    var bx = x1 - ux * hk, by = y1 - uy * hk;
+    E('line', { x1: f1(x0), y1: f1(y0), x2: f1(bx), y2: f1(by), stroke: col, 'stroke-width': w || 1.8, 'stroke-linecap': 'round' }, g);
+    E('polygon', { points: f1(x1) + ',' + f1(y1) + ' ' + f1(bx - uy * hb) + ',' + f1(by + ux * hb) + ' ' + f1(bx + uy * hb) + ',' + f1(by - ux * hb), fill: col }, g);
+  }
+  function abzeichen(g, x, y, n) {
+    E('circle', { cx: f1(x), cy: f1(y), r: 6.6, fill: DARK, stroke: BRASS, 'stroke-width': 1.3 }, g);
+    E('text', { x: f1(x), y: f1(y + 3.3), 'text-anchor': 'middle', fill: BRASS, 'font-size': 9.5, 'font-weight': 700 }, g, String(n));
+  }
+  function text(g, x, y, s, size, fill, o) {
+    var a = { x: f1(x), y: f1(y), fill: fill, 'font-size': size, 'font-weight': 500, stroke: '#122229', 'stroke-width': 2.6, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+    if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+    return E('text', a, g, s);
+  }
+  function mark(v) { return Math.round(v / 50) * 50; }
+
+  function build(box, pick) {
+    if (built) return;
+    onPick = pick;
+    box.innerHTML = '';
+    svg = E('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'font-family': 'Inter, "Segoe UI", system-ui, sans-serif',
+      'aria-label': 'Schema: Nephron mit Nierenkörperchen, Tubulus und Gefäßen, die Teilchen fließen wie im 3D-Modell' }, box);
+    bahn = organ.form.bahnen();
+    var L = {}, i;
+    bahn.linien.forEach(function (b) { L[b.id] = b; });
+    var defs = E('defs', null, svg);
+    var gr = E('linearGradient', { id: 'schMark', gradientUnits: 'userSpaceOnUse', x1: 0, y1: YG, x2: 0, y2: Y(-9) }, defs);
+    E('stop', { offset: 0, 'stop-color': '#1E343C' }, gr); E('stop', { offset: 1, 'stop-color': '#5B3A2F' }, gr);
+
+    /* ---- Hintergrund: Rinde oben, Mark unten mit Salzgehalt ---- */
+    var gb = grp(svg, 'grad');
+    E('rect', { x: 0, y: 0, width: W, height: YG, fill: '#1E343C' }, gb);
+    E('rect', { x: 0, y: YG, width: W, height: f1(H - YG), fill: 'url(#schMark)' }, gb);
+    E('line', { x1: 0, y1: YG, x2: W, y2: YG, stroke: '#7F6A55', 'stroke-width': 1, 'stroke-dasharray': '5 4' }, gb);
+
+    /* ---- Gefaesse hinten: Vasa recta (absteigend rot, aufsteigend blau), aufsteigendes Vas rectum am Sammelrohr ---- */
+    var gv = grp(svg, 'vasa'); gv.setAttribute('opacity', 0.85);
+    var vp = toA(smooth(BD.VASA, 90)), cp = toA(smooth(BD.CAPC, 70));
+    PTS.vasa = vp.concat(cp);
+    rohr(gv, vp, [0.13, 0.14, 0.15, 0.16, 0.17], function (f) { return hexMix(0xC8605E, 0x6F98C8, Math.pow(f, 1.25)); }, { step: 3 });
+    rohr(gv, cp, [0.10, 0.11, 0.12], function (f) { return hexMix(0x9A7EB0, 0x6F98C8, f); }, { step: 3 });
+
+    /* ---- Peritubulaere Kapillaren: Wendeln um den proximalen und distalen Tubulus, Zu- und Abfluss ---- */
+    var gp = grp(svg, 'peritub'); gp.setAttribute('opacity', 0.8);
+    var hp = toA(HELIX.prox.hx), hd = toA(HELIX.dist.hx), hf = toA(smooth(HELIX.feed, 40)), hn = toA(smooth(HELIX.drain, 30));
+    PTS.peritub = hp.concat(hd, hf, hn);
+    var RB = function (f) { return hexMix(0xD8747A, 0x7FA6D2, f); };
+    rohr(gp, hf, [0.11, 0.095, 0.085], function (f) { return hexMix(0xC8605E, 0xD8747A, f); }, { step: 8, umriss: false });
+    rohr(gp, hp, [CAP_PT], RB, { step: 8, umriss: false });
+    rohr(gp, hd, [CAP_PT], RB, { step: 8, umriss: false });
+    rohr(gp, hn, [CAP_PT, 0.10, 0.11], function () { return '#7FA6D2'; }, { step: 8, umriss: false });
+
+    /* ---- Tubulus: Farbe = Konzentration im Rohr; hinten (distal, aufsteigend) zuerst ---- */
+    ['dist', 'asc', 'coll', 'desc', 'loop', 'prox'].forEach(function (sid) {
+      PTS[sid] = L[sid].pts;
+      rohr(grp(svg, sid), L[sid].pts, L[sid].r, '#F3EEDC', { sid: sid });
+    });
+    recolor();
+
+    /* ---- Nierenkoerperchen: Kapsel mit Hals, Knaeuel, Arteriolen, Macula densa ---- */
+    var gB = grp(svg, 'bowman'), cx = X(GC.x), cy = Y(GC.y);
+    var n0 = GC.clone().addScaledVector(AX, RO * Math.cos(TH0) * 0.9);
+    E('line', { x1: X(n0.x), y1: Y(n0.y), x2: X(MOUTH.x), y2: Y(MOUTH.y), stroke: DARK, 'stroke-width': f1(2 * NECK_R * K + 3.4), 'stroke-linecap': 'round' }, gB);
+    E('line', { x1: X(n0.x), y1: Y(n0.y), x2: X(MOUTH.x), y2: Y(MOUTH.y), stroke: '#BFA9A0', 'stroke-width': f1(2 * NECK_R * K), 'stroke-linecap': 'round' }, gB);
+    E('circle', { cx: cx, cy: cy, r: f1(RO * K), fill: '#151F25', 'fill-opacity': 0.92, stroke: DARK, 'stroke-width': 6.6 }, gB);
+    E('circle', { cx: cx, cy: cy, r: f1(RO * K), fill: 'none', stroke: '#BFA9A0', 'stroke-width': 3.2 }, gB);
+    var gG = grp(svg, 'glomerulus'), dl = '';
+    LOOPS.forEach(function (pts) { var a = toA(pts); dl += pd(a, 0, a.length - 1); });
+    E('path', { d: dl, fill: 'none', stroke: '#E39088', 'stroke-width': f1(2 * CAP_R * K), 'stroke-opacity': 0.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, gG);
+    PTS.glomerulus = [[GC.x + 0.3, GC.y + 0.2, GC.z + 0.5]]; PTS.bowman = PTS.glomerulus;
+    rohr(grp(svg, 'afferens'), L.afferens.pts, L.afferens.r, '#D65A4A', { step: 3 });
+    rohr(grp(svg, 'efferens'), L.efferens.pts, L.efferens.r, '#A8453A', { step: 3 });
+    PTS.afferens = PTS.efferens = PTS.glomerulus;
+    var gM = grp(svg, 'macula');
+    E('ellipse', { cx: X(-1.50), cy: Y(5.28), rx: f1(0.22 * K), ry: f1(0.26 * K), fill: '#74B189', stroke: DARK, 'stroke-width': 1 }, gM);
+    PTS.macula = PTS.glomerulus;
+
+    /* ---- Teilchen: je Strom ein Pool; Form wie im 3D-Modell (Scheibe, Kugel, Sechsring, Oktaeder) ---- */
+    var gt = E('g', { 'pointer-events': 'none' }, svg);
+    var FORM = {
+      flowBlood: { tag: 'circle', a: { r: 3.5, fill: '#C0303C', stroke: '#4A0A12', 'stroke-width': 0.7 } },
+      flowWater: { tag: 'circle', a: { r: 2.5, fill: '#3A9BEA', stroke: '#0C2F55', 'stroke-width': 0.5 } },
+      flowSalt: { tag: 'circle', a: { r: 2.5, fill: '#C266FF', stroke: '#3A0F66', 'stroke-width': 0.5 } },
+      flowGluc: { tag: 'path', a: { d: 'M4.2 0L2.1 3.6L-2.1 3.6L-4.2 0L-2.1 -3.6L2.1 -3.6Z', fill: '#F5B301', stroke: '#6B4700', 'stroke-width': 0.6 } },
+      flowDrug: { tag: 'path', a: { d: 'M0 -5L4.4 0L0 5L-4.4 0Z', fill: '#33E0A0', stroke: '#06462E', 'stroke-width': 0.6 } }
+    };
+    Object.keys(PSTREAMS).forEach(function (sid) {
+      var S = PSTREAMS[sid], fm = FORM[sid], g = E('g', { 'data-s': sid }, gt), arr = [];
+      for (i = 0; i < S.list.length; i++) {
+        var e = E(fm.tag, fm.a, g); e.setAttribute('display', 'none');
+        arr.push({ el: e, on: false, tf: '' });
+      }
+      POOL[sid] = arr;
+    });
+
+    /* ---- Vorgaenge: Pfeile und Abzeichen an den Stationen, Legende, Osmolaritaet ---- */
+    var ga = E('g', { 'pointer-events': 'none' }, svg);
+    /* Pfeile des 3D-Modells: Wasser tritt aus (absteigender Schenkel, Sammelrohr), Salz wird gepumpt (aufsteigender Schenkel) */
+    function modellPfeile(list, col, key, min) {
+      var g = E('g', null, ga); AROPA[key] = g;
+      list.forEach(function (e) {
+        var x0 = X(e.a.x), y0 = Y(e.a.y), dx = X(e.a.x + e.d.x * e.l) - x0, dy = Y(e.a.y + e.d.y * e.l) - y0, l = Math.sqrt(dx * dx + dy * dy);
+        if (l < 0.01) { dx = 1; dy = 0; l = 1; }
+        var s = Math.max(min, l) / l;
+        pfeil(g, x0, y0, x0 + dx * s, y0 + dy * s, col, 1.9, 5);
+      });
+    }
+    modellPfeile(EXITS, '#3A9BEA', 'wasser', 11);
+    modellPfeile(SALT, '#C266FF', 'salz', 14);
+    var gx = E('g', { stroke: '#FF6A5C', 'stroke-width': 2.4, 'stroke-linecap': 'round', opacity: 0 }, ga); DYN.kreuz = gx;     /* Torasemid: Pumpe steht still */
+    var kc = TUB.pts[TUB.start.asc + Math.round(0.33 * (TUB.start.dist - TUB.start.asc))];
+    E('line', { x1: X(kc.x) - 9, y1: Y(kc.y) - 9, x2: X(kc.x) + 9, y2: Y(kc.y) + 9 }, gx); E('line', { x1: X(kc.x) - 9, y1: Y(kc.y) + 9, x2: X(kc.x) + 9, y2: Y(kc.y) - 9 }, gx);
+    /* Filtration: Pfeile vom Knaeuel in den Kapselraum */
+    var gf = E('g', null, ga);
+    [-10, -48, -78].forEach(function (deg) {
+      var a = deg * DEG, ux = Math.cos(a), uy = Math.sin(a);
+      pfeil(gf, cx + ux * 0.74 * K, cy - uy * 0.74 * K, cx + ux * 1.32 * K, cy - uy * 1.32 * K, '#3A9BEA', 1.8, 5);
+    });
+    /* Rueckresorption: aus dem Rohr zurueck ins Blut (Pfeile nach aussen); Sekretion: vom Blut ins Rohr (nach innen) */
+    var gr1 = E('g', null, ga), gs = E('g', null, ga);
+    [[3.60, 5.62, 3.60, 6.20], [4.96, 4.72, 5.40, 4.72]].forEach(function (a) { pfeil(gr1, X(a[0]), Y(a[1]), X(a[2]), Y(a[3]), '#6FB8F0', 1.9, 5); });
+    DYN.sekr = gs;
+    pfeil(gs, X(3.95), Y(2.50), X(3.85), Y(3.28), '#33E0A0', 1.9, 5);
+    /* Abzeichen */
+    var BA = { 1: [GC.x + 0.28, GC.y + 1.88], 2: [3.60, 6.46], 3: [4.30, 2.38], 4: [2.46, -2.0], 5: [1.36, -4.3], 6: [2.60, 8.05], 7: [6.78, -2.6] };
+    Object.keys(BA).forEach(function (k) { abzeichen(ga, X(BA[k][0]), Y(BA[k][1]), k); });
+
+    /* Osmolaritaet an den Stationen */
+    function chip(key, x, y, px, py) {
+      var g = E('g', null, ga);
+      if (px !== undefined) { E('line', { x1: f1(px), y1: f1(py), x2: f1(x), y2: f1(y), stroke: BRASS, 'stroke-width': 0.8, 'stroke-dasharray': '2 2' }, g); E('circle', { cx: f1(px), cy: f1(py), r: 1.8, fill: BRASS }, g); }
+      E('rect', { x: f1(x - 16), y: f1(y - 7), width: 32, height: 14, rx: 7, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, g);
+      CHIPS[key] = E('text', { x: f1(x), y: f1(y + 3.4), 'text-anchor': 'middle', fill: BRASS, 'font-size': 9.5, 'font-weight': 600, 'font-family': 'ui-monospace, Menlo, Consolas, monospace' }, g, '');
+    }
+    chip('kapsel', X(2.02), Y(6.40), cx + 0.8 * RO * K * Math.cos(0.5), cy - 0.8 * RO * K * Math.sin(0.5));
+    chip('scheitel', X(1.40), Y(-6.95), X(1.42), Y(-7.75));
+    chip('asc', X(-3.3), Y(3.55), X(-1.5), Y(5.28));
+    chip('coll', X(6.02), Y(-9.35), X(6.02), Y(-8.9));
+    /* Skala am rechten Rand: Osmolaritaet des Gewebes (wie die Tafel: 300 an der Grenze, 1200 tief im Mark) */
+    var gk = E('g', null, ga), sx = W - 7;
+    E('line', { x1: sx, y1: YG, x2: sx, y2: Y(3 - 11.5), stroke: FAINT, 'stroke-width': 1 }, gk);
+    [300, 600, 900, 1200].forEach(function (o) {
+      var y = Y(3 - 11.5 * (o - 300) / 900);
+      E('line', { x1: sx - 4, y1: y, x2: sx, y2: y, stroke: FAINT, 'stroke-width': 1 }, gk);
+      text(gk, sx - 7, y + 3.2, String(o), 9, DIM, { 'text-anchor': 'end', 'stroke-width': 2 });
+    });
+    text(gk, sx - 7, YG - 5, 'mosmol/l', 8, FAINT, { 'text-anchor': 'end', 'stroke-width': 2 });
+    /* Rinde und Mark */
+    text(ga, 8, 16, 'RINDE', 9.5, DIM, { 'letter-spacing': 1.6, 'font-weight': 600 });
+    text(ga, 8, YG + 14, 'MARK', 9.5, DIM, { 'letter-spacing': 1.6, 'font-weight': 600 });
+    text(ga, 8, YG - 5, 'Grenze Rinde / Mark', 8.5, FAINT, { 'font-style': 'italic' });
+
+    /* Legende der Vorgaenge im freien Teil des Marks */
+    var LG = [
+      ['Filtration', 'Glomerulus: Wasser und Salz', 'werden abgepresst'],
+      ['Rückresorption', 'Prox. Tubulus: Salz, Wasser,', 'Zucker (ca. 65 %) zurück ins Blut'],
+      ['Sekretion', 'Prox. Tubulus: Medikamente', '(z. B. Torasemid), H⁺ ins Rohr'],
+      ['Wasser tritt aus', 'Absteigender Schenkel: das', 'Wasser folgt dem Salz im Mark'],
+      ['Salz wird gepumpt', 'Aufsteigender Schenkel: Salz ins', 'Gewebe, das Wasser bleibt im Rohr'],
+      ['Feinabstimmung (Aldosteron)', 'Distaler Tubulus: Natrium', 'gegen Kalium getauscht'],
+      ['Wasser zurück mit ADH', 'Sammelrohr: Wasser ins Vas rectum,', 'der Harn wird konzentriert']
+    ];
+    var ly = YG + 38;
+    LG.forEach(function (t, k) {
+      abzeichen(ga, 16, ly - 3, k + 1);
+      DYN['lg' + k] = text(ga, 29, ly, t[0], 10.5, BRASS, { 'font-weight': 700 });
+      DYN['lg' + k + 'a'] = text(ga, 29, ly + 11.5, t[1], 8.6, DIM, { 'stroke-width': 2.2, 'class': 'sch-d' });
+      DYN['lg' + k + 'b'] = text(ga, 29, ly + 22, t[2], 8.6, DIM, { 'stroke-width': 2.2, 'class': 'sch-d' });
+      ly += 40.5;
+    });
+
+    /* ---- Antippflaechen (unsichtbar, ueber allem): Bahn antippen waehlt die Struktur ---- */
+    var gh = E('g', { fill: 'none', stroke: '#000', 'stroke-opacity': 0, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'pointer-events': 'stroke' }, svg);
+    function flaeche(sid, pts, w) {
+      var g = E('g', { 'class': 'sz', 'data-info': sid }, gh);
+      E('path', { d: pd(pts, 0, pts.length - 1), 'stroke-width': w }, g);
+    }
+    flaeche('vasa', vp, 14); flaeche('vasa', cp, 14); flaeche('peritub', hp, 12); flaeche('peritub', hd, 12);
+    ['dist', 'asc', 'coll', 'desc', 'loop', 'prox'].forEach(function (sid) { flaeche(sid, L[sid].pts, sid === 'coll' ? 26 : 18); });
+    flaeche('afferens', L.afferens.pts, 18); flaeche('efferens', L.efferens.pts, 16);
+    var gw = E('g', { 'class': 'sz', 'data-info': 'bowman', 'pointer-events': 'all' }, svg);
+    E('circle', { cx: cx, cy: cy, r: f1(RO * K), fill: '#000', 'fill-opacity': 0, stroke: 'none' }, gw);
+    var gc = E('g', { 'class': 'sz', 'data-info': 'glomerulus', 'pointer-events': 'all' }, svg);
+    E('circle', { cx: cx, cy: cy, r: f1(0.98 * K), fill: '#000', 'fill-opacity': 0, stroke: 'none' }, gc);
+    var gm = E('g', { 'class': 'sz', 'data-info': 'macula', 'pointer-events': 'all' }, svg);
+    E('circle', { cx: X(-1.50), cy: Y(5.28), r: 9, fill: '#000', 'fill-opacity': 0 }, gm);
+    svg.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('.sz') : null;
+      if (onPick) onPick(t ? t.getAttribute('data-info') : null, e);
+    });
+    built = true;
+  }
+
+  /* Klickstelle im Bild -> naechster Punkt der angetippten Bahn im 3D-Modell (fuer die Lupe) */
+  function punkt(sid, e) {
+    var pts = PTS[sid];
+    if (!pts || !pts.length) return null;
+    var q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clientY;
+    var m = svg.getScreenCTM(), mx, my;
+    if (m) { q = q.matrixTransform(m.inverse()); mx = X0 + q.x / K; my = Y1 - q.y / K; } else { mx = pts[0][0]; my = pts[0][1]; }
+    var bi = 0, bd = 1e9;
+    for (var i = 0; i < pts.length; i++) { var dx = pts[i][0] - mx, dy = pts[i][1] - my, d = dx * dx + dy * dy; if (d < bd) { bd = d; bi = i; } }
+    return V(pts[bi][0], pts[bi][1], pts[bi][2]);
+  }
+
+  /* Werte an den Stationen: wie im Modell je Zustand (normal, Hyperglykaemie, Torasemid), weich ueberblendet */
+  function osm(sid, ende) {
+    var a = N_CONC[sid][ende], h = HG_CONC[sid][ende], t = LT_CONC[sid][ende];
+    return a + (h - a) * SW.hg + (t - a) * SW.lt;
+  }
+  function beschriften() {
+    var asc = osm('asc', 1);
+    CHIPS.kapsel.textContent = '300';
+    CHIPS.scheitel.textContent = String(mark(osm('loop', 1)));
+    CHIPS.asc.textContent = (SW.hg + SW.lt < 0.01 ? '≈\u202f' : '') + String(mark(asc));
+    CHIPS.coll.textContent = String(mark(osm('coll', 1)));
+    var lt = SW.lt > 0.5, hg = SW.hg > 0.5;
+    DYN.lg4.setAttribute('text-decoration', lt ? 'line-through' : 'none');
+    DYN.lg4b.textContent = lt ? 'Torasemid blockiert die Salzpumpe' : 'Gewebe, das Wasser bleibt im Rohr';
+    DYN.lg1b.textContent = hg ? 'Zucker bleibt teils im Rohr (SGLT am Limit)' : 'Zucker (ca. 65 %) zurück ins Blut';
+    DYN.lg2.setAttribute('fill', lt ? '#33E0A0' : BRASS);
+  }
+
+  var dirty = true;
+  function update(sel, enabledMap, visV) {
+    if (!built) return;
+    if (SW.hg !== seen.hg || SW.lt !== seen.lt) { seen.hg = SW.hg; seen.lt = SW.lt; recolor(); beschriften(); }
+    if (visV !== seen.vis || sel !== seen.sel) {
+      seen.vis = visV; seen.sel = sel;
+      Object.keys(SG).forEach(function (sid) {
+        var on = enabledMap[sid] !== false, op = !on ? 0 : ((sel && sel !== sid && sid !== 'grad') ? 0.3 : 1);
+        SG[sid].forEach(function (g) { g.setAttribute('opacity', sid === 'vasa' ? op * 0.85 : (sid === 'peritub' ? op * 0.8 : op)); g.setAttribute('display', on ? 'inline' : 'none'); });
+      });
+    }
+    /* Pfeile folgen den Deckkraeften der 3D-Pfeile (Torasemid loescht die Salzpumpe) */
+    var ow = MAT.waterArrow.opacity, os = MAT.saltArrow.opacity;
+    if (ow !== seen.ow) { seen.ow = ow; AROPA.wasser.setAttribute('opacity', ow); }
+    if (os !== seen.os) { seen.os = os; AROPA.salz.setAttribute('opacity', os); DYN.kreuz.setAttribute('opacity', 1 - os); }
+    /* Teilchen */
+    Object.keys(PSTREAMS).forEach(function (sid) {
+      var S = PSTREAMS[sid], pool = POOL[sid], show = S.mesh.visible;
+      for (var i = 0; i < S.list.length; i++) {
+        var p = S.list[i], q = pool[i], v = show ? p.vis : 0;
+        if (v > 0.03) {
+          var tf = 'translate(' + X(p.last.x) + ' ' + Y(p.last.y) + ') scale(' + (Math.round(Math.min(v, 1.5) * 20) / 20) + ')';
+          if (tf !== q.tf) { q.el.setAttribute('transform', tf); q.tf = tf; }
+          if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+        } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+      }
+    });
+  }
+  function abbauen() {
+    svg = null; built = false; onPick = null; bahn = null; SG = {}; SUBS = []; POOL = {}; CHIPS = {}; DYN = {}; PTS = {}; AROPA = {};
+    seen = { vis: -1, hg: -1, lt: -1 };
+  }
+  return { build: build, update: update, abbauen: abbauen, punkt: punkt, get svg() { return svg; } };
+})();
+
+/* Schema: Knopf, Schliessen, Antippen (Bahn waehlt die Struktur; bei eingeschalteter Lupe oeffnet sie die Lupe des Abschnitts) */
+var schemaOn = false, schemaKarte = false, schemaZu = null;
+function schemaPick(info, e) {
+  if (!info) { if (!LUPE.mode && !LUPE.open) setSelected(null); return; }
+  if (LUPE.mode || LUPE.open) {
+    var p = SCH.punkt(info, e);
+    if (p) { var s = lupeSectionAt(p); lupeSetSection(s.sec, s.depth, p); }
+    return;
+  }
+  if (STRUCT[info]) setSelected(info);
+}
+function setSchema(on) {
+  schemaOn = on;
+  document.getElementById('bSchema').classList.toggle('on', on);
+  if (on) { SCH.build(document.getElementById('schemaBox'), schemaPick); SCH.update(selected, enabled, visVersion); }
+  document.getElementById('schema').classList.toggle('show', on);
+  document.body.classList.toggle('schema', on);
+  canvas.style.visibility = on ? 'hidden' : '';
+  if (!on) { schemaZu = null; if (schemaKarte) { schemaKarte = false; document.body.classList.remove('schkarte'); } }
+  lastLabelKey = '';
+}
+document.getElementById('bSchema').onclick = function () { setSchema(!schemaOn); };
+document.getElementById('bSchemaX').onclick = function () { setSchema(false); };
+function schemaTick() {
+  SCH.update(selected, enabled, visVersion);
+  var k = !!SZ.aktiv;                                       /* Erklaerkarte offen: das Schema rueckt nach links */
+  if (k !== schemaKarte) { schemaKarte = k; document.body.classList.toggle('schkarte', k); }
+  /* schmaler Bildschirm: die Karte deckt das Bild, darum einmal je Krankheitsbild/Medikament einklappen */
+  if (window.innerWidth < 1000 && SZ.aktiv !== schemaZu) { schemaZu = SZ.aktiv; if (SZ.aktiv && SZ.offen) SZ.zuklappen(); }
+}
+
+/* =====================================================================
    10. Renderschleife
    ===================================================================== */
 function groesse(w, h) {
@@ -2107,10 +2524,11 @@ function loop(now, frame) {
   var scChanged = SZ.schritt(dt);                           /* weich ein- und ausblenden, auch in der Pause */
   if (scChanged) applyScenarioVisuals();
   updateParticles();
+  if (schemaOn) schemaTick();
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   if (inAR) { ARL.update(); renderer.render(scene, camera); return; }
   updateCamera();
-  renderer.render(scene, camera);
+  if (!schemaOn) renderer.render(scene, camera);
   lupeTick(dt);
   layoutLabels(window.innerWidth, window.innerHeight);
 }
@@ -2129,7 +2547,9 @@ organ.abbauen = function () {
   SZ.abbauen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
-  canvas.style.cursor = '';
+  canvas.style.cursor = ''; canvas.style.visibility = '';
+  SCH.abbauen();
+  document.body.classList.remove('schema', 'schkarte');
   /* DOM */
   if (LUPE.box.parentNode) LUPE.box.parentNode.removeChild(LUPE.box);
   umg.bereich.innerHTML = '';

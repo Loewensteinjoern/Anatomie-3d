@@ -5,7 +5,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 
 #title .sub{margin-top:3px;font-size:12px;color:var(--ink-dim);max-width:32ch}
 
-#rail{top:124px;left:22px;width:244px;max-height:calc(100vh - 350px);overflow-y:auto;
+#rail{top:124px;left:22px;width:244px;max-height:calc(100vh - 470px);overflow-y:auto;
   padding:14px 4px 12px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
@@ -13,8 +13,51 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 
 #legend p{margin:0;font-size:11.5px;line-height:1.65;color:var(--ink-dim)}
 #legend .note{margin-top:8px;font-size:10.5px;color:var(--ink-faint)}
+#legend .kz{color:var(--ink-dim)}
 
 #info{bottom:22px;left:286px;width:326px;padding:16px 18px 17px;display:none}
+#info #iOpen{margin-top:12px;border-color:var(--brass-dim);color:var(--ink)}
+#info #iOpen:hover{background:var(--panel-hi);border-color:var(--brass)}
+
+/* Reiter in der Leiste (Aussehen: core/kern.css); fuenf Reiter: zwei Zeilen (3 + 2), damit alle Namen lesbar bleiben */
+#rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
+#rail .tab{flex:1 1 calc(33.3% - 3px);font-size:10px;padding:6px 0}
+.pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte */
+#scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#scard .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+#scard .kick{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);padding-right:40px}
+#scard h3{margin:3px 0 8px;font-size:16px;font-weight:600;padding-right:40px}
+#scard .after:empty{display:none}
+#scard .qa{display:flex;gap:6px;margin-top:10px;align-items:center}
+#scard .score{font-family:var(--mono);font-size:11px;color:var(--brass);margin-right:auto}
+#scard .ok{color:#7CD69B}
+#scard .no{color:#F08A7E}
+
+/* Szenariokarte (Krankheiten, Medikamente): rechts unter der Werkzeugleiste, Aussehen: core/kern.css, .szkarte; der Bildbereich ist dann um ihre Breite schmaler */
+#kcard{top:150px;right:22px;width:330px;max-height:calc(100vh - 230px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#kcard.show{display:block}
+#kcard.show.weg{display:none}
+#kcard .kick,#kcard h3{padding-right:70px}
+#kcard.min{padding-bottom:6px}
+#kcard .lead{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--ink-dim)}
+#kcard .after{margin:4px 0 0;padding-top:9px;border-top:1px solid var(--line)}
+#kcard .after:empty{display:none}
+#kcard .after h5{margin:0 0 3px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+#kcard .after p{margin:0 0 8px;font-size:12px;line-height:1.5;color:var(--ink-dim)}
+
+/* Lupe (Papille): Lage und Groesse wie beim Nephron */
+#lupe{left:286px;bottom:22px;width:620px;padding:12px 14px 10px;display:none}
+#lupe .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+.lp-chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 10px}
+.lp-main{display:flex;gap:14px;align-items:flex-start}
+#lpCv{width:340px;height:236px;flex:0 0 340px;border-radius:2px;border:1px solid var(--line);display:block}
+.lp-text{flex:1;min-width:0;font-size:12px;line-height:1.45;color:var(--ink-dim)}
+.lp-text .lp-hint{margin:8px 0 0;font-size:10.5px;color:var(--ink-faint)}
+.lp-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:10.5px;color:var(--ink-faint)}
 
 @media (max-width:1000px){
   #tools .cap{display:none}
@@ -32,4 +75,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
     border-radius:0;border-left:0;border-right:0;border-bottom:0}
   #legend{display:none}
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 92px)}
+  #lupe{left:0;right:0;width:auto;top:auto;bottom:0;max-height:62vh;overflow-y:auto;border-radius:3px 3px 0 0;border-bottom:0}
+  .lp-main{flex-direction:column}
+  #lpCv{width:100%;height:auto;flex:none;aspect-ratio:340/236}
+  #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  #kcard{top:94px;left:12px;right:12px;width:auto;max-height:36vh}   /* unter der Export-Leiste (#exp, top 46 px) */
+  #rail .tabs{flex-wrap:nowrap}
+  #rail .tab{flex:1 1 0}
 }
+/* Die Werkzeugleiste wird auf schmalen Handys hoeher (Reihe 1 bricht unter 415 px um, Reihe 2 unter 379 px): die Infokarte bleibt darueber */
+@media (max-width:414px){ #info{bottom:calc(34vh + 124px)} }
+@media (max-width:378px){ #info{bottom:calc(34vh + 156px)} }
