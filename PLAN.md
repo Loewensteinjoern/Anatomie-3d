@@ -163,7 +163,7 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
 - [x] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
   - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
 - Umsetzung: Schritte 1–4 als #23–#26, Schritt 5 als #27, Schritte 6–10 zusammen in einem Pull Request (Wunsch von Jörn); nach einem Container-Neustart zeichnete Chromium minimal anders (ca. 110 Pixel), ab Schritt 9 wurde daher gegen eine neu aufgenommene Referenz verglichen
-- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema überdeckt dort die Werkzeugleiste, Kennzahlen der Niere stehen nur in der Lesehilfe am Desktop)
+- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema: Leiste ausgeblendet, Werkzeugleiste unten, Schema darüber; Kennzahlen der Niere stehen nur in der Lesehilfe am Desktop)
 
 ### Phase 3 und weiter – Organ für Organ
 
