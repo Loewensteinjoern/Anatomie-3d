@@ -320,35 +320,6 @@ var LF = null, RIP_R, RIP_YA, domY, DOM_R, DOM_L;
 function zst(y) { return LF.zst(y); }
 function zSternum(y) { return LF.zSternum(y); }
 
-/* Rippe i, Seite s: Stuetzpunkte; Abstand zur Lunge (lg) und Haut (hh) werden eingehalten */
-function rippeStuetz(i, s, lg, hh) {
-  var P = LF.rippen()[i], n = 15, pts = [], k, u, ph, x, z, y, dx, dz, l, m;
-  for (k = 0; k <= n; k++) {
-    u = k / n; ph = P.p0 + (P.p1 - P.p0) * u;
-    x = P.A * Math.sin(ph);
-    z = P.zc - P.B * Math.cos(ph) - 0.5 * Math.sin(PI * Math.min(1, u / 0.3));   /* erst nach hinten-seitlich */
-    y = P.yb + (P.ye - P.yb) * Math.pow(u, 1.4);
-    if (k === 0) x = 3.3;
-    pts.push([s * x, y, z]);
-  }
-  /* radial nach aussen schieben, bis Lunge und Haut passen */
-  for (k = 1; k <= n; k++) {
-    var p = pts[k];
-    dx = p[0]; dz = p[2] - P.zc; l = Math.sqrt(dx * dx + dz * dz); dx /= l; dz /= l;
-    for (m = 0; m < 40 && lg(p[0], p[1], p[2]) < RIP_R + 0.6; m++) {
-      var qx = p[0] + dx * 0.15, qz = p[2] + dz * 0.15;
-      if (huelle(qx, p[1], qz) > -(RIP_R + 0.8)) break;
-      p[0] = qx; p[2] = qz;
-    }
-  }
-  /* glaetten (Enden bleiben) */
-  for (m = 0; m < 2; m++) {
-    var q = pts.map(function (a) { return a.slice(); });
-    for (k = 1; k < n; k++) for (var c = 0; c < 3; c++) pts[k][c] = 0.25 * q[k - 1][c] + 0.5 * q[k][c] + 0.25 * q[k + 1][c];
-  }
-  return pts;
-}
-
 function skelett() {
   var kn = mat('skelett', 0xE6DCC6, { rough: 0.8, env: 0.2 });
   var sk = 'skelett';
@@ -386,7 +357,7 @@ function skelett() {
   var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [], lgs = { '-1': LF.lunge(-1, null), '1': LF.lunge(1, null) };
   LF.rippen().forEach(function (P, i) {
     [-1, 1].forEach(function (s) {
-      var pts = rippeStuetz(i, s, lgs[s], huelle), e = pts[pts.length - 1], ziel;
+      var pts = LF.rippeStuetz(i, s, lgs[s], huelle), e = pts[pts.length - 1], ziel;
       stab(sk, kn, [s * 0.9, P.yb, zst(P.yb) - 1.2], [s * 3.3, P.yb, P.zb], 0.5, 0.45, true);   /* Querfortsatz */
       rohr(sk, kn, pts, RIP_R, 48);
       (enden[i] = enden[i] || {})[s] = e;
