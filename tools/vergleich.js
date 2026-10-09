@@ -6,7 +6,7 @@
    funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz, Niere und
    Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere, #niere/nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -25,7 +25,7 @@
    #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
    datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut, größer; AR ohne Beschriftung)
    und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
-   lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
+   lädt das Herz-Skript und die Form-Bausteine der Niere und der Lunge im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
    Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
    Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,
@@ -33,6 +33,15 @@
    „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
    die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel und
    Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau.
+
+   Modell lunge (index.html#lunge): beide Lungenflügel mit Lappen, Atemwegen, Gefäßen, Rippenfell, Zwerchfell und Brustkorb. Kontexte desktop
+   (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura), Durchsicht, ohne Brustkorb,
+   ohne Beschriftung, Info; am Ende Atmung: Reiter, Zwerchfell voll, Schema (#bSchema), Ruheatmung, angestrengte Atmung, durchsichtige Rippen mit Druckzahlen,
+   Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von LungeApp.atmung() stehen in erg.atmung
+   und werden von `vergleichen` verglichen); danach die 3D-Lunge, die mitatmet (Schema zu, Ruheatmung „3d-einatmen“, angestrengte Atmung „3d-stress“, Rippen
+   durchsichtig), die Hilfekarte („hilfekarte“, „probier“ = „Probier das aus“) und das Üben („ueben“)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung
+   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR.
+   Der Vergleich des Atmungs-Schemas mit dem Original-Modell (Ebene 1) ist ein eigenes Werkzeug: tools/nachweis.js (Vorlage: tools/originale/).
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -46,7 +55,7 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Der Kontext uebergaenge-lunge (Körper → Lunge mit Kamerafahrt, Browser-Zurück mit Rückfahrt, Adresse #lunge, Zurück-Knopf „← Körper“) prüft den Endzustand ebenso, uebergaenge-lunge-handy zeigt dieselbe Fahrt auf dem Handy (Bilder fahrt-lunge und lunge). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
@@ -277,16 +286,18 @@ async function abbauAblauf(t, name, bedienung) {
     return;
   }
   /* Messwerte: Speicher, Szene (nur Rahmen-Objekte), DOM und Listener */
-  const messen = () => t.js(() => {
+  const messen = () => t.js((n) => {
     const R = Kern.Rahmen, info = R.renderer.info, kinder = (id) => { const e = document.getElementById(id); return e ? e.childNodes.length : null; };
-    return {
+    const m = {
       geometrien: info.memory.geometries, texturen: info.memory.textures, programme: info.programs.length,
       szene: R.szene.children.map((c) => c.type + (c.name ? ':' + c.name : '')),
       organ: kinder('organ'), labels: kinder('labels'), leaders: kinder('leaders'),
       bodyKinder: document.body.childElementCount, bodyKlasse: document.body.className,
       herzApp: typeof window.HerzApp !== 'undefined', koerperApp: typeof window.KoerperApp !== 'undefined', niereApp: typeof window.NiereApp !== 'undefined', listener: window.__listener()
     };
-  });
+    if (n === 'lunge') m.lungeApp = typeof window.LungeApp !== 'undefined';   /* nur beim Modell lunge (die Messwerte der übrigen bleiben gleich) */
+    return m;
+  }, name);
   const beenden = () => t.js(() => Kern.organBeenden());
   await beenden(); const m1 = await messen();
   await t.js((n) => { Kern.organStarten(n); }, name); await t.weiter(50); await beenden(); await t.weiter(2000); const m2 = await messen();
@@ -538,6 +549,59 @@ const MODELLE = {
       }) }
     }
   },
+  lunge: {
+    datei: 'index.html',
+    bereit: () => !!(window.LungeApp && window.LungeApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('bronchialbaum');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('hilus');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('zwerchfell-pleura');
+        await t.klick('#cam0'); await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
+        await t.klick('#bSee'); await t.klick('#bBrust'); await t.weiter(600); await t.bild('ohne-brustkorb');
+        await t.klick('#bBrust'); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
+        await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Atmung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben): Reiter, Regler, Schema; nach den Schema-Bildern die Werte von LungeApp.atmung() in erg.atmung */
+        const werte = async (name) => { (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-' + name] = await t.js(() => window.LungeApp.atmung()); };
+        await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.weiter(300); await t.bild('atmung');
+        await t.klick('#paneAtmung button[data-set="zwerch"][data-wert="100"]'); await t.weiter(2500); await t.bild('zwerchfell-voll');
+        await t.klick('#bSchema'); await t.weiter(300); await t.bild('schema-zwerchfell-voll'); await werte('schema-zwerchfell-voll');
+        await t.klick('#loEntspannen'); await t.weiter(3000);
+        await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema-ruhe-einatmen'); await werte('schema-ruhe-einatmen');
+        await t.weiter(1900); await t.bild('schema-ruhe-ausatmen'); await werte('schema-ruhe-ausatmen');
+        await t.klick('#loDemoStress'); await t.weiter(1500); await t.bild('schema-stress'); await werte('schema-stress');
+        await t.klick('#loRippenWahl button[data-rippen="kontur"]'); await t.klick('#loZahlen'); await t.weiter(500); await t.bild('schema-durchsichtig-zahlen'); await werte('schema-durchsichtig-zahlen');
+        await t.klick('#loTempoWahl button[data-tempo="0.25"]'); await t.weiter(800); await t.bild('schema-zeitlupe'); await werte('schema-zeitlupe');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('schema-pause'); await werte('schema-pause-1');
+        await t.weiter(1000); await t.bild('schema-pause'); await werte('schema-pause-2');   /* beide Bilder müssen gleich aussehen, die Werte ebenso */
+        /* die 3D-Lunge atmet mit (neue Bilder am Ende): Schema zu, Pause aus, Tempo normal, Rippen sichtbar, dann Ruheatmung und angestrengte Atmung in 3D; Hilfekarte, „Probier das aus“ und Üben */
+        await t.klick('#bCls'); await t.klick('#bSchemaX'); await t.klick('#bPlay'); await t.klick('#loTempoWahl button[data-tempo="1"]'); await t.klick('#loRippenWahl button[data-rippen="voll"]');
+        await t.klick('#loDemoRuhe'); await t.weiter(1200); await t.bild('3d-einatmen'); await werte('3d-einatmen');
+        await t.klick('#loDemoStress'); await t.weiter(1600); await t.bild('3d-stress'); await werte('3d-stress');
+        await t.klick('#loRippenWahl button[data-rippen="kontur"]'); await t.weiter(300); await t.bild('3d-rippen-durchsichtig'); await werte('3d-rippen-durchsichtig');
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(300); await t.bild('hilfekarte');
+        await t.klick('#paneHelp .dis >> nth=7'); await t.weiter(300); await t.bild('probier');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('bronchialbaum');
+        await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Atmung (neues Bild am Ende): Reiter Atmung, Schema offen, Ruheatmung; die Leiste bleibt bedienbar */
+        await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.klick('#bSchema'); await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema');
+        (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-schema'] = await t.js(() => window.LungeApp.atmung());
+        await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.weiter(300); await t.bild('3d-atmung');   /* Schema zu, Infokarte zu: die 3D-Lunge atmet mit */
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'lunge', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('bronchialbaum');
+        await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
+      }) }
+    }
+  },
   nephron: {
     datei: 'index.html',
     bereit: () => document.getElementById('boot').classList.contains('gone'),
@@ -595,17 +659,18 @@ const MODELLE = {
 };
 
 /* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
-const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron' };
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge' };
 /* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz, niere und nephron auf #herz / #niere / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
   herz: () => !!(window.HerzApp && window.HerzApp.ready) && document.getElementById('boot').classList.contains('gone'),
   niere: () => !!(window.NiereApp && window.NiereApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  lunge: () => !!(window.LungeApp && window.LungeApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['koerper', 'herz', 'niere', 'nephron']) {
+for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
@@ -673,6 +738,31 @@ MODELLE.atlas.kontexte['uebergaenge-niere'] = { opt: DESKTOP, init: [initListene
   const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && ATLAS_ENDZUSTAND_OK(z3);
   t.erg.uebergaengeNiere = { endzustand: [z1, z2, z3], ok };
   process.stdout.write('  uebergaenge-niere: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles)' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, z3])) + '\n');
+} };
+/* Kontext uebergaenge-lunge: Körper, Lunge wählen, Kamerafahrt (Bild mitten in der Fahrt), Lunge, Browser-Zurück mit Rückfahrt; dann die Adresse #lunge direkt
+   und der Zurück-Knopf des Atlas („← Körper“); Endzustand prüfen. uebergaenge-lunge-handy: dieselbe Fahrt auf dem Handy (Bilder fahrt-lunge und lunge) */
+const ATLAS_LUNGE_BEREIT = () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone');
+MODELLE.atlas.kontexte['uebergaenge-lunge'] = { opt: DESKTOP, init: [initListener], bereit: ATLAS_LUNGE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.js(() => window.KoerperApp.waehle('lunge')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-lunge'); await t.bisAdresse('#lunge');
+  await organ('lunge'); await t.weiter(1500); await t.bild('lunge');
+  await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt-lunge'); await t.weiter(1200); await t.bild('koerper-zurueck');
+  const z1 = await t.js(ATLAS_ENDZUSTAND);
+  await t.js(() => { location.hash = 'lunge'; }); await organ('lunge'); await t.weiter(1500); await t.bild('lunge-adresse');   /* Zurück-Knopf zeigt „← Körper“ */
+  const knopf = await t.js(() => document.getElementById('atlasZurueck').textContent.trim());
+  await t.klick('#atlasZurueck'); await organ('koerper'); await t.weiter(1500); await t.bild('koerper-von-lunge');
+  await t.weiter(1500);   /* Rückfahrt zu Ende */
+  const z2 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Körper/.test(knopf);
+  t.erg.uebergaengeLunge = { endzustand: [z1, z2], knopf, ok };
+  process.stdout.write('  uebergaenge-lunge: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+MODELLE.atlas.kontexte['uebergaenge-lunge-handy'] = { opt: HANDY, init: [initListener], bereit: ATLAS_LUNGE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.js(() => window.KoerperApp.waehle('lunge')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-lunge'); await t.bisAdresse('#lunge');
+  await organ('lunge'); await t.weiter(1500); await t.bild('lunge');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
@@ -1113,6 +1203,10 @@ async function vergleichen(va, vb) {
     }
     const vgl = (titel, x, y) => { if (JSON.stringify(x) === JSON.stringify(y)) ok.push(m + ' ' + titel + ': gleich'); else probleme.push(m + ' ' + titel + ': anders\n    vorher:  ' + JSON.stringify(x) + '\n    nachher: ' + JSON.stringify(y)); };
     vgl('AR (WebXR-Anfrage)', a.ar, b.ar);
+    for (const k of Object.keys(b.atmung || {})) {   /* Werte von LungeApp.atmung(): nur gegen vorhandene Referenz */
+      if (!a.atmung || !(k in a.atmung)) ok.push(m + ' Atmung ' + k + ': neu (keine Referenz)');
+      else vgl('Atmung ' + k, a.atmung[k], b.atmung[k]);
+    }
     const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
     for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
     vgl('Seitentext', a.text, textB);
@@ -1155,7 +1249,7 @@ async function vergleichen(va, vb) {
 /* =====================================================================
    5. Aufruf
    ===================================================================== */
-module.exports = { initZeit, initDownloads, initQuickLook, initWebXR, MODELLE, DESKTOP, HANDY };
+module.exports = { initZeit, initDownloads, initQuickLook, initWebXR, MODELLE, DESKTOP, HANDY, CHROMIUM_ARGS, ladePlaywright, server, ATLAS_BEREIT };   /* auch für tools/nachweis.js */
 if (require.main === module) (async () => {
   const [cmd, ...rest] = process.argv.slice(2);
   const opt = (n) => { const i = rest.indexOf(n); return i >= 0 ? rest.splice(i, 2)[1] : null; };
@@ -1163,7 +1257,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }

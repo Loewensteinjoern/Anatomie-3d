@@ -58,9 +58,9 @@ var STRUKTUREN = [
     text: 'Die obere Hohlvene sammelt das Blut aus Kopf, Hals und Armen, die untere aus Bauch, Becken und Beinen. Beide münden in den rechten Vorhof und bringen sauerstoffarmes Blut zum Herzen zurück.' },
   { id: 'milz', de: 'Milz', lat: 'Splen', system: 'kreislauf', detail: false,
     text: 'Die Milz liegt im linken Oberbauch unter dem Zwerchfell, hinter dem Magen. Als größtes lymphatisches Organ filtert sie das Blut, baut alte rote Blutkörperchen ab und bildet Abwehrzellen; zudem dient sie als Blutspeicher.' },
-  { id: 'luftroehre', de: 'Luftröhre und Bronchien', lat: 'Trachea et bronchi', system: 'atmung', detail: false,
+  { id: 'luftroehre', de: 'Luftröhre und Bronchien', lat: 'Trachea et bronchi', system: 'atmung', oeffnen: '#lunge', knopf: 'Lunge öffnen',
     text: 'Die etwa 10–12 cm lange Luftröhre führt vom Kehlkopf in den Brustraum und teilt sich in die beiden Hauptbronchien. Knorpelspangen halten sie offen; das Flimmerepithel befördert Schleim und Fremdkörper Richtung Rachen.' },
-  { id: 'lunge', de: 'Lunge', lat: 'Pulmo', system: 'atmung', detail: false,
+  { id: 'lunge', de: 'Lunge', lat: 'Pulmo', system: 'atmung', oeffnen: '#lunge', knopf: 'Lunge öffnen',
     text: 'Die rechte Lunge hat drei, die linke zwei Lappen; sie füllen den Brustraum beiderseits des Herzens. In den Lungenbläschen (Alveolen) tritt Sauerstoff ins Blut über und Kohlendioxid wird abgegeben.' },
   { id: 'zwerchfell', de: 'Zwerchfell', lat: 'Diaphragma', system: 'atmung', detail: false,
     text: 'Die kuppelförmige Muskelplatte trennt Brust- und Bauchraum. Als wichtigster Atemmuskel flacht es sich beim Einatmen ab und erweitert so den Brustraum; Speiseröhre, Aorta und untere Hohlvene treten durch Lücken hindurch.' },
@@ -314,59 +314,11 @@ function huelle(x, y, z) {
 /* =====================================================================
    4. Skelett
    ===================================================================== */
-var ZST = [[82, -7.5], [92, -4.8], [100, -4.2], [110, -5.8], [120, -7.5], [130, -7.6], [142, -6.2], [150, -4.5]];
 var RWT = [[100, 2.7], [114, 2.5], [117, 2.0], [140, 1.8], [143, 1.5], [150, 1.35]];
-function zst(y) { return interp(ZST, y); }
-function zSternum(y) { return 4.3 + (143 - y) * 0.31; }
-
-/* Rippen: Verlauf je Rippe (i = 0..11) als Ellipsenbogen um den Brustkorb; die Parameter dienen auch der Lunge (Innenraum) */
-var RIP_R = 0.5;
-var RIP_A = [6.6, 9.0, 11.4, 13.2, 14.3, 14.8, 15.0, 15.0, 14.8, 14.4, 13.4, 12.4];   /* halbe Breite der Rippenmittellinie */
-var RIP_XE = [2.6, 4.6, 6.2, 7.2, 8.0, 8.4, 8.6, 12.4, 13.0, 13.4, 12.9, 11.7];       /* seitlicher Abstand des vorderen Knochenendes */
-var RIP_YE = [139.1, 135.7, 132.0, 128.4, 124.8, 121.9, 119.8, 117.9, 116.2, 114.6, 112.4, 110.4];   /* Hoehe des vorderen Knochenendes */
-var RIP_YA = [139.4, 136.8, 134.0, 131.2, 128.4, 125.6, 123.2];      /* Ansatzhoehe am Brustbein (Rippe 1-7) */
-var RIP_ZE = [6.0, 4.6, 3.2, 0.8, -2.5];                             /* vorderes Ende Rippe 8-12 (z) */
-var RIP_P = null;
-function rippenParam() {
-  if (RIP_P) return RIP_P;
-  RIP_P = [];
-  for (var i = 0; i < 12; i++) {
-    var yb = 140 - 2.1 * i + 0.6, A = RIP_A[i], xe = RIP_XE[i];
-    var zb = zst(yb) - (i < 2 ? 1.2 : 1.6), ze = i < 7 ? zSternum(RIP_YA[i]) - (i < 5 ? 0.3 : i === 5 ? 0.6 : 1.3) : RIP_ZE[i - 7];
-    var ua = Math.sqrt(1 - Math.pow(3.3 / A, 2)), va = Math.sqrt(1 - Math.pow(xe / A, 2));
-    var B = (ze - zb) / (ua + va);
-    RIP_P.push({ yb: yb, ye: RIP_YE[i], A: A, B: B, zc: zb + B * ua, zb: zb, p0: Math.asin(3.3 / A), p1: PI - Math.asin(xe / A) });
-  }
-  return RIP_P;
-}
-/* Rippe i, Seite s: Stuetzpunkte; Abstand zur Lunge (lg) und Haut (hh) werden eingehalten */
-function rippeStuetz(i, s, lg, hh) {
-  var P = rippenParam()[i], n = 15, pts = [], k, u, ph, x, z, y, dx, dz, l, m;
-  for (k = 0; k <= n; k++) {
-    u = k / n; ph = P.p0 + (P.p1 - P.p0) * u;
-    x = P.A * Math.sin(ph);
-    z = P.zc - P.B * Math.cos(ph) - 0.5 * Math.sin(PI * Math.min(1, u / 0.3));   /* erst nach hinten-seitlich */
-    y = P.yb + (P.ye - P.yb) * Math.pow(u, 1.4);
-    if (k === 0) x = 3.3;
-    pts.push([s * x, y, z]);
-  }
-  /* radial nach aussen schieben, bis Lunge und Haut passen */
-  for (k = 1; k <= n; k++) {
-    var p = pts[k];
-    dx = p[0]; dz = p[2] - P.zc; l = Math.sqrt(dx * dx + dz * dz); dx /= l; dz /= l;
-    for (m = 0; m < 40 && lg(p[0], p[1], p[2]) < RIP_R + 0.6; m++) {
-      var qx = p[0] + dx * 0.15, qz = p[2] + dz * 0.15;
-      if (huelle(qx, p[1], qz) > -(RIP_R + 0.8)) break;
-      p[0] = qx; p[2] = qz;
-    }
-  }
-  /* glaetten (Enden bleiben) */
-  for (m = 0; m < 2; m++) {
-    var q = pts.map(function (a) { return a.slice(); });
-    for (k = 1; k < n; k++) for (var c = 0; c < 3; c++) pts[k][c] = 0.25 * q[k - 1][c] + 0.5 * q[k][c] + 0.25 * q[k + 1][c];
-  }
-  return pts;
-}
+/* Wirbelsaeule, Brustbein, Rippen- und Lungenform stammen aus dem Form-Baustein der Lunge (organe/lunge/lunge-form.js); er wird in bauen geladen, bevor das Skelett entsteht */
+var LF = null, RIP_R, RIP_YA, domY, DOM_R, DOM_L;
+function zst(y) { return LF.zst(y); }
+function zSternum(y) { return LF.zSternum(y); }
 
 function skelett() {
   var kn = mat('skelett', 0xE6DCC6, { rough: 0.8, env: 0.2 });
@@ -402,10 +354,10 @@ function skelett() {
   stab(sk, kn, [0, 84, -7.6], [0, 80.4, -6.2], 0.9, 0.4, true);
   /* Brustkorb: 12 Rippenpaare, Querfortsaetze, Rippenknorpel */
   als('brustkorb');
-  var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [], lgs = { '-1': sdfLunge(-1), '1': sdfLunge(1) };
-  rippenParam().forEach(function (P, i) {
+  var knorpel = mat(sk, 0xD5DDE3, { rough: 0.7, env: 0.25 }), enden = [], lgs = { '-1': LF.lunge(-1, null), '1': LF.lunge(1, null) };
+  LF.rippen().forEach(function (P, i) {
     [-1, 1].forEach(function (s) {
-      var pts = rippeStuetz(i, s, lgs[s], huelle), e = pts[pts.length - 1], ziel;
+      var pts = LF.rippeStuetz(i, s, lgs[s], huelle), e = pts[pts.length - 1], ziel;
       stab(sk, kn, [s * 0.9, P.yb, zst(P.yb) - 1.2], [s * 3.3, P.yb, P.zb], 0.5, 0.45, true);   /* Querfortsatz */
       rohr(sk, kn, pts, RIP_R, 48);
       (enden[i] = enden[i] || {})[s] = e;
@@ -466,13 +418,6 @@ function skelett() {
 /* =====================================================================
    5. Organe
    ===================================================================== */
-/* Zwerchfellkuppel: Hoehe der Flaeche ueber (x,z); xc = Mitte der Kuppel */
-function domY(x, z, xc, ytop) {
-  var u = (x - xc) / 9.5, v = (z - 0.5) / 10.5;
-  return ytop - 16 * (u * u + v * v);
-}
-
-var DOM_R = 118, DOM_L = 115.5;
 /* Herz aus dem Herz-Modell: Verschiebung (Herz-Koordinaten -> Koerper) und Abtaster der Herzform (fuer die Lungenbucht); leer = einfaches Ersatzherz */
 var HERZ_V = [2.0, 122.5, 2.4], herzSmp = null, herzP = null;
 
@@ -483,46 +428,6 @@ function sdfHerz(x, y, z) {
   d = smin(d, ell(x, y, z, 0.2, 125.6, 1.6, 3.4, 3.0, 2.6), 2);      // Vorhoefe
   d = smin(d, ell(x, y, z, -0.6, 121.6, 3.2, 2.6, 3.6, 2.4), 1.6);   // rechter Rand (rechter Vorhof/Kammer)
   return d;
-}
-/* Innenraum des Brustkorbs: elliptischer Querschnitt je Hoehe aus den Rippen (Abstand Rippe + 1.2 cm), schnuert die Lunge ein */
-var THX = null;
-function thoraxInnen(x, y, z) {
-  if (!THX) {
-    THX = rippenParam().map(function (P) { return [P.yb + (P.ye - P.yb) * 0.4, P.A - 1.7, P.B - 1.7, P.zc]; }).reverse();
-  }
-  var t = THX, n = t.length, a, i, f;
-  if (y <= t[0][0]) a = t[0]; else if (y >= t[n - 1][0]) a = t[n - 1];
-  else {
-    for (i = 1; i < n && y > t[i][0]; i++);
-    f = (y - t[i - 1][0]) / (t[i][0] - t[i - 1][0]);
-    a = [0, t[i - 1][1] + (t[i][1] - t[i - 1][1]) * f, t[i - 1][2] + (t[i][2] - t[i - 1][2]) * f, t[i - 1][3] + (t[i][3] - t[i - 1][3]) * f];
-  }
-  var u = x / a[1], v = (z - a[3]) / a[2];
-  return (Math.sqrt(u * u + v * v) - 1) * Math.min(a[1], a[2]);
-}
-function sdfLunge(s) {
-  var cx = s * 8.4, ytop = s < 0 ? DOM_R : DOM_L, xc = s * 6.5;
-  var rx = s < 0 ? 5.2 : 4.9;
-  return function (x, y, z) {
-    var d = ell(x, y, z, cx - s * 0.18 * Math.max(0, y - 122), 125, -0.8, rx, 19, 7.8);   // Spitze neigt sich zur Mitte
-    d = S.smax(d, thoraxInnen(x, y, z), 1.0);
-    d = Math.max(d, 0.4 * (domY(x, z, xc, ytop) + 0.5 - y));
-    if (herzSmp) {
-      d = S.smax(d, -(herzSmp.val(x - HERZ_V[0], y - HERZ_V[1], z - HERZ_V[2]) - 0.4), 0.8);   // Herzbucht nach der Form des Herzens
-      if (s > 0) d = S.smax(d, -kap(x, y, z, 4.7, 127, -3.2, 3.8, 110, -2.6, 2.1), 0.8);       // Aortenrinne
-    } else if (s > 0) {
-      d = S.smax(d, -ell(x, y, z, 4.6, 120.5, 2.8, 6.4, 8.0, 5.2), 1);          // Herzbucht
-      d = S.smax(d, -kap(x, y, z, 5.1, 134, -4.1, 3.8, 110, -2.6, 2.1), 0.8);  // Aortenrinne
-    }
-    /* Lappengrenzen: flache Furchen */
-    var sc = Math.max(Math.abs(0.515 * (y - 123) + 0.857 * z) - 0.5, -(d + 2.0));
-    d = Math.max(d, -sc);
-    if (s < 0) {
-      var sh = Math.max(Math.abs(y - 129.5) - 0.5, -(d + 2.0), 1 - z);
-      d = Math.max(d, -sh);
-    }
-    return d;
-  };
 }
 function sdfLeber(x, y, z) {
   var d = ell(x, y, z, -4.0, 109.8, 0.8, 9.0, 8.4, 7.0);             // rechter Lappen
@@ -539,7 +444,7 @@ function sdfMagen(x, y, z) {
 }
 /* Nieren aus dem Form-Baustein der Niere (organe/niere/niere-form.js; er wird mit dem Niere-Modul nachgeladen): Promise der Form, Wert null = einfacher Ersatz.
    Die Form liegt in anatomischen Achsen um die Mitte der linken Niere; die rechte Niere ist die gespiegelte linke (x -> -x), damit der Hilus zur Mitte zeigt. */
-var nierenP = null;
+var nierenP = null, lungenP = null;
 /* Mitte der Niere s (1 = links, -1 = rechts) */
 function nierenMitte(s) { return [s * 7.5, s > 0 ? 105 : 102.5, -6.2]; }
 function sdfNiere(s, form) {
@@ -701,10 +606,11 @@ async function organe() {
     rohr('atmung', lu, [[s * 6.2, 123, -2.5], [s * 9.5, 118, -1.0]], 0.45, 8);
   });
   als('lunge');
+  var lh = herzSmp ? { smp: herzSmp, v: HERZ_V } : null;   // Herzbucht nach dem Herzen, falls vorhanden
   var lm = mat('atmung', 0xE39AA4, { rough: 0.5, coat: 0.3, coatRough: 0.45 });
-  await sdfMesh('atmung', lm, sdfLunge(-1), b(-15, 105, -10, -1.5, 146.5, 9.5), h);
+  await sdfMesh('atmung', lm, LF.lunge(-1, lh), LF.grenzen(-1), h);
   if (abgebaut) return; await weiter('Lungen');
-  await sdfMesh('atmung', lm, sdfLunge(1), b(1.5, 105, -10, 15, 146.5, 9.5), h);
+  await sdfMesh('atmung', lm, LF.lunge(1, lh), LF.grenzen(1), h);
   if (abgebaut) return; await weiter('Lungen');
   als('zwerchfell');
   var zw = mat('atmung', 0xB5655A, { rough: 0.6, opacity: 0.3, side: THREE.DoubleSide });
@@ -785,6 +691,10 @@ async function bauen() {
   /* Niere-Modell nur als Skript nachladen (ohne Gestaltung; zuerst die Form, die der Koerper ohnehin braucht); ohne Modul bleibt die Form, ohne Form gilt der Ersatz */
   nierenP = Kern.organLaden('niere', { ohneCss: true }).then(function () { return Kern.Formen.niere || null; },
     function (e) { console.warn(e && e.message || e); return Kern.Formen && Kern.Formen.niere || null; });
+  /* Form der Lunge (Brustkorb, Rippen, Zwerchfellkuppel, Lungenfluegel): ohne sie kein Koerper, ein Ladefehler bricht den Aufbau ab */
+  lungenP = Kern.formLaden('lunge'); lungenP.catch(function () {});
+  /* Lungen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start); ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
+  lungenP.then(function () { return Kern.organLaden('lunge', { ohneCss: true }); }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -792,6 +702,8 @@ async function bauen() {
   await sdfMesh('haut', hm, huelle, [[-44, -1, -17], [44, 179, 19]], klein ? 1.6 : 1.2, function (f) { return setLoad(0.02 + f * 0.4); });
   if (abgebaut) return;
   await setLoad(0.45, 'Skelett'); if (abgebaut) return;
+  LF = await lungenP; if (abgebaut) return;
+  RIP_R = LF.RIP_R; RIP_YA = LF.RIP_YA; domY = LF.domY; DOM_R = LF.DOM_R; DOM_L = LF.DOM_L;
   skelett();
   await setLoad(0.58, 'Organe'); if (abgebaut) return;
   await organe(); if (abgebaut) return;
@@ -1113,14 +1025,18 @@ function layoutLabels(w, h) {
    die Kamera landet in der Startansicht des Detailmodells, dann wird die Adresse gesetzt
    ===================================================================== */
 /* Ziel je Struktur: Kamera in Koerper-Koordinaten (cm); ext = Breite und Hoehe (cm), die im freien Bereich Platz finden sollen */
+/* Strukturen, die das Lungen-Modell mitzeigt (Lungen, Luftroehre mit Bronchien, Zwerchfell, Rippen und Brustbein, Herz): sie bleiben bei der Fahrt sichtbar */
+var LUNGE_MIT = ['lunge', 'luftroehre', 'zwerchfell', 'brustkorb', 'herz'];
 var ZIELE = {
   herz: { theta: 0, phi: 1.52, dist: 34.5, target: [0.4 + HERZ_V[0], 1.0 + HERZ_V[1], -1.2 + HERZ_V[2]] },   /* Startansicht des Herz-Modells (Ersatz, wenn das Herz-Modul fehlt) */
+  lunge: { theta: 0, phi: PI / 2, ext: [36, 52], target: [0, 127, 0], mit: LUNGE_MIT },   /* Ersatz, wenn das Lungen-Modul fehlt (Ganzansicht der Lunge von vorn) */
   nieren: { phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von vorn, senkrecht auf die Schnittflaeche (Ersatz, wenn das Niere-Modul fehlt); theta s. zielFuer */
 };
+ZIELE.luftroehre = ZIELE.lunge;   /* gleiches Ziel: das Lungen-Modell */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1129,18 +1045,24 @@ function zielFuer(id, w, h) {
     var sn = ni.start(w, h), nm = nierenMitte(1);
     return { theta: sn.theta, phi: sn.phi, dist: sn.dist, target: V(sn.target[0] + nm[0], sn.target[1] + nm[1], sn.target[2] + nm[2]), versatz: sn.versatz };
   }
+  if (z === ZIELE.lunge && lu && lu.start) {   /* Startansicht der Lunge (Lungen-Koordinaten, um die Mitte lu.mitte im Koerper verschoben) */
+    var sl = lu.start(w, h), lm = lu.mitte;
+    return { theta: sl.theta, phi: sl.phi, dist: sl.dist, target: V(sl.target[0] + lm[0], sl.target[1] + lm[1], sl.target[2] + lm[2]), versatz: sl.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
   /* userData.anschluss: gehoert zur Struktur, aber nicht zum Detailmodell (Lungengefaessstummel, rechte Niere) - blendet mit aus */
-  STR[id].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  (ZIELE[id] && ZIELE[id].mit || [id]).forEach(function (sid) {   /* mit: weitere Strukturen, die das Detailmodell mitzeigt */
+    STR[sid].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  });
   wurzel.traverse(function (o) {
     if (zielObj.has(o) || !o.material || !o.visible) return;
     var ms = [].concat(o.material), frei = true;

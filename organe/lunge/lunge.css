@@ -1,0 +1,162 @@
+canvas{display:block;width:100%;height:100%;touch-action:none}
+
+.lbl{position:absolute;transform:translateY(-50%);white-space:nowrap;line-height:1.15;transition:opacity .18s}
+.lbl.sel b{color:var(--brass)}
+
+#title .sub{margin-top:3px;font-size:12px;color:var(--ink-dim);max-width:32ch}
+
+#rail{top:124px;left:22px;width:244px;max-height:calc(100vh - 470px);overflow-y:auto;
+  padding:14px 4px 12px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+
+.cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-faint);padding:0 6px 0 7px;min-width:72px}
+
+#legend p{margin:0;font-size:11.5px;line-height:1.65;color:var(--ink-dim)}
+#legend .note{margin-top:8px;font-size:10.5px;color:var(--ink-faint)}
+
+#info{bottom:22px;left:286px;width:326px;padding:16px 18px 17px;display:none}
+
+/* Reiter in der Leiste (Aussehen: core/kern.css); weitere Reiter kommen spaeter dazu */
+#rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
+#rail .tab{flex:1 1 calc(50% - 3px);font-size:10px;padding:6px 0}   /* vier Reiter: zwei Zeilen (2 + 2) */
+.pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte; der Inhalt der Hilfekarten ist HTML aus dem Thorax-Modell (p, ul, ol, li, .merk) */
+#scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#scard .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+#scard .kick{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);padding-right:40px}
+#scard h3{margin:3px 0 8px;font-size:16px;font-weight:600;padding-right:40px}
+#scard .after:empty{display:none}
+#scard .qa{display:flex;gap:6px;margin-top:10px;align-items:center}
+#scard .score{font-family:var(--mono);font-size:11px;color:var(--brass);margin-right:auto}
+#scard .ok{color:#7CD69B}
+#scard .no{color:#F08A7E}
+#scard .lead p,#scard .lead ul,#scard .lead ol{margin:0 0 9px;font-size:12.5px;line-height:1.5;color:var(--ink-dim)}
+#scard .lead ul,#scard .lead ol{padding-left:19px}
+#scard .lead li{margin-bottom:5px}
+#scard .lead b{color:var(--ink);font-weight:600}
+#scard .lead .merk{background:var(--panel-hi);border-left:3px solid var(--brass);padding:8px 11px;border-radius:0 3px 3px 0;font-size:12.5px;line-height:1.5;color:var(--ink)}
+
+@media (max-width:1000px){
+  #tools .cap{display:none}
+  #tools .gh{padding:6px 6px;font-size:11px}
+  #tools .sep{display:none}
+  #title .kicker{display:none}
+  .lbl b{font-size:11px}
+  .lbl i{display:none}
+  #wm{bottom:auto;top:44px;white-space:normal;text-align:center;width:92vw;font-size:9.5px}   /* oben unter dem Titel: unten schiene sie durch die Werkzeugleiste */
+  #title .sub{display:none}
+  #rail{top:auto;bottom:0;left:0;right:0;width:100%;max-height:34vh;
+    border-radius:0;border-left:0;border-right:0;border-bottom:0}
+  #legend{display:none}
+  #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 92px)}
+  #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Infokarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
+  #rail .tabs{flex-wrap:nowrap}
+  #rail .tab{flex:1 1 0}
+}
+/* Die Werkzeugleiste wird auf schmalen Handys hoeher (die Reihen brechen um): die Infokarte bleibt darueber */
+@media (max-width:414px){ #info{bottom:calc(34vh + 124px)} }
+@media (max-width:378px){ #info{bottom:calc(34vh + 156px)} }
+
+/* Reiter "Atmung" in der Leiste: Regler, Schnellknoepfe, Schalter (Aufbau und Texte wie im Thorax-Modell, Aussehen im Stil der App) */
+#paneAtmung{padding:0 10px}
+#paneAtmung .karte{border:1px solid var(--line);border-radius:3px;padding:10px 10px 11px;margin-bottom:10px}
+#paneAtmung .karte > .titel{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+#paneAtmung .karte > .titel b{font-weight:500;color:var(--brass);letter-spacing:.06em}
+#paneAtmung input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:10px 0 4px;height:44px}
+#paneAtmung input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:var(--panel-hi);border:1px solid var(--line)}
+#paneAtmung input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:34px;height:34px;margin-top:-13px;border-radius:50%;
+  background:var(--brass);border:3px solid var(--brass-dim);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#paneAtmung input[type=range]::-moz-range-track{height:10px;border-radius:5px;background:var(--panel-hi);border:1px solid var(--line)}
+#paneAtmung input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--brass);border:3px solid var(--brass-dim)}
+#paneAtmung input[type=range]:focus-visible{outline:none}
+#paneAtmung input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--ink)}
+#paneAtmung .enden{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);margin-top:-2px}
+#paneAtmung .schnell{display:flex;gap:6px;margin-top:8px}
+#paneAtmung .schnell button{flex:1}
+#paneAtmung button{min-height:44px;padding:8px 10px}
+#paneAtmung button.voll{width:100%;margin-bottom:8px}
+#paneAtmung button.on.stress{background:#C08A1E;color:#14222A}   /* angestrengte Atmung: wie --strom im Thorax-Modell */
+#paneAtmung .segment{display:flex;margin-top:8px;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+#paneAtmung .segment button{flex:1;border:none;border-right:1px solid var(--line);border-radius:0;font-size:11.5px;padding:8px 2px}
+#paneAtmung .segment button:last-child{border-right:none}
+#paneAtmung .schalter{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-dim);padding:6px 0;min-height:44px}
+#paneAtmung .schalter input{width:26px;height:26px;accent-color:var(--brass)}
+
+/* Pleuraspalt-Hinweis und Tempo-Abzeichen (unten) sind im Original fest in px bei ca. 958 px Buehnenbreite (1280 - 322); --sk (= Breite des Bildes / 958, von lunge.js gesetzt)
+   skaliert Groesse und Lage mit dem Panel, auch auf dem Handy. */
+/* Schema der Atemmechanik (aus dem Thorax-Modell): helles Original-Aussehen, auf das Panel beschraenkt; die Variablen des Originals
+   werden hier neu definiert, weil --ink, --panel usw. in der App andere Werte haben. Breite folgt dem Seitenverhaeltnis (Bild 800 : 620 plus Kette) */
+#schema{
+  --ink:#16282F; --panel:#213B45; --panel-hi:#2E4E5A; --panel-line:#3C606D; --paper:#EDF0EF; --paper-2:#DDE4E3;
+  --sog:#1B7F9E; --sog-hell:#4FB3CE; --strom:#C08A1E; --ein:#CE3A2F; --aus:#6B7F8C; --muskel:#A24E4E; --lunge:#E6D6D7; --lunge-linie:#8E6A6C;
+  --knochen:#F4F6F2; --knochenkante:#7E8C88; --herz:#8C4747;
+  --sans:"Samsung Sans","Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Roboto Mono",ui-monospace,"DejaVu Sans Mono",monospace;
+  top:150px;right:22px;bottom:22px;width:calc((100vh - 172px - 168px) * 1.2903 + 24px);min-width:520px;max-width:calc(100vw - 640px);
+  padding:0;overflow:hidden;display:none;flex-direction:column;background:var(--paper);color:var(--ink);font-family:var(--sans)}
+#schema.show{display:flex}
+#schema .sch-head{display:flex;align-items:baseline;gap:12px;padding:10px 44px 6px 14px;min-height:30px}
+#schema .kick{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--sog);white-space:nowrap}
+#schema .hbtn{position:absolute;top:6px;right:8px;padding:3px 9px;font-size:13px;line-height:1;color:var(--ink);border-color:var(--knochenkante)}
+#schema .hbtn:hover{background:var(--paper-2);color:var(--ink)}
+#schemaBox{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--paper)}
+#schema #loBild{flex:1;min-height:0;position:relative}
+#schema #loBild svg{width:100%;height:100%;display:block}
+
+#schema .pleura-chip{
+  position:absolute;top:calc(14px * var(--sk,1));right:calc(16px * var(--sk,1));transform:scale(var(--sk,1));transform-origin:top right;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+  color:var(--ink);background:rgba(255,255,255,.85);border:1px solid var(--sog);border-left:5px solid var(--sog);
+  border-radius:6px;padding:7px 10px;max-width:230px;line-height:1.4;
+}
+#schema .pleura-chip b.kopfzeile{display:block;color:var(--sog);letter-spacing:.14em;text-transform:uppercase;font-size:10px;margin-bottom:2px}
+
+#schema #loKette{flex:0 0 auto;display:flex;background:var(--ink);color:var(--paper);border-top:1px solid var(--panel-line)}
+#schema .glied{flex:1;padding:11px 14px 13px;border-right:1px solid var(--panel-line);min-width:0;opacity:.4;transition:opacity .25s}
+#schema .glied:last-child{border-right:none}
+#schema .glied.aktiv{opacity:1}
+#schema .glied .marke{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8FA6AD;display:flex;align-items:center;gap:7px;margin-bottom:7px}
+#schema .glied .marke i{color:var(--sog-hell);font-style:normal;font-weight:700}
+#schema .glied .wert{font-size:16px;font-weight:650;line-height:1.15;white-space:normal;min-height:2.3em;overflow:hidden}   /* Original: eine Zeile mit Auslassung; hier umbrechen, weil das Panel schmaler ist (Hoehe fest, damit die Kette nicht springt) */
+#schema .glied .zahl{font-family:var(--mono);font-size:12px;color:#9FB6BD;margin-top:3px;min-height:15px}
+
+#schema .chips{display:flex;gap:5px;flex-wrap:wrap}
+#schema .chip{font-size:11.5px;font-weight:600;padding:4px 7px;border-radius:5px;background:var(--panel);border:1px solid var(--panel-line);color:#7C949B}
+#schema .chip.an{background:var(--muskel);border-color:#C06A6A;color:#fff}
+#schema .chip.an.aus{background:var(--strom);border-color:#E0AE4A;color:#2A1F06}
+
+#schema .skala{position:relative;height:22px;background:var(--panel);border:1px solid var(--panel-line);border-radius:5px;margin-top:2px}
+#schema .skala .mitte{position:absolute;top:0;bottom:0;width:1px;background:var(--panel-line)}
+#schema .skala .fuell{position:absolute;top:2px;bottom:2px;width:0;background:var(--sog);border-radius:3px}
+#schema .skala .beschr{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 7px;font-family:var(--mono);font-size:9.5px;color:#7C949B;letter-spacing:.05em}
+
+#schema .strompfeil{font-size:22px;line-height:1;margin-right:8px;display:inline-block}
+
+#schema #loTempoBadge{
+  position:absolute;top:calc(14px * var(--sk,1));left:calc(16px * var(--sk,1));transform:scale(var(--sk,1));transform-origin:top left;display:none;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;background:var(--sog);border-radius:6px;padding:6px 11px;
+}
+#schema #loTempoBadge.an{display:flex}
+@media (prefers-reduced-motion: reduce){#schema *{transition-duration:.01ms !important}}
+
+body.schema #labels,body.schema #leaders{display:none}
+
+@media (max-width:1000px){
+  /* offenes Schema: die Leiste bleibt (Reiter Atmung), Werkzeugleiste darueber, das Schema oben darueber (--wz = gemessene Hoehe der Werkzeugleiste) */
+  body.schema #rail{max-height:26vh}   /* niedriger, damit das Schema mehr Platz hat; die Leiste bleibt scrollbar */
+  body.schema #tools{bottom:calc(26vh + 6px)}
+  #schema{left:12px;right:12px;top:62px;bottom:calc(26vh + var(--wz,190px) + 14px);width:auto;min-width:0;max-width:none}
+  body.schema #atlasZurueck{display:none}
+  body.schema #info,body.schema #scard{display:none}   /* die Infokarte wuerde das Schema verdecken: solange es offen ist, ausgeblendet */
+  #schema .sch-head{padding:7px 44px 4px 10px}
+  #schema .glied{padding:8px 6px 9px}
+  #schema .glied .marke{font-size:8.5px;letter-spacing:.06em;gap:4px}
+  #schema .glied .wert{font-size:11px;min-height:2.3em}
+  #schema .glied .zahl{font-size:8.5px;overflow-wrap:anywhere}
+  #schema .skala .beschr{font-size:7.5px;padding:0 4px;letter-spacing:0}
+  #schema .chip{font-size:9.5px;padding:2px 4px}
+}

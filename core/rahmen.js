@@ -25,6 +25,7 @@ var Kern = window.Kern = window.Kern || {};
     herz: { titel: 'Herz', seitentitel: 'Herz \u2013 Herzh\u00f6hlen, Klappen und Windkessel', skript: 'organe/herz/herz.js', css: 'organe/herz/herz.css' },
     niere: { titel: 'Niere', seitentitel: 'Niere \u2013 Rinde, Mark und Nierenbecken', skript: 'organe/niere/niere.js', css: 'organe/niere/niere.css' },
     nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css', adresse: 'niere/nephron', alt: ['nephron'] },
+    lunge: { titel: 'Lunge', seitentitel: 'Lunge \u2013 Lappen, Atemwege und Atemmechanik', skript: 'organe/lunge/lunge.js', css: 'organe/lunge/lunge.css' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
 
@@ -70,7 +71,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis ladbarer Formen (Name -> Titel, Skript). Hat ein Organ in Kern.ORGANE denselben Namen,
      laedt Kern.organLaden zuerst die Form und dann das Organ-Skript. */
   K.FORMEN = {
-    niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' }
+    niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' },
+    lunge: { titel: 'Lunge', form: 'organe/lunge/lunge-form.js' }
   };
 
   /* Formbaustein anmelden (die Form-Datei ruft das beim Laden auf; def: Funktionen und Daten der Form, je Organ eigen) */

@@ -52,6 +52,8 @@ organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Her
 organe/niere/              niere-form.js, niere.css, niere.js, nephron.css, nephron.js – Form der Niere (eigener Baustein, den der Körper mit dem Niere-Modul nachlädt), Gestaltung und App-Code der Niere, Gestaltung und App-Code des Nephrons
 vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
+tools/nachweis.js          Vergleich der Atemmechanik (Schema) mit dem Original-Modell (Prüfwerkzeug, braucht Playwright): `node tools/nachweis.js lunge <ziel>`
+tools/originale/           Original-Modelle der Lunge (unverändert, Vorlage für tools/nachweis.js; keine App-Dateien, nicht im Offline-Speicher)
 tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen
 tools/symbole.js           PNG-Symbole aus icons/symbol.svg erzeugen
 ```
