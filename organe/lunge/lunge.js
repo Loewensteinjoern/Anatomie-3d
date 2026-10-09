@@ -361,7 +361,7 @@ var organ = { renderer: {}, aufbauen: aufbauen };
 /* Mitte der Lunge im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, die Lunge steht im Modell mittig (spaeter: Ziel der Kamerafahrt aus dem Koerper) */
 var M = [0, 126, -0.5];
 /* Ausschnitt 'Uebersicht' (Breite und Hoehe im freien Bereich, cm) und Kamera: gemeinsam fuer das Modell und spaeter fuer die Fahrt aus dem Koerper */
-var UEBERSICHT = { ext: [36, 52], halb: 18.5 };
+var UEBERSICHT = { ext: [36, 52], halb: 18.5, ziel: [0 - M[0], 127 - M[1], 0 - M[2]] };   /* ziel = Blickpunkt in Modell-Koordinaten (Koerper-Punkt 0/127/0) */
 var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
 /* Freier Bereich fuer Lunge und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
 function bereichFuer(w, h, toolsOben, toolsUnten) {
@@ -374,6 +374,23 @@ function abstandFuer(ext, r, fov, h) {
   var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
+   32 mehr, wenn eine der ersten Reihen umbricht: Reihe 1 (Ausschnitt) unter Breite 440, dann unter 274 und unter 264); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
+function werkzeugRand(w, h) {
+  if (w <= 1000) {
+    var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
+    return { oben: u - (100 + (w < 440 ? 32 : 0) + (w < 274 ? 32 : 0) + (w < 264 ? 32 : 0)), unten: u };
+  }
+  return { oben: 18, unten: 18 + 115 };
+}
+/* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
+organ.mitte = M;   /* Mitte der Lunge im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
+organ.start = function (w, h) {
+  var t = werkzeugRand(w, h), r = bereichFuer(w, h, t.oben, t.unten);
+  return { theta: 0, phi: Math.PI / 2, dist: abstandFuer(UEBERSICHT.ext, r, KAMERA_FOV, h), target: UEBERSICHT.ziel.slice(),
+    versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] };
+};
 function aufbauen(umg) {
 var canvas = umg.canvas, renderer = umg.renderer, scene = umg.szene, camera = umg.kamera, envTex = umg.envTex;
 var S = Kern.SDF, form = Kern.Formen && Kern.Formen.lunge;
@@ -958,7 +975,7 @@ $('bLab').onclick = function () {
 var K3 = function (x, y, z) { return V(x - M[0], y - M[1], z - M[2]); };   /* Koerper-Koordinaten -> Modell */
 /* ext = Breite und Hoehe (cm), die im freien Bereich ganz sichtbar sein sollen; halb = halbe Breite (cm), die die Beschriftungsspalten freilassen */
 var AUSSCHNITTE = [
-  { name: 'Übersicht', theta: 0, phi: PI / 2, target: K3(0, 127, 0), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb },
+  { name: 'Übersicht', theta: 0, phi: PI / 2, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb },
   { name: 'Bronchialbaum', theta: 0, phi: PI / 2, target: K3(0, 126, 0), ext: [32, 44], halb: 16.5 },
   { name: 'Hilus und Gefäße', theta: 0, phi: 1.2, target: K3(0, 125, 0), ext: [28, 24], halb: 14.5 },
   { name: 'Zwerchfell und Pleura', theta: -PI / 2, phi: 1.85, target: K3(-3, 120, 0), ext: [28, 42], halb: 14.5 }

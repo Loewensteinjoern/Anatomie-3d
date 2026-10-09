@@ -58,9 +58,9 @@ var STRUKTUREN = [
     text: 'Die obere Hohlvene sammelt das Blut aus Kopf, Hals und Armen, die untere aus Bauch, Becken und Beinen. Beide münden in den rechten Vorhof und bringen sauerstoffarmes Blut zum Herzen zurück.' },
   { id: 'milz', de: 'Milz', lat: 'Splen', system: 'kreislauf', detail: false,
     text: 'Die Milz liegt im linken Oberbauch unter dem Zwerchfell, hinter dem Magen. Als größtes lymphatisches Organ filtert sie das Blut, baut alte rote Blutkörperchen ab und bildet Abwehrzellen; zudem dient sie als Blutspeicher.' },
-  { id: 'luftroehre', de: 'Luftröhre und Bronchien', lat: 'Trachea et bronchi', system: 'atmung', detail: false,
+  { id: 'luftroehre', de: 'Luftröhre und Bronchien', lat: 'Trachea et bronchi', system: 'atmung', oeffnen: '#lunge', knopf: 'Lunge öffnen',
     text: 'Die etwa 10–12 cm lange Luftröhre führt vom Kehlkopf in den Brustraum und teilt sich in die beiden Hauptbronchien. Knorpelspangen halten sie offen; das Flimmerepithel befördert Schleim und Fremdkörper Richtung Rachen.' },
-  { id: 'lunge', de: 'Lunge', lat: 'Pulmo', system: 'atmung', detail: false,
+  { id: 'lunge', de: 'Lunge', lat: 'Pulmo', system: 'atmung', oeffnen: '#lunge', knopf: 'Lunge öffnen',
     text: 'Die rechte Lunge hat drei, die linke zwei Lappen; sie füllen den Brustraum beiderseits des Herzens. In den Lungenbläschen (Alveolen) tritt Sauerstoff ins Blut über und Kohlendioxid wird abgegeben.' },
   { id: 'zwerchfell', de: 'Zwerchfell', lat: 'Diaphragma', system: 'atmung', detail: false,
     text: 'Die kuppelförmige Muskelplatte trennt Brust- und Bauchraum. Als wichtigster Atemmuskel flacht es sich beim Einatmen ab und erweitert so den Brustraum; Speiseröhre, Aorta und untere Hohlvene treten durch Lücken hindurch.' },
@@ -693,6 +693,8 @@ async function bauen() {
     function (e) { console.warn(e && e.message || e); return Kern.Formen && Kern.Formen.niere || null; });
   /* Form der Lunge (Brustkorb, Rippen, Zwerchfellkuppel, Lungenfluegel): ohne sie kein Koerper, ein Ladefehler bricht den Aufbau ab */
   lungenP = Kern.formLaden('lunge'); lungenP.catch(function () {});
+  /* Lungen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start); ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
+  lungenP.then(function () { return Kern.organLaden('lunge', { ohneCss: true }); }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1023,14 +1025,18 @@ function layoutLabels(w, h) {
    die Kamera landet in der Startansicht des Detailmodells, dann wird die Adresse gesetzt
    ===================================================================== */
 /* Ziel je Struktur: Kamera in Koerper-Koordinaten (cm); ext = Breite und Hoehe (cm), die im freien Bereich Platz finden sollen */
+/* Strukturen, die das Lungen-Modell mitzeigt (Lungen, Luftroehre mit Bronchien, Zwerchfell, Rippen und Brustbein, Herz): sie bleiben bei der Fahrt sichtbar */
+var LUNGE_MIT = ['lunge', 'luftroehre', 'zwerchfell', 'brustkorb', 'herz'];
 var ZIELE = {
   herz: { theta: 0, phi: 1.52, dist: 34.5, target: [0.4 + HERZ_V[0], 1.0 + HERZ_V[1], -1.2 + HERZ_V[2]] },   /* Startansicht des Herz-Modells (Ersatz, wenn das Herz-Modul fehlt) */
+  lunge: { theta: 0, phi: PI / 2, ext: [36, 52], target: [0, 127, 0], mit: LUNGE_MIT },   /* Ersatz, wenn das Lungen-Modul fehlt (Ganzansicht der Lunge von vorn) */
   nieren: { phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von vorn, senkrecht auf die Schnittflaeche (Ersatz, wenn das Niere-Modul fehlt); theta s. zielFuer */
 };
+ZIELE.luftroehre = ZIELE.lunge;   /* gleiches Ziel: das Lungen-Modell */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1039,18 +1045,24 @@ function zielFuer(id, w, h) {
     var sn = ni.start(w, h), nm = nierenMitte(1);
     return { theta: sn.theta, phi: sn.phi, dist: sn.dist, target: V(sn.target[0] + nm[0], sn.target[1] + nm[1], sn.target[2] + nm[2]), versatz: sn.versatz };
   }
+  if (z === ZIELE.lunge && lu && lu.start) {   /* Startansicht der Lunge (Lungen-Koordinaten, um die Mitte lu.mitte im Koerper verschoben) */
+    var sl = lu.start(w, h), lm = lu.mitte;
+    return { theta: sl.theta, phi: sl.phi, dist: sl.dist, target: V(sl.target[0] + lm[0], sl.target[1] + lm[1], sl.target[2] + lm[2]), versatz: sl.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
   /* userData.anschluss: gehoert zur Struktur, aber nicht zum Detailmodell (Lungengefaessstummel, rechte Niere) - blendet mit aus */
-  STR[id].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  (ZIELE[id] && ZIELE[id].mit || [id]).forEach(function (sid) {   /* mit: weitere Strukturen, die das Detailmodell mitzeigt */
+    STR[sid].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
+  });
   wurzel.traverse(function (o) {
     if (zielObj.has(o) || !o.material || !o.visible) return;
     var ms = [].concat(o.material), frei = true;
