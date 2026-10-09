@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atmung – Ebene 1: Thorax</title>
+<style>
+:root{
+  --ink:#16282F;
+  --panel:#213B45;
+  --panel-hi:#2E4E5A;
+  --panel-line:#3C606D;
+  --paper:#EDF0EF;
+  --paper-2:#DDE4E3;
+  --sog:#1B7F9E;
+  --sog-hell:#4FB3CE;
+  --strom:#C08A1E;
+  --ein:#CE3A2F;      /* sauerstoffreiche Luft, wie O2 in Ebene 3 */
+  --aus:#6B7F8C;      /* sauerstoffaermere Luft, wie CO2 in Ebene 3 */
+  --muskel:#A24E4E;
+  --lunge:#E6D6D7;
+  --lunge-linie:#8E6A6C;
+  --knochen:#F4F6F2;
+  --knochenkante:#7E8C88;
+  --herz:#8C4747;
+  --sans:"Samsung Sans","Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Roboto Mono",ui-monospace,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden}
+body{font-family:var(--sans);background:var(--ink);color:var(--paper);display:flex;touch-action:manipulation}
+
+#leiste{
+  width:322px;flex:0 0 322px;background:var(--ink);border-right:1px solid var(--panel-line);
+  display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 18px;
+}
+.kopf{margin-bottom:14px}
+.kopf .stufe{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--sog-hell);margin-bottom:4px}
+.kopf h1{font-size:19px;margin:0;font-weight:650}
+
+.karte{background:var(--panel);border:1px solid var(--panel-line);border-radius:10px;padding:12px 12px 14px;margin-bottom:12px}
+.karte > .titel{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9FB6BD;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.karte > .titel b{font-weight:500;color:var(--sog-hell);letter-spacing:.06em}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:16px 0 8px;height:44px}
+input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:var(--panel-hi);border:1px solid var(--panel-line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin-top:-17px;border-radius:50%;background:var(--paper);border:4px solid var(--sog);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:var(--panel-hi)}
+input[type=range]::-moz-range-thumb{width:40px;height:40px;border-radius:50%;background:var(--paper);border:4px solid var(--sog)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--sog-hell)}
+
+.enden{display:flex;justify-content:space-between;font-size:12px;color:#8FA6AD;margin-top:-4px}
+.schnell{display:flex;gap:6px;margin-top:10px}
+.schnell button{flex:1}
+
+button{font-family:var(--sans);font-size:14px;font-weight:600;color:var(--paper);background:var(--panel-hi);border:1px solid var(--panel-line);border-radius:8px;min-height:46px;padding:8px 10px;cursor:pointer}
+button:active{background:var(--sog);border-color:var(--sog)}
+button:focus-visible{outline:3px solid var(--sog-hell);outline-offset:2px}
+button.voll{width:100%;margin-bottom:8px}
+button.an{background:var(--sog);border-color:var(--sog-hell)}
+button.an.stress{background:var(--strom);border-color:#E0AE4A}
+
+.segment{display:flex;gap:0;margin-top:10px;border:1px solid var(--panel-line);border-radius:8px;overflow:hidden}
+.segment button{flex:1;border:none;border-right:1px solid var(--panel-line);border-radius:0;font-size:13px;font-weight:600;background:transparent}
+.segment button:last-child{border-right:none}
+.segment button.an{background:var(--sog);color:#fff}
+
+.schalter{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;padding:6px 0}
+.schalter input{width:26px;height:26px;accent-color:var(--sog)}
+
+.hilfeliste{display:flex;flex-direction:column;gap:6px}
+.hilfeliste button{text-align:left;font-weight:500;font-size:14px;line-height:1.3;background:transparent;border-color:var(--panel-line)}
+.hilfeliste button::before{content:"?";font-family:var(--mono);color:var(--sog-hell);margin-right:9px;font-weight:700}
+
+details.entdecke summary{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9FB6BD;cursor:pointer;list-style:none;padding:2px 0}
+details.entdecke summary::-webkit-details-marker{display:none}
+details.entdecke summary::after{content:" ▾";color:var(--sog-hell)}
+details.entdecke[open] summary::after{content:" ▴"}
+details.entdecke ol{margin:10px 0 0;padding-left:20px;font-size:13.5px;line-height:1.45;color:#D3DEE0}
+details.entdecke li{margin-bottom:9px}
+
+#buehne{flex:1;display:flex;flex-direction:column;background:var(--paper);min-width:0}
+#bild{flex:1;min-height:0;position:relative}
+#bild svg{width:100%;height:100%;display:block}
+
+.pleura-chip{
+  position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+  color:var(--ink);background:rgba(255,255,255,.85);border:1px solid var(--sog);border-left:5px solid var(--sog);
+  border-radius:6px;padding:7px 10px;max-width:230px;line-height:1.4;
+}
+.pleura-chip b.kopfzeile{display:block;color:var(--sog);letter-spacing:.14em;text-transform:uppercase;font-size:10px;margin-bottom:2px}
+
+#kette{flex:0 0 auto;display:flex;background:var(--ink);border-top:1px solid var(--panel-line)}
+.glied{flex:1;padding:11px 14px 13px;border-right:1px solid var(--panel-line);min-width:0;opacity:.4;transition:opacity .25s}
+.glied:last-child{border-right:none}
+.glied.aktiv{opacity:1}
+.glied .marke{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8FA6AD;display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.glied .marke i{color:var(--sog-hell);font-style:normal;font-weight:700}
+.glied .wert{font-size:16px;font-weight:650;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glied .zahl{font-family:var(--mono);font-size:12px;color:#9FB6BD;margin-top:3px;min-height:15px}
+
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-size:11.5px;font-weight:600;padding:4px 7px;border-radius:5px;background:var(--panel);border:1px solid var(--panel-line);color:#7C949B}
+.chip.an{background:var(--muskel);border-color:#C06A6A;color:#fff}
+.chip.an.aus{background:var(--strom);border-color:#E0AE4A;color:#2A1F06}
+
+.skala{position:relative;height:22px;background:var(--panel);border:1px solid var(--panel-line);border-radius:5px;margin-top:2px}
+.skala .mitte{position:absolute;top:0;bottom:0;width:1px;background:var(--panel-line)}
+.skala .fuell{position:absolute;top:2px;bottom:2px;width:0;background:var(--sog);border-radius:3px}
+.skala .beschr{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 7px;font-family:var(--mono);font-size:9.5px;color:#7C949B;letter-spacing:.05em}
+
+.strompfeil{font-size:22px;line-height:1;margin-right:8px;display:inline-block}
+
+#tempoBadge{
+  position:absolute;top:14px;left:16px;display:none;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;background:var(--sog);border-radius:6px;padding:6px 11px;
+}
+#tempoBadge.an{display:flex}
+
+#modal{position:fixed;inset:0;background:rgba(10,20,25,.72);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+#modal.auf{display:flex}
+#modal .box{background:var(--paper);color:var(--ink);border-radius:14px;max-width:620px;width:100%;max-height:86vh;overflow-y:auto;padding:24px 26px 20px}
+#modal h2{margin:0 0 4px;font-size:22px}
+#modal .unter{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--sog);margin-bottom:14px}
+#modal p,#modal ul{font-size:16.5px;line-height:1.55;margin:0 0 12px}
+#modal ul{padding-left:22px}
+#modal li{margin-bottom:6px}
+#modal .merk{background:#DCE8EB;border-left:5px solid var(--sog);padding:11px 14px;border-radius:0 8px 8px 0;font-size:16px;line-height:1.5}
+#modal button{background:var(--ink);border-color:var(--ink);width:100%;margin-top:16px}
+
+@media (max-aspect-ratio: 1/1){
+  body{flex-direction:column-reverse}
+  #leiste{width:100%;flex:0 0 auto;max-height:44vh;border-right:none;border-top:1px solid var(--panel-line)}
+}
+@media (prefers-reduced-motion: reduce){*{transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<aside id="leiste">
+  <div class="kopf">
+    <div class="stufe">Ebene 1 von 4</div>
+    <h1>Thorax und Atemmechanik</h1>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><span>Zwerchfell</span><b id="lblZwerch">entspannt</b></div>
+    <input type="range" id="zwerch" min="0" max="100" value="0" aria-label="Zwerchfell: Anspannung">
+    <div class="enden"><span>entspannt</span><span>voll angespannt</span></div>
+    <div class="schnell">
+      <button data-set="zwerch" data-wert="0">aus</button>
+      <button data-set="zwerch" data-wert="50">halb</button>
+      <button data-set="zwerch" data-wert="100">voll</button>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><span>Zwischenrippenmuskeln</span><b id="lblRippen">entspannt</b></div>
+    <input type="range" id="rippen" min="0" max="100" value="0" aria-label="Äußere Zwischenrippenmuskulatur: Anspannung">
+    <div class="enden"><span>entspannt</span><span>voll angespannt</span></div>
+    <div class="schnell">
+      <button data-set="rippen" data-wert="0">aus</button>
+      <button data-set="rippen" data-wert="50">halb</button>
+      <button data-set="rippen" data-wert="100">voll</button>
+    </div>
+  </div>
+
+  <button class="voll" id="entspannen">Alle Muskeln entspannen</button>
+  <button class="voll" id="demoRuhe">Ruheatmung starten</button>
+  <button class="voll" id="demoStress">Angestrengte Atmung starten</button>
+
+  <div class="karte">
+    <div class="titel"><span>Rippen</span></div>
+    <div class="segment" id="rippenWahl">
+      <button data-rippen="voll" class="an">sichtbar</button>
+      <button data-rippen="kontur">durchsichtig</button>
+      <button data-rippen="aus">aus</button>
+    </div>
+    <div class="titel" style="margin-top:14px"><span>Zwischenrippenmuskeln</span></div>
+    <div class="segment" id="muskelWahl">
+      <button data-muskel="voll" class="an">sichtbar</button>
+      <button data-muskel="aus">aus</button>
+    </div>
+  </div>
+
+  <div class="karte">
+    <div class="titel"><span>Tempo</span></div>
+    <div class="segment" id="tempoWahl">
+      <button data-tempo="1" class="an">normal</button>
+      <button data-tempo="0.5">langsam</button>
+      <button data-tempo="0.25">Zeitlupe</button>
+    </div>
+    <label class="schalter" for="pfeileAn" style="margin-top:10px">
+      <span>Bewegungspfeile</span><input type="checkbox" id="pfeileAn" checked>
+    </label>
+    <label class="schalter" for="zahlen">
+      <span>Druckzahlen einblenden</span><input type="checkbox" id="zahlen">
+    </label>
+  </div>
+
+  <div class="karte">
+    <details class="entdecke">
+      <summary>Probier das aus</summary>
+      <ol>
+        <li>Zwerchfell voll anspannen – und den Regler dort <b>stehen lassen</b>. Was passiert mit dem Luftstrom, obwohl die Lunge maximal gedehnt bleibt?</li>
+        <li>Rippen auf <b>sichtbar</b>, dann langsam einatmen. Wohin geht die Lunge, wenn sich die Rippen heben? Danach die Rippen <b>ausschalten</b> und dasselbe noch einmal ansehen.</li>
+        <li>Nur das Zwerchfell benutzen, dann nur die Rippenmuskeln. Womit holst du mehr Luft?</li>
+        <li>Zwerchfell voll anspannen und die Rippenmuskeln <b>ganz aus</b> lassen – dann umgekehrt. Wann strömt gar nichts?</li>
+        <li>Tief einatmen und dann alle Muskeln entspannen. Welcher Muskel schiebt die Luft wieder hinaus?</li>
+        <li>Ruheatmung und angestrengte Atmung nacheinander laufen lassen. Vergleiche die ml – und achte darauf, welche Muskeln beim <b>Ausatmen</b> aufleuchten.</li>
+        <li>Beobachte den Pleuraspalt (blauer Saum). Wird dort jemals ein Überdruck daraus?</li>
+        <li>Ruheatmung starten und auf <b>Zeitlupe</b> stellen. Schau unten auf die vier Felder: In welcher Reihenfolge leuchten sie auf? Was kommt zuerst – der Druck oder der Luftstrom?</li>
+      </ol>
+    </details>
+  </div>
+
+  <div class="karte">
+    <div class="titel" style="margin-bottom:10px"><span>Hilfekarten</span></div>
+    <div class="hilfeliste">
+      <button data-karte="pleura">Pleura und Pleuraspalt</button>
+      <button data-karte="zwerchfell">Das Zwerchfell</button>
+      <button data-karte="rippen">Zwischenrippenmuskulatur</button>
+      <button data-karte="fluegel">Warum der linke Flügel kleiner ist</button>
+      <button data-karte="ausatmen">Ausatmen geht von allein</button>
+      <button data-karte="angestrengt">Angestrengte Atmung</button>
+      <button data-karte="begriffe">Fachbegriffe zum Schreiben</button>
+    </div>
+  </div>
+</aside>
+
+<main id="buehne">
+  <div id="bild">
+    <svg id="svg" viewBox="0 0 800 620" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Schematischer Brustkorb mit Lunge, Zwerchfell, Rippen und Zwischenrippenmuskeln">
+
+      <path id="koerper" fill="var(--paper-2)" d=""/>
+
+      <g id="atemweg" stroke="#9AA8A5" stroke-width="9" fill="none" stroke-linecap="round">
+        <path d="M400 46 L400 152"/>
+        <path id="bronchL" d="M400 152 L336 206"/>
+        <path id="bronchR" d="M400 152 L464 206"/>
+      </g>
+
+      <path id="herz" fill="var(--herz)" opacity=".85" d=""/>
+
+      <g id="lungen">
+        <path id="pleuraR" fill="none" stroke="var(--sog)" stroke-width="15" stroke-linejoin="round" d="" opacity=".25"/>
+        <path id="pleuraL" fill="none" stroke="var(--sog)" stroke-width="15" stroke-linejoin="round" d="" opacity=".25"/>
+        <path id="lungeR" fill="var(--lunge)" stroke="var(--lunge-linie)" stroke-width="2.5" stroke-linejoin="round" d=""/>
+        <path id="lungeL" fill="var(--lunge)" stroke="var(--lunge-linie)" stroke-width="2.5" stroke-linejoin="round" d=""/>
+        <path id="lappenR1" stroke="var(--lunge-linie)" stroke-width="1.6" fill="none" opacity=".55" d=""/>
+        <path id="lappenR2" stroke="var(--lunge-linie)" stroke-width="1.6" fill="none" opacity=".55" d=""/>
+        <path id="lappenL1" stroke="var(--lunge-linie)" stroke-width="1.6" fill="none" opacity=".55" d=""/>
+      </g>
+
+      <!-- Luftpunkte laufen durch Luftröhre und Bronchien bis in die Lunge -->
+      <g id="luftpunkte"></g>
+      <text id="atemLabel" x="400" y="28" text-anchor="middle" font-size="21" font-weight="700"
+            fill="#8A9A96" font-family="var(--sans)">kein Luftstrom</text>
+
+      <!-- Brustwand LIEGT ÜBER der Lunge: Zwischenrippenmuskeln, Rippen, Brustbein -->
+      <g id="thoraxwand">
+        <g id="muskeln"></g>
+        <g id="rippenKontur" stroke="var(--knochenkante)" stroke-width="14.5" fill="none" stroke-linecap="round"></g>
+        <g id="rippen" stroke="var(--knochen)" stroke-width="11" fill="none" stroke-linecap="round"></g>
+        <rect id="sternum" x="391" y="188" width="18" height="196" rx="9"
+              fill="var(--knochen)" stroke="var(--knochenkante)" stroke-width="2"/>
+      </g>
+
+      <path id="zwerchfell" fill="none" stroke="var(--muskel)" stroke-width="13" stroke-linecap="round" d=""/>
+      <text id="zwerchLabel" x="280" y="0" text-anchor="middle" font-family="var(--mono)" font-size="13"
+            fill="var(--muskel)" font-weight="600">Zwerchfell</text>
+
+      <!-- Bewegungspfeile -->
+      <g id="pfeile" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path id="pfZwerch" stroke="var(--muskel)" stroke-width="5" d="" opacity="0"/>
+        <path id="pfRipL"  stroke="var(--muskel)" stroke-width="5" d="" opacity="0"/>
+        <path id="pfRipR"  stroke="var(--muskel)" stroke-width="5" d="" opacity="0"/>
+      </g>
+      <g font-family="var(--mono)" font-size="12" font-weight="600" text-anchor="middle" fill="var(--muskel)">
+        <text id="txZwerch" x="400" y="0" opacity="0"></text>
+        <text id="txRipL" x="0" y="342" opacity="0"></text>
+        <text id="txRipR" x="0" y="342" opacity="0"></text>
+      </g>
+
+      <text x="424" y="96" font-family="var(--mono)" font-size="12.5" fill="#6E7C7A">Luftröhre</text>
+      <text x="150" y="196" font-family="var(--mono)" font-size="12.5" fill="#6E7C7A">rechter Lungenflügel</text>
+      <text x="562" y="196" font-family="var(--mono)" font-size="12.5" fill="#6E7C7A">linker Lungenflügel</text>
+    </svg>
+
+    <div id="tempoBadge"><span>Tempo</span><b id="tempoFaktor">¼×</b></div>
+
+    <div class="pleura-chip">
+      <b class="kopfzeile">Pleuraspalt</b>
+      Der blaue Saum ist der Spalt zwischen Lunge und Brustwand. Hier herrscht immer Unterdruck – deshalb folgt die Lunge dem Brustkorb.
+      <div id="pleuraZahl" style="margin-top:5px;color:var(--sog);display:none"></div>
+    </div>
+  </div>
+
+  <div id="kette">
+    <div class="glied" id="g1">
+      <div class="marke"><i>1</i> Muskeln</div>
+      <div class="chips">
+        <span class="chip" id="chipZ">Zwerchfell</span>
+        <span class="chip" id="chipR">Rippen</span>
+        <span class="chip" id="chipA">Bauchpresse</span>
+      </div>
+      <div class="zahl" id="z1"></div>
+    </div>
+    <div class="glied" id="g2">
+      <div class="marke"><i>2</i> Brustkorb</div>
+      <div class="wert" id="w2">unverändert</div>
+      <div class="skala"><span class="mitte" id="m2"></span><span class="fuell" id="b2"></span>
+        <span class="beschr"><span>enger</span><span>weiter</span></span></div>
+    </div>
+    <div class="glied" id="g3">
+      <div class="marke"><i>3</i> Druck in der Lunge</div>
+      <div class="wert" id="w3">wie außen</div>
+      <div class="skala"><span class="mitte" id="m3" style="left:50%"></span><span class="fuell" id="b3"></span>
+        <span class="beschr"><span>niedriger</span><span>höher</span></span></div>
+      <div class="zahl" id="z3"></div>
+    </div>
+    <div class="glied" id="g4">
+      <div class="marke"><i>4</i> Luftstrom</div>
+      <div class="wert"><span class="strompfeil" id="p4">–</span><span id="w4">kein Luftstrom</span></div>
+      <div class="zahl" id="z4">Atemzugvolumen: 0 ml</div>
+    </div>
+  </div>
+</main>
+
+<div id="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h2 id="mTitel"></h2>
+    <div class="unter" id="mUnter"></div>
+    <div id="mText"></div>
+    <button id="mZu">Schließen</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- Zustand ---------------- */
+var S = { d:0, i:0, V:0 };
+var VMAX_D = 800, VMAX_I = 400;
+var TAU = 0.48, K_DRUCK = 0.0125;
+var vD = 0, vI = 0;
+var modus = null;                 // null | "ruhe" | "stress"
+var demoT = 0, entspannenAn = false;
+var zeigeZahlen = false, zeigePfeile = true;
+var tempo = 1;
+
+function $(id){ return document.getElementById(id); }
+var el = {};
+["koerper","herz","lungeR","lungeL","pleuraR","pleuraL","lappenR1","lappenR2","lappenL1",
+ "thoraxwand","muskeln","rippen","rippenKontur","sternum","tempoBadge","tempoFaktor","zwerchfell","zwerchLabel","luftpunkte","atemLabel",
+ "bronchL","bronchR","pfZwerch","pfRipL","pfRipR","txZwerch","txRipL","txRipR",
+ "chipZ","chipR","chipA","z1","w2","b2","m2","w3","b3","z3","p4","w4","z4","g1","g2","g3","g4",
+ "lblZwerch","lblRippen","pleuraZahl"].forEach(function(k){ el[k]=$(k); });
+
+/* ---------------- Geometrie ---------------- */
+var MITTE = 400, BASIS_Y = 452, HALB_RUHE = 176;
+function halbBreite(){ return HALB_RUHE + 13*S.i; }
+function apexY(){ return 372 + 62*S.d; }
+
+function zwerchY(x){
+  var hw = halbBreite();
+  var t = (x - MITTE)/(2*hw) + 0.5;
+  t = Math.max(0, Math.min(1, t));
+  var Cy = 2*apexY() - BASIS_Y;
+  return BASIS_Y*((1-t)*(1-t) + t*t) + 2*(1-t)*t*Cy;
+}
+function zwerchfellPfad(){
+  var hw = halbBreite(), Cy = 2*apexY() - BASIS_Y;
+  return "M"+(MITTE-hw)+" "+BASIS_Y+" Q"+MITTE+" "+Cy+" "+(MITTE+hw)+" "+BASIS_Y;
+}
+function koerperPfad(){
+  var hw = halbBreite() + 26;
+  return "M"+(MITTE-hw+30)+" 118 Q"+(MITTE-hw)+" 150 "+(MITTE-hw)+" 250"
+       + " L"+(MITTE-hw)+" 470 Q"+(MITTE-hw)+" 512 "+(MITTE-hw+38)+" 512"
+       + " L"+(MITTE+hw-38)+" 512 Q"+(MITTE+hw)+" 512 "+(MITTE+hw)+" 470"
+       + " L"+(MITTE+hw)+" 250 Q"+(MITTE+hw)+" 150 "+(MITTE+hw-30)+" 118 Z";
+}
+function lungenPfad(seite){
+  var hw = halbBreite();
+  var xAussen = MITTE + seite*(hw - 15), xInnen = MITTE + seite*46, yOben = 178, p = [];
+  p.push("M"+(MITTE + seite*(hw*0.30))+" "+yOben);
+  p.push("Q"+(MITTE + seite*(hw-6))+" "+(yOben+16)+" "+xAussen+" "+(yOben+78));
+  p.push("L"+xAussen+" "+(zwerchY(xAussen)-11));
+  var N = 7, k, x;
+  for (k=1; k<=N; k++){
+    x = xAussen + (xInnen - xAussen)*(k/N);
+    p.push("L"+x.toFixed(1)+" "+(zwerchY(x)-11).toFixed(1));
+  }
+  var yUntenInnen = zwerchY(xInnen)-11, M2 = 8, m, y, kerbe;
+  for (m=1; m<=M2; m++){
+    y = yUntenInnen + (yOben+52 - yUntenInnen)*(m/M2);
+    kerbe = (seite > 0 && y > 322 && y < 424) ? 36*Math.sin(Math.PI*(y-322)/102) : 0;
+    p.push("L"+(xInnen + seite*kerbe).toFixed(1)+" "+y.toFixed(1));
+  }
+  p.push("Q"+xInnen+" "+yOben+" "+(MITTE + seite*(hw*0.30))+" "+yOben+" Z");
+  return p.join(" ");
+}
+function lappenPfad(seite, anteil){
+  var hw = halbBreite(), xA = MITTE + seite*(hw-18), xI = MITTE + seite*52;
+  return "M"+xA+" "+(178 + (zwerchY(xA)-190)*anteil).toFixed(1)
+       + " L"+xI+" "+(178 + (zwerchY(xI)-190)*(anteil+0.18)).toFixed(1);
+}
+function herzPfad(){
+  return "M362 318 Q352 372 386 424 Q420 462 452 424 Q476 392 470 330 Q450 300 412 302 Q378 300 362 318 Z";
+}
+
+/* ---------------- Rippen und Zwischenrippenmuskeln ---------------- */
+function dreh(pt, piv, a){
+  var dx = pt.x-piv.x, dy = pt.y-piv.y, ca = Math.cos(a), sa = Math.sin(a);
+  return { x: piv.x + dx*ca - dy*sa, y: piv.y + dx*sa + dy*ca };
+}
+function rippeGeo(r, s){
+  var hw = halbBreite(), y0 = 192 + r*40;
+  var piv = { x: MITTE + s*24, y: y0 };
+  var c   = { x: MITTE + s*(hw*0.70), y: y0 - 10 };
+  var e   = { x: MITTE + s*(hw*0.94), y: y0 + 40 };
+  var a = -s * (7.5*Math.PI/180) * S.i;
+  return { p:piv, c:dreh(c,piv,a), e:dreh(e,piv,a) };
+}
+var rippenEl = [], muskelEl = [];
+(function baueWand(){
+  var r, s, g;
+  for (r=0; r<6; r++){
+    for (s=-1; s<=1; s+=2){
+      var k = document.createElementNS("http://www.w3.org/2000/svg","path");
+      el.rippenKontur.appendChild(k);
+      g = document.createElementNS("http://www.w3.org/2000/svg","path");
+      g.dataset.reihe = r; g.dataset.seite = s;
+      el.rippen.appendChild(g);
+      rippenEl.push({ knochen:g, kontur:k, r:r, s:s });
+    }
+  }
+  for (r=0; r<5; r++){
+    for (s=-1; s<=1; s+=2){
+      g = document.createElementNS("http://www.w3.org/2000/svg","path");
+      g.dataset.reihe = r; g.dataset.seite = s;
+      g.setAttribute("fill","var(--muskel)"); g.setAttribute("stroke","none");
+      el.muskeln.appendChild(g); muskelEl.push(g);
+    }
+  }
+})();
+function zeichneWand(){
+  rippenEl.forEach(function(o){
+    var G = rippeGeo(o.r, o.s);
+    var d = "M"+G.p.x.toFixed(1)+" "+G.p.y.toFixed(1)
+          + " Q"+G.c.x.toFixed(1)+" "+G.c.y.toFixed(1)+" "+G.e.x.toFixed(1)+" "+G.e.y.toFixed(1);
+    o.knochen.setAttribute("d", d);
+    o.kontur.setAttribute("d", d);
+  });
+  var spannung = Math.max(0, Math.min(1, S.i));
+  var deck = (0.16 + 0.46*spannung).toFixed(2);
+  muskelEl.forEach(function(g){
+    var r = +g.dataset.reihe, s = +g.dataset.seite;
+    var A = rippeGeo(r, s), B = rippeGeo(r+1, s);
+    g.setAttribute("d",
+      "M"+A.p.x.toFixed(1)+" "+A.p.y.toFixed(1)+
+      " Q"+A.c.x.toFixed(1)+" "+A.c.y.toFixed(1)+" "+A.e.x.toFixed(1)+" "+A.e.y.toFixed(1)+
+      " L"+B.e.x.toFixed(1)+" "+B.e.y.toFixed(1)+
+      " Q"+B.c.x.toFixed(1)+" "+B.c.y.toFixed(1)+" "+B.p.x.toFixed(1)+" "+B.p.y.toFixed(1)+" Z");
+    g.setAttribute("opacity", deck);
+  });
+}
+
+/* ---------------- Luftpunkte bis in die Lunge ---------------- */
+var punkte = [];
+(function baueLuft(){
+  var sparsam = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var n = sparsam ? 6 : 14, k, c, s;
+  for (k=0; k<n; k++){
+    s = (k % 2 === 0) ? -1 : 1;
+    c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("r","5"); c.setAttribute("cx","400"); c.setAttribute("cy","60");
+    el.luftpunkte.appendChild(c);
+    punkte.push({
+      el:c, s:s, ph:(k/n),
+      fx: (s < 0 ? 0.22 : 0.44) + 0.62*((k*0.37) % 1),
+      fy: 0.18 + 0.66*((k*0.61) % 1)
+    });
+  }
+})();
+function bahn(dot){
+  var hw = halbBreite(), s = dot.s;
+  var hx = MITTE + s*(64 + 6*S.i);
+  var xMed = MITTE + s*54, xLat = MITTE + s*(hw-30);
+  var x = xMed + (xLat - xMed)*dot.fx;
+  var yTop = 218, yBot = zwerchY(x) - 24;
+  return [ {x:MITTE,y:42}, {x:MITTE,y:150}, {x:hx,y:206}, {x:x,y:yTop + (yBot-yTop)*dot.fy} ];
+}
+function punktAuf(pts, f){
+  var segs = [], total = 0, k, dx, dy, L;
+  for (k=0; k<pts.length-1; k++){
+    dx = pts[k+1].x-pts[k].x; dy = pts[k+1].y-pts[k].y;
+    L = Math.sqrt(dx*dx+dy*dy); segs.push(L); total += L;
+  }
+  var rest = f*total, t;
+  for (k=0; k<segs.length; k++){
+    if (rest <= segs[k] || k === segs.length-1){
+      t = segs[k] > 0 ? Math.min(1, rest/segs[k]) : 0;
+      return { x: pts[k].x + (pts[k+1].x-pts[k].x)*t, y: pts[k].y + (pts[k+1].y-pts[k].y)*t };
+    }
+    rest -= segs[k];
+  }
+  return pts[pts.length-1];
+}
+
+/* ---------------- Bewegungspfeile ---------------- */
+function pfeilPfad(x, y0, laenge, richtung){
+  var y1 = y0 + richtung*laenge;
+  return "M"+x+" "+y0.toFixed(1)+" L"+x+" "+y1.toFixed(1)
+       + " M"+(x-9)+" "+(y1 - richtung*12).toFixed(1)+" L"+x+" "+y1.toFixed(1)
+       + " L"+(x+9)+" "+(y1 - richtung*12).toFixed(1);
+}
+function zeichnePfeile(){
+  var schwelle = 0.05;
+  // Zwerchfell
+  var aktivZ = zeigePfeile && Math.abs(vD) > schwelle;
+  if (aktivZ){
+    var rZ2 = vD > 0 ? 1 : -1;
+    var yStart = zwerchY(MITTE) + (rZ2 > 0 ? 16 : 48);
+    el.pfZwerch.setAttribute("d", pfeilPfad(MITTE, yStart, 34, rZ2));
+    el.pfZwerch.setAttribute("opacity", Math.min(1, 0.35 + Math.abs(vD)*1.6).toFixed(2));
+    el.txZwerch.setAttribute("y", (zwerchY(MITTE) + 74).toFixed(0));
+    el.txZwerch.setAttribute("opacity","1");
+    el.txZwerch.textContent = rZ2 > 0 ? "tritt tiefer" : "weicht zurück";
+  } else {
+    el.pfZwerch.setAttribute("opacity","0"); el.txZwerch.setAttribute("opacity","0");
+  }
+  // Rippen
+  var aktivR = zeigePfeile && Math.abs(vI) > schwelle;
+  if (aktivR){
+    var rR2 = vI > 0 ? -1 : 1;               // Anspannung steigt -> Rippen heben sich
+    var hw = halbBreite(), yStart = rR2 > 0 ? 262 : 306;
+    var deck = Math.min(1, 0.35 + Math.abs(vI)*1.6).toFixed(2);
+    var txt = rR2 > 0 ? "senken sich" : "heben sich";
+    [[-1, el.pfRipL, el.txRipL], [1, el.pfRipR, el.txRipR]].forEach(function(a){
+      var x = MITTE + a[0]*(hw + 34);
+      a[1].setAttribute("d", pfeilPfad(x, yStart, 40, rR2));
+      a[1].setAttribute("opacity", deck);
+      a[2].setAttribute("x", x.toFixed(0)); a[2].setAttribute("opacity","1");
+      a[2].textContent = txt;
+    });
+  } else {
+    el.pfRipL.setAttribute("opacity","0"); el.pfRipR.setAttribute("opacity","0");
+    el.txRipL.setAttribute("opacity","0"); el.txRipR.setAttribute("opacity","0");
+  }
+}
+
+/* ---------------- Physik ---------------- */
+function schritt(dt){
+  var Vziel = VMAX_D*S.d + VMAX_I*S.i;
+  var fluss = (Vziel - S.V)/TAU;
+  S.V += fluss*dt;
+  if (Math.abs(Vziel - S.V) < 0.4) S.V = Vziel;
+  return { Vziel:Vziel, fluss:fluss, pAlv:(S.V - Vziel)*K_DRUCK, pPleura:-5 - 0.0055*Math.max(0,Vziel) };
+}
+
+/* ---------------- Darstellung ---------------- */
+var letzterZustand = "";
+function zeichne(m, dt){
+  var sig = S.d.toFixed(3)+"|"+S.i.toFixed(3);
+  if (sig !== letzterZustand){
+    letzterZustand = sig;
+    el.koerper.setAttribute("d", koerperPfad());
+    el.herz.setAttribute("d", herzPfad());
+    var pR = lungenPfad(-1), pL = lungenPfad(1);
+    el.lungeR.setAttribute("d", pR); el.pleuraR.setAttribute("d", pR);
+    el.lungeL.setAttribute("d", pL); el.pleuraL.setAttribute("d", pL);
+    el.lappenR1.setAttribute("d", lappenPfad(-1, 0.30));
+    el.lappenR2.setAttribute("d", lappenPfad(-1, 0.60));
+    el.lappenL1.setAttribute("d", lappenPfad(1, 0.46));
+    el.zwerchfell.setAttribute("d", zwerchfellPfad());
+    el.zwerchLabel.setAttribute("y", (zwerchY(280)+30).toFixed(0));
+    el.sternum.setAttribute("y", (188 - 7*S.i).toFixed(1));
+    el.bronchL.setAttribute("d", "M400 152 L"+(MITTE-64-6*S.i).toFixed(1)+" 206");
+    el.bronchR.setAttribute("d", "M400 152 L"+(MITTE+64+6*S.i).toFixed(1)+" 206");
+    zeichneWand();
+  }
+
+  var pStaerke = Math.min(1, (Math.abs(m.pPleura)-5)/3);
+  var op = (0.22 + 0.40*pStaerke).toFixed(2);
+  el.pleuraR.setAttribute("opacity", op);
+  el.pleuraL.setAttribute("opacity", op);
+
+  var f = m.fluss, absF = Math.abs(f), stroemt = absF > 12;
+  var farbe = f > 0 ? "var(--ein)" : "var(--aus)";
+  punkte.forEach(function(p){
+    if (stroemt){
+      p.ph = p.ph + (f/450)*dt;
+      p.ph = p.ph - Math.floor(p.ph);
+    }
+    var pos = punktAuf(bahn(p), p.ph);
+    p.el.setAttribute("cx", pos.x.toFixed(1));
+    p.el.setAttribute("cy", pos.y.toFixed(1));
+    p.el.setAttribute("fill", farbe);
+    var rand = Math.min(1, Math.min(p.ph, 1-p.ph)*7);
+    p.el.setAttribute("opacity", stroemt ? (rand*Math.min(1, absF/220)).toFixed(2) : "0.12");
+  });
+  el.atemLabel.textContent = !stroemt ? "kein Luftstrom"
+        : (f > 0 ? "▼  Einatmen (Inspiration)" : "▲  Ausatmen (Exspiration)");
+  el.atemLabel.setAttribute("fill", stroemt ? farbe : "#8A9A96");
+
+  zeichnePfeile();
+  zeichneKette(m, stroemt);
+}
+
+function zeichneKette(m, stroemt){
+  var ein = S.d > 0.02 || S.i > 0.02, aus = S.d < -0.01 || S.i < -0.01;
+  el.chipZ.classList.toggle("an", S.d > 0.02);
+  el.chipR.classList.toggle("an", S.i > 0.02);
+  el.chipA.classList.toggle("an", aus);
+  el.chipA.classList.toggle("aus", aus);
+  el.g1.classList.toggle("aktiv", ein || aus);
+  el.z1.textContent = aus ? "presst aktiv aus" : (ein ? "angespannt" : "alles entspannt");
+
+  var v = m.Vziel;
+  el.g2.classList.toggle("aktiv", Math.abs(v) > 6);
+  el.w2.textContent = v > 6 ? "dehnt sich aus" : (v < -6 ? "enger als in Ruhe" : "unverändert");
+  el.m2.style.left = "18%";
+  if (v >= 0){
+    el.b2.style.left = "18%";
+    el.b2.style.width = Math.min(80, v/1300*80) + "%";
+    el.b2.style.background = "var(--sog)";
+  } else {
+    var br = Math.min(17, Math.abs(v)/560*17);
+    el.b2.style.left = (18-br) + "%";
+    el.b2.style.width = br + "%";
+    el.b2.style.background = "var(--strom)";
+  }
+
+  var p = m.pAlv, spuerbar = Math.abs(p) > 0.05;
+  el.g3.classList.toggle("aktiv", spuerbar);
+  el.w3.textContent = !spuerbar ? "wie außen" : (p < 0 ? "niedriger als außen" : "höher als außen");
+  var breite = Math.min(48, Math.abs(p)*16);
+  el.b3.style.left = (p < 0 ? 50-breite : 50) + "%";
+  el.b3.style.width = breite + "%";
+  el.b3.style.background = p < 0 ? "var(--sog)" : "var(--strom)";
+  el.z3.textContent = zeigeZahlen ? (p>=0?"+":"") + p.toFixed(2) + " cmH₂O" : "";
+
+  var f = m.fluss;
+  el.g4.classList.toggle("aktiv", stroemt);
+  el.p4.textContent = stroemt ? (f > 0 ? "↓" : "↑") : "–";
+  el.p4.style.color = stroemt ? (f > 0 ? "var(--ein)" : "var(--aus)") : "#7C949B";
+  el.w4.textContent = !stroemt ? "kein Luftstrom" : (f > 0 ? "Einatmen (Inspiration)" : "Ausatmen (Exspiration)");
+  el.z4.textContent = S.V >= 0
+    ? "Atemzugvolumen: " + Math.round(S.V) + " ml"
+    : "unter Ruhelage: " + Math.round(-S.V) + " ml";
+
+  el.pleuraZahl.style.display = zeigeZahlen ? "block" : "none";
+  el.pleuraZahl.textContent = m.pPleura.toFixed(1) + " cmH₂O";
+}
+
+/* ---------------- Schleife ---------------- */
+var tAlt = 0;
+function tick(t){
+  var dtEcht = tAlt ? Math.min(0.05, (t - tAlt)/1000) : 0.016;
+  tAlt = t;
+  var dt = dtEcht * tempo;
+  var dAlt = S.d, iAlt = S.i;
+
+  if (modus === "ruhe"){
+    demoT += dt;
+    var Z = 4.2, ph = demoT % Z, w;
+    if (ph < 1.7){ w = 0.52*(1 - Math.cos(Math.PI*(ph/1.7)))/2; }
+    else { w = 0.52*Math.pow(1 - (ph-1.7)/2.5, 2.2); }
+    S.d = w; S.i = w*0.95;
+    setzeRegler();
+  } else if (modus === "stress"){
+    demoT += dt;
+    var Zs = 2.1, phs = demoT % Zs, boden = -0.70, gd = 1.00, gi = 0.95, u, kd, ki;
+    if (phs < 0.85){
+      u = (1 - Math.cos(Math.PI*(phs/0.85)))/2;
+      kd = boden + (gd-boden)*u; ki = boden + (gi-boden)*u;
+    } else {
+      u = (1 - Math.cos(Math.PI*((phs-0.85)/1.25)))/2;
+      kd = gd - (gd-boden)*u; ki = gi - (gi-boden)*u;
+    }
+    S.d = kd; S.i = ki;
+    setzeRegler();
+  } else if (entspannenAn){
+    S.d = Math.max(0, S.d - dt*0.75);
+    S.i = Math.max(0, S.i - dt*0.75);
+    if (S.d === 0 && S.i === 0) entspannenAn = false;
+    setzeRegler();
+  }
+
+  var gl = Math.min(1, dt*9);
+  vD += (((S.d - dAlt)/dt) - vD)*gl;
+  vI += (((S.i - iAlt)/dt) - vI)*gl;
+
+  zeichne(schritt(dt), dt);
+  requestAnimationFrame(tick);
+}
+
+/* ---------------- Bedienung ---------------- */
+var rZ = $("zwerch"), rR = $("rippen");
+function setzeRegler(){
+  rZ.value = Math.round(Math.max(0, S.d)*100);
+  rR.value = Math.round(Math.max(0, S.i)*100);
+  beschrifte();
+}
+function stufe(v){
+  if (v < -0.02) return "presst aus";
+  return v < 0.03 ? "entspannt" : v < 0.35 ? "leicht" : v < 0.72 ? "deutlich" : "maximal";
+}
+function beschrifte(){
+  el.lblZwerch.textContent = stufe(S.d);
+  el.lblRippen.textContent = stufe(S.i);
+}
+function demoAus(){
+  modus = null;
+  $("demoRuhe").classList.remove("an"); $("demoRuhe").textContent = "Ruheatmung starten";
+  $("demoStress").classList.remove("an"); $("demoStress").textContent = "Angestrengte Atmung starten";
+}
+function handbetrieb(){ demoAus(); entspannenAn = false; }
+
+rZ.addEventListener("input", function(){ handbetrieb(); S.d = +rZ.value/100; beschrifte(); });
+rR.addEventListener("input", function(){ handbetrieb(); S.i = +rR.value/100; beschrifte(); });
+
+document.querySelectorAll("[data-set]").forEach(function(b){
+  b.addEventListener("click", function(){
+    handbetrieb();
+    var w = +b.dataset.wert/100;
+    if (b.dataset.set === "zwerch") S.d = w; else S.i = w;
+    setzeRegler();
+  });
+});
+
+$("entspannen").addEventListener("click", function(){ demoAus(); entspannenAn = true; });
+
+$("demoRuhe").addEventListener("click", function(){
+  var an = modus !== "ruhe"; demoAus(); entspannenAn = false;
+  if (an){ modus = "ruhe"; demoT = 0; this.classList.add("an"); this.textContent = "Ruheatmung anhalten"; }
+});
+$("demoStress").addEventListener("click", function(){
+  var an = modus !== "stress"; demoAus(); entspannenAn = false;
+  if (an){ modus = "stress"; demoT = 0; this.classList.add("an","stress"); this.textContent = "Angestrengte Atmung anhalten"; }
+});
+
+function segment(gruppe, aktion){
+  document.querySelectorAll("["+gruppe+"]").forEach(function(b){
+    b.addEventListener("click", function(){
+      document.querySelectorAll("["+gruppe+"]").forEach(function(x){ x.classList.remove("an"); });
+      b.classList.add("an");
+      aktion(b.dataset[gruppe.replace("data-","")]);
+    });
+  });
+}
+segment("data-rippen", function(w){
+  el.rippen.setAttribute("opacity", w === "voll" ? "1" : "0");
+  el.rippenKontur.setAttribute("stroke-width", w === "voll" ? "14.5" : "2.5");
+  el.rippenKontur.setAttribute("opacity", w === "aus" ? "0" : "1");
+  el.sternum.setAttribute("opacity", w === "aus" ? "0" : (w === "voll" ? "1" : "0.35"));
+});
+segment("data-muskel", function(w){
+  el.muskeln.setAttribute("opacity", w === "aus" ? "0" : "1");
+});
+segment("data-tempo", function(w){
+  tempo = parseFloat(w);
+  el.tempoBadge.classList.toggle("an", tempo < 1);
+  el.tempoFaktor.textContent = tempo === 0.5 ? "½×" : "¼×";
+});
+
+$("pfeileAn").addEventListener("change", function(){ zeigePfeile = this.checked; });
+$("zahlen").addEventListener("change", function(){ zeigeZahlen = this.checked; });
+
+/* ---------------- Hilfekarten ---------------- */
+var karten = {
+  pleura: {
+    t:"Pleura und Pleuraspalt", u:"Warum die Lunge dem Brustkorb folgt",
+    h:"<p>Die Lunge hat <b>keine eigene Muskulatur</b>. Sie kann sich nicht selbst ausdehnen und nicht selbst zusammenziehen.</p>"+
+      "<p>Sie ist von einem doppelten Häutchen überzogen: Das <b>Lungenfell (Pleura visceralis)</b> liegt direkt auf der Lunge, das <b>Rippenfell (Pleura parietalis)</b> kleidet den Brustkorb von innen aus. Dazwischen liegt der <b>Pleuraspalt</b> mit einem dünnen Flüssigkeitsfilm.</p>"+
+      "<p>In diesem Spalt herrscht ständig ein Unterdruck. Die beiden Blätter haften dadurch aneinander wie zwei nasse Glasplatten: verschiebbar, aber nicht trennbar.</p>"+
+      "<div class='merk'>Der Brustkorb zieht die Lunge auf. Die Lunge wird gedehnt – sie dehnt sich nicht selbst.</div>"
+  },
+  zwerchfell: {
+    t:"Das Zwerchfell", u:"Der wichtigste Atemmuskel",
+    h:"<p>Das Zwerchfell (Diaphragma) ist eine Muskelplatte zwischen Brust- und Bauchraum. Entspannt wölbt es sich <b>kuppelförmig nach oben</b> in den Brustkorb hinein.</p>"+
+      "<p>Spannt es sich an, wird es <b>flacher und tritt nach unten</b>. Der Brustraum wird höher – das ist der größte Anteil an der Einatmung.</p>"+
+      "<ul><li>Rund zwei Drittel des Atemzugvolumens gehen auf das Zwerchfell zurück.</li>"+
+      "<li>Gesteuert über den <b>Nervus phrenicus</b> aus dem Halsmark (C3–C5).</li>"+
+      "<li>Alles, was von unten drückt – Schwangerschaft, Aszites, ein voller Magen, flaches Liegen – macht das Atmen schwerer.</li></ul>"
+  },
+  rippen: {
+    t:"Zwischenrippenmuskulatur", u:"Der Brustkorb wird weiter",
+    h:"<p>Die <b>äußeren Zwischenrippenmuskeln (Mm. intercostales externi)</b> liegen in den Zwischenrippenräumen. Bei Anspannung ziehen sie die Rippen nach oben und außen, der Brustkorb wird weiter und tiefer.</p>"+
+      "<p>Im Modell sind sie die Felder zwischen den Rippen. Je stärker sie angespannt sind, desto kräftiger färben sie sich.</p>"+
+      "<p>Die <b>inneren</b> Zwischenrippenmuskeln arbeiten in die Gegenrichtung und werden erst bei der <b>angestrengten</b> Ausatmung gebraucht – beim Husten, Pressen, Sprechen –, in Ruhe nicht.</p>"+
+      "<div class='merk'>Stell den Brustkorb auf „sichtbar“: Dann siehst du, dass die Lunge unmittelbar an der Brustwand hängt und jede Rippenbewegung mitmacht.</div>"
+  },
+  fluegel: {
+    t:"Warum der linke Flügel kleiner ist", u:"Das Herz braucht Platz",
+    h:"<p>Das Herz liegt nicht mittig, sondern mit seiner Spitze <b>nach links verlagert</b>. Der linke Lungenflügel muss ihm ausweichen.</p>"+
+      "<ul><li>Dafür ist am linken Flügel eine Einbuchtung ausgespart: die <b>Incisura cardiaca</b> (Herzeinschnitt). Du siehst sie als Delle an der Innenkante.</li>"+
+      "<li><b>Rechts: 3 Lappen</b> (Ober-, Mittel-, Unterlappen).</li>"+
+      "<li><b>Links: 2 Lappen</b> (Ober- und Unterlappen).</li></ul>"+
+      "<p>Der rechte Hauptbronchus verläuft außerdem steiler und weiter als der linke. Deshalb landen aspirierte Fremdkörper meist rechts.</p>"
+  },
+  ausatmen: {
+    t:"Ausatmen geht von allein", u:"Passive Ausatmung",
+    h:"<p>Für die ruhige Ausatmung wird <b>kein Muskel</b> gebraucht. Es reicht, dass Zwerchfell und Zwischenrippenmuskeln <b>aufhören zu arbeiten</b>.</p>"+
+      "<p>Lunge und Brustkorb sind elastisch. Wie ein gedehntes Gummiband kehren sie von selbst in ihre Ruhelage zurück – der Brustraum wird kleiner, der Druck in der Lunge steigt über den Außendruck, die Luft strömt hinaus.</p>"+
+      "<div class='merk'>Probier es aus: tief einatmen, dann alle Muskeln entspannen. Die Luft geht hinaus, ohne dass du etwas anspannst.</div>"
+  },
+  angestrengt: {
+    t:"Angestrengte Atmung", u:"Wenn die Ruheatmung nicht mehr reicht",
+    h:"<p>Bei Belastung oder Atemnot reicht die Ruheatmung nicht aus. Dann ändern sich <b>drei</b> Dinge gleichzeitig:</p>"+
+      "<ul><li>Die Atmung wird <b>tiefer</b> – Zwerchfell und Rippenmuskeln arbeiten kräftiger.</li>"+
+      "<li>Die Atmung wird <b>schneller</b>.</li>"+
+      "<li>Die Ausatmung wird <b>aktiv</b>: Bauchmuskeln und innere Zwischenrippenmuskeln pressen die Luft heraus. Der Brustkorb wird dabei sogar <b>enger als in Ruhe</b>.</li></ul>"+
+      "<p>Im Modell siehst du das daran, dass beim Ausatmen der Balken „Brustkorb“ nach links über die Ruhelage hinausgeht und das Feld <b>Bauchpresse</b> aufleuchtet.</p>"+
+      "<div class='merk'>Genau das beobachtest du bei einem Menschen in Atemnot: aufgestützte Arme, sichtbar arbeitende Hals- und Bauchmuskeln, hohe Atemfrequenz.</div>"
+  },
+  begriffe: {
+    t:"Fachbegriffe zum Schreiben", u:"Schreibhilfe für deine Erläuterung",
+    h:"<ul>"+
+      "<li><b>Diaphragma</b> – Zwerchfell</li>"+
+      "<li><b>Mm. intercostales externi</b> – äußere Zwischenrippenmuskeln</li>"+
+      "<li><b>Mm. intercostales interni</b> – innere Zwischenrippenmuskeln, aktive Ausatmung</li>"+
+      "<li><b>Pleura visceralis</b> – Lungenfell, liegt der Lunge auf</li>"+
+      "<li><b>Pleura parietalis</b> – Rippenfell, kleidet den Brustkorb aus</li>"+
+      "<li><b>Pleuraspalt</b> – Spalt dazwischen, ständiger Unterdruck</li>"+
+      "<li><b>Inspiration</b> – Einatmung (aktiv)</li>"+
+      "<li><b>Exspiration</b> – Ausatmung (in Ruhe passiv, angestrengt aktiv)</li>"+
+      "<li><b>Atemzugvolumen</b> – Luftmenge pro Atemzug, in Ruhe etwa 500 ml</li>"+
+      "<li><b>Incisura cardiaca</b> – Herzeinschnitt am linken Lungenflügel</li>"+
+      "<li><b>Trachea</b> – Luftröhre; <b>Hauptbronchus</b> – erster Ast danach</li>"+
+      "</ul>"+
+      "<div class='merk'>Beschreibe die Reihenfolge: Welcher Muskel bewegt sich zuerst? Was macht der Brustkorb? Was macht der Druck? Und erst dann: Wohin strömt die Luft?</div>"
+  }
+};
+
+var modal = $("modal");
+document.querySelectorAll("[data-karte]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var k = karten[b.dataset.karte];
+    $("mTitel").textContent = k.t; $("mUnter").textContent = k.u;
+    $("mText").innerHTML = k.h;
+    modal.classList.add("auf"); $("mZu").focus();
+  });
+});
+$("mZu").addEventListener("click", function(){ modal.classList.remove("auf"); });
+modal.addEventListener("click", function(e){ if (e.target === modal) modal.classList.remove("auf"); });
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") modal.classList.remove("auf"); });
+
+setzeRegler();
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

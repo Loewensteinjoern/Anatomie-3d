@@ -20,12 +20,13 @@
      lunge(s, herz)       SDF-Funktion des Lungenfluegels s mit Lappenfurchen (Koerper); herz = { smp, v }
                           (Abtaster der Herzform und Verschiebung Herz -> Koerper)
                           oder null (dann Ersatz-Herzbucht)
-     fluegel(s, herz)     wie lunge, aber ohne Furchen (Grundlage der Lappen und des Rippenfells)
+     fluegel(s, herz, rund) wie lunge, aber ohne Furchen (Grundlage der Lappen und des Rippenfells); rund (optional, cm): Verrundung der
+                          Kante an der Zwerchfellkuppel (Detailmodell: ohne duenne, ausgefranste Raender unten; der Koerper laesst es weg)
      grenzen(s)           Gitterbox [[x0,y0,z0],[x1,y1,z1]] des Fluegels s
      HERZ_V               Verschiebung Herz-Modell -> Koerper (Herzbucht, Lage des Herzens)
      rippeStuetz(i,s,lg,hh) Stuetzpunkte der Rippe i, Seite s (lg = Lunge, hh = Haut oder null)
-     lappen(s, herz)      Lungenlappen des Fluegels s: Liste { id, sdf, grenzen }, durch Spalten getrennt
-     bronchien(herz)      Bronchialbaum: Liste von Aesten { pts, r0, r1, lappen, gen }, Eigenschaft endpunkte
+     lappen(s, herz, rund) Lungenlappen des Fluegels s: Liste { id, sdf, grenzen }, durch Spalten getrennt (rund wie bei fluegel)
+     bronchien(herz, rund) Bronchialbaum: Liste von Aesten { pts, r0, r1, lappen, gen }, Eigenschaft endpunkte
      TRACHEA, hauptbronchus(s)  Mittellinien von Luftroehre und Hauptbronchus
    ========================================================================== */
 (function () {
@@ -94,13 +95,14 @@ function thoraxInnen(x, y, z) {
 }
 
 /* Lungenfluegel s (-1 rechts, 1 links) ohne die Lappenfurchen; herz = { smp, v } formt die Herzbucht nach dem Herzen, null = Ersatz-Herzbucht */
-function fluegel(s, herz) {
+function fluegel(s, herz, rund) {
   var cx = s * 8.4, ytop = s < 0 ? DOM_R : DOM_L, xc = s * 6.5;
   var rx = s < 0 ? 5.2 : 4.9;
   return function (x, y, z) {
     var d = ell(x, y, z, cx - s * 0.18 * Math.max(0, y - 122), 125, -0.8, rx, 19, 7.8);   // Spitze neigt sich zur Mitte
     d = S.smax(d, thoraxInnen(x, y, z), 1.0);
-    d = Math.max(d, 0.4 * (domY(x, z, xc, ytop) + 0.5 - y));
+    var kuppe = 0.4 * (domY(x, z, xc, ytop) + 0.5 - y);
+    d = rund ? S.smax(d, kuppe, rund) : Math.max(d, kuppe);   /* rund: Kante an der Kuppel verrunden, duenne Raender (Messerschneide) verschwinden */
     if (herz) {
       d = S.smax(d, -(herz.smp.val(x - herz.v[0], y - herz.v[1], z - herz.v[2]) - 0.4), 0.8);   // Herzbucht nach der Form des Herzens
       if (s > 0) d = S.smax(d, -kap(x, y, z, 4.7, 127, -3.2, 3.8, 110, -2.6, 2.1), 0.8);       // Aortenrinne
@@ -170,8 +172,8 @@ function rippeStuetz(i, s, lg, hh) {
    waagerechte Spalte (Fissura horizontalis) bei y = 129.5, nur vorn (z > 1): darueber der Oberlappen, darunter der Mittellappen. */
 var SPALT = 0.25, HOR_Y = 129.5, HOR_Z = 1;
 function schraeg(y, z) { return 0.515 * (y - 123) + 0.857 * z; }
-function lappen(s, herz) {
-  var f = fluegel(s, herz), g = SPALT / 2, bx = grenzen(s), z0 = bx[0][2], z1 = bx[1][2], x0 = bx[0][0], x1 = bx[1][0];
+function lappen(s, herz, rund) {
+  var f = fluegel(s, herz, rund), g = SPALT / 2, bx = grenzen(s), z0 = bx[0][2], z1 = bx[1][2], x0 = bx[0][0], x1 = bx[1][0];
   var box = function (y0, y1, zmin) { return [[x0, y0, zmin === undefined ? z0 : zmin], [x1, y1, z1]]; };
   if (s > 0) return [
     { id: 'oberlappenL', sdf: function (x, y, z) { return Math.max(f(x, y, z), g - schraeg(y, z)); }, grenzen: box(110, 146.5) },
@@ -207,7 +209,7 @@ var LAPPEN_WEG = {   /* Lappenbronchus: Abzweig am Hauptbronchus (Hilus), zwei Z
   oberlappenL: [[7.0, 124.2, -2.6], [6.5, 128.6, -1.2], [5.6, 133.0, 0.2], [4.8, 137.0, -0.4]],
   unterlappenL: [[7.0, 124.2, -2.6], [7.8, 121.2, -3.2], [8.4, 119.0, -3.2], [8.4, 117.2, -3.6]]
 };
-function bronchien(herz) {
+function bronchien(herz, rund) {
   var aeste = [], endpunkte = [];
   var norm = function (v) { var l = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
   var kreuz = function (a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; };
@@ -220,7 +222,7 @@ function bronchien(herz) {
     var f = (d - L[i - 1]) / ((L[i] - L[i - 1]) || 1);
     return [0, 1, 2].map(function (c) { return pts[i - 1][c] + (pts[i][c] - pts[i - 1][c]) * f; });
   };
-  var alle = lappen(-1, herz).concat(lappen(1, herz)), sdf = {};
+  var alle = lappen(-1, herz, rund).concat(lappen(1, herz, rund)), sdf = {};
   alle.forEach(function (l) { sdf[l.id] = l.sdf; });
   var LAENGE = [0, 3.4, 2.1, 1.3], RADIUS = [0, [0.36, 0.26], [0.26, 0.18], [0.18, 0.12]], ANZAHL = [0, 3, 2, 2];
   var wink = 0;

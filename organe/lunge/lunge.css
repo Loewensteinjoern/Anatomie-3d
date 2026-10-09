@@ -18,7 +18,25 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 
 /* Reiter in der Leiste (Aussehen: core/kern.css); weitere Reiter kommen spaeter dazu */
 #rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
-#rail .tab{flex:1 1 calc(33.3% - 3px);font-size:10px;padding:6px 0}
+#rail .tab{flex:1 1 calc(50% - 3px);font-size:10px;padding:6px 0}   /* vier Reiter: zwei Zeilen (2 + 2) */
+.pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte; der Inhalt der Hilfekarten ist HTML aus dem Thorax-Modell (p, ul, ol, li, .merk) */
+#scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#scard .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+#scard .kick{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);padding-right:40px}
+#scard h3{margin:3px 0 8px;font-size:16px;font-weight:600;padding-right:40px}
+#scard .after:empty{display:none}
+#scard .qa{display:flex;gap:6px;margin-top:10px;align-items:center}
+#scard .score{font-family:var(--mono);font-size:11px;color:var(--brass);margin-right:auto}
+#scard .ok{color:#7CD69B}
+#scard .no{color:#F08A7E}
+#scard .lead p,#scard .lead ul,#scard .lead ol{margin:0 0 9px;font-size:12.5px;line-height:1.5;color:var(--ink-dim)}
+#scard .lead ul,#scard .lead ol{padding-left:19px}
+#scard .lead li{margin-bottom:5px}
+#scard .lead b{color:var(--ink);font-weight:600}
+#scard .lead .merk{background:var(--panel-hi);border-left:3px solid var(--brass);padding:8px 11px;border-radius:0 3px 3px 0;font-size:12.5px;line-height:1.5;color:var(--ink)}
 
 @media (max-width:1000px){
   #tools .cap{display:none}
@@ -33,7 +51,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
     border-radius:0;border-left:0;border-right:0;border-bottom:0}
   #legend{display:none}
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 92px)}
-  body:has(#info.show) #atlasZurueck{display:none}   /* offene Infokarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
+  #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Infokarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   #rail .tabs{flex-wrap:nowrap}
   #rail .tab{flex:1 1 0}
 }
@@ -67,6 +86,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #paneAtmung .schalter{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-dim);padding:6px 0;min-height:44px}
 #paneAtmung .schalter input{width:26px;height:26px;accent-color:var(--brass)}
 
+/* Pleuraspalt-Hinweis und Tempo-Abzeichen (unten) sind im Original fest in px bei ca. 958 px Buehnenbreite (1280 - 322); --sk (= Breite des Bildes / 958, von lunge.js gesetzt)
+   skaliert Groesse und Lage mit dem Panel, auch auf dem Handy. */
 /* Schema der Atemmechanik (aus dem Thorax-Modell): helles Original-Aussehen, auf das Panel beschraenkt; die Variablen des Originals
    werden hier neu definiert, weil --ink, --panel usw. in der App andere Werte haben. Breite folgt dem Seitenverhaeltnis (Bild 800 : 620 plus Kette) */
 #schema{
@@ -87,7 +108,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #schema #loBild svg{width:100%;height:100%;display:block}
 
 #schema .pleura-chip{
-  position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+  position:absolute;top:calc(14px * var(--sk,1));right:calc(16px * var(--sk,1));transform:scale(var(--sk,1));transform-origin:top right;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
   color:var(--ink);background:rgba(255,255,255,.85);border:1px solid var(--sog);border-left:5px solid var(--sog);
   border-radius:6px;padding:7px 10px;max-width:230px;line-height:1.4;
 }
@@ -115,7 +136,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #schema .strompfeil{font-size:22px;line-height:1;margin-right:8px;display:inline-block}
 
 #schema #loTempoBadge{
-  position:absolute;top:14px;left:16px;display:none;align-items:center;gap:7px;
+  position:absolute;top:calc(14px * var(--sk,1));left:calc(16px * var(--sk,1));transform:scale(var(--sk,1));transform-origin:top left;display:none;align-items:center;gap:7px;
   font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
   color:#fff;background:var(--sog);border-radius:6px;padding:6px 11px;
 }
@@ -130,7 +151,7 @@ body.schema #labels,body.schema #leaders{display:none}
   body.schema #tools{bottom:calc(26vh + 6px)}
   #schema{left:12px;right:12px;top:62px;bottom:calc(26vh + var(--wz,190px) + 14px);width:auto;min-width:0;max-width:none}
   body.schema #atlasZurueck{display:none}
-  body.schema #info{display:none}   /* die Infokarte wuerde das Schema verdecken: solange es offen ist, ausgeblendet */
+  body.schema #info,body.schema #scard{display:none}   /* die Infokarte wuerde das Schema verdecken: solange es offen ist, ausgeblendet */
   #schema .sch-head{padding:7px 44px 4px 10px}
   #schema .glied{padding:8px 6px 9px}
   #schema .glied .marke{font-size:8.5px;letter-spacing:.06em;gap:4px}
@@ -138,7 +159,4 @@ body.schema #labels,body.schema #leaders{display:none}
   #schema .glied .zahl{font-size:8.5px;overflow-wrap:anywhere}
   #schema .skala .beschr{font-size:7.5px;padding:0 4px;letter-spacing:0}
   #schema .chip{font-size:9.5px;padding:2px 4px}
-  #schema .pleura-chip{top:6px;right:6px;font-size:8.5px;max-width:130px;padding:4px 6px;letter-spacing:.02em}
-  #schema .pleura-chip b.kopfzeile{font-size:8px}
-  #schema #loTempoBadge{top:6px;left:6px;font-size:10px;padding:4px 8px}
 }

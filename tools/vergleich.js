@@ -38,7 +38,10 @@
    (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura), Durchsicht, ohne Brustkorb,
    ohne Beschriftung, Info; am Ende Atmung: Reiter, Zwerchfell voll, Schema (#bSchema), Ruheatmung, angestrengte Atmung, durchsichtige Rippen mit Druckzahlen,
    Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von LungeApp.atmung() stehen in erg.atmung
-   und werden von `vergleichen` verglichen)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung mit offenem Schema), datei (file://) und abbau; noch ohne Exporte und AR.
+   und werden von `vergleichen` verglichen); danach die 3D-Lunge, die mitatmet (Schema zu, Ruheatmung „3d-einatmen“, angestrengte Atmung „3d-stress“, Rippen
+   durchsichtig), die Hilfekarte („hilfekarte“, „probier“ = „Probier das aus“) und das Üben („ueben“)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung
+   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR.
+   Der Vergleich des Atmungs-Schemas mit dem Original-Modell (Ebene 1) ist ein eigenes Werkzeug: tools/nachweis.js (Vorlage: tools/originale/).
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -572,6 +575,14 @@ const MODELLE = {
         await t.klick('#loTempoWahl button[data-tempo="0.25"]'); await t.weiter(800); await t.bild('schema-zeitlupe'); await werte('schema-zeitlupe');
         await t.klick('#bPlay'); await t.weiter(500); await t.bild('schema-pause'); await werte('schema-pause-1');
         await t.weiter(1000); await t.bild('schema-pause'); await werte('schema-pause-2');   /* beide Bilder müssen gleich aussehen, die Werte ebenso */
+        /* die 3D-Lunge atmet mit (neue Bilder am Ende): Schema zu, Pause aus, Tempo normal, Rippen sichtbar, dann Ruheatmung und angestrengte Atmung in 3D; Hilfekarte, „Probier das aus“ und Üben */
+        await t.klick('#bCls'); await t.klick('#bSchemaX'); await t.klick('#bPlay'); await t.klick('#loTempoWahl button[data-tempo="1"]'); await t.klick('#loRippenWahl button[data-rippen="voll"]');
+        await t.klick('#loDemoRuhe'); await t.weiter(1200); await t.bild('3d-einatmen'); await werte('3d-einatmen');
+        await t.klick('#loDemoStress'); await t.weiter(1600); await t.bild('3d-stress'); await werte('3d-stress');
+        await t.klick('#loRippenWahl button[data-rippen="kontur"]'); await t.weiter(300); await t.bild('3d-rippen-durchsichtig'); await werte('3d-rippen-durchsichtig');
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(300); await t.bild('hilfekarte');
+        await t.klick('#paneHelp .dis >> nth=7'); await t.weiter(300); await t.bild('probier');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -580,6 +591,7 @@ const MODELLE = {
         /* Atmung (neues Bild am Ende): Reiter Atmung, Schema offen, Ruheatmung; die Leiste bleibt bedienbar */
         await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.klick('#bSchema'); await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema');
         (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-schema'] = await t.js(() => window.LungeApp.atmung());
+        await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.weiter(300); await t.bild('3d-atmung');   /* Schema zu, Infokarte zu: die 3D-Lunge atmet mit */
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1212,7 +1224,7 @@ async function vergleichen(va, vb) {
 /* =====================================================================
    5. Aufruf
    ===================================================================== */
-module.exports = { initZeit, initDownloads, initQuickLook, initWebXR, MODELLE, DESKTOP, HANDY };
+module.exports = { initZeit, initDownloads, initQuickLook, initWebXR, MODELLE, DESKTOP, HANDY, CHROMIUM_ARGS, ladePlaywright, server, ATLAS_BEREIT };   /* auch für tools/nachweis.js */
 if (require.main === module) (async () => {
   const [cmd, ...rest] = process.argv.slice(2);
   const opt = (n) => { const i = rest.indexOf(n); return i >= 0 ? rest.splice(i, 2)[1] : null; };

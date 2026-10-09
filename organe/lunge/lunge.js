@@ -5,8 +5,8 @@
    in den Lappen, Lungenarterien und -venen, Rippenfell, Zwerchfell, Brustkorb (Rippen, Brustbein, Zwischenrippenmuskeln) und das Herz
    zur Orientierung. Die Form liefert organe/lunge/lunge-form.js (Kern.Formen.lunge), das Herz kommt aus dem Herz-Modell (organe/herz/herz.js);
    hier wird sie vernetzt, eingefaerbt und bedient.
-   Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste. Die Rippen und Zwischenrippenbaender sind
-   so gebaut, dass sie spaeter pro Bild bewegt werden koennen (Atmung): RIPPEN und baenderSetzen.
+   Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste. Atmung: Reiter Atmung und Schema aus dem Thorax-Modell
+   (Abschnitt 6), dazu atmet das 3D-Modell mit (Abschnitt 7: Zwerchfell, Lunge, Rippen, Luftteilchen). Hilfekarten und Ueben wie bei der Niere.
    ===================================================================== */
 (function () {
 'use strict';
@@ -214,6 +214,15 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
+</div>
+
+<div class="panel" id="scard">
+  <button class="gh hbtn" id="sClose" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="sKick"></div>
+  <h3 id="sTitle"></h3>
+  <div class="lead" id="sLead"></div>
+  <div class="after" id="sAfter"></div>
+  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
 </div>`;
 /* Reiter "Atmung" (Regler und Schalter aus dem Thorax-Modell; die IDs tragen das Praefix lo) */
 var ATMUNG_PANE = `<div class="karte">
@@ -270,6 +279,84 @@ var ATMUNG_PANE = `<div class="karte">
     <span>Druckzahlen einblenden</span><input type="checkbox" id="loZahlen">
   </label>
 </div>`;
+/* Hilfekarten und "Probier das aus" (aus dem Thorax-Modell, Texte und HTML woertlich): t = Titel, u = Untertitel, h = Inhalt als HTML.
+   Die Liste KARTEN_LISTE traegt die Knopftexte des Originals (data-karte) in dessen Reihenfolge. */
+var karten = {
+  pleura: {
+    t:"Pleura und Pleuraspalt", u:"Warum die Lunge dem Brustkorb folgt",
+    h:"<p>Die Lunge hat <b>keine eigene Muskulatur</b>. Sie kann sich nicht selbst ausdehnen und nicht selbst zusammenziehen.</p>"+
+      "<p>Sie ist von einem doppelten Häutchen überzogen: Das <b>Lungenfell (Pleura visceralis)</b> liegt direkt auf der Lunge, das <b>Rippenfell (Pleura parietalis)</b> kleidet den Brustkorb von innen aus. Dazwischen liegt der <b>Pleuraspalt</b> mit einem dünnen Flüssigkeitsfilm.</p>"+
+      "<p>In diesem Spalt herrscht ständig ein Unterdruck. Die beiden Blätter haften dadurch aneinander wie zwei nasse Glasplatten: verschiebbar, aber nicht trennbar.</p>"+
+      "<div class='merk'>Der Brustkorb zieht die Lunge auf. Die Lunge wird gedehnt – sie dehnt sich nicht selbst.</div>"
+  },
+  zwerchfell: {
+    t:"Das Zwerchfell", u:"Der wichtigste Atemmuskel",
+    h:"<p>Das Zwerchfell (Diaphragma) ist eine Muskelplatte zwischen Brust- und Bauchraum. Entspannt wölbt es sich <b>kuppelförmig nach oben</b> in den Brustkorb hinein.</p>"+
+      "<p>Spannt es sich an, wird es <b>flacher und tritt nach unten</b>. Der Brustraum wird höher – das ist der größte Anteil an der Einatmung.</p>"+
+      "<ul><li>Rund zwei Drittel des Atemzugvolumens gehen auf das Zwerchfell zurück.</li>"+
+      "<li>Gesteuert über den <b>Nervus phrenicus</b> aus dem Halsmark (C3–C5).</li>"+
+      "<li>Alles, was von unten drückt – Schwangerschaft, Aszites, ein voller Magen, flaches Liegen – macht das Atmen schwerer.</li></ul>"
+  },
+  rippen: {
+    t:"Zwischenrippenmuskulatur", u:"Der Brustkorb wird weiter",
+    h:"<p>Die <b>äußeren Zwischenrippenmuskeln (Mm. intercostales externi)</b> liegen in den Zwischenrippenräumen. Bei Anspannung ziehen sie die Rippen nach oben und außen, der Brustkorb wird weiter und tiefer.</p>"+
+      "<p>Im Modell sind sie die Felder zwischen den Rippen. Je stärker sie angespannt sind, desto kräftiger färben sie sich.</p>"+
+      "<p>Die <b>inneren</b> Zwischenrippenmuskeln arbeiten in die Gegenrichtung und werden erst bei der <b>angestrengten</b> Ausatmung gebraucht – beim Husten, Pressen, Sprechen –, in Ruhe nicht.</p>"+
+      "<div class='merk'>Stell den Brustkorb auf „sichtbar“: Dann siehst du, dass die Lunge unmittelbar an der Brustwand hängt und jede Rippenbewegung mitmacht.</div>"
+  },
+  fluegel: {
+    t:"Warum der linke Flügel kleiner ist", u:"Das Herz braucht Platz",
+    h:"<p>Das Herz liegt nicht mittig, sondern mit seiner Spitze <b>nach links verlagert</b>. Der linke Lungenflügel muss ihm ausweichen.</p>"+
+      "<ul><li>Dafür ist am linken Flügel eine Einbuchtung ausgespart: die <b>Incisura cardiaca</b> (Herzeinschnitt). Du siehst sie als Delle an der Innenkante.</li>"+
+      "<li><b>Rechts: 3 Lappen</b> (Ober-, Mittel-, Unterlappen).</li>"+
+      "<li><b>Links: 2 Lappen</b> (Ober- und Unterlappen).</li></ul>"+
+      "<p>Der rechte Hauptbronchus verläuft außerdem steiler und weiter als der linke. Deshalb landen aspirierte Fremdkörper meist rechts.</p>"
+  },
+  ausatmen: {
+    t:"Ausatmen geht von allein", u:"Passive Ausatmung",
+    h:"<p>Für die ruhige Ausatmung wird <b>kein Muskel</b> gebraucht. Es reicht, dass Zwerchfell und Zwischenrippenmuskeln <b>aufhören zu arbeiten</b>.</p>"+
+      "<p>Lunge und Brustkorb sind elastisch. Wie ein gedehntes Gummiband kehren sie von selbst in ihre Ruhelage zurück – der Brustraum wird kleiner, der Druck in der Lunge steigt über den Außendruck, die Luft strömt hinaus.</p>"+
+      "<div class='merk'>Probier es aus: tief einatmen, dann alle Muskeln entspannen. Die Luft geht hinaus, ohne dass du etwas anspannst.</div>"
+  },
+  angestrengt: {
+    t:"Angestrengte Atmung", u:"Wenn die Ruheatmung nicht mehr reicht",
+    h:"<p>Bei Belastung oder Atemnot reicht die Ruheatmung nicht aus. Dann ändern sich <b>drei</b> Dinge gleichzeitig:</p>"+
+      "<ul><li>Die Atmung wird <b>tiefer</b> – Zwerchfell und Rippenmuskeln arbeiten kräftiger.</li>"+
+      "<li>Die Atmung wird <b>schneller</b>.</li>"+
+      "<li>Die Ausatmung wird <b>aktiv</b>: Bauchmuskeln und innere Zwischenrippenmuskeln pressen die Luft heraus. Der Brustkorb wird dabei sogar <b>enger als in Ruhe</b>.</li></ul>"+
+      "<p>Im Modell siehst du das daran, dass beim Ausatmen der Balken „Brustkorb“ nach links über die Ruhelage hinausgeht und das Feld <b>Bauchpresse</b> aufleuchtet.</p>"+
+      "<div class='merk'>Genau das beobachtest du bei einem Menschen in Atemnot: aufgestützte Arme, sichtbar arbeitende Hals- und Bauchmuskeln, hohe Atemfrequenz.</div>"
+  },
+  begriffe: {
+    t:"Fachbegriffe zum Schreiben", u:"Schreibhilfe für deine Erläuterung",
+    h:"<ul>"+
+      "<li><b>Diaphragma</b> – Zwerchfell</li>"+
+      "<li><b>Mm. intercostales externi</b> – äußere Zwischenrippenmuskeln</li>"+
+      "<li><b>Mm. intercostales interni</b> – innere Zwischenrippenmuskeln, aktive Ausatmung</li>"+
+      "<li><b>Pleura visceralis</b> – Lungenfell, liegt der Lunge auf</li>"+
+      "<li><b>Pleura parietalis</b> – Rippenfell, kleidet den Brustkorb aus</li>"+
+      "<li><b>Pleuraspalt</b> – Spalt dazwischen, ständiger Unterdruck</li>"+
+      "<li><b>Inspiration</b> – Einatmung (aktiv)</li>"+
+      "<li><b>Exspiration</b> – Ausatmung (in Ruhe passiv, angestrengt aktiv)</li>"+
+      "<li><b>Atemzugvolumen</b> – Luftmenge pro Atemzug, in Ruhe etwa 500 ml</li>"+
+      "<li><b>Incisura cardiaca</b> – Herzeinschnitt am linken Lungenflügel</li>"+
+      "<li><b>Trachea</b> – Luftröhre; <b>Hauptbronchus</b> – erster Ast danach</li>"+
+      "</ul>"+
+      "<div class='merk'>Beschreibe die Reihenfolge: Welcher Muskel bewegt sich zuerst? Was macht der Brustkorb? Was macht der Druck? Und erst dann: Wohin strömt die Luft?</div>"
+  }
+};
+var KARTEN_LISTE = [["pleura", "Pleura und Pleuraspalt"], ["zwerchfell", "Das Zwerchfell"], ["rippen", "Zwischenrippenmuskulatur"],
+  ["fluegel", "Warum der linke Flügel kleiner ist"], ["ausatmen", "Ausatmen geht von allein"], ["angestrengt", "Angestrengte Atmung"], ["begriffe", "Fachbegriffe zum Schreiben"]];
+var PROBIER = `      <ol>
+        <li>Zwerchfell voll anspannen – und den Regler dort <b>stehen lassen</b>. Was passiert mit dem Luftstrom, obwohl die Lunge maximal gedehnt bleibt?</li>
+        <li>Rippen auf <b>sichtbar</b>, dann langsam einatmen. Wohin geht die Lunge, wenn sich die Rippen heben? Danach die Rippen <b>ausschalten</b> und dasselbe noch einmal ansehen.</li>
+        <li>Nur das Zwerchfell benutzen, dann nur die Rippenmuskeln. Womit holst du mehr Luft?</li>
+        <li>Zwerchfell voll anspannen und die Rippenmuskeln <b>ganz aus</b> lassen – dann umgekehrt. Wann strömt gar nichts?</li>
+        <li>Tief einatmen und dann alle Muskeln entspannen. Welcher Muskel schiebt die Luft wieder hinaus?</li>
+        <li>Ruheatmung und angestrengte Atmung nacheinander laufen lassen. Vergleiche die ml – und achte darauf, welche Muskeln beim <b>Ausatmen</b> aufleuchten.</li>
+        <li>Beobachte den Pleuraspalt (blauer Saum). Wird dort jemals ein Überdruck daraus?</li>
+        <li>Ruheatmung starten und auf <b>Zeitlupe</b> stellen. Schau unten auf die vier Felder: In welcher Reihenfolge leuchten sie auf? Was kommt zuerst – der Druck oder der Luftstrom?</li>
+      </ol>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 /* Mitte der Lunge im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, die Lunge steht im Modell mittig (spaeter: Ziel der Kamerafahrt aus dem Koerper) */
 var M = [0, 126, -0.5];
@@ -278,7 +365,7 @@ var UEBERSICHT = { ext: [36, 52], halb: 18.5 };
 var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
 /* Freier Bereich fuer Lunge und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
 function bereichFuer(w, h, toolsOben, toolsUnten) {
-  if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 30 };
+  if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 104 };   /* Handy: links und rechts bleibt je eine Namensspalte (labW) frei, die Lunge steht dazwischen */
   return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil(toolsUnten) + 6), y1: h - 30, labW: 142, fit: 100 };
 }
 /* Kameraabstand (cm), bei dem ext (Breite, Hoehe in cm) in den Bereich r passt */
@@ -311,19 +398,20 @@ var srgb = Kern.srgb;
 function mat(hex, o) { return Kern.mat(hex, o || {}, envTex); }
 var LAPPEN = ['oberlappenR', 'mittellappen', 'unterlappenR', 'oberlappenL', 'unterlappenL'];   /* Strukturen der Lungenlappen (bei "Durchsicht" Glas) */
 var BRUST = ['rippen', 'brustbein', 'zwischenrippen'];                                          /* Strukturen des Knopfes "Brustkorb" */
-var GLAS = 0.25;                                                                                /* Deckkraft der Lappen bei "Durchsicht" */
+var GLAS = 0.25;                                                                                /* Deckkraft der Lappen bei "Durchsicht" (und der Rippen bei "durchsichtig") */
+var LUFT_GLAS = 0.55;                                                                           /* Deckkraft der Luftwege (Luftroehre, Haupt- und Segmentbronchien) */
 var MAT = {};
 /* Material der Lappen kraeftiger als der Farbpunkt der Liste (die hellen Punktfarben wirken im Licht fast weiss); Unterlappen dunkler als Oberlappen */
 var LAPPENFARBE = { oberlappenR: 0xE3A2A8, mittellappen: 0xDB949D, unterlappenR: 0xD0868F, oberlappenL: 0xE3A2A8, unterlappenL: 0xD0868F };
 LAPPEN.forEach(function (sid) { MAT[sid] = mat(LAPPENFARBE[sid], { rough: 0.5, coat: 0.3, coatRough: 0.45 }); });
-MAT.luftroehre = mat(0xC9D3D1, { rough: 0.5, coat: 0.25 });
+MAT.luftroehre = mat(0xC9D3D1, { rough: 0.5, coat: 0.25, opacity: LUFT_GLAS });   /* Luftwege wie Glas, damit man die Luftteilchen darin sieht; beim Antippen und fuer die Sichtpruefung zaehlen sie als undurchsichtig (userData.dicht) */
 MAT.spangen = mat(0xE6EDEB, { rough: 0.45, coat: 0.3 });                   /* Knorpelspangen der Luftroehre, etwas heller */
-MAT.hauptbronchien = mat(0xBAC6C4, { rough: 0.5, coat: 0.25 });
-MAT.bronchien = mat(0xA9B7B5, { rough: 0.5, coat: 0.25 });
-MAT.pleura = mat(0x1B7F9E, { rough: 0.3, coat: 0.5, opacity: 0.22, side: THREE.DoubleSide });
+MAT.hauptbronchien = mat(0xBAC6C4, { rough: 0.5, coat: 0.25, opacity: LUFT_GLAS });
+MAT.bronchien = mat(0xA9B7B5, { rough: 0.5, coat: 0.25, opacity: LUFT_GLAS });
+MAT.pleura = mat(0x1B7F9E, { rough: 0.3, coat: 0.5, opacity: 0.22 * 0.45, side: THREE.DoubleSide });
 MAT.herz = mat(0x8C4747, { rough: 0.55, coat: 0.25, opacity: 0.35 });
 MAT.zwerchfell = mat(0xffffff, { rough: 0.6, side: THREE.DoubleSide, opacity: 0.85, vc: true });   /* Farbe je Eckpunkt: Muskel dunkler, Sehnenplatte (Centrum tendineum) in der Mitte heller */
-MAT.zwischenrippen = mat(0xA24E4E, { rough: 0.6, opacity: 0.35, side: THREE.DoubleSide });
+MAT.zwischenrippen = mat(0xA24E4E, { rough: 0.6, opacity: 0.16, side: THREE.DoubleSide });   /* Deckkraft folgt der Anspannung: 0.16 + 0.46 * clamp01(S.i), wie im Schema */
 MAT.rippen = mat(0xD8CDB3, { rough: 0.8, env: 0.2 });
 MAT.knorpel = mat(0xF4F6F2, { rough: 0.7, env: 0.25 });                    /* Rippenknorpel, heller als der Knochen */
 MAT.brustbein = mat(0xD8CDB3, { rough: 0.8, env: 0.2 });   /* wie die Rippen */
@@ -331,6 +419,7 @@ MAT.wirbel = mat(0x8C8676, { rough: 0.85, env: 0.2 });                     /* An
 MAT.lungenarterien = mat(0x3F63B5, { rough: 0.4, coat: 0.3 });
 MAT.lungenvenen = mat(0xC8372D, { rough: 0.4, coat: 0.3 });
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
+['luftroehre', 'hauptbronchien', 'bronchien'].forEach(function (k) { MAT[k].userData.dicht = true; });
 
 var root = new THREE.Group(); root.name = 'Lunge'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
 var tris = { lappen: 0, pleura: 0, atemwege: 0, gefaesse: 0, brustkorb: 0, herz: 0 };
@@ -351,6 +440,7 @@ var HL = klein ? 0.5 : 0.35;                      /* Gitterweite der Lappen (cm)
 var HP = klein ? 0.55 : 0.4;                      /* Gitterweite des Rippenfells */
 var HH = klein ? 0.4 : 0.3;                       /* Gitterweite des Herzens (gerastert genug fuer die Herzbucht) */
 var ell = S.ellipsoid, kap = S.kapsel;
+var RUND = 1.5;                                   /* Verrundung der Lappen-Unterkante an der Zwerchfellkuppel (cm): keine duennen, ausgefransten Raender unten (nur Detailmodell) */
 
 /* Netz aus einem Abstandsfeld: Gitter ueber bounds mit Weite h, glatte Normalen */
 async function netz(fn, bounds, h, fortschritt) {
@@ -471,10 +561,13 @@ function zwerchfellGeo() {
 var RIPPEN = { '-1': [], '1': [] };      /* Stuetzpunkte je Rippe i (0..11) und Seite s */
 var RIPPE_MESH = { '-1': [], '1': [] };  /* Mesh je Rippe */
 var BAENDER = { '-1': [], '1': [] };     /* Zwischenrippenbaender i = 0..10 (zwischen Rippe i und i + 1) */
+var KNORPEL = [];                        /* Rippenknorpel: { m, sd, i, e (Ende der Rippe), ziel (Ziel des Knorpels) } fuer die Atmung */
 var BAND_PUNKTE = 16;                    /* Stuetzpunkte je Rippe (rippeStuetz: 15 Abschnitte) */
-/* Band zwischen Rippe i und i + 1 neu aus den Stuetzpunkten der beiden Rippen legen (untere Kante der oberen, obere Kante der unteren Rippe) */
-function baenderSetzen(s, i) {
-  var m = BAENDER[s][i], A = RIPPEN[s][i], B = RIPPEN[s][i + 1], p = m.geometry.attributes.position, k, r = form.RIP_R * 0.85;
+/* Band zwischen Rippe i und i + 1 neu aus den Stuetzpunkten der beiden Rippen legen (untere Kante der oberen, obere Kante der unteren Rippe);
+   R = Stuetzpunkte der Rippen (Standard: Ruhelage RIPPEN, bei der Atmung die gedrehten Rippen) */
+function baenderSetzen(s, i, R) {
+  R = R || RIPPEN;
+  var m = BAENDER[s][i], A = R[s][i], B = R[s][i + 1], p = m.geometry.attributes.position, k, r = form.RIP_R * 0.85;
   for (k = 0; k < BAND_PUNKTE; k++) {
     p.setXYZ(k * 2, A[k][0], A[k][1] - r, A[k][2]);
     p.setXYZ(k * 2 + 1, B[k][0], B[k][1] + r, B[k][2]);
@@ -504,7 +597,8 @@ function brustkorbBauen(lg) {
     for (i = 0; i < 10; i++) {
       var e = RIPPEN[sd][i][BAND_PUNKTE - 1], ziel = i < 7 ? [sd * 1.2, form.RIP_YA[i], form.zSternum(form.RIP_YA[i]) - 0.1] : RIPPEN[sd][i - 1][BAND_PUNKTE - 1];
       var gk = rohre([{ pts: [e, ziel], r0: 0.45, r1: 0.45, seiten: 8, segmente: 8 }]);
-      addMesh('rippen', gk, MAT.knorpel, 'Rippenknorpel ' + (i + 1) + (sd < 0 ? ' rechts' : ' links'), 2); tris.brustkorb += anz(gk);
+      var mk = addMesh('rippen', gk, MAT.knorpel, 'Rippenknorpel ' + (i + 1) + (sd < 0 ? ' rechts' : ' links'), 2); tris.brustkorb += anz(gk);
+      KNORPEL.push({ m: mk, sd: sd, i: i, e: e, ziel: ziel });
     }
   });
   /* Zwischenrippenmuskeln: Baender zwischen Rippe i und i + 1 */
@@ -602,7 +696,7 @@ async function bauen() {
   LH = hz.smp ? { smp: hz.smp, v: form.HERZ_V } : null;   /* Herzbucht nach dem Herzen; ohne Herz-Modell die Ersatz-Herzbucht der Form */
   var hm = addMesh('herz', hz.geo, MAT.herz, 'Herz (Lage)', 3); hm.position.set(hz.pos[0], hz.pos[1], hz.pos[2]); tris.herz = anz(hz.geo);
   await setLoad(0.2, 'Lungenlappen'); if (abgebaut) return;
-  var alle = form.lappen(-1, LH).concat(form.lappen(1, LH)), n = 0;
+  var alle = form.lappen(-1, LH, RUND).concat(form.lappen(1, LH, RUND)), n = 0;
   for (var i = 0; i < alle.length; i++) {
     var l = alle[i];
     LAP[l.id] = l.sdf;
@@ -612,14 +706,14 @@ async function bauen() {
   await setLoad(0.54, 'Rippenfell'); if (abgebaut) return;
   var lg = {};
   for (var si = 0; si < 2; si++) {
-    var s = si ? 1 : -1, f = form.fluegel(s, LH), gb = form.grenzen(s);
+    var s = si ? 1 : -1, f = form.fluegel(s, LH, RUND), gb = form.grenzen(s);
     lg[s] = f;
     var pg = await netz(function (x, y, z) { return f(x, y, z) - 0.45; }, [[gb[0][0] - 0.7, gb[0][1] - 0.7, gb[0][2] - 0.7], [gb[1][0] + 0.7, gb[1][1] + 0.7, gb[1][2] + 0.7]], HP, weiter(0.54 + 0.1 * si, 0.64 + 0.1 * si)); if (abgebaut) return;
     addMesh('pleura', pg, MAT.pleura, 'Rippenfell ' + (s < 0 ? 'rechts' : 'links'), 4); tris.pleura += anz(pg);
   }
   await setLoad(0.76, 'Atemwege'); if (abgebaut) return;
   luftroehreBauen();
-  BAUM = form.bronchien(LH);
+  BAUM = form.bronchien(LH, RUND);
   var bg = rohre(BAUM.map(function (a) { return { pts: a.pts, r0: a.r0, r1: a.r1 }; }));
   addMesh('bronchien', bg, MAT.bronchien, 'Lappen- und Segmentbronchien', 2); tris.atemwege += anz(bg);
   await setLoad(0.82, 'Gefäße'); if (abgebaut) return;
@@ -631,20 +725,28 @@ async function bauen() {
   brustkorbBauen(lg);
   await setLoad(0.96, 'Beschriftung'); if (abgebaut) return;
   ankerBerechnen();
+  atmungVorbereiten();
 }
 
 /* =====================================================================
    3. Zustand, Bedienung
    ===================================================================== */
+var rippenW = 'voll', muskelW = 'voll';   /* Schalter im Reiter Atmung: Rippen (voll | kontur | aus), Zwischenrippenmuskeln (voll | aus); wirken auch im 3D-Modell */
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, brustAn = true, seeCam = false, brustHand = false, lv = 0;   /* lv: Version fuer die Beschriftung; seeCam: Durchsicht kommt vom Ausschnitt Bronchialbaum; brustHand: der Knopf Brustkorb wurde bedient (dann schaltet kein Ausschnitt ihn mehr) */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
 
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+/* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (Luftwege) */
+function weichMat(o) { return o.material.transparent && !o.material.userData.dicht; }
+/* Struktur der Atmung: nicht durch die Schalter Rippen/Zwischenrippenmuskeln ausgeblendet */
+function sidAn(sid) { return sid === 'rippen' || sid === 'brustbein' ? rippenW !== 'aus' : sid === 'zwischenrippen' ? muskelW !== 'aus' : true; }
+/* Luftteilchen (userData.teilchen = 'luft'): sichtbar, solange eine Ebene der Luftwege sichtbar ist */
+function luftSichtbar() { return !!(enabled.luftroehre || enabled.hauptbronchien || enabled.bronchien); }
 function applyVisibility() {
   root.traverse(function (o) {
     if (!o.isMesh) return;
     var sid = o.userData.sid;
-    o.visible = sid ? (enabled[sid] && (brustAn || BRUST.indexOf(sid) < 0)) : brustAn;   /* ohne Struktur: Andeutung der Wirbelsaeule, gehoert zum Brustkorb */
+    o.visible = o.userData.teilchen ? luftSichtbar() : sid ? (enabled[sid] && sidAn(sid)) : brustAn;   /* ohne Struktur: Andeutung der Wirbelsaeule, gehoert zum Brustkorb */
   });
   lv++;
 }
@@ -673,6 +775,7 @@ function setSelected(id, punkt) {
   lv++;
   var box = $('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
   $('iDe').textContent = s.de;
@@ -687,12 +790,14 @@ function setSelected(id, punkt) {
 }
 
 (function leiste() {
-  /* Reiter (erweiterbar: weitere Namen und Bereiche kommen spaeter dazu, z. B. Hilfekarten, Ueben, Krankheiten) */
+  /* Reiter: Strukturen, Atmung, Hilfekarten, Ueben (weitere kommen spaeter dazu, z. B. Krankheiten) */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneAtmung = document.createElement('div'); paneAtmung.id = 'paneAtmung'; paneAtmung.innerHTML = ATMUNG_PANE;
-  var panes = [rail, paneAtmung];
-  ['Strukturen', 'Atmung'].forEach(function (name, k) {
+  var paneH = document.createElement('div'); paneH.id = 'paneHelp';
+  var paneU = document.createElement('div'); paneU.id = 'paneUeben';
+  var panes = [rail, paneAtmung, paneH, paneU];
+  ['Strukturen', 'Atmung', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -702,6 +807,21 @@ function setSelected(id, punkt) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Hilfekarten: die sieben Karten des Thorax-Modells und "Probier das aus" (Muster wie bei der Niere) */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben: Strukturen finden */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur an der Lunge und tippe sie an. Die Beschriftung verschwindet solange.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  pb.appendChild(bq); paneU.appendChild(pb);
   var gruppen = [];
   ORDER.forEach(function (s) { if (gruppen.indexOf(s.grp) < 0) gruppen.push(s.grp); });
   var hex = function (c) { return c.toString(16).padStart(6, '0'); };
@@ -722,9 +842,9 @@ function setSelected(id, punkt) {
         applyVisibility();
       }
       sw.addEventListener('click', function (e) { e.stopPropagation(); flip(); });
-      row.addEventListener('click', function () { setSelected(s.id); });
+      row.addEventListener('click', function () { if (!quiz) setSelected(s.id); });
       row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); setSelected(s.id); }
+        if (e.key === 'Enter') { e.preventDefault(); if (!quiz) setSelected(s.id); }
         if (e.key === ' ') { e.preventDefault(); flip(); }
       });
       wrap.appendChild(row);
@@ -733,14 +853,91 @@ function setSelected(id, punkt) {
   });
 })();
 
+/* Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Inhalt als HTML (die Hilfekarten bringen ihr HTML aus dem Thorax-Modell mit); unten links wie die Infokarte */
+function showCard(kick, title, html, istQuiz) {
+  $('sKick').textContent = kick; $('sTitle').textContent = title;
+  $('sLead').innerHTML = html;
+  $('sAfter').innerHTML = '';
+  $('sQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  $('scard').classList.add('show');
+  $('info').classList.remove('show');
+  lv++;
+}
+function closeCard() {
+  $('scard').classList.remove('show');
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  lv++;
+}
+function openHelp(key) {
+  var k = key === 'probier' ? { t: 'Probier das aus', u: 'Hilfekarte', h: PROBIER } : karten[key]; if (!k) return;
+  if (quiz) quizEnd();
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard(k.u, k.t, k.h, false);
+}
+/* Ueben: "Tippe auf: ..." - nur Strukturen, die in der aktuellen Ansicht sichtbar sind (die Bronchien liegen in den Lappen: nur bei Durchsicht) */
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
+function quizPool() {
+  return ORDER.filter(function (s) { return s.meshes.length && enabled[s.id] && sidAn(s.id) && (brustAn || BRUST.indexOf(s.id) < 0) && (s.id !== 'bronchien' || seeThrough); }).map(function (s) { return s.id; });
+}
+function quizNext() {
+  var pool = quizPool(); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  showCard('\u00dcben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe die Lunge, wenn du die Struktur nicht gleich siehst.', true);
+  $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizStart() {
+  setSelected(null); closeCard();
+  if (schemaOn) setSchema(false);   /* das Schema verdeckt die 3D-Ansicht */
+  quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
+  $('bQuiz').classList.add('on'); $('bQuiz').textContent = '\u00dcben beenden';
+  lv++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+}
+function leuchte(id, an) {   /* Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte */
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = $('sLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben \u2013 die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+$('sClose').onclick = function () { if (quiz) quizEnd(); else closeCard(); };
+$('qNext').onclick = function () { if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); } };
+$('qStop').onclick = quizEnd;
+
 function durchsicht(an) {
   seeThrough = an;
   $('bSee').classList.toggle('on', an);
   applyLook();
   lv++;
+  if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); }   /* andere Ansicht: neue Aufgabe aus den jetzt sichtbaren Strukturen */
 }
 $('bSee').onclick = function () { seeCam = false; durchsicht(!seeThrough); };
+/* Brustkorb ein/aus: gleicht die Schalter Rippen und Zwischenrippenmuskeln im Reiter Atmung ab (aus = beide aus; an = beide sichtbar, ein Schalter auf
+   "durchsichtig" bleibt); die Schalter wirken ueber ihre Knoepfe, damit auch das Schema folgt */
 function brust(an) {
+  var wahl = function (g, w) { var b = $('paneAtmung').querySelector('[data-' + g + '="' + w + '"]'); if (b) b.click(); };
+  if (an) { if (rippenW === 'aus') wahl('rippen', 'voll'); if (muskelW === 'aus') wahl('muskel', 'voll'); }
+  else { wahl('rippen', 'aus'); wahl('muskel', 'aus'); }
   brustAn = an;
   $('bBrust').classList.toggle('on', an);
   applyVisibility();
@@ -827,13 +1024,15 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, punkt = null, weichPunkt = null;
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, punkt = null, weichPunkt = null, durch = [];
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
-    if (o.material.transparent) { if (!weich) { weich = sid; weichPunkt = hits[i].point; } }
+    durch.push(sid);   /* Strukturen auf dem Strahl bis zum ersten undurchsichtigen Treffer (fuer das Ueben) */
+    if (weichMat(o)) { if (!weich) { weich = sid; weichPunkt = hits[i].point; } }
     else { treffer = sid; punkt = hits[i].point; }
   }
+  if (quiz) { quizAntwort(treffer || weich || null, durch); return; }
   setSelected(treffer || weich || null, treffer ? punkt : weichPunkt);
 }
 canvas.addEventListener('click', canvasKlick);
@@ -855,7 +1054,7 @@ function ankerBerechnen() {
   var P = function (a) { return K3(a[0], a[1], a[2]); };
   var liste = function (arr) { return arr.filter(Boolean).map(P); };
   var ast = function (lap, gen) { return BAUM.filter(function (x) { return x.lappen === lap && x.gen === gen; }); };
-  var fl = form.fluegel(-1, LH), pl = function (x, y, z) { return fl(x, y, z) - 0.45; };
+  var fl = form.fluegel(-1, LH, RUND), pl = function (x, y, z) { return fl(x, y, z) - 0.45; };
   var herzS = LH ? function (x, y, z) { return LH.smp.val(x - LH.v[0], y - LH.v[1], z - LH.v[2]); } : sdfHerz;
   var rb = RIPPEN['-1'], rl = RIPPEN['1'];
   var bandMitte = function (s, i, k) { var q = BAENDER[s][i].geometry.attributes.position; return [(q.getX(k * 2) + q.getX(k * 2 + 1)) / 2, (q.getY(k * 2) + q.getY(k * 2 + 1)) / 2, (q.getZ(k * 2) + q.getZ(k * 2 + 1)) / 2]; };
@@ -899,13 +1098,13 @@ function frei(id, p) {
   var hits = rayS.intersectObjects(root.children, true);
   for (var i = 0; i < hits.length; i++) {
     var o = hits[i].object, sid = o.userData.sid;
-    if (!sid || sid === id || !sichtbar(o) || !enabled[sid] || o.material.transparent) continue;
+    if (!sid || sid === id || !sichtbar(o) || !enabled[sid] || weichMat(o)) continue;
     if (hits[i].distance < d - 0.3) return false;
   }
   return true;
 }
 function sichtPruefen(now, w, h) {
-  var k = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, brustAn].join('|');
+  var k = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, brustAn, rippenW, muskelW].join('|');
   if (k !== sKey) { sKey = k; sT = now; sOk = false; return; }
   if (sOk || orbit.anim || now - sT < 150) return;
   sOk = true;
@@ -943,32 +1142,40 @@ LISTEN.forEach(function (l) {
   });
 });
 var pv = new THREE.Vector3(), lastKey = '';
+/* Schneiden sich die Strecken (ax,ay)-(bx,by) und (cx,cy)-(dx,dy)? */
+function schneiden(ax, ay, bx, by, cx, cy, dx, dy) {
+  var o = function (px, py, qx, qy, rx, ry) { return (qx - px) * (ry - py) - (qy - py) * (rx - px); };
+  var d1 = o(ax, ay, bx, by, cx, cy), d2 = o(ax, ay, bx, by, dx, dy), d3 = o(cx, cy, dx, dy, ax, ay), d4 = o(cx, cy, dx, dy, bx, by);
+  return d1 * d2 < 0 && d3 * d4 < 0;
+}
 function layoutLabels(w, h) {
-  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, brustAn, sichtVer].join('|');
+  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, brustAn, rippenW, muskelW, sichtVer, A3.q].join('|');
   if (key === lastKey) return;
   lastKey = key;
   var narrow = w < 1000, r = bereich(w, h), a = AUSSCHNITTE[aktiv];
   var pxcm = h / (2 * view.dist * Math.tan(camera.fov * PI / 360)), cx = (r.x0 + r.x1) / 2;
   var colL = Math.min(cx - 20, Math.max(r.x0 + r.labW + 4, cx - a.halb * pxcm - 12));
   var colR = Math.max(cx + 20, Math.min(r.x1 - r.labW - 4, cx + a.halb * pxcm + 12));
-  var topL = narrow ? r.y0 : 100, topR = narrow ? Math.max(r.y0, 214) : $('tools').getBoundingClientRect().bottom + 16;
+  var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
   if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt die Lunge, ohne Beschriftung bleibt sie frei */
+  if (showLabels && !quiz && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt die Lunge, ohne Beschriftung bleibt sie frei; beim Ueben und bei einer Hilfekarte keine Beschriftung */
     LISTEN[aktiv].forEach(function (id) {
-      if (!enabled[id] || (!brustAn && BRUST.indexOf(id) >= 0)) return;
+      if (!enabled[id] || !sidAn(id) || (!brustAn && BRUST.indexOf(id) >= 0)) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
       var an = id in VIS ? VIS[id] : ((aktiv === 3 && KAND3[id]) || KAND[id] || [])[0];
       if (!an) return;
-      pv.copy(an).project(camera);   /* ANKER liegen schon im Raum der Szene (Koerper-Koordinaten minus M) */
+      pv.copy(an);
+      if (an._dyn) ankerVerschiebung(an._dyn, pv);   /* Anker folgt der Atmung (die Anker selbst liegen in der Ruhelage) */
+      pv.project(camera);   /* ANKER liegen schon im Raum der Szene (Koerper-Koordinaten minus M) */
       if (pv.z > 1) return;
       items.push({ id: id, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
     });
   }
-  items.forEach(function (it) { it.side = it.sx < cx ? 'l' : 'r'; });
+  items.forEach(function (it) { it.side = (it.sx < cx || (narrow && it.id === 'luftroehre')) ? 'l' : 'r'; });   /* Handy: die Luftroehre (Mitte, oben) steht links, damit ihre Linie nicht quer ueber das Modell laeuft */
   ['l', 'r'].forEach(function (side) {
     var g = items.filter(function (it) { return it.side === side; }).sort(function (p, q) { return p.sy - q.sy; });
     var top = side === 'l' ? topL : topR, bot = side === 'l' ? botL : botR, gp = g.length > 1 ? Math.min(gap, (bot - top) / (g.length - 1)) : gap, y = top;
@@ -977,6 +1184,17 @@ function layoutLabels(w, h) {
     if (over > 0) {   /* zu weit nach unten geschoben: hochruecken, dabei nicht ueber den Rand der Spalte hinaus (von oben neu ordnen) */
       g.forEach(function (it) { it.ly -= over; });
       y = top; g.forEach(function (it) { it.ly = Math.max(it.ly, y); y = it.ly + gp; });
+    }
+    /* Fuehrungslinien duerfen sich nicht kreuzen: kreuzen sich zwei Linien, tauschen ihre Namen die Plaetze (jeder Tausch macht die Linien
+       zusammen kuerzer, daher endet das); die Plaetze selbst bleiben, wie sie nach der Hoehe der Anker verteilt wurden */
+    var ex = function (it) { return side === 'l' ? colL + 7 + 16 : colR - 7 - 16; };
+    for (var rd = 0, getauscht = true; getauscht && rd < 60; rd++) {
+      getauscht = false;
+      for (var m = 0; m < g.length; m++) for (var n = m + 1; n < g.length; n++) {
+        if (schneiden(g[m].sx, g[m].sy, ex(g[m]), g[m].ly, g[n].sx, g[n].sy, ex(g[n]), g[n].ly)) {
+          var t = g[m].ly; g[m].ly = g[n].ly; g[n].ly = t; getauscht = true;
+        }
+      }
     }
   });
   items.forEach(function (it) {
@@ -995,8 +1213,9 @@ function layoutLabels(w, h) {
 /* =====================================================================
    6. Atmung (aus dem Thorax-Modell): Zustand, Geometrie des Schemas, Physik, Darstellung und Bedienung im Reiter "Atmung"
    Der Code steht unveraendert wie im Thorax-Modell (eigener Gueltigkeitsbereich, weil S und $ hier anders belegt sind); angepasst sind nur
-   die IDs (Praefix lo), die Schleife (tick wird aus der Renderschleife gerufen, Pause), die Klasse on statt an bei den Knoepfen und die
-   Suche der Bedienelemente nur im Reiter.
+   die IDs (Praefix lo), die Schleife (tick wird aus der Renderschleife gerufen, Pause), die Klasse on statt an bei den Knoepfen, die Suche
+   der Bedienelemente nur im Reiter und der Anschluss des 3D-Modells (haken, hakenWahl: je ein Aufruf am Ende von zeichne bzw. im Schalter
+   Rippen/Zwischenrippenmuskeln; Abschnitt 7).
    ===================================================================== */
 var atmen = (function () {
 /* ---------------- Zustand ---------------- */
@@ -1008,6 +1227,7 @@ var modus = null;                 // null | "ruhe" | "stress"
 var demoT = 0, entspannenAn = false;
 var zeigeZahlen = false, zeigePfeile = true;
 var tempo = 1;
+var haken = null, hakenWahl = null;   // Einbindung: Anschluss des 3D-Modells (Abschnitt 7), wird am Ende von zeichne bzw. beim Schalter Rippen/Muskeln gerufen
 
 function $(id){ return document.getElementById(id); }
 function ID(k){ return "lo" + k.charAt(0).toUpperCase() + k.slice(1); }   // Praefix lo: eindeutige IDs im Atlas
@@ -1268,6 +1488,7 @@ function zeichne(m, dt){
 
   zeichnePfeile();
   zeichneKette(m, stroemt);
+  if (haken) haken(S, m, dt, punkte);   // Einbindung: das 3D-Modell folgt dem Zustand
 }
 
 function zeichneKette(m, stroemt){
@@ -1421,9 +1642,11 @@ segment("data-rippen", function(w){
   el.rippenKontur.setAttribute("stroke-width", w === "voll" ? "14.5" : "2.5");
   el.rippenKontur.setAttribute("opacity", w === "aus" ? "0" : "1");
   el.sternum.setAttribute("opacity", w === "aus" ? "0" : (w === "voll" ? "1" : "0.35"));
+  if (hakenWahl) hakenWahl("rippen", w);   // Einbindung: auch im 3D-Modell
 });
 segment("data-muskel", function(w){
   el.muskeln.setAttribute("opacity", w === "aus" ? "0" : "1");
+  if (hakenWahl) hakenWahl("muskel", w);   // Einbindung: auch im 3D-Modell
 });
 segment("data-tempo", function(w){
   tempo = parseFloat(w);
@@ -1447,8 +1670,344 @@ function lesen(){
     pleura: el.pleuraZahl.textContent
   };
 }
-return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen };
+return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, anschliessen: function (f, w) { haken = f; hakenWahl = w; }, punkte: punkte };
 })();
+
+/* =====================================================================
+   7. Atmung in 3D: Zwerchfell, Lunge und Brustkorb folgen den Muskeln des Schemas (S.d, S.i), die Luftteilchen laufen durch Luftroehre und Bronchien
+   Der Zustand kommt aus dem Abschnitt 6 (atmen.anschliessen: Aufruf am Ende von zeichne), die Geometrie folgt wie im Schema direkt den Muskeln
+   (S.d, S.i), nicht dem Volumen S.V; negative Werte (angestrengte Atmung) wirken in die Gegenrichtung. Es wird nur neu gerechnet, wenn sich
+   S.d oder S.i aendern. Alle Netze werden aus ihrer Ruhelage verschoben (Ruhepositionen einmal gespeichert).
+   Zwerchfell: der Scheitel sinkt um dA = 62 * S.d * (Hoehe der Kuppel im Modell / 80 px) (Schema: apexY = 372 + 62 * d bei 80 px Kuppelhoehe, also
+   sinkt er um denselben Anteil der Kuppel wie dort; mit PX_CM laege der Scheitel bei S.d = 1 unter dem Rand, die Kuppel waere umgestuelpt),
+   der Rand bleibt: dy = -dA * w, w = Anteil der Hoehe der Kuppel ueber dem Rand (RAND_Y). Seitlich waechst die Halbbreite um
+   dB = 13 * S.i * PX_CM (Schema: halbBreite = 176 + 13 * i).
+   Lunge (Lappen, Rippenfell, Atemwege und Gefaesse in der Lunge): unten folgt sie dem Zwerchfell, die Spitze bleibt; seitlich wird sie weiter.
+   Rippen: Drehung um die hintere Gelenkachse (Wirbelende) um 7,5 Grad * S.i, die vorderen Teile heben sich (Eimerhenkel); Knorpel folgen,
+   das Brustbein hebt sich um 7 * S.i * PX_CM (und etwas nach vorn).
+   ===================================================================== */
+var PX_CM = 0.11;                        /* Schema (Pixel) -> Modell (cm): die Lungenhoehe im Schema (274 px) entspricht ca. 30 cm im Modell */
+var Y_SPITZE = 146.5, X_MAX = 15;        /* Lunge: Oberkante (y, cm) bleibt fest; seitlich wirkt die Verschiebung voll ab |x| = X_MAX (groesste Breite der Rippen) */
+var RIPPE_WINKEL = 7.5 * DEG;            /* Drehung der Rippen bei S.i = 1 (Schema: 7,5 Grad) */
+var Z_GELENK = -7, WAND_Z0 = -2, WAND_Z1 = 6, WAND_Y0 = 118, WAND_Y1 = 128;   /* Lunge an der Brustwand: Gelenkachse der Rippen (z), Uebergang hinten -> vorn (z) und unten -> oben (y) */
+var PLEURA_3D = 0.45;                    /* Daempfung der Rippenfell-Deckkraft in 3D (0,10 in Ruhe bis ca. 0,28) */
+var KUPPEL_PX = 80;                      /* Hoehe der Zwerchfellkuppel im Schema (px): BASIS_Y 452 - apexY 372 */
+var STERNUM_ZU_VOR = 0.5;                /* das Brustbein geht um diesen Anteil seines Hubs auch nach vorn */
+var A3 = { bereit: false, neu: false, sig: '', q: '', S: null, dB: 0, rc: 1, rs: 0, sx: 1, dyS: 0, dzS: 0, dAR: 0, dAL: 0, sinW: 0, rest: new Map(), feld: [], zwerch: null, sternum: null, luft: null };
+var KQ = { h: 0, hx: 0, hz: 0, w: 0, wx: 0, wz: 0, dA: 0 }, FO = { x: 0, y: 0, z: 0, a: 1, bx: 0, by: 1, bz: 0 };
+var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
+
+/* Kuppel des Zwerchfells ueber (x, z): Hoehe h, Anteil w ueber dem Rand (0 am Rand, 1 am Scheitel, je Seite DOM_R/DOM_L) und die Ableitungen nach x und z */
+function kuppel(x, z, q) {
+  var R = form.DOM_R, L = form.DOM_L, hr = form.domY(x, z, -6.5, R), hl = form.domY(x, z, 6.5, L), e = 0.05;
+  var wr = (hr - RAND_Y) / (R - RAND_Y), wl = (hl - RAND_Y) / (L - RAND_Y), rechts = wr >= wl;
+  var xc = rechts ? -6.5 : 6.5, top = rechts ? R : L, w = rechts ? wr : wl;
+  q.h = rechts ? hr : hl; q.dA = rechts ? A3.dAR : A3.dAL;   /* Senkung des Scheitels dieser Kuppel */
+  q.hx = (form.domY(x + e, z, xc, top) - form.domY(x - e, z, xc, top)) / (2 * e);
+  q.hz = (form.domY(x, z + e, xc, top) - form.domY(x, z - e, xc, top)) / (2 * e);
+  if (w <= 0 || w >= 1) { q.w = w <= 0 ? 0 : 1; q.wx = 0; q.wz = 0; }
+  else { q.w = w; q.wx = q.hx / (top - RAND_Y); q.wz = q.hz / (top - RAND_Y); }
+}
+/* Verschiebung der Lunge fuer einen Punkt der Ruhelage (x, y, z) -> o.x, o.y, o.z; dazu die Jacobi-Matrix (o.a, o.bx, o.by, o.bz) fuer die Normalen:
+   y' = y - dA * w(x,z) * t, t = Anteil des Wegs von der Spitze (0) zur Basis (1) = clamp01((Y_SPITZE - y) / (Y_SPITZE - yBasis)), yBasis = Kuppel + 0.5
+   x' = x + sign(x) * dB * clamp01(|x| / X_MAX)
+   Dazu haftet der obere, vordere Teil an der Brustwand (Pleura): y' += sin(7,5 Grad * S.i) * (z - Z_GELENK) * wz * wy, das ist die Hebung bzw. Senkung
+   der Rippen an dieser Stelle (wz: 0 hinten, 1 vorn; wy: 0 unten, 1 oben). Ohne sie stiessen die Rippen bei der angestrengten Ausatmung (S.i < 0)
+   auf die Lunge. */
+function lungeFeld(x, y, z, o) {
+  var dB = A3.dB, q = KQ, dA;
+  kuppel(x, z, q); dA = q.dA;
+  var nen = Y_SPITZE - (q.h + 0.5), roh = (Y_SPITZE - y) / nen, t = clamp01(roh), inn = roh > 0 && roh < 1, ax = Math.abs(x);
+  var uz = clamp01((z - WAND_Z0) / (WAND_Z1 - WAND_Z0)), wz = uz * uz * (3 - 2 * uz), dwz = (uz > 0 && uz < 1) ? 6 * uz * (1 - uz) / (WAND_Z1 - WAND_Z0) : 0;
+  var uy = clamp01((y - WAND_Y0) / (WAND_Y1 - WAND_Y0)), wy = uy * uy * (3 - 2 * uy), dwy = (uy > 0 && uy < 1) ? 6 * uy * (1 - uy) / (WAND_Y1 - WAND_Y0) : 0;
+  var sg = A3.sinW, zr = z - Z_GELENK;
+  o.x = x + (x < 0 ? -1 : 1) * dB * (ax < X_MAX ? ax / X_MAX : 1);
+  o.y = y - dA * q.w * t + sg * zr * wz * wy;
+  o.z = z;
+  o.a = 1 + (ax < X_MAX ? dB / X_MAX : 0);
+  o.by = 1 + (inn ? dA * q.w / nen : 0) + sg * zr * wz * dwy;
+  o.bx = -dA * (q.wx * t + (inn ? q.w * (Y_SPITZE - y) * q.hx / (nen * nen) : 0));
+  o.bz = -dA * (q.wz * t + (inn ? q.w * (Y_SPITZE - y) * q.hz / (nen * nen) : 0)) + sg * wy * (wz + zr * dwz);
+}
+function lungeAnwenden(e) {
+  var g = e.m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, p0 = e.pos0, n0 = e.nor0, o = FO, i, j, m1, m2, m3, l;
+  for (i = 0; i < p0.length; i += 3) {
+    lungeFeld(p0[i], p0[i + 1], p0[i + 2], o);
+    P[i] = o.x; P[i + 1] = o.y; P[i + 2] = o.z;
+    m2 = n0[i + 1] / o.by; m1 = (n0[i] - o.bx * m2) / o.a; m3 = n0[i + 2] - o.bz * m2;   /* Normale: Jacobi^-T * n */
+    l = Math.sqrt(m1 * m1 + m2 * m2 + m3 * m3) || 1;
+    N[i] = m1 / l; N[i + 1] = m2 / l; N[i + 2] = m3 / l;
+  }
+  g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true;
+}
+/* Rippen und Lunge: die Rippen duerfen die Lunge nicht durchstossen. Die Stuetzstrecken der gedrehten Rippen kommen in ein grobes Gitter; Eckpunkte von
+   Rippenfell und Lappen, die der Mittellinie einer Rippe naeher kommen als RIP_R + Rand (Rippenfell: anliegend, Lappen: 0,45 cm Spalt wie in Ruhe),
+   werden von ihr weggeschoben (in Ruhe ist nichts zu tun). */
+var KG = { c: 3, x0: -18, y0: 100, z0: -14, nx: 12, ny: 17, nz: 10, zellen: [], segs: [] };
+function kollisionGitter() {
+  var G = KG, n = G.nx * G.ny * G.nz, i, k, sd, r = form.RIP_R + 0.6;
+  if (!G.zellen.length) for (i = 0; i < n; i++) G.zellen.push([]);
+  for (i = 0; i < n; i++) G.zellen[i].length = 0;
+  G.segs.length = 0;
+  [-1, 1].forEach(function (sd) {
+    for (i = 0; i < 12; i++) {
+      var P = RIPPEN_J[sd][i];
+      for (k = 0; k < P.length - 1; k++) {
+        var a = P[k], b = P[k + 1], id = G.segs.length, x, y, z;
+        G.segs.push([a, b]);
+        var ix0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - r - G.x0) / G.c)), ix1 = Math.min(G.nx - 1, Math.floor((Math.max(a[0], b[0]) + r - G.x0) / G.c));
+        var iy0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - r - G.y0) / G.c)), iy1 = Math.min(G.ny - 1, Math.floor((Math.max(a[1], b[1]) + r - G.y0) / G.c));
+        var iz0 = Math.max(0, Math.floor((Math.min(a[2], b[2]) - r - G.z0) / G.c)), iz1 = Math.min(G.nz - 1, Math.floor((Math.max(a[2], b[2]) + r - G.z0) / G.c));
+        for (x = ix0; x <= ix1; x++) for (y = iy0; y <= iy1; y++) for (z = iz0; z <= iz1; z++) G.zellen[x + G.nx * (y + G.ny * z)].push(id);
+      }
+    }
+  });
+}
+function kollisionAnwenden(e) {
+  var G = KG, P = e.m.geometry.attributes.position.array, R = form.RIP_R + e.rand, i, j, c, ix, iy, iz, q, s, a, b, dx, dy, dz, L2, t, ex, ey, ez, d2, d, hit = false;
+  for (i = 0; i < P.length; i += 3) {
+    ix = Math.floor((P[i] - G.x0) / G.c); iy = Math.floor((P[i + 1] - G.y0) / G.c); iz = Math.floor((P[i + 2] - G.z0) / G.c);
+    if (ix < 0 || iy < 0 || iz < 0 || ix >= G.nx || iy >= G.ny || iz >= G.nz) continue;
+    c = G.zellen[ix + G.nx * (iy + G.ny * iz)];
+    for (j = 0; j < c.length; j++) {
+      s = G.segs[c[j]]; a = s[0]; b = s[1];
+      dx = b[0] - a[0]; dy = b[1] - a[1]; dz = b[2] - a[2]; L2 = dx * dx + dy * dy + dz * dz || 1;
+      t = ((P[i] - a[0]) * dx + (P[i + 1] - a[1]) * dy + (P[i + 2] - a[2]) * dz) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+      ex = P[i] - (a[0] + dx * t); ey = P[i + 1] - (a[1] + dy * t); ez = P[i + 2] - (a[2] + dz * t);
+      d2 = ex * ex + ey * ey + ez * ez;
+      if (d2 < R * R && d2 > 1e-10) { d = R / Math.sqrt(d2); P[i] = a[0] + dx * t + ex * d; P[i + 1] = a[1] + dy * t + ey * d; P[i + 2] = a[2] + dz * t + ez * d; hit = true; }
+    }
+  }
+  if (hit) e.m.geometry.attributes.position.needsUpdate = true;
+}
+function zwerchfellAnwenden() {
+  var e = A3.zwerch, g = e.m.geometry, P = g.attributes.position.array, p0 = e.pos0, q = KQ, i, x, ax;
+  for (i = 0; i < p0.length; i += 3) {
+    x = p0[i]; ax = Math.abs(x);
+    kuppel(x, p0[i + 2], q);
+    P[i] = x + (x < 0 ? -1 : 1) * A3.dB * (ax < X_MAX ? ax / X_MAX : 1);
+    P[i + 1] = p0[i + 1] - q.dA * q.w;
+    P[i + 2] = p0[i + 2];
+  }
+  g.attributes.position.needsUpdate = true;
+  g.computeVertexNormals();
+}
+/* Punkt p der Rippe i (Ruhelage) nach Drehung um die hintere Gelenkachse (Wirbelende, Achse in x-Richtung) und Verbreiterung -> o */
+function rippePunkt(sd, i, p, o) {
+  var piv = RIPPEN[sd][i][0], dy = p[1] - piv[1], dz = p[2] - piv[2];
+  o[0] = p[0] * A3.sx; o[1] = piv[1] + dy * A3.rc - dz * A3.rs; o[2] = piv[2] + dy * A3.rs + dz * A3.rc;
+  return o;
+}
+var RIPPEN_J = { '-1': [], '1': [] };   /* Stuetzpunkte der gedrehten Rippen (fuer die Zwischenrippenmuskeln) */
+function brustkorbAnwenden() {
+  var th = -RIPPE_WINKEL * A3.S.i, sd, i, k, tmp = [0, 0, 0];
+  A3.rc = Math.cos(th); A3.rs = Math.sin(th); A3.sx = 1 + A3.dB / X_MAX;
+  A3.dyS = 7 * A3.S.i * PX_CM; A3.dzS = STERNUM_ZU_VOR * A3.dyS;
+  [-1, 1].forEach(function (sd) {
+    for (i = 0; i < 12; i++) {
+      var piv = RIPPEN[sd][i][0], m = RIPPE_MESH[sd][i];   /* Rippe als Ganzes: Drehung um die Achse durch das Wirbelende, dann Verbreiterung (beide vertauschen) */
+      m.rotation.x = th; m.scale.x = A3.sx;
+      m.position.set(0, piv[1] - (piv[1] * A3.rc - piv[2] * A3.rs), piv[2] - (piv[1] * A3.rs + piv[2] * A3.rc));
+      RIPPEN_J[sd][i] = RIPPEN[sd][i].map(function (p) { return rippePunkt(sd, i, p, [0, 0, 0]); });
+    }
+    for (i = 0; i < 11; i++) baenderSetzen(sd, i, RIPPEN_J);
+  });
+  var so = A3.sternum; so.m.position.set(so.p0[0], so.p0[1] + A3.dyS, so.p0[2] + A3.dzS);
+  KNORPEL.forEach(function (kn) {   /* Knorpel: Ende an der Rippe und Ziel (Brustbein bzw. Rippe darueber) verschoben, dazwischen anteilig */
+    var e1 = rippePunkt(kn.sd, kn.i, kn.e, [0, 0, 0]), z1 = kn.i < 7 ? [kn.ziel[0], kn.ziel[1] + A3.dyS, kn.ziel[2] + A3.dzS] : rippePunkt(kn.sd, kn.i - 1, kn.ziel, [0, 0, 0]);
+    var re = A3.rest.get(kn.m), P = kn.m.geometry.attributes.position, a = P.array, p0 = re.pos0, lam = re.lam, c;
+    for (k = 0; k < lam.length; k++) for (c = 0; c < 3; c++) a[k * 3 + c] = p0[k * 3 + c] + (1 - lam[k]) * (e1[c] - kn.e[c]) + lam[k] * (z1[c] - kn.ziel[c]);
+    P.needsUpdate = true;
+  });
+  MAT.zwischenrippen.opacity = 0.16 + 0.46 * clamp01(A3.S.i);   /* wie im Schema */
+}
+/* Rippen, Brustbein: Glas bei "durchsichtig" */
+function rippenLook() {
+  var glas = rippenW === 'kontur';
+  [MAT.rippen, MAT.knorpel, MAT.brustbein].forEach(function (m) { stelleMat(m, glas, glas ? GLAS : 1); });
+}
+/* Schalter Rippen/Zwischenrippenmuskeln des Schemas wirken auch im 3D-Modell; der Knopf Brustkorb folgt (beide aus = aus) */
+function atmungWahl(gruppe, w) {
+  if (gruppe === 'rippen') rippenW = w; else muskelW = w;
+  brustAn = !(rippenW === 'aus' && muskelW === 'aus');
+  $('bBrust').classList.toggle('on', brustAn);
+  rippenLook();
+  applyVisibility();
+}
+
+/* Luftteilchen: die Punkte des Schemas (atmen.punkte) laufen in 3D von der Luftroehre ueber die Gabelung und den Hauptbronchus der Seite s durch den
+   Bronchialbaum bis zu einem Endpunkt (deterministisch aus fy des Punktes); Phase p.ph, Richtung, Farbe und Deckkraft wie im Schema */
+var LUFT_R = 0.175;                      /* Kugelradius (cm): Groesse 0,35 cm */
+function pfadZu(e, s) {
+  var kette = [], a = BAUM.filter(function (b) { return b.lappen === e.lappen && b.gen === 3 && b.pts[2] === e.p; })[0], st, g;
+  while (a && a.gen > 0) {
+    kette.unshift(a); st = a.pts[0]; g = a.gen - 1;
+    a = BAUM.filter(function (b) { return b.lappen === e.lappen && b.gen === g && (g === 0 || b.pts[b.pts.length - 1] === st); })[0];
+  }
+  var pts = form.TRACHEA.map(function (p) { return p.slice(); }), hb = form.hauptbronchus(s);
+  pts.push(hb[1].slice(), hb[2].slice());
+  if (!a || !kette.length) return pts;
+  /* Lappenbronchus bis zum Abzweig der Generation 1 (st liegt auf seiner Mittellinie) */
+  var w = a.pts, best = 1e9, bj = 1, k, d, f, L2;
+  st = kette[0].pts[0];
+  for (k = 0; k < w.length - 1; k++) {
+    L2 = Math.pow(w[k + 1][0] - w[k][0], 2) + Math.pow(w[k + 1][1] - w[k][1], 2) + Math.pow(w[k + 1][2] - w[k][2], 2) || 1;
+    f = clamp01(((st[0] - w[k][0]) * (w[k + 1][0] - w[k][0]) + (st[1] - w[k][1]) * (w[k + 1][1] - w[k][1]) + (st[2] - w[k][2]) * (w[k + 1][2] - w[k][2])) / L2);
+    d = Math.pow(w[k][0] + (w[k + 1][0] - w[k][0]) * f - st[0], 2) + Math.pow(w[k][1] + (w[k + 1][1] - w[k][1]) * f - st[1], 2) + Math.pow(w[k][2] + (w[k + 1][2] - w[k][2]) * f - st[2], 2);
+    if (d < best) { best = d; bj = k + 1; }
+  }
+  for (k = 1; k < bj; k++) pts.push(w[k].slice());
+  pts.push(st.slice());
+  kette.forEach(function (b) { pts.push(b.pts[1].slice(), b.pts[2].slice()); });
+  return pts;
+}
+function luftBauen(punkte) {
+  var ends = { '-1': [], '1': [] };
+  BAUM.endpunkte.forEach(function (e) { ends[e.lappen.slice(-1) === 'L' ? '1' : '-1'].push(e); });
+  var pfade = punkte.map(function (p) {
+    var l = ends[p.s], e = l[Math.min(l.length - 1, Math.floor((p.fy - 0.18) / 0.66 * l.length))];
+    var pts = pfadZu(e, p.s);
+    return { ruhe: pts, pts: pts.map(function (q) { return q.slice(); }), L: new Float32Array(pts.length), gesamt: 0 };
+  });
+  var n = punkte.length, geo = new THREE.SphereGeometry(LUFT_R, 10, 7), alpha = new THREE.InstancedBufferAttribute(new Float32Array(n), 1), farbe = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+  alpha.setUsage(THREE.DynamicDrawUsage); farbe.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('aAlpha', alpha); geo.setAttribute('aFarbe', farbe);
+  var mt = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });   /* Farbe und Deckkraft je Teilchen (Attribute aFarbe, aAlpha) */
+  mt.onBeforeCompile = function (sh) {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aAlpha;\nattribute vec3 aFarbe;\nvarying float vAl;\nvarying vec3 vFa;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAl = aAlpha; vFa = aFarbe;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAl;\nvarying vec3 vFa;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = vFa; diffuseColor.a *= vAl;');
+  };
+  mt.name = 'luftteilchen';
+  var im = new THREE.InstancedMesh(geo, mt, n);
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  im.frustumCulled = false; im.renderOrder = 5;
+  im.name = 'Luft'; im.userData.teilchen = 'luft'; im.userData.noexport = true;
+  im.raycast = function () {};   /* Teilchen sind nicht anklickbar */
+  root.add(im);
+  return { im: im, pfade: pfade, alpha: alpha, farbe: farbe, ein: srgb(0xCE3A2F), aus: srgb(0x6B7F8C), M: new THREE.Matrix4() };
+}
+/* Pfade in die aktuelle Lage der Lunge setzen (Feld wie bei den Netzen) und die Laengen neu bestimmen */
+function luftPfade() {
+  A3.luft.pfade.forEach(function (pf) {
+    var k, o = FO, t = 0;
+    for (k = 0; k < pf.ruhe.length; k++) {
+      lungeFeld(pf.ruhe[k][0], pf.ruhe[k][1], pf.ruhe[k][2], o);
+      pf.pts[k][0] = o.x; pf.pts[k][1] = o.y; pf.pts[k][2] = o.z;
+      if (k) t += Math.sqrt(Math.pow(pf.pts[k][0] - pf.pts[k - 1][0], 2) + Math.pow(pf.pts[k][1] - pf.pts[k - 1][1], 2) + Math.pow(pf.pts[k][2] - pf.pts[k - 1][2], 2));
+      pf.L[k] = t;
+    }
+    pf.gesamt = t;
+  });
+}
+function luftSetzen(m, punkte) {
+  var Lf = A3.luft, f = m.fluss, absF = Math.abs(f), stroemt = absF > 12, farbe = f > 0 ? Lf.ein : Lf.aus;
+  punkte.forEach(function (p, k) {
+    var pf = Lf.pfade[k], rest = p.ph * pf.gesamt, j = 1;
+    while (j < pf.L.length - 1 && rest > pf.L[j]) j++;
+    var d = pf.L[j] - pf.L[j - 1], u = d > 0 ? clamp01((rest - pf.L[j - 1]) / d) : 0, a = pf.pts[j - 1], b = pf.pts[j];
+    Lf.M.makeTranslation(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u);
+    Lf.im.setMatrixAt(k, Lf.M);
+    var rand = Math.min(1, Math.min(p.ph, 1 - p.ph) * 7);
+    Lf.alpha.array[k] = stroemt ? rand * Math.min(1, absF / 220) : 0.12;
+    Lf.farbe.array[k * 3] = farbe.r; Lf.farbe.array[k * 3 + 1] = farbe.g; Lf.farbe.array[k * 3 + 2] = farbe.b;
+  });
+  Lf.im.instanceMatrix.needsUpdate = true; Lf.alpha.needsUpdate = true; Lf.farbe.needsUpdate = true;
+}
+
+/* Anker der Beschriftung folgen den bewegten Strukturen: je Anker der naechste Eckpunkt der Struktur (Ruhelage); die Verschiebung dieses Punktes
+   (aktuell minus Ruhe) wird beim Legen der Beschriftung auf den Anker addiert */
+var AV = new THREE.Vector3(), AW = new THREE.Vector3();
+function ankerVerschiebung(dd, out) {
+  var e = A3.rest.get(dd.m), j = dd.vi * 3, a;
+  if (e.m0) {
+    dd.m.updateMatrix();
+    AV.set(e.pos0[j], e.pos0[j + 1], e.pos0[j + 2]); AW.copy(AV);
+    AV.applyMatrix4(dd.m.matrix); AW.applyMatrix4(e.m0);
+    out.add(AV.sub(AW));
+  } else {
+    a = dd.m.geometry.attributes.position.array;
+    out.x += a[j] - e.pos0[j]; out.y += a[j + 1] - e.pos0[j + 1]; out.z += a[j + 2] - e.pos0[j + 2];
+  }
+}
+function ankerKoppeln() {
+  [KAND, KAND3].forEach(function (K) {
+    Object.keys(K).forEach(function (id) {
+      var ms = STRUCT[id].meshes.filter(function (m) { return A3.rest.has(m); });
+      if (!ms.length) return;
+      K[id].forEach(function (v) {
+        var best = 1e18, x = v.x - root.position.x, y = v.y - root.position.y, z = v.z - root.position.z;   /* Szene -> Koordinaten der Meshes */
+        ms.forEach(function (m) {
+          var p = A3.rest.get(m).pos0, i, d;
+          for (i = 0; i < p.length; i += 3) {
+            d = (p[i] - x) * (p[i] - x) + (p[i + 1] - y) * (p[i + 1] - y) + (p[i + 2] - z) * (p[i + 2] - z);
+            if (d < best) { best = d; v._dyn = { m: m, vi: i / 3 }; }
+          }
+        });
+      });
+    });
+  });
+}
+
+/* Ruhelagen speichern, Teilchen bauen, Anker koppeln (am Ende des Aufbaus) */
+function atmungVorbereiten() {
+  var festhalten = function (m, art) {
+    var g = m.geometry, e = { m: m, pos0: new Float32Array(g.attributes.position.array) };
+    if (art === 'feld') e.nor0 = new Float32Array(g.attributes.normal.array);
+    A3.rest.set(m, e);
+    m.frustumCulled = false;
+    g.computeBoundingSphere(); g.boundingSphere.radius += 10;   /* Treffer beim Antippen: Huelle gross genug fuer die Verschiebung */
+    return e;
+  };
+  LAPPEN.concat(['pleura', 'hauptbronchien', 'bronchien', 'lungenarterien', 'lungenvenen']).forEach(function (sid) {
+    STRUCT[sid].meshes.forEach(function (m) {
+      var e = festhalten(m, 'feld');
+      if (sid === 'pleura') e.rand = 0.01; else if (LAPPEN.indexOf(sid) >= 0) e.rand = 0.45;   /* Abstand zur Rippenmitte jenseits von RIP_R (Rippenfell liegt an, Lappen 0,45 cm dahinter) */
+      A3.feld.push(e);
+    });
+  });
+  A3.zwerch = festhalten(STRUCT.zwerchfell.meshes[0], 'zwerchfell');
+  [-1, 1].forEach(function (sd) {
+    var i;
+    for (i = 0; i < 12; i++) A3.rest.set(RIPPE_MESH[sd][i], { m: RIPPE_MESH[sd][i], pos0: new Float32Array(RIPPE_MESH[sd][i].geometry.attributes.position.array), m0: new THREE.Matrix4() });   /* Rippen bewegen sich als Ganzes (Matrix), m0 = Ruhelage */
+    for (i = 0; i < 11; i++) festhalten(BAENDER[sd][i], 'band');
+  });
+  KNORPEL.forEach(function (kn) {
+    var e = festhalten(kn.m, 'knorpel'), p = e.pos0, k, c = [kn.ziel[0] - kn.e[0], kn.ziel[1] - kn.e[1], kn.ziel[2] - kn.e[2]], L2 = c[0] * c[0] + c[1] * c[1] + c[2] * c[2];
+    e.lam = new Float32Array(p.length / 3);
+    for (k = 0; k < e.lam.length; k++) e.lam[k] = clamp01(((p[k * 3] - kn.e[0]) * c[0] + (p[k * 3 + 1] - kn.e[1]) * c[1] + (p[k * 3 + 2] - kn.e[2]) * c[2]) / L2);
+  });
+  var so = STRUCT.brustbein.meshes[0];
+  A3.sternum = { m: so, p0: [so.position.x, so.position.y, so.position.z] };
+  so.updateMatrix();
+  A3.rest.set(so, { m: so, pos0: new Float32Array(so.geometry.attributes.position.array), m0: so.matrix.clone() });
+  A3.luft = luftBauen(atmen.punkte);
+  ankerKoppeln();
+  rippenLook();
+  A3.bereit = true; A3.neu = true;
+}
+/* Anschluss an die Atmung: am Ende von zeichne (Abschnitt 6) mit dem Zustand S, den Werten m der Physik und den Luftpunkten */
+function atmung3D(S, m, dt, punkte) {
+  A3.S = S;
+  if (!A3.bereit) return;
+  var sig = S.d.toFixed(3) + '|' + S.i.toFixed(3);
+  if (sig !== A3.sig || A3.neu) {
+    A3.sig = sig; A3.neu = false;
+    A3.q = Math.round(S.d * 25) + '|' + Math.round(S.i * 25);   /* grob: die Beschriftung legt sich nur bei merklicher Aenderung neu */
+    A3.dAR = 62 * S.d * (form.DOM_R - RAND_Y) / KUPPEL_PX; A3.dAL = 62 * S.d * (form.DOM_L - RAND_Y) / KUPPEL_PX; A3.dB = 13 * S.i * PX_CM; A3.sinW = Math.sin(RIPPE_WINKEL * S.i);
+    brustkorbAnwenden();   /* zuerst die Rippen (gedrehte Stuetzpunkte), dann die Lunge, die ihnen ausweicht */
+    A3.feld.forEach(lungeAnwenden);
+    kollisionGitter();
+    A3.feld.forEach(function (e) { if (e.rand !== undefined) kollisionAnwenden(e); });
+    zwerchfellAnwenden();
+    luftPfade();
+  }
+  var pStaerke = Math.min(1, (Math.abs(m.pPleura) - 5) / 3);
+  MAT.pleura.opacity = PLEURA_3D * (0.22 + 0.40 * pStaerke);   /* Rippenfell: Deckkraft aus der Formel des Schemas (dort ein Saum hinter der Lunge), in 3D als Huelle vor der Lunge gedaempft */
+  luftSetzen(m, punkte);
+}
+atmen.anschliessen(atmung3D, atmungWahl);
 
 /* Knoepfe der Werkzeugleiste: Pause/Weiter der Atmung und Schema (Muster wie bei der Niere bzw. beim Nephron) */
 var atmenLaeuft = true;
@@ -1461,7 +2020,14 @@ $('bPlay').onclick = function () {
 /* Schema: Panel rechts (Desktop) bzw. oben (Handy); die 3D-Ansicht wird dabei ausgeblendet und nicht gezeichnet, die Beschriftung ebenso.
    Handy: Hoehe der Werkzeugleiste als --wz (das Schema endet darueber); aendert sich die Leiste (Umbruch), misst der Beobachter neu */
 var schemaOn = false, schemaWz = null;
+/* Hinweis und Abzeichen im Schema: Skala = Breite des Bildes / 958 px (Buehnenbreite des Originals bei 1280 x 800), Variable --sk am Bild */
+var BUEHNE_B = 958;
+function schemaSkala() {
+  var b = $('loBild'), w = b && b.clientWidth;
+  if (w) b.style.setProperty('--sk', (w / BUEHNE_B).toFixed(4));
+}
 function schemaMessen() {
+  schemaSkala();
   if (!window.matchMedia('(max-width:1000px)').matches) { schemaWzLoeschen(); return; }   /* Desktop: nichts setzen */
   document.body.style.setProperty('--wz', Math.ceil($('tools').getBoundingClientRect().height) + 'px');
 }
@@ -1480,7 +2046,7 @@ function setSchema(on) {
   document.body.classList.toggle('schema', on);
   if (on) {
     schemaMessen();
-    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe($('tools')); }
+    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe($('tools')); schemaWz.observe($('loBild')); }
   } else schemaWzEnde();
   canvas.style.visibility = on ? 'hidden' : '';
   lv++;
@@ -1503,10 +2069,12 @@ function loop(now) {
 }
 organ.bild = loop; organ.groesse = groesse;
 
+
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
   clearTimeout(Kern.toast._t);
+  clearTimeout(quizT);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
