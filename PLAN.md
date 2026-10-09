@@ -6,21 +6,21 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 
 ✓ = vorhanden, – = fehlt, (✓) = teilweise
 
-| Baustein | Herz | Nephron | Niere |
-|---|---|---|---|
-| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ |
-| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ |
-| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ |
-| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ |
-| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik |
-| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) |
-| Hilfekarten und Üben (Quiz) | ✓ | (✓) | ✓ |
-| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) |
-| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – |
-| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ |
-| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ |
-| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ |
-| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper |
+| Baustein | Herz | Nephron | Niere | Lunge |
+|---|---|---|---|---|
+| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ |
+| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ |
+| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ |
+| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) |
+| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik | Atemmechanik aus dem Thorax-Modell (Zwerchfell, Rippen, Pleuradruck, Luftstrom), 3D folgt derselben Simulation |
+| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | – (folgt: Pleuraspalt) |
+| Hilfekarten und Üben (Quiz) | ✓ | (✓) | ✓ | ✓ |
+| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | – (folgt) |
+| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – | ✓ (Thorax-Modell, unverändert übernommen) |
+| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | – (folgt) |
+| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | – (folgt) |
+| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper | ✓ `lunge-form.js` (Brustkorb, Rippen, Zwerchfellkuppel, Lappen, Bronchien; Körper nutzt sie), `organ.start` für die Fahrt aus dem Körper |
 
 Alle Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
@@ -167,7 +167,14 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
 
 ### Phase 3 und weiter – Organ für Organ
 
-- [ ] Lunge mit Alveole
+- [ ] Lunge mit Alveole – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Lunge, B Alveole, C Krankheitsbilder, Medikamente, Lupe, Export/AR
+  - Vorlage sind zwei fertige Modelle von Jörn (`tools/originale/lunge-ebene1-thorax.html`, `lunge-ebene3-alveole.html`): Krankheitsbilder, Einstellfunktionen und Schemata werden mit Texten, Werten, Formeln und Abläufen unverändert übernommen; jede Anpassung für die Einbindung wird einzeln genannt; `tools/nachweis.js` vergleicht Original und App (Bilder nebeneinander, Werte und SVG)
+  - [x] A: Form-Baustein `organe/lunge/lunge-form.js` (Rippenparameter, Brustkorb-Innenraum, Zwerchfellkuppel, Lungenflügel aus dem Körper, bytegleich umgezogen; dazu Lappen, Bronchialbaum, `rippeStuetz`); Detailmodell `#lunge` mit fünf Lappen, Atemwegen, Rippenfell/Pleuraspalt, Zwerchfell, Rippen, Brustbein, Zwischenrippenmuskeln, Lungengefäßen und Herz zur Orientierung; Ausschnitte Übersicht, Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura
+  - [x] A: Atemmechanik aus dem Thorax-Modell (Reiter „Atmung“ im App-Stil, Schema-Panel mit Original-SVG und Kette im hellen Originalaussehen, Pause); abgestimmte Abweichung: doppelte ID `rippen` im Original aufgelöst, die weißen Rippen sind sichtbar; 3D-Lunge atmet mit (Zwerchfell flacht im selben Anteil ab wie im Schema, seitliche Weitung, Rippen drehen, Pleura-Deckkraft gedämpft, 14 Luftteilchen); Hilfekarten und „Probier das aus“ wörtlich, Üben; Kopfzeile „Ebene 1 von 4“ entfällt
+  - [x] A: Kamerafahrt Körper → Lunge und zurück („Lunge öffnen“; Lunge, Atemwege, Zwerchfell, Brustkorb und Herz bleiben bei der Fahrt sichtbar)
+  - [ ] B: Alveole (`#lunge/alveole`) als Alveolarsäckchen mit Kapillarnetz, Zoomstufe aus der Lunge (Antippen, Knopf „Alveole“), Simulation und Schema aus dem Alveolen-Modell
+  - [ ] C: Krankheitsbilder aus dem Alveolen-Modell mit neuen Erklärkarten (auch in der Lunge, dort nur sichtbar in 3D), Medikamente (Vorschläge mit Text zur Freigabe), Lupe (Pleuraspalt, Blut-Luft-Schranke), Export, AR
+  - Später: Lunge und Herz im Kreislauf verbinden (eigener Schritt), Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert
 - [ ] Leber mit Leberläppchen
 - [ ] Magen und Darm mit Dünndarmzotte
 - [ ] Gehirn mit Neuron und Synapse
