@@ -316,7 +316,7 @@ function huelle(x, y, z) {
    ===================================================================== */
 var RWT = [[100, 2.7], [114, 2.5], [117, 2.0], [140, 1.8], [143, 1.5], [150, 1.35]];
 /* Wirbelsaeule, Brustbein, Rippen- und Lungenform stammen aus dem Form-Baustein der Lunge (organe/lunge/lunge-form.js); er wird in bauen geladen, bevor das Skelett entsteht */
-var LF = null, RIP_R, RIP_YA, domY, DOM_R, DOM_L;
+var LF = null, RIP_R, RIP_YA, kuppel;
 function zst(y) { return LF.zst(y); }
 function zSternum(y) { return LF.zSternum(y); }
 
@@ -431,8 +431,8 @@ function sdfHerz(x, y, z) {
 }
 function sdfLeber(x, y, z) {
   var d = ell(x, y, z, -4.0, 109.8, 0.8, 9.0, 8.4, 7.0);             // rechter Lappen
-  d = smin(d, ell(x, y, z, 2.6, 111.6, 3.4, 7.4, 4.0, 4.6), 4);       // linker Lappen, duenn auslaufend
-  d = Math.max(d, 0.4 * (y - (domY(x, z, -6.5, DOM_R) - 0.6)));         // Oberseite folgt der Kuppel
+  d = smin(d, ell(x, y, z, 2.6, 112.4, 3.4, 7.4, 4.0, 4.6), 4);       // linker Lappen, duenn auslaufend
+  d = Math.max(d, 0.4 * (y - (kuppel(x, z) - 0.6)));         // Oberseite folgt der Kuppel
   return Math.max(d, -(y - 100.2 - 0.5 * (x + 12)) * 0.89);            // schraeger, scharfer Unterrand
 }
 function sdfMagen(x, y, z) {
@@ -468,14 +468,16 @@ function sdfHirn(x, y, z) {
   d = smin(d, kap(sx, y, z, 0, 160.5, -3.6, 0, 152, -4.2, 1.3, 1.0), 1.5);
   return d + 0.2 * Math.sin(2.6 * x + 0.7) * Math.sin(2.5 * y) * Math.sin(2.7 * z + 1.3);
 }
-/* Zwerchfell: dünne Kuppelfläche (zwei Kuppeln, Rand an den unteren Rippen) */
+/* Zwerchfell: dünne Kuppelfläche (eine Kuppel, rechts höher, Rand an den unteren Rippen) */
 function zwerchfellGeo() {
   var g = new THREE.RingGeometry(0.02, 1, 56, 18), p = g.attributes.position;
-  for (var i = 0; i < p.count; i++) {
-    var rx = p.getX(i), rz = p.getY(i);
-    var x = 13.0 * rx, z = 0.6 + 9.4 * rz;
-    var yd = Math.max(domY(x, z, -6.5, DOM_R), domY(x, z, 6.5, DOM_L));
-    p.setXYZ(i, x, S.smax(yd, 106.5, 7), z);
+  /* Rand je Richtung: aeusserster Punkt, an dem die Kuppel ueber dem Rand an der Brustwand (kuppelRand) liegt */
+  var i;
+  for (i = 0; i < p.count; i++) {
+    var rx = p.getX(i), rz = p.getY(i), rr = Math.sqrt(rx * rx + rz * rz) || 1, fe = 0.05, f;
+    for (f = 1; f > 0.05; f -= 0.005) { var x0 = f * 17 * rx / rr, z0 = 0.6 + f * 11 * rz / rr; if (kuppel(x0, z0) >= LF.kuppelRand(x0, z0)) { fe = f; break; } }
+    var x = fe * 17 * rx, z = 0.6 + fe * 11 * rz;
+    p.setXYZ(i, x, kuppel(x, z), z);
   }
   g.computeVertexNormals();
   return g;
@@ -703,7 +705,7 @@ async function bauen() {
   if (abgebaut) return;
   await setLoad(0.45, 'Skelett'); if (abgebaut) return;
   LF = await lungenP; if (abgebaut) return;
-  RIP_R = LF.RIP_R; RIP_YA = LF.RIP_YA; domY = LF.domY; DOM_R = LF.DOM_R; DOM_L = LF.DOM_L;
+  RIP_R = LF.RIP_R; RIP_YA = LF.RIP_YA; kuppel = LF.kuppel;
   skelett();
   await setLoad(0.58, 'Organe'); if (abgebaut) return;
   await organe(); if (abgebaut) return;

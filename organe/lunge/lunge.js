@@ -542,22 +542,20 @@ async function herzBauen(hform) {
   return { geo: g, smp: smp, pos: HV };
 }
 
-/* Zwerchfell: Kuppelflaeche aus domY (rechts DOM_R, links DOM_L), knapp unter der Lungenbasis. Der Rand liegt dort, wo die Flaeche auf Hoehe des
-   Rippenbogens (RAND_Y) ausstreicht; dazu in der Mitte ein flacher Streifen unter dem Herzen (Centrum tendineum, heller). Polargitter: Winkel mal
+/* Zwerchfell: eine zusammenhaengende Kuppelflaeche aus form.kuppel (rechts hoeher), knapp unter der Lungenbasis. Der Rand liegt dort, wo die Flaeche auf Hoehe
+   des Rands (form.kuppelRand: hinten/seitlich tief im Recessus, vorn am Rippenbogen) ausstreicht; die Sehnenplatte (Centrum tendineum) in der Mitte ist nur heller gefaerbt, nicht tiefer. Polargitter: Winkel mal
    Anteil des Wegs von der Mitte zum Rand, Ellipse der Brustwand. */
-var RAND_Y = 113.5, MITTE_Y = 111.2;
 function zwerchfellGeo() {
   var NA = 72, NR = 20, a, j, f;
-  var hoehe = function (x, z) { return Math.max(form.domY(x, z, -6.5, form.DOM_R), form.domY(x, z, 6.5, form.DOM_L)); };
+  var hoehe = form.kuppel;
   var sehne = function (x, z) { var u = Math.sqrt(Math.pow(x / 5.5, 2) + Math.pow((z - 0.6) / 5.5, 2)); return 1 - Math.min(1, Math.max(0, (u - 0.7) / 0.5)); };   /* 1 in der Mitte, 0 aussen */
   var cm = srgb(0xA85A58), cs = srgb(0xDDB4A4);
   var pos = [], col = [], idx = [];
   for (a = 0; a < NA; a++) {
-    var w = a / NA * 2 * PI, ca = 11.8 * Math.cos(w), sa = 9.4 * Math.sin(w), fe = 0.05;
-    for (f = 1; f > 0.05; f -= 0.005) { var x0 = f * ca, z0 = 0.6 + f * sa; if (hoehe(x0, z0) >= RAND_Y || sehne(x0, z0) > 0.99) { fe = f; break; } }   /* aeusserster Punkt ueber dem Rand oder im Mittelstreifen */
+    var w = a / NA * 2 * PI, ca = 17 * Math.cos(w), sa = 11 * Math.sin(w), fe = 0.05;
+    for (f = 1; f > 0.05; f -= 0.005) { var x0 = f * ca, z0 = 0.6 + f * sa; if (hoehe(x0, z0) >= form.kuppelRand(x0, z0)) { fe = f; break; } }   /* aeusserster Punkt ueber dem Rand */
     for (j = 0; j <= NR; j++) {
       var fj = fe * j / NR, x = fj * ca, z = 0.6 + fj * sa, t = sehne(x, z), y = hoehe(x, z);
-      y += (Math.max(y, MITTE_Y) - y) * t;
       pos.push(x, y, z);
       col.push(cm.r + (cs.r - cm.r) * t, cm.g + (cs.g - cm.g) * t, cm.b + (cs.b - cm.b) * t);
     }
@@ -1075,7 +1073,7 @@ function ankerBerechnen() {
   var herzS = LH ? function (x, y, z) { return LH.smp.val(x - LH.v[0], y - LH.v[1], z - LH.v[2]); } : sdfHerz;
   var rb = RIPPEN['-1'], rl = RIPPEN['1'];
   var bandMitte = function (s, i, k) { var q = BAENDER[s][i].geometry.attributes.position; return [(q.getX(k * 2) + q.getX(k * 2 + 1)) / 2, (q.getY(k * 2) + q.getY(k * 2 + 1)) / 2, (q.getZ(k * 2) + q.getZ(k * 2 + 1)) / 2]; };
-  var dom = function (x, z) { return [x, Math.max(form.domY(x, z, -6.5, form.DOM_R), form.domY(x, z, 6.5, form.DOM_L)), z]; };
+  var dom = function (x, z) { return [x, form.kuppel(x, z), z]; };
   var vornPunkte = function (sdf, xs, ys) { var r = []; ys.forEach(function (y) { xs.forEach(function (x) { r.push(vorn(sdf, x, y, null)); }); }); return r; };
   var seitePunkte = function (sdf, yz) { return yz.map(function (q) { return rechts(sdf, q[0], q[1], null); }); };
   var mp = function (a) { return a.pts[1]; };
@@ -1697,7 +1695,7 @@ return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, ansc
    S.d oder S.i aendern. Alle Netze werden aus ihrer Ruhelage verschoben (Ruhepositionen einmal gespeichert).
    Zwerchfell: der Scheitel sinkt um dA = 62 * S.d * (Hoehe der Kuppel im Modell / 80 px) (Schema: apexY = 372 + 62 * d bei 80 px Kuppelhoehe, also
    sinkt er um denselben Anteil der Kuppel wie dort; mit PX_CM laege der Scheitel bei S.d = 1 unter dem Rand, die Kuppel waere umgestuelpt),
-   der Rand bleibt: dy = -dA * w, w = Anteil der Hoehe der Kuppel ueber dem Rand (RAND_Y). Seitlich waechst die Halbbreite um
+   der Rand bleibt: dy = -dA * w, w = Hoehe der Kuppel ueber dem Rand an dieser Stelle (cm), dA = 62 * d / 80 px je cm. Seitlich waechst die Halbbreite um
    dB = 13 * S.i * PX_CM (Schema: halbBreite = 176 + 13 * i).
    Lunge (Lappen, Rippenfell, Atemwege und Gefaesse in der Lunge): unten folgt sie dem Zwerchfell, die Spitze bleibt; seitlich wird sie weiter.
    Rippen: Drehung um die hintere Gelenkachse (Wirbelende) um 7,5 Grad * S.i, die vorderen Teile heben sich (Eimerhenkel); Knorpel folgen,
@@ -1710,20 +1708,19 @@ var Z_GELENK = -7, WAND_Z0 = -2, WAND_Z1 = 6, WAND_Y0 = 118, WAND_Y1 = 128;   /*
 var PLEURA_3D = 0.45;                    /* Daempfung der Rippenfell-Deckkraft in 3D (0,10 in Ruhe bis ca. 0,28) */
 var KUPPEL_PX = 80;                      /* Hoehe der Zwerchfellkuppel im Schema (px): BASIS_Y 452 - apexY 372 */
 var STERNUM_ZU_VOR = 0.5;                /* das Brustbein geht um diesen Anteil seines Hubs auch nach vorn */
-var A3 = { bereit: false, neu: false, sig: '', q: '', S: null, dB: 0, rc: 1, rs: 0, sx: 1, dyS: 0, dzS: 0, dAR: 0, dAL: 0, sinW: 0, rest: new Map(), feld: [], zwerch: null, sternum: null, luft: null };
+var A3 = { bereit: false, neu: false, sig: '', q: '', S: null, dB: 0, rc: 1, rs: 0, sx: 1, dyS: 0, dzS: 0, dA: 0, sinW: 0, rest: new Map(), feld: [], zwerch: null, sternum: null, luft: null };
 var KQ = { h: 0, hx: 0, hz: 0, w: 0, wx: 0, wz: 0, dA: 0 }, FO = { x: 0, y: 0, z: 0, a: 1, bx: 0, by: 1, bz: 0 };
 var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
 
-/* Kuppel des Zwerchfells ueber (x, z): Hoehe h, Anteil w ueber dem Rand (0 am Rand, 1 am Scheitel, je Seite DOM_R/DOM_L) und die Ableitungen nach x und z */
+/* Kuppel des Zwerchfells ueber (x, z): Hoehe h, Hoehe w (cm) ueber dem Rand an dieser Stelle (0 am Rand und darunter) und die Ableitungen nach x und z */
 function kuppel(x, z, q) {
-  var R = form.DOM_R, L = form.DOM_L, hr = form.domY(x, z, -6.5, R), hl = form.domY(x, z, 6.5, L), e = 0.05;
-  var wr = (hr - RAND_Y) / (R - RAND_Y), wl = (hl - RAND_Y) / (L - RAND_Y), rechts = wr >= wl;
-  var xc = rechts ? -6.5 : 6.5, top = rechts ? R : L, w = rechts ? wr : wl;
-  q.h = rechts ? hr : hl; q.dA = rechts ? A3.dAR : A3.dAL;   /* Senkung des Scheitels dieser Kuppel */
-  q.hx = (form.domY(x + e, z, xc, top) - form.domY(x - e, z, xc, top)) / (2 * e);
-  q.hz = (form.domY(x, z + e, xc, top) - form.domY(x, z - e, xc, top)) / (2 * e);
-  if (w <= 0 || w >= 1) { q.w = w <= 0 ? 0 : 1; q.wx = 0; q.wz = 0; }
-  else { q.w = w; q.wx = q.hx / (top - RAND_Y); q.wz = q.hz / (top - RAND_Y); }
+  var e = 0.05, r = form.kuppelRand;
+  q.h = form.kuppel(x, z); q.dA = A3.dA;   /* Senkung je cm Hoehe ueber dem Rand */
+  q.hx = (form.kuppel(x + e, z) - form.kuppel(x - e, z)) / (2 * e);
+  q.hz = (form.kuppel(x, z + e) - form.kuppel(x, z - e)) / (2 * e);
+  var rd = r(x, z);
+  if (q.h <= rd) { q.w = 0; q.wx = 0; q.wz = 0; }
+  else { q.w = q.h - rd; q.wx = q.hx - (r(x + e, z) - r(x - e, z)) / (2 * e); q.wz = q.hz - (r(x, z + e) - r(x, z - e)) / (2 * e); }
 }
 /* Verschiebung der Lunge fuer einen Punkt der Ruhelage (x, y, z) -> o.x, o.y, o.z; dazu die Jacobi-Matrix (o.a, o.bx, o.by, o.bz) fuer die Normalen:
    y' = y - dA * w(x,z) * t, t = Anteil des Wegs von der Spitze (0) zur Basis (1) = clamp01((Y_SPITZE - y) / (Y_SPITZE - yBasis)), yBasis = Kuppel + 0.5
@@ -2012,7 +2009,7 @@ function atmung3D(S, m, dt, punkte) {
   if (sig !== A3.sig || A3.neu) {
     A3.sig = sig; A3.neu = false;
     A3.q = Math.round(S.d * 25) + '|' + Math.round(S.i * 25);   /* grob: die Beschriftung legt sich nur bei merklicher Aenderung neu */
-    A3.dAR = 62 * S.d * (form.DOM_R - RAND_Y) / KUPPEL_PX; A3.dAL = 62 * S.d * (form.DOM_L - RAND_Y) / KUPPEL_PX; A3.dB = 13 * S.i * PX_CM; A3.sinW = Math.sin(RIPPE_WINKEL * S.i);
+    A3.dA = 62 * S.d / KUPPEL_PX; A3.dB = 13 * S.i * PX_CM; A3.sinW = Math.sin(RIPPE_WINKEL * S.i);
     brustkorbAnwenden();   /* zuerst die Rippen (gedrehte Stuetzpunkte), dann die Lunge, die ihnen ausweicht */
     A3.feld.forEach(lungeAnwenden);
     kollisionGitter();
