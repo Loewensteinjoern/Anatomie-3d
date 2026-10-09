@@ -36,7 +36,9 @@
 
    Modell lunge (index.html#lunge): beide Lungenflügel mit Lappen, Atemwegen, Gefäßen, Rippenfell, Zwerchfell und Brustkorb. Kontexte desktop
    (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura), Durchsicht, ohne Brustkorb,
-   ohne Beschriftung, Info), handy (Übersicht, Bronchialbaum, Info), datei (file://) und abbau; noch ohne Exporte und AR.
+   ohne Beschriftung, Info; am Ende Atmung: Reiter, Zwerchfell voll, Schema (#bSchema), Ruheatmung, angestrengte Atmung, durchsichtige Rippen mit Druckzahlen,
+   Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von LungeApp.atmung() stehen in erg.atmung
+   und werden von `vergleichen` verglichen)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung mit offenem Schema), datei (file://) und abbau; noch ohne Exporte und AR.
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -557,11 +559,27 @@ const MODELLE = {
         await t.klick('#bSee'); await t.klick('#bBrust'); await t.weiter(600); await t.bild('ohne-brustkorb');
         await t.klick('#bBrust'); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Atmung (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben): Reiter, Regler, Schema; nach den Schema-Bildern die Werte von LungeApp.atmung() in erg.atmung */
+        const werte = async (name) => { (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-' + name] = await t.js(() => window.LungeApp.atmung()); };
+        await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.weiter(300); await t.bild('atmung');
+        await t.klick('#paneAtmung button[data-set="zwerch"][data-wert="100"]'); await t.weiter(2500); await t.bild('zwerchfell-voll');
+        await t.klick('#bSchema'); await t.weiter(300); await t.bild('schema-zwerchfell-voll'); await werte('schema-zwerchfell-voll');
+        await t.klick('#loEntspannen'); await t.weiter(3000);
+        await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema-ruhe-einatmen'); await werte('schema-ruhe-einatmen');
+        await t.weiter(1900); await t.bild('schema-ruhe-ausatmen'); await werte('schema-ruhe-ausatmen');
+        await t.klick('#loDemoStress'); await t.weiter(1500); await t.bild('schema-stress'); await werte('schema-stress');
+        await t.klick('#loRippenWahl button[data-rippen="kontur"]'); await t.klick('#loZahlen'); await t.weiter(500); await t.bild('schema-durchsichtig-zahlen'); await werte('schema-durchsichtig-zahlen');
+        await t.klick('#loTempoWahl button[data-tempo="0.25"]'); await t.weiter(800); await t.bild('schema-zeitlupe'); await werte('schema-zeitlupe');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('schema-pause'); await werte('schema-pause-1');
+        await t.weiter(1000); await t.bild('schema-pause'); await werte('schema-pause-2');   /* beide Bilder müssen gleich aussehen, die Werte ebenso */
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam1'); await t.weiter(900); await t.bild('bronchialbaum');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Atmung (neues Bild am Ende): Reiter Atmung, Schema offen, Ruheatmung; die Leiste bleibt bedienbar */
+        await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.klick('#bSchema'); await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema');
+        (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-schema'] = await t.js(() => window.LungeApp.atmung());
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1148,6 +1166,10 @@ async function vergleichen(va, vb) {
     }
     const vgl = (titel, x, y) => { if (JSON.stringify(x) === JSON.stringify(y)) ok.push(m + ' ' + titel + ': gleich'); else probleme.push(m + ' ' + titel + ': anders\n    vorher:  ' + JSON.stringify(x) + '\n    nachher: ' + JSON.stringify(y)); };
     vgl('AR (WebXR-Anfrage)', a.ar, b.ar);
+    for (const k of Object.keys(b.atmung || {})) {   /* Werte von LungeApp.atmung(): nur gegen vorhandene Referenz */
+      if (!a.atmung || !(k in a.atmung)) ok.push(m + ' Atmung ' + k + ': neu (keine Referenz)');
+      else vgl('Atmung ' + k, a.atmung[k], b.atmung[k]);
+    }
     const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
     for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
     vgl('Seitentext', a.text, textB);

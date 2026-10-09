@@ -40,3 +40,105 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 /* Die Werkzeugleiste wird auf schmalen Handys hoeher (die Reihen brechen um): die Infokarte bleibt darueber */
 @media (max-width:414px){ #info{bottom:calc(34vh + 124px)} }
 @media (max-width:378px){ #info{bottom:calc(34vh + 156px)} }
+
+/* Reiter "Atmung" in der Leiste: Regler, Schnellknoepfe, Schalter (Aufbau und Texte wie im Thorax-Modell, Aussehen im Stil der App) */
+#paneAtmung{padding:0 10px}
+#paneAtmung .karte{border:1px solid var(--line);border-radius:3px;padding:10px 10px 11px;margin-bottom:10px}
+#paneAtmung .karte > .titel{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+#paneAtmung .karte > .titel b{font-weight:500;color:var(--brass);letter-spacing:.06em}
+#paneAtmung input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:10px 0 4px;height:44px}
+#paneAtmung input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:var(--panel-hi);border:1px solid var(--line)}
+#paneAtmung input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:34px;height:34px;margin-top:-13px;border-radius:50%;
+  background:var(--brass);border:3px solid var(--brass-dim);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#paneAtmung input[type=range]::-moz-range-track{height:10px;border-radius:5px;background:var(--panel-hi);border:1px solid var(--line)}
+#paneAtmung input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--brass);border:3px solid var(--brass-dim)}
+#paneAtmung input[type=range]:focus-visible{outline:none}
+#paneAtmung input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--ink)}
+#paneAtmung .enden{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);margin-top:-2px}
+#paneAtmung .schnell{display:flex;gap:6px;margin-top:8px}
+#paneAtmung .schnell button{flex:1}
+#paneAtmung button{min-height:44px;padding:8px 10px}
+#paneAtmung button.voll{width:100%;margin-bottom:8px}
+#paneAtmung button.on.stress{background:#C08A1E;color:#14222A}   /* angestrengte Atmung: wie --strom im Thorax-Modell */
+#paneAtmung .segment{display:flex;margin-top:8px;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+#paneAtmung .segment button{flex:1;border:none;border-right:1px solid var(--line);border-radius:0;font-size:11.5px;padding:8px 2px}
+#paneAtmung .segment button:last-child{border-right:none}
+#paneAtmung .schalter{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-dim);padding:6px 0;min-height:44px}
+#paneAtmung .schalter input{width:26px;height:26px;accent-color:var(--brass)}
+
+/* Schema der Atemmechanik (aus dem Thorax-Modell): helles Original-Aussehen, auf das Panel beschraenkt; die Variablen des Originals
+   werden hier neu definiert, weil --ink, --panel usw. in der App andere Werte haben. Breite folgt dem Seitenverhaeltnis (Bild 800 : 620 plus Kette) */
+#schema{
+  --ink:#16282F; --panel:#213B45; --panel-hi:#2E4E5A; --panel-line:#3C606D; --paper:#EDF0EF; --paper-2:#DDE4E3;
+  --sog:#1B7F9E; --sog-hell:#4FB3CE; --strom:#C08A1E; --ein:#CE3A2F; --aus:#6B7F8C; --muskel:#A24E4E; --lunge:#E6D6D7; --lunge-linie:#8E6A6C;
+  --knochen:#F4F6F2; --knochenkante:#7E8C88; --herz:#8C4747;
+  --sans:"Samsung Sans","Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Roboto Mono",ui-monospace,"DejaVu Sans Mono",monospace;
+  top:150px;right:22px;bottom:22px;width:calc((100vh - 172px - 168px) * 1.2903 + 24px);min-width:520px;max-width:calc(100vw - 640px);
+  padding:0;overflow:hidden;display:none;flex-direction:column;background:var(--paper);color:var(--ink);font-family:var(--sans)}
+#schema.show{display:flex}
+#schema .sch-head{display:flex;align-items:baseline;gap:12px;padding:10px 44px 6px 14px;min-height:30px}
+#schema .kick{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--sog);white-space:nowrap}
+#schema .hbtn{position:absolute;top:6px;right:8px;padding:3px 9px;font-size:13px;line-height:1;color:var(--ink);border-color:var(--knochenkante)}
+#schema .hbtn:hover{background:var(--paper-2);color:var(--ink)}
+#schemaBox{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--paper)}
+#schema #loBild{flex:1;min-height:0;position:relative}
+#schema #loBild svg{width:100%;height:100%;display:block}
+
+#schema .pleura-chip{
+  position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+  color:var(--ink);background:rgba(255,255,255,.85);border:1px solid var(--sog);border-left:5px solid var(--sog);
+  border-radius:6px;padding:7px 10px;max-width:230px;line-height:1.4;
+}
+#schema .pleura-chip b.kopfzeile{display:block;color:var(--sog);letter-spacing:.14em;text-transform:uppercase;font-size:10px;margin-bottom:2px}
+
+#schema #loKette{flex:0 0 auto;display:flex;background:var(--ink);color:var(--paper);border-top:1px solid var(--panel-line)}
+#schema .glied{flex:1;padding:11px 14px 13px;border-right:1px solid var(--panel-line);min-width:0;opacity:.4;transition:opacity .25s}
+#schema .glied:last-child{border-right:none}
+#schema .glied.aktiv{opacity:1}
+#schema .glied .marke{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8FA6AD;display:flex;align-items:center;gap:7px;margin-bottom:7px}
+#schema .glied .marke i{color:var(--sog-hell);font-style:normal;font-weight:700}
+#schema .glied .wert{font-size:16px;font-weight:650;line-height:1.15;white-space:normal;min-height:2.3em;overflow:hidden}   /* Original: eine Zeile mit Auslassung; hier umbrechen, weil das Panel schmaler ist (Hoehe fest, damit die Kette nicht springt) */
+#schema .glied .zahl{font-family:var(--mono);font-size:12px;color:#9FB6BD;margin-top:3px;min-height:15px}
+
+#schema .chips{display:flex;gap:5px;flex-wrap:wrap}
+#schema .chip{font-size:11.5px;font-weight:600;padding:4px 7px;border-radius:5px;background:var(--panel);border:1px solid var(--panel-line);color:#7C949B}
+#schema .chip.an{background:var(--muskel);border-color:#C06A6A;color:#fff}
+#schema .chip.an.aus{background:var(--strom);border-color:#E0AE4A;color:#2A1F06}
+
+#schema .skala{position:relative;height:22px;background:var(--panel);border:1px solid var(--panel-line);border-radius:5px;margin-top:2px}
+#schema .skala .mitte{position:absolute;top:0;bottom:0;width:1px;background:var(--panel-line)}
+#schema .skala .fuell{position:absolute;top:2px;bottom:2px;width:0;background:var(--sog);border-radius:3px}
+#schema .skala .beschr{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 7px;font-family:var(--mono);font-size:9.5px;color:#7C949B;letter-spacing:.05em}
+
+#schema .strompfeil{font-size:22px;line-height:1;margin-right:8px;display:inline-block}
+
+#schema #loTempoBadge{
+  position:absolute;top:14px;left:16px;display:none;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;background:var(--sog);border-radius:6px;padding:6px 11px;
+}
+#schema #loTempoBadge.an{display:flex}
+@media (prefers-reduced-motion: reduce){#schema *{transition-duration:.01ms !important}}
+
+body.schema #labels,body.schema #leaders{display:none}
+
+@media (max-width:1000px){
+  /* offenes Schema: die Leiste bleibt (Reiter Atmung), Werkzeugleiste darueber, das Schema oben darueber (--wz = gemessene Hoehe der Werkzeugleiste) */
+  body.schema #rail{max-height:26vh}   /* niedriger, damit das Schema mehr Platz hat; die Leiste bleibt scrollbar */
+  body.schema #tools{bottom:calc(26vh + 6px)}
+  #schema{left:12px;right:12px;top:62px;bottom:calc(26vh + var(--wz,190px) + 14px);width:auto;min-width:0;max-width:none}
+  body.schema #atlasZurueck{display:none}
+  body.schema #info{display:none}   /* die Infokarte wuerde das Schema verdecken: solange es offen ist, ausgeblendet */
+  #schema .sch-head{padding:7px 44px 4px 10px}
+  #schema .glied{padding:8px 6px 9px}
+  #schema .glied .marke{font-size:8.5px;letter-spacing:.06em;gap:4px}
+  #schema .glied .wert{font-size:11px;min-height:2.3em}
+  #schema .glied .zahl{font-size:8.5px;overflow-wrap:anywhere}
+  #schema .skala .beschr{font-size:7.5px;padding:0 4px;letter-spacing:0}
+  #schema .chip{font-size:9.5px;padding:2px 4px}
+  #schema .pleura-chip{top:6px;right:6px;font-size:8.5px;max-width:130px;padding:4px 6px;letter-spacing:.02em}
+  #schema .pleura-chip b.kopfzeile{font-size:8px}
+  #schema #loTempoBadge{top:6px;left:6px;font-size:10px;padding:4px 8px}
+}
