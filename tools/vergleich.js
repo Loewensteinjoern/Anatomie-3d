@@ -25,7 +25,7 @@
    #cam1 bis #cam5, Systemschalter, Auswahl mit Infokarte, ohne Beschriftung, Seitentext), handy,
    datei (file://), webxr, quicklook (AR wie bei Herz und Nephron; Haut, größer; AR ohne Beschriftung)
    und abbau; keine Exporte GLB/STL (hat der Körper nicht). Der Körper
-   lädt das Herz-Skript und den Form-Baustein der Niere im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
+   lädt das Herz-Skript und die Form-Bausteine der Niere und der Lunge im Hintergrund nach; das Nachladen läuft wie bei herz/nephron in echter Zeit.
 
    Modell niere (index.html#niere): Frontalschnitt der linken Niere, vordere Hälfte abhebbar. Kontexte desktop (Übersicht,
    Seitentext, Exporte GLB statisch, GLB animiert (Strömung) und STL, die Ausschnitte #cam1 bis #cam3, geschlossen, Durchsicht,

@@ -70,7 +70,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Verzeichnis ladbarer Formen (Name -> Titel, Skript). Hat ein Organ in Kern.ORGANE denselben Namen,
      laedt Kern.organLaden zuerst die Form und dann das Organ-Skript. */
   K.FORMEN = {
-    niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' }
+    niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' },
+    lunge: { titel: 'Lunge', form: 'organe/lunge/lunge-form.js' }
   };
 
   /* Formbaustein anmelden (die Form-Datei ruft das beim Laden auf; def: Funktionen und Daten der Form, je Organ eigen) */
