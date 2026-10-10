@@ -16,7 +16,7 @@
      RIP_R, RIP_YA        Rippenradius, Ansatzhoehe am Brustbein (Rippe 1-7)
      rippen()             Verlauf je Rippe (i = 0..11) als Ellipsenbogen
      thoraxInnen(x,y,z)   Innenraum des Brustkorbs (aus den Rippen)
-     domY(x,z,xc,ytop)    Zwerchfellkuppel; DOM_R, DOM_L = Scheitelhoehe rechts/links
+     kuppel(x,z)          Zwerchfellkuppel (eine zusammenhaengende Flaeche, rechts hoeher): Hoehe y der Oberseite; kuppelRand(x,z) = Hoehe des Rands an der Brustwand
      lunge(s, herz)       SDF-Funktion des Lungenfluegels s mit Lappenfurchen (Koerper); herz = { smp, v }
                           (Abtaster der Herzform und Verschiebung Herz -> Koerper)
                           oder null (dann Ersatz-Herzbucht)
@@ -70,12 +70,18 @@ function rippenParam() {
   return RIP_P;
 }
 
-/* Zwerchfellkuppel: Hoehe der Flaeche ueber (x,z); xc = Mitte der Kuppel */
-function domY(x, z, xc, ytop) {
-  var u = (x - xc) / 9.5, v = (z - 0.5) / 10.5;
-  return ytop - 16 * (u * u + v * v);
+/* Zwerchfellkuppel: Hoehe der Oberseite ueber (x,z) - eine einzige, glatte, gewoelbte Flaeche ohne Mulde in der Mitte (einzige Quelle fuer Lunge,
+   Zwerchfell, Leber, Magen). Scheitel knapp rechts der Mitte (ca. 117.8), links (x = +6) ca. 116 (Leber rechts hoeher); die Herzunterseite liegt
+   in der Mitte auf. Seitlich und hinten faellt sie steil bis in den Recessus ab (vorn kuerzer: Rippenbogen), Profil r^2.6. */
+function kuppel(x, z) {
+  var u = x / 15.5, v = (z - 0.5) / (z > 0.5 ? 7 : 9), r = Math.sqrt(u * u + v * v);
+  return 117.6 - x / 10 - 16 * Math.pow(r, 2.6);
 }
-var DOM_R = 118, DOM_L = 115.5;
+/* Rand der Muskelplatte (Hoehe y, wo das Zwerchfell an der Brustwand ansetzt): hinten und seitlich tief im Recessus (ca. 107), vorn am Rippenbogen (ca. 113.5) */
+function kuppelRand(x, z) {
+  var t = Math.min(1, Math.max(0, (z + 1.5) / 7.5));
+  return 107 + 6.5 * t * t * (3 - 2 * t);
+}
 
 /* Innenraum des Brustkorbs: elliptischer Querschnitt je Hoehe aus den Rippen (Abstand Rippe + 1.2 cm), schnuert die Lunge ein */
 var THX = null;
@@ -96,12 +102,12 @@ function thoraxInnen(x, y, z) {
 
 /* Lungenfluegel s (-1 rechts, 1 links) ohne die Lappenfurchen; herz = { smp, v } formt die Herzbucht nach dem Herzen, null = Ersatz-Herzbucht */
 function fluegel(s, herz, rund) {
-  var cx = s * 8.4, ytop = s < 0 ? DOM_R : DOM_L, xc = s * 6.5;
+  var cx = s * 8.4;
   var rx = s < 0 ? 5.2 : 4.9;
   return function (x, y, z) {
     var d = ell(x, y, z, cx - s * 0.18 * Math.max(0, y - 122), 125, -0.8, rx, 19, 7.8);   // Spitze neigt sich zur Mitte
     d = S.smax(d, thoraxInnen(x, y, z), 1.0);
-    var kuppe = 0.4 * (domY(x, z, xc, ytop) + 0.5 - y);
+    var kuppe = 0.4 * (kuppel(x, z) + 0.5 - y);
     d = rund ? S.smax(d, kuppe, rund) : Math.max(d, kuppe);   /* rund: Kante an der Kuppel verrunden, duenne Raender (Messerschneide) verschwinden */
     if (herz) {
       d = S.smax(d, -(herz.smp.val(x - herz.v[0], y - herz.v[1], z - herz.v[2]) - 0.4), 0.8);   // Herzbucht nach der Form des Herzens
@@ -271,7 +277,7 @@ function bronchien(herz, rund) {
 Kern.form('lunge', {
   interp: interp, zst: zst, zSternum: zSternum,
   RIP_R: RIP_R, RIP_YA: RIP_YA, rippen: rippenParam,
-  thoraxInnen: thoraxInnen, domY: domY, DOM_R: DOM_R, DOM_L: DOM_L,
+  thoraxInnen: thoraxInnen, kuppel: kuppel, kuppelRand: kuppelRand,
   lunge: lunge, fluegel: fluegel, grenzen: grenzen,
   HERZ_V: HERZ_V, rippeStuetz: rippeStuetz, lappen: lappen, SPALT: SPALT, HOR_Y: HOR_Y, schraeg: schraeg,
   TRACHEA: TRACHEA, hauptbronchus: hauptbronchus, bronchien: bronchien
