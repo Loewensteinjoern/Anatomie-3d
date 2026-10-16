@@ -38,6 +38,8 @@ Updates: Gibt es eine neue Version, erscheint der Hinweis „Neue Version verfü
 Der Ordner bzw. die ZIP-Datei per `file://` funktioniert weiterhin, aber ohne Offline-Speicher und ohne Installation.
 
 Für Entwickler: Nach Änderungen an App-Dateien `node tools/version.js` ausführen (aktualisiert die Version des Offline-Speichers in `sw.js`; `--pruefen` prüft nur).
+`--pruefen` prüft zusätzlich die Sicherheit: feste SHA-256-Prüfsummen von `vendor/`, verbotene Muster in den App-Dateien (externe Adressen, `fetch(`, `eval(`, `new Function`, `document.write`, `XMLHttpRequest`, `<iframe` u. a.) die Content-Security-Policy in `index.html` gegen den Soll-Wert im Werkzeug und Zugangsdaten/Schlüsselmuster in allen versionierten Dateien (Werte werden nie ausgegeben).
+`node tools/live.js [basis-url]` prüft die veröffentlichte Seite (Standard: GitHub Pages): alle Dateien aus `sw.js` per SHA-256 gegen den lokalen Stand, die Version, und in Chromium Körper, Herz, Niere, Nephron und Lunge auf Konsolenfehler, Anfragen an fremde Hosts und CSP-Verstöße (`--quelle <ordner>` für einen anderen Stand, `--ohne-browser`).
 
 ### Dateien
 
@@ -54,7 +56,8 @@ vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen g
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
 tools/nachweis.js          Vergleich der Atemmechanik (Schema) mit dem Original-Modell (Prüfwerkzeug, braucht Playwright): `node tools/nachweis.js lunge <ziel>`
 tools/originale/           Original-Modelle der Lunge (unverändert, Vorlage für tools/nachweis.js; keine App-Dateien, nicht im Offline-Speicher)
-tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen
+tools/version.js           Version des Offline-Speichers in sw.js berechnen/prüfen, Sicherheitsprüfungen
+tools/live.js              veröffentlichte Seite prüfen (Dateien, Version, fremde Anfragen, CSP; braucht Playwright)
 tools/symbole.js           PNG-Symbole aus icons/symbol.svg erzeugen
 ```
 

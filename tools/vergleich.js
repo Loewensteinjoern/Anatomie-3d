@@ -202,9 +202,10 @@ function initQuickLook() {
 
 /* Atlas: Zurück-Knopf ausblenden, damit Bilder und Seitentext mit der Einzelseite vergleichbar sind */
 function initAtlasZurueckAus() {
-  const s = document.createElement('style');
-  s.textContent = '#atlasZurueck{display:none !important}';
-  document.addEventListener('DOMContentLoaded', () => document.head.appendChild(s));   /* beim Init-Skript gibt es noch kein <head> */
+  /* Konstruierbares Stylesheet statt <style>-Element: die Content-Security-Policy der Seite erlaubt keine <style>-Elemente */
+  const s = new CSSStyleSheet();
+  s.replaceSync('#atlasZurueck{display:none !important}');
+  document.adoptedStyleSheets = [s];
 }
 
 /* WebXR: nachgebildetes AR-Gerät. Kamera 0,9 m vor einer Tischfläche,
