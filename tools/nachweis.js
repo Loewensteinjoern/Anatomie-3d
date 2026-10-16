@@ -15,6 +15,15 @@
         Ausnahme (mit dem Nutzer abgestimmte Korrektur): die Gruppe der weißen Rippen (id rippen) ist im Original leer (doppelte ID: die Rippen landen im
         Regler), in der App gefüllt; sie wird in beiden ausgeblendet verglichen. Ergänzend wird geprüft, dass ihre Pfade zu den Pfaden der Rippenkontur passen.
    Ergebnis: <ziel>/nachweis.json und eine Zusammenfassung auf der Konsole („gleich“ oder die Liste der Abweichungen). Exit 0, wenn alles gleich ist.
+
+     node tools/nachweis.js alveole <ziel>
+
+   Dasselbe für das Schema des Gasaustauschs (tools/originale/lunge-ebene3-alveole.html gegen index.html#lunge/alveole, Reiter „Gasaustausch“, Schema offen), Ergebnis
+   <ziel>/nachweis.json und <ziel>/alveole-<fall>.png. Besonderheiten:
+     - Das Original platziert die Gasteilchen und die Atemwegflüge mit Math.random; die App verbraucht vor dem Gasaustausch andere Zufallszahlen (three.js). Damit auch diese Teile
+       vergleichbar sind, ersetzt das Werkzeug in BEIDEN Seiten (nur im Prüfbrowser) Math.random für die Aufrufer schwarm, zufallImBlaeschen und atemwegVerkehr durch einen
+       eigenen, gleich initialisierten Zahlenstrom; alles andere behält den festen Zufall von vergleich.js. So wird das gesamte SVG (auch die Positionen) verglichen.
+     - Die Simulation läuft ab dem ersten Bild: beide Seiten werden auf dieselbe Zahl Takte gebracht (Original: gezählte Bilder, App: AlveoleApp.gas().takte), bevor die Schritte beginnen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -83,9 +92,12 @@ function wertDiff(a, b, pfad, r) {
   else if (a !== b) r.push({ wert: pfad, original: a, app: b });
 }
 
-async function seite(browser, basis, adresse, app) {
+async function seite(browser, basis, adresse, app, extra) {
   const ctx = await browser.newContext(Object.assign({ locale: 'de-DE', timezoneId: 'Europe/Berlin', reducedMotion: 'no-preference' }, V.DESKTOP));
   await ctx.addInitScript(V.initZeit, { epoch: Date.UTC(2026, 0, 15, 9, 30, 0), seed: 0x2F6FB5, kerne: 8 });
+  /* Zurück-Knopf des Atlas aus (konstruierbares Stylesheet: die CSP der Seite erlaubt keine <style>-Elemente) */
+  if (app) await ctx.addInitScript(() => { const s = new CSSStyleSheet(); s.replaceSync('#atlasZurueck{display:none !important}'); document.adoptedStyleSheets = [s]; });
+  if (extra) await ctx.addInitScript(extra);
   const page = await ctx.newPage();
   page.setDefaultTimeout(30000);
   const fehler = [];
@@ -100,7 +112,6 @@ async function seite(browser, basis, adresse, app) {
     while (!(await page.evaluate(() => { const l = document.querySelector('link[data-organ="lunge"]'); return !!(window.Kern && Kern.Organe.lunge && l && l.getAttribute('data-geladen')); }))) { zu(); await warte(20); }
     const bereit = V.ATLAS_BEREIT('lunge');
     while (!(await page.evaluate(bereit))) { zu(); await weiter(50); }
-    await page.addStyleTag({ content: '#atlasZurueck{display:none !important}' });
     await page.click('#rail .tabs .tab:text-is("Atmung")');
     await page.click('#bSchema');
   } else {
@@ -120,14 +131,14 @@ async function schritte(s, fall, app) {
     } else if (st[0] === 'weiter') await s.weiter(st[1]);
   }
 }
-async function bildPaar(browser, ziel, fall, pngO, pngA) {
+async function bildPaar(browser, ziel, fall, pngO, pngA, praefix) {
   const ctx = await browser.newContext({ viewport: { width: 1800, height: 900 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const url = (b) => 'data:image/png;base64,' + b.toString('base64');
   await page.setContent('<body style="margin:0;background:#fff;font:600 18px sans-serif;color:#16282F"><div style="display:flex;gap:24px;padding:12px;align-items:flex-start">' +
     ['Original', 'App'].map((n, i) => '<div><div style="margin:0 0 6px">' + n + '</div><img style="display:block;height:820px;border:1px solid #999" src="' + url(i ? pngA : pngO) + '"></div>').join('') + '</div></body>');
   await page.waitForFunction(() => Array.from(document.images).every((i) => i.complete));
-  const datei = path.join(ziel, 'lunge-' + fall + '.png');
+  const datei = path.join(ziel, (praefix || 'lunge') + '-' + fall + '.png');
   fs.writeFileSync(datei, await page.screenshot({ fullPage: true }));
   await ctx.close();
   return datei;
@@ -180,8 +191,166 @@ async function lunge(ziel) {
   return gleichAlle ? 0 : 1;
 }
 
+/* =====================================================================
+   Alveole: Schema des Gasaustauschs gegen das Original-Modell
+   ===================================================================== */
+const ORIGINAL_ALV = 'tools/originale/lunge-ebene3-alveole.html';
+/* Bedienschritte, in beiden Seiten gleich. Namen sind die IDs des Originals (die App trägt das Präfix la: laTiefe, laFreiAn, …). */
+const FAELLE_ALV = {
+  'normal-3s': [['weiter', 3000]],
+  'normal-10s': [['weiter', 10000]],
+  'co2': [['segment', 'gas', 'co2'], ['weiter', 4000]],
+  'o2': [['segment', 'gas', 'o2'], ['weiter', 4000]],
+  'stopp': [['schnell', 'fluss', 0], ['weiter', 6000]],
+  'schnell': [['schnell', 'fluss', 100], ['weiter', 5000]],
+  'atempause': [['regler', 'tiefe', 0], ['weiter', 8000]],
+  'tief-schnell': [['regler', 'tiefe', 100], ['regler', 'freq', 100], ['weiter', 6000]],
+  'frei': [['klick', 'freiAn'], ['regler', 'freiAlv', 40], ['regler', 'freiBlut', 70], ['weiter', 4000]],
+  'tempo-normal': [['segment', 'tempo', '1'], ['weiter', 4000]],
+  'zeitlupe': [['segment', 'tempo', '0.25'], ['weiter', 4000]]
+};
+
+/* Prüfbrowser: eigener, in beiden Seiten gleich initialisierter Zahlenstrom für die Aufrufer, die im Original Math.random nutzen (Gasteilchen, Atemwegflüge);
+   zählt außerdem im Original die ausgeführten Bilder (die App zählt selbst: gas().takte). Läuft nach initZeit (dessen Math.random ist das „orig“ hier). */
+function zufallStrom() {
+  const orig = Math.random;
+  let s = 0x51F15E;
+  const strom = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  Math.random = function () { return /\b(schwarm|zufallImBlaeschen|atemwegVerkehr)\b/.test(new Error().stack || '') ? strom() : orig(); };
+  const raf = window.requestAnimationFrame;
+  window.__takte = 0;
+  window.requestAnimationFrame = (fn) => raf((t) => { window.__takte++; fn(t); });
+}
+
+/* Im Browser: alle Werte, die verglichen werden (app = true: IDs mit Präfix la) */
+function liesAlv(app) {
+  const ID = (k) => (app ? 'la' + k.charAt(0).toUpperCase() + k.slice(1) : k);
+  const g = (k) => document.getElementById(ID(k));
+  const T = (k) => g(k).textContent;
+  const at = (k, a) => g(k).getAttribute(a);
+  const ft = (k) => ({ text: T(k), fill: at(k, 'fill') });
+  const st = (k) => { const s = g(k).style; return { width: s.width, background: s.background, color: s.color }; };
+  const an = (e) => e.classList.contains('an') || e.classList.contains('on');
+  const wahl = (k) => Array.from(g(k).querySelectorAll('button')).filter(an).map((b) => b.dataset.gas || b.dataset.tempo);
+  const zaehle = (k) => Array.from(g(k).querySelectorAll('circle')).filter((c) => c.getAttribute('opacity') === '1').length;
+  return {
+    kette: { m1: T('m1'), w1: T('w1'), p2: T('p2'), w2: T('w2'), w3: T('w3'), w4: T('w4') },
+    glieder: ['g1', 'g2', 'g3', 'g4'].map((k) => g(k).className),
+    stile: { d1a: st('d1a'), d1b: st('d1b'), b3: st('b3'), t4: st('t4'), p2: st('p2') },
+    ergebnis: { sz: T('ergSz'), barAO: at('barAO', 'width'), barAC: at('barAC', 'width'), barBO: at('barBO', 'width'), barBC: at('barBC', 'width'),
+                barAus: { width: at('barAus', 'width'), fill: at('barAus', 'fill') }, urtAus: ft('urtAus'), urtO: ft('urtO'), urtC: ft('urtC'), urtS: ft('urtS') },
+    miniLunge: { l1: ['cx', 'cy', 'rx', 'ry'].map((a) => at('miniL1', a)), l2: ['cx', 'cy', 'rx', 'ry'].map((a) => at('miniL2', a)), zwerchfell: at('miniZwerch', 'd'), text: ft('miniText') },
+    abflussRohr: at('abflussRohr', 'stroke'),
+    blutkoerperchen: Array.from(g('blut').children).map((e) => ({ transform: e.getAttribute('transform'), fill: e.querySelector('ellipse').getAttribute('fill'),
+      punkte: Array.from(e.querySelectorAll('circle')).map((c) => c.getAttribute('opacity')).join('') })),
+    gasteilchen: { o2: zaehle('alvO2'), co2: zaehle('alvCO2'), fluege: zaehle('uebertritt') },
+    befund: { opacity: at('befund', 'opacity'), zeilen: [T('bef1'), T('bef2'), T('bef3')], weg: [at('wegLumen', 'stroke-width'), at('wegWand', 'stroke')], enge: at('engeMarke', 'opacity'),
+              alveole: ['stroke', 'stroke-width', 'stroke-dasharray'].map((a) => at('alveole', a)) },
+    legende: ['legO2p', 'legO2t', 'legCO2p', 'legCO2t'].map((k) => at(k, 'opacity')),
+    tempo: { abzeichen: g('tempoBadge').className, faktor: T('tempoFaktor'), wahl: wahl('tempoWahl') },
+    regler: { tiefe: g('tiefe').value, freq: g('freq').value, fluss: g('fluss').value, freiAlv: g('freiAlv').value, freiBlut: g('freiBlut').value, freiAn: g('freiAn').checked, feld: g('freiFeld').className },
+    stufen: { fluss: T('lblFluss'), tiefe: T('lblTiefe'), freq: T('lblFreq') },
+    gas: wahl('gasWahl'),
+    status: ['stAtemwege', 'stFlaeche', 'stMuster'].map((k) => [T(k), g(k).className])
+  };
+}
+/* Im Browser: SVG als Text, normalisiert (Präfix la an den IDs entfernt, Leerraum zusammengefasst) */
+function liesSvgAlv(app) {
+  let s = document.getElementById(app ? 'laSvg' : 'svg').outerHTML;
+  s = s.replace(/\bid="la([A-Z])/g, (m, c) => 'id="' + c.toLowerCase());
+  return s.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
+}
+async function seiteAlv(browser, basis, adresse, app) {
+  const ctx = await browser.newContext(Object.assign({ locale: 'de-DE', timezoneId: 'Europe/Berlin', reducedMotion: 'no-preference' }, V.DESKTOP));
+  await ctx.addInitScript(V.initZeit, { epoch: Date.UTC(2026, 0, 15, 9, 30, 0), seed: 0x2F6FB5, kerne: 8 });
+  await ctx.addInitScript(zufallStrom);
+  if (app) await ctx.addInitScript(() => { const s = new CSSStyleSheet(); s.replaceSync('#atlasZurueck{display:none !important}'); document.adoptedStyleSheets = [s]; });
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(30000);
+  const fehler = [];
+  page.on('pageerror', (e) => fehler.push('Seitenfehler: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error') fehler.push(m.text()); });
+  const weiter = (ms) => page.evaluate((a) => window.__zeit.weiter(a, 50), ms);
+  await page.goto(basis + adresse);
+  if (app) {
+    const t0 = Date.now();
+    const zu = () => { if (Date.now() - t0 > 300000) throw new Error('Alveole wurde nicht fertig aufgebaut'); };
+    while (!(await page.evaluate(() => { const l = document.querySelector('link[data-organ="alveole"]'); return !!(window.Kern && Kern.Organe.alveole && l && l.getAttribute('data-geladen')); }))) { zu(); await warte(20); }
+    const bereit = V.ATLAS_BEREIT('alveole');
+    while (!(await page.evaluate(bereit))) { zu(); await weiter(50); }
+    await page.click('#rail .tabs .tab:text-is("Gasaustausch")');
+    await page.click('#bSchema');
+  } else {
+    await weiter(100);
+  }
+  const takte = () => page.evaluate((a) => (a ? window.AlveoleApp.gas().takte : window.__takte), app);
+  return { ctx, page, weiter, fehler, takte };
+}
+async function schrittAlv(s, fall, app) {
+  const ID = (k) => '#' + (app ? 'la' + k.charAt(0).toUpperCase() + k.slice(1) : k);
+  for (const st of FAELLE_ALV[fall]) {
+    if (st[0] === 'klick') await s.page.click(ID(st[1]));
+    else if (st[0] === 'schnell') await s.page.click('[data-set="' + st[1] + '"][data-wert="' + st[2] + '"]');
+    else if (st[0] === 'segment') await s.page.click('[data-' + st[1] + '="' + st[2] + '"]');
+    else if (st[0] === 'regler') await s.page.evaluate(([q, v]) => { const e = document.querySelector(q); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }, [ID(st[1]), st[2]]);
+    else if (st[0] === 'weiter') await s.weiter(st[1]);
+  }
+}
+
+const NUR = process.argv[4] ? process.argv[4].split(',') : null;
+async function alveole(ziel) {
+  fs.mkdirSync(ziel, { recursive: true });
+  const pw = V.ladePlaywright();
+  const srv = await V.server(WURZEL), basis = 'http://127.0.0.1:' + srv.address().port + '/';
+  const browser = await pw.chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: V.CHROMIUM_ARGS });
+  const erg = { browser: browser.version(), faelle: {} };
+  let gleichAlle = true;
+  try {
+    for (const fall of Object.keys(FAELLE_ALV)) {
+      if (NUR && !NUR.includes(fall)) continue;   // nur zum Ausprobieren: node tools/nachweis.js alveole <ziel> fall1,fall2
+      process.stdout.write('Fall ' + fall + '\n');
+      const r = { werte: { gleich: true, abweichungen: [] }, svg: { gleich: true, abweichungen: [] }, fehler: [] };
+      const o = await seiteAlv(browser, basis, ORIGINAL_ALV, false);
+      const a = await seiteAlv(browser, basis, 'index.html#lunge/alveole', true);
+      /* beide auf dieselbe Zahl Takte bringen (die Simulation läuft ab dem ersten Bild) */
+      let n1 = await o.takte(), n2 = await a.takte();
+      while (n1 < n2) { await o.weiter(50); n1 = await o.takte(); }
+      while (n2 < n1) { await a.weiter(50); n2 = await a.takte(); }
+      r.takte = [n1, n2];
+      await schrittAlv(o, fall, false);
+      const wo = await o.page.evaluate(liesAlv, false), so = await o.page.evaluate(liesSvgAlv, false);
+      const pngO = await (await o.page.$('#buehne')).screenshot({ animations: 'disabled' });
+      r.fehler.push(...o.fehler.map((f) => 'Original: ' + f)); await o.ctx.close();
+      await schrittAlv(a, fall, true);
+      const wa = await a.page.evaluate(liesAlv, true), sa = await a.page.evaluate(liesSvgAlv, true);
+      const pngA = await (await a.page.$('#schemaBox')).screenshot({ animations: 'disabled' });
+      r.fehler.push(...a.fehler.map((f) => 'App: ' + f)); await a.ctx.close();
+      wertDiff(wo, wa, '', r.werte.abweichungen); r.werte.gleich = r.werte.abweichungen.length === 0;
+      r.svg.gleich = so === sa; if (!r.svg.gleich) r.svg.abweichungen = textDiff(so, sa);
+      r.werte.original = wo; r.werte.app = wa;
+      r.bild = await bildPaar(browser, ziel, fall, pngO, pngA, 'alveole');
+      r.gleich = r.werte.gleich && r.svg.gleich && r.fehler.length === 0;
+      if (!r.gleich) gleichAlle = false;
+      erg.faelle[fall] = r;
+      process.stdout.write('  ' + (r.gleich ? 'gleich' : 'ABWEICHUNG') + '  ' + r.bild + '\n');
+    }
+  } finally { await browser.close(); srv.close(); }
+  erg.gleich = gleichAlle;
+  fs.writeFileSync(path.join(ziel, 'nachweis.json'), JSON.stringify(erg, null, 1));
+  console.log('\nZusammenfassung (Original-Modell Alveole gegen App, ' + Object.keys(FAELLE_ALV).length + ' Fälle, Werte und SVG):');
+  for (const [fall, r] of Object.entries(erg.faelle)) {
+    console.log('  ' + fall.padEnd(22) + (r.gleich ? 'gleich' : 'ANDERS') + '  (Takte ' + r.takte.join('/') + ')');
+    r.werte.abweichungen.forEach((d) => console.log('      Wert ' + d.wert + ': Original ' + JSON.stringify(d.original) + ' / App ' + JSON.stringify(d.app)));
+    r.svg.abweichungen.forEach((d) => console.log('      SVG ' + JSON.stringify(d)));
+    r.fehler.forEach((f) => console.log('      ' + f));
+  }
+  console.log(gleichAlle ? '\nAlles gleich (Werte und gesamtes SVG; Zufall der Gasteilchen und Flüge über den gemeinsamen Zahlenstrom).' : '\nAbweichungen vorhanden.');
+  return gleichAlle ? 0 : 1;
+}
+
 (async () => {
   const [cmd, ziel] = process.argv.slice(2);
   if (cmd === 'lunge' && ziel) process.exitCode = await lunge(path.resolve(ziel));
-  else { console.log('node tools/nachweis.js lunge <ziel>'); process.exitCode = 2; }
+  else if (cmd === 'alveole' && ziel) process.exitCode = await alveole(path.resolve(ziel));
+  else { console.log('node tools/nachweis.js lunge|alveole <ziel>'); process.exitCode = 2; }
 })().catch((e) => { console.error(e); process.exitCode = 1; });

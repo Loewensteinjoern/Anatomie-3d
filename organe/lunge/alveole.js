@@ -61,10 +61,171 @@ var MARKUP = `<div id="title">
     <button id="bSee" class="gh" title="Die Wand durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
     <button id="bLab" class="gh on">Beschriftung</button>
   </div>
-  <!-- Zeile "Gasaustausch" (Pause, Schema) kommt später hierher -->
+  <div class="trow">
+    <span class="cap">Gasaustausch</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bSchema" class="gh" title="Der Gasaustausch als flaches Schema: Alveole, Kapillare, Blutk&ouml;rperchen und Ergebnis">Schema</button>
+  </div>
 </div>
 
 <div class="panel" id="rail"></div>
+
+<div class="panel" id="schema" aria-label="Schema Alveole und Kapillare">
+  <div class="sch-head"><span class="kick">Schema &middot; Alveole und Kapillare</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
+  <div id="schemaBox">
+  <div id="laBild">
+    <svg id="laSvg" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Rundes Lungenbläschen mit ringförmig umlaufender Kapillare">
+
+      <!-- ---------- Linke Spalte: Mini-Lunge ---------- -->
+      <g id="laMiniLunge">
+        <rect x="12" y="12" width="172" height="164" rx="10" fill="#FFFFFF" stroke="#C7D2CE" stroke-width="1.5"/>
+        <text x="98" y="34" text-anchor="middle" font-family="var(--mono)" font-size="10" letter-spacing="2" fill="#8A9A96">ATMUNG</text>
+        <path d="M98 42 L98 58" stroke="#A9B4B1" stroke-width="6" stroke-linecap="round" fill="none"/>
+        <path d="M98 58 L82 68" stroke="#A9B4B1" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M98 58 L114 68" stroke="#A9B4B1" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <ellipse id="laMiniL1" cx="82" cy="88" rx="15" ry="20" fill="#E6D6D7" stroke="#8E6A6C" stroke-width="1.6"/>
+        <ellipse id="laMiniL2" cx="114" cy="88" rx="15" ry="20" fill="#E6D6D7" stroke="#8E6A6C" stroke-width="1.6"/>
+        <path id="laMiniZwerch" d="" fill="none" stroke="#A24E4E" stroke-width="5" stroke-linecap="round"/>
+        <text id="laMiniText" x="98" y="160" text-anchor="middle" font-family="var(--mono)" font-size="11" font-weight="600" fill="#6E7C7A">Atempause</text>
+      </g>
+
+      <!-- ---------- Linke Spalte: Legende ---------- -->
+      <g>
+        <rect x="12" y="188" width="172" height="84" rx="10" fill="#FFFFFF" stroke="#C7D2CE" stroke-width="1.5"/>
+        <circle id="laLegO2p" cx="32" cy="212" r="4.2" fill="var(--o2)"/>
+        <text id="laLegO2t" x="46" y="217" font-family="var(--mono)" font-size="11.5" fill="#6E7C7A">Sauerstoff O₂</text>
+        <circle id="laLegCO2p" cx="32" cy="236" r="4.2" fill="var(--co2)"/>
+        <text id="laLegCO2t" x="46" y="241" font-family="var(--mono)" font-size="11.5" fill="#6E7C7A">Kohlendioxid CO₂</text>
+        <text x="26" y="262" font-family="var(--mono)" font-size="10.5" fill="#8A9A96">viele Punkte = viel davon</text>
+      </g>
+
+      <!-- ---------- Linke Spalte: Die Regel ---------- -->
+      <g>
+        <rect x="12" y="284" width="172" height="126" rx="10" fill="#FFFFFF" stroke="var(--sog)" stroke-width="1.5"/>
+        <rect x="12" y="284" width="5" height="126" rx="2.5" fill="var(--sog)"/>
+        <text x="28" y="306" font-family="var(--mono)" font-size="10" letter-spacing="2" fill="var(--sog)">DIE REGEL</text>
+        <g font-family="var(--sans)" font-size="13" fill="#16282F">
+          <text x="28" y="330">Es wandert immer</text>
+          <text x="28" y="349">von viel nach wenig –</text>
+          <text x="28" y="368">und es hört auf,</text>
+          <text x="28" y="387">sobald kein Unterschied</text>
+          <text x="28" y="402">mehr da ist.</text>
+        </g>
+      </g>
+
+      <g id="laBefund" opacity="0">
+        <rect x="12" y="424" width="172" height="104" rx="10" fill="#FFF6E8" stroke="var(--warn)" stroke-width="1.5"/>
+        <rect x="12" y="424" width="5" height="104" rx="2.5" fill="var(--warn)"/>
+        <text x="28" y="446" font-family="var(--mono)" font-size="10" letter-spacing="2" fill="#8A6A1E">BEFUND</text>
+        <g font-family="var(--sans)" font-size="12.5" fill="#16282F">
+          <text id="laBef1" x="28" y="470"></text>
+          <text id="laBef2" x="28" y="491"></text>
+          <text id="laBef3" x="28" y="512"></text>
+        </g>
+      </g>
+
+      <!-- ---------- Mitte: Alveole mit umlaufender Kapillare ---------- -->
+      <path id="laKapWand" d="" fill="none" stroke="#C3A99A" stroke-width="52" stroke-linecap="round"/>
+      <path id="laKapLumen" d="" fill="none" stroke="#FBF6F4" stroke-width="46" stroke-linecap="round"/>
+
+      <path d="M335 121 L310 52" stroke="#C3A99A" stroke-width="30" stroke-linecap="round" fill="none"/>
+      <path d="M335 121 L310 52" stroke="var(--blutarm)" stroke-width="24" stroke-linecap="round" fill="none" opacity=".55"/>
+      <path d="M465 121 L490 52" stroke="#C3A99A" stroke-width="30" stroke-linecap="round" fill="none"/>
+      <path id="laAbflussRohr" d="M465 121 L490 52" stroke="var(--blutreich)" stroke-width="24" stroke-linecap="round" fill="none" opacity=".55"/>
+      <text x="296" y="40" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="#6E7C7A">Blut kommt an</text>
+      <text x="506" y="40" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="#6E7C7A">Blut fließt ab</text>
+
+      <!-- Luftweg -->
+      <path id="laWegWand" d="M400 16 L400 168" stroke="#A9B4B1" stroke-width="30" stroke-linecap="round" fill="none"/>
+      <path id="laWegLumen" d="M400 16 L400 168" stroke="#F4F7F5" stroke-width="24" stroke-linecap="round" fill="none"/>
+      <g id="laEngeMarke" opacity="0">
+        <path d="M366 95 L381 103 L366 111 Z" fill="var(--schlecht)"/>
+        <path d="M434 95 L419 103 L434 111 Z" fill="var(--schlecht)"/>
+      </g>
+      <text x="422" y="26" font-family="var(--mono)" font-size="11.5" fill="#6E7C7A">von der Bronchiole</text>
+
+      <!-- Alveole -->
+      <circle id="laAlveole" cx="400" cy="300" r="148" fill="#F7F9F7" stroke="var(--wand)" stroke-width="3"/>
+      <text x="400" y="300" text-anchor="middle" font-family="var(--mono)" font-size="12"
+            letter-spacing="2.5" fill="#D8CFC6">ALVEOLE · LUFT</text>
+
+      <g id="laAlvO2"></g>
+      <g id="laAlvCO2"></g>
+      <g id="laBlut"></g>
+      <g id="laUebertritt"></g>
+
+      <path d="M511 411 L596 486" stroke="#B0A093" stroke-width="1.5" fill="none"/>
+      <text x="600" y="492" font-family="var(--mono)" font-size="11.5" fill="#8A7A6E">dünne Wand</text>
+
+      <!-- ---------- Rechte Spalte: Ergebnis ---------- -->
+      <g id="laErgebnis">
+        <rect x="620" y="12" width="268" height="410" rx="10" fill="#FFFFFF" stroke="#C7D2CE" stroke-width="1.5"/>
+        <text x="638" y="34" font-family="var(--mono)" font-size="10" letter-spacing="2" fill="#8A9A96">ERGEBNIS</text>
+        <text id="laErgSz" x="638" y="56" font-family="var(--sans)" font-size="14" font-weight="700" fill="#16282F">Normale Ruheatmung</text>
+
+        <text x="638" y="86" font-family="var(--mono)" font-size="10.5" letter-spacing="1.5" fill="#8A9A96">IN DER ALVEOLE</text>
+        <text x="638" y="108" font-family="var(--mono)" font-size="12" fill="#6E7C7A">O₂</text>
+        <rect x="668" y="96" width="200" height="15" rx="4" fill="#E7ECEA"/>
+        <rect id="laBarAO" x="668" y="96" width="0" height="15" rx="4" fill="var(--o2)"/>
+        <text x="638" y="132" font-family="var(--mono)" font-size="12" fill="#6E7C7A">CO₂</text>
+        <rect x="668" y="120" width="200" height="15" rx="4" fill="#E7ECEA"/>
+        <rect id="laBarAC" x="668" y="120" width="0" height="15" rx="4" fill="var(--co2)"/>
+
+        <text x="638" y="166" font-family="var(--mono)" font-size="10.5" letter-spacing="1.5" fill="#8A9A96">IM BLUT DANACH</text>
+        <text x="638" y="188" font-family="var(--mono)" font-size="12" fill="#6E7C7A">O₂</text>
+        <rect x="668" y="176" width="200" height="15" rx="4" fill="#E7ECEA"/>
+        <rect id="laBarBO" x="668" y="176" width="0" height="15" rx="4" fill="var(--o2)"/>
+        <text x="638" y="212" font-family="var(--mono)" font-size="12" fill="#6E7C7A">CO₂</text>
+        <rect x="668" y="200" width="200" height="15" rx="4" fill="#E7ECEA"/>
+        <rect id="laBarBC" x="668" y="200" width="0" height="15" rx="4" fill="var(--co2)"/>
+
+        <text x="638" y="248" font-family="var(--mono)" font-size="10.5" letter-spacing="1.5" fill="#8A9A96">GASAUSTAUSCH GERADE JETZT</text>
+        <rect x="638" y="258" width="230" height="18" rx="5" fill="#E7ECEA"/>
+        <rect id="laBarAus" x="638" y="258" width="0" height="18" rx="5" fill="var(--gut)"/>
+        <line x1="787" y1="253" x2="787" y2="281" stroke="#16282F" stroke-width="2"/>
+        <text x="787" y="295" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="#6E7C7A">normale Ruheatmung</text>
+        <text id="laUrtAus" x="638" y="318" font-family="var(--sans)" font-size="14" font-weight="700" fill="var(--gut)">voll</text>
+
+        <line x1="638" y1="336" x2="870" y2="336" stroke="#DCE3E1" stroke-width="1.5"/>
+        <text x="638" y="362" font-family="var(--sans)" font-size="13.5" fill="#6E7C7A">Sauerstoff</text>
+        <text id="laUrtO" x="870" y="362" text-anchor="end" font-family="var(--sans)" font-size="13.5" font-weight="700" fill="var(--gut)">in Ordnung</text>
+        <text x="638" y="388" font-family="var(--sans)" font-size="13.5" fill="#6E7C7A">Kohlendioxid</text>
+        <text id="laUrtC" x="870" y="388" text-anchor="end" font-family="var(--sans)" font-size="13.5" font-weight="700" fill="var(--gut)">in Ordnung</text>
+        <text x="638" y="414" font-family="var(--sans)" font-size="13.5" fill="#6E7C7A">Säure-Basen-Lage</text>
+        <text id="laUrtS" x="870" y="414" text-anchor="end" font-family="var(--sans)" font-size="13.5" font-weight="700" fill="var(--gut)">ausgeglichen</text>
+      </g>
+    </svg>
+
+    <div id="laTempoBadge"><span>Tempo</span><b id="laTempoFaktor">¼×</b></div>
+  </div>
+
+  <div id="laKette">
+    <div class="glied" id="laG1">
+      <div class="marke"><i>1</i> <span id="laM1">Unterschied</span></div>
+      <div class="wert" id="laW1">groß</div>
+      <div class="dichte">
+        <span>Alveole <u><i id="laD1a"></i></u></span>
+        <span>Blut <u><i id="laD1b"></i></u></span>
+      </div>
+    </div>
+    <div class="glied" id="laG2">
+      <div class="marke"><i>2</i> Richtung</div>
+      <div class="wert"><span class="pfeilGross" id="laP2">→</span><span id="laW2">in das Blut</span></div>
+    </div>
+    <div class="glied" id="laG3">
+      <div class="marke"><i>3</i> Übertritt</div>
+      <div class="wert" id="laW3">stark</div>
+      <div class="balken"><i id="laB3"></i></div>
+    </div>
+    <div class="glied" id="laG4">
+      <div class="marke"><i>4</i> Blut fließt ab</div>
+      <div class="wert"><span class="tupfer" id="laT4"></span><span id="laW4">sauerstoffreich</span></div>
+    </div>
+  </div>
+  </div>
+</div>
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
@@ -80,7 +241,145 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
+</div>
+
+<div class="panel" id="scard">
+  <button class="gh hbtn" id="sClose" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="sKick"></div>
+  <h3 id="sTitle"></h3>
+  <div class="lead" id="sLead"></div>
+  <div class="after" id="sAfter"></div>
+  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
 </div>`;
+/* Reiter "Gasaustausch" (Regler und Schalter aus dem Alveolen-Modell; die IDs tragen das Praefix la). Die Statushinweise des Originals (laStAtemwege usw.) stehen
+   unsichtbar darin: der Code schreibt hinein, die Liste "Situationen und Krankheitsbilder" folgt spaeter. */
+var GAS_PANE = `<div class="karte">
+  <div class="titel"><span>Was soll sichtbar sein?</span></div>
+  <div class="segment" id="laGasWahl">
+    <button data-gas="o2" class="o2">nur O₂</button>
+    <button data-gas="co2" class="co2">nur CO₂</button>
+    <button data-gas="beide" class="on">beide</button>
+  </div>
+</div>
+
+<div class="karte">
+  <div class="titel"><span>Atemtiefe</span><b id="laLblTiefe">ruhig</b></div>
+  <input type="range" id="laTiefe" min="0" max="100" value="50" aria-label="Wie tief geatmet wird">
+  <div class="enden"><span>Atempause</span><span>tief</span></div>
+  <div class="titel" style="margin-top:14px"><span>Atemfrequenz</span><b id="laLblFreq">ruhig</b></div>
+  <input type="range" id="laFreq" min="0" max="100" value="50" aria-label="Wie schnell geatmet wird">
+  <div class="enden"><span>langsam</span><span>schnell</span></div>
+</div>
+
+<div class="karte">
+  <div class="titel"><span>Blutfluss</span><b id="laLblFluss">ruhig</b></div>
+  <input type="range" id="laFluss" min="0" max="100" value="50" aria-label="Geschwindigkeit des Blutflusses">
+  <div class="enden"><span>angehalten</span><span>schnell</span></div>
+  <div class="schnell">
+    <button class="gh" data-set="fluss" data-wert="0">Stopp</button>
+    <button class="gh" data-set="fluss" data-wert="50">ruhig</button>
+    <button class="gh" data-set="fluss" data-wert="100">schnell</button>
+  </div>
+</div>
+
+<div class="karte">
+  <label class="schalter" for="laFreiAn"><span>Freier Modus (O₂ selbst einstellen)</span>
+    <input type="checkbox" id="laFreiAn"></label>
+  <div id="laFreiFeld">
+    <div class="titel" style="margin-top:8px"><span>O₂ in der Alveole</span></div>
+    <input type="range" id="laFreiAlv" min="0" max="100" value="85" aria-label="Sauerstoff in der Alveole">
+    <div class="titel"><span>O₂ im ankommenden Blut</span></div>
+    <input type="range" id="laFreiBlut" min="0" max="100" value="28" aria-label="Sauerstoff im ankommenden Blut">
+  </div>
+</div>
+
+<div class="karte">
+  <div class="titel"><span>Tempo</span></div>
+  <div class="segment" id="laTempoWahl">
+    <button data-tempo="1">normal</button>
+    <button data-tempo="0.5" class="on">langsam</button>
+    <button data-tempo="0.25">Zeitlupe</button>
+  </div>
+</div>
+
+<div id="laStatus" hidden>
+  <span id="laStAtemwege">Atemwege frei</span>
+  <span id="laStFlaeche">Austauschfläche normal</span>
+  <span id="laStMuster">Atemmuster regelmäßig</span>
+</div>`;
+/* Hilfekarten und "Probier das aus" (aus dem Alveolen-Modell, Texte und HTML woertlich): t = Titel, u = Untertitel, h = Inhalt als HTML.
+   Die Liste KARTEN_LISTE traegt die Knopftexte des Originals (data-karte) in dessen Reihenfolge. */
+var karten = {
+  diffusion: { t:"Diffusion – die eine Regel", u:"Von viel nach wenig",
+    h:"<p><b>Diffusion</b> heißt: Teilchen verteilen sich von selbst dorthin, wo weniger von ihnen sind. Es gibt keine Pumpe, niemand transportiert sie.</p>"+
+      "<ul><li>Je größer der Unterschied, desto mehr wandert.</li><li>Wird der Unterschied kleiner, wandert weniger.</li><li>Ist kein Unterschied mehr da, hört es auf – ganz von allein.</li></ul>"+
+      "<div class='merk'>Verwechsle das nicht mit <b>Osmose</b>. Bei der Osmose wandert <b>Wasser</b> durch eine Membran. Beim Gasaustausch wandern <b>Gase</b> – das ist Diffusion.</div>" },
+  wand: { t:"Die Alveole und die dünne Wand", u:"Warum das überhaupt funktioniert",
+    h:"<p>Eine Alveole ist ein winziges, rundes Luftbläschen am Ende der Atemwege. Um sie herum liegt ein Netz feinster Blutgefäße, der <b>Kapillaren</b> – im Modell siehst du eine davon rundherum verlaufen.</p>"+
+      "<p>Zwischen Luft und Blut liegt nur eine hauchdünne Wand. Sie ist so dünn, dass Gase mühelos hindurchwandern.</p>"+
+      "<ul><li>Beide Lungen zusammen haben rund 300 Millionen Alveolen.</li><li>Ausgebreitet ergäbe das etwa die Fläche eines halben Tennisplatzes.</li></ul>"+
+      "<div class='merk'>Wird diese Wand dicker oder legt sich Flüssigkeit dazwischen, wird der Weg länger und der Austausch schlechter. Deshalb geraten Menschen mit Wasser in der Lunge in Atemnot.</div>" },
+  farbe: { t:"Warum das Blut die Farbe wechselt", u:"Hämoglobin",
+    h:"<p>Der Sauerstoff schwimmt nicht einfach im Blut herum. Er wird an den <b>roten Blutfarbstoff Hämoglobin</b> in den roten Blutkörperchen gebunden.</p>"+
+      "<p>Beladenes Hämoglobin ist hellrot, unbeladenes dunkel und bläulich. Deshalb wechseln die Blutkörperchen auf ihrer Rundreise um die Alveole von blau nach rot.</p><p>Im Modell trägt jedes Blutkörperchen beide Gase sichtbar in sich: oben die roten Sauerstoffpunkte, unten die graublauen Kohlendioxidpunkte. So kannst du beide direkt miteinander vergleichen.</p><div class='merk'>Vereinfachung: In Wirklichkeit wird der <b>Sauerstoff an Hämoglobin gebunden</b>, das <b>Kohlendioxid</b> dagegen zum größten Teil im Plasma transportiert. Für den Vergleich sind hier beide in der Zelle dargestellt.</div>"+
+      "<div class='merk'>Bei einer Blutarmut ist zu wenig Hämoglobin da. Die Lunge arbeitet dann einwandfrei – und der Mensch ist trotzdem unterversorgt.</div>" },
+  co2: { t:"Warum CO₂ andersherum wandert", u:"Zwei Wege, eine Regel",
+    h:"<p>Es gilt genau dieselbe Regel – nur sind die Verhältnisse umgekehrt.</p>"+
+      "<ul><li><b>Sauerstoff:</b> viel in der Alveole, wenig im ankommenden Blut → er wandert ins Blut.</li>"+
+      "<li><b>Kohlendioxid:</b> viel im ankommenden Blut, wenig in der Alveole → es wandert in die Alveole und wird beim nächsten Ausatmen hinausbefördert.</li></ul>"+
+      "<div class='merk'>Der Gasaustausch ist <b>kein Tausch</b>. Beide Gase wandern völlig unabhängig voneinander – jedes einfach dorthin, wo weniger davon ist.</div>" },
+  ventil: { t:"Hyper- und Hypoventilation", u:"Zu viel und zu wenig Atmung",
+    h:"<p>Beides verändert vor allem das <b>Kohlendioxid</b>. Der Sauerstoff folgt langsamer, weil er schon bei normaler Atmung fast vollständig aufgenommen wird.</p>"+
+      "<ul><li><b>Hyperventilation:</b> zu tief und zu schnell. Es wird mehr CO₂ abgeatmet, als anfällt – der CO₂-Wert fällt unter die Norm. Typisch sind Kribbeln in Händen und um den Mund sowie Muskelkrämpfe.</li>"+
+      "<li><b>Hypoventilation:</b> zu flach und zu langsam, etwa bei einer Schädigung des Atemzentrums, nach Opiatgabe oder bei Bewusstlosigkeit. CO₂ staut sich an, der Mensch wird müde und zunehmend benommen.</li></ul>"+
+      "<div class='merk'>Merke dir die Richtung: <b>Wie viel jemand atmet, entscheidet in erster Linie über das CO₂.</b> Deshalb ist die Atemfrequenz ein so wichtiges Beobachtungskriterium.</div>" },
+  obstruktiv: { t:"Asthma und COPD", u:"Wenn die Luft nicht mehr hinaus kommt",
+    h:"<p>Bei beiden sind die Atemwege verengt. Das Problem ist vor allem das <b>Ausatmen</b>: Die Luft kommt hinein, aber nicht vollständig wieder heraus.</p>"+
+      "<ul><li>Es bleibt Luft in der Lunge gefangen – sie wird <b>überbläht</b>. Im Modell siehst du das an der kleinen Lunge links: Sie bleibt größer als in Ruhe.</li>"+
+      "<li>Weil weniger frische Luft nachkommt, staut sich CO₂ und der Sauerstoff fällt ab.</li>"+
+      "<li>Bei der <b>COPD</b> kommt hinzu, dass Alveolen zerstört sind. Die Austauschfläche schrumpft, und der Sauerstoff schafft es selbst dann schlechter ins Blut, wenn in der Alveole genug davon ist.</li></ul>"+
+      "<div class='merk'>Achte im Ergebnisfeld auf den Unterschied: Bei COPD ist der O₂ in der Alveole deutlich höher als im Blut danach. Genau das ist eine Diffusionsstörung.</div>" },
+  saeure: { t:"Azidose und Alkalose", u:"Warum das CO₂ über den Säuregrad entscheidet",
+    h:"<p>Kohlendioxid ist im Blut nicht neutral: Zusammen mit Wasser bildet es <b>Kohlensäure</b>. Je mehr CO₂ sich anstaut, desto saurer wird das Blut.</p>"+
+      "<ul><li>Wird zu wenig geatmet, staut sich CO₂ an – das Blut übersäuert. Das ist die <b>respiratorische Azidose</b>.</li>"+
+      "<li>Wird zu viel geatmet, wird zu viel CO₂ abgeatmet – das Blut wird zu basisch. Das ist die <b>respiratorische Alkalose</b>, typisch bei Hyperventilation.</li></ul>"+
+      "<p>Im Modell siehst du das in der untersten Zeile des Ergebnisfeldes. Stelle nacheinander Hyperventilation und Azidose ein und beobachte, wie sie umspringt.</p>"+
+      "<div class='merk'>Deshalb ist die Atmung nicht nur für den Sauerstoff zuständig. Sie ist zugleich die schnellste Stellschraube des Körpers für den Säuregrad des Blutes.</div>" },
+  cheyne: { t:"Cheyne-Stokes-Atmung", u:"Atmung, die an- und abschwillt",
+    h:"<p>Bei der Cheyne-Stokes-Atmung wechseln sich immer wieder dieselben Phasen ab: Die Atmung wird <b>tiefer und tiefer</b>, dann wieder <b>flacher und flacher</b>, und schließlich folgt eine <b>Atempause</b>. Danach beginnt alles von vorn.</p>"+
+      "<p>Beobachte im Modell, was währenddessen passiert: In der Atempause fällt der Sauerstoff ab und das CO₂ staut sich an. In der tiefen Phase wird beides wieder ausgeglichen – oft sogar überschießend.</p>"+
+      "<p>Sie tritt vor allem bei <b>Herzschwäche</b>, bei Schädigungen des Gehirns und in der Sterbephase auf. Die Steuerung im Atemzentrum reagiert dabei verzögert und schießt über das Ziel hinaus.</p>"+
+      "<div class='merk'>Für die Pflege wichtig: Dieses Muster ist ein <b>Beobachtungsbefund</b>, den man dokumentiert und weitergibt. Zähle nicht nur die Atemzüge pro Minute, sondern achte auf das Muster und auf die Länge der Atempausen.</div>" },
+  kreislauf: { t:"Warum der Kreislauf nicht anhalten darf", u:"Der Unterschied muss erhalten bleiben",
+    h:"<p>Halte im Modell den Blutfluss an: Der Austausch läuft noch kurz weiter und kommt dann zum Erliegen. Nicht weil etwas kaputt ist, sondern weil sich Alveole und Blut angeglichen haben.</p>"+
+      "<p>Nur weil ständig frisches, sauerstoffarmes Blut nachströmt und ständig frische Luft nachkommt, bleibt der Unterschied bestehen – und nur deshalb wandert überhaupt etwas.</p>"+
+      "<div class='merk'>Atmung und Kreislauf sind deshalb nicht zwei getrennte Dinge. Fällt eines von beiden aus, nützt das andere allein nichts.</div>" },
+  begriffe: { t:"Fachbegriffe zum Schreiben", u:"Schreibhilfe für deine Erläuterung",
+    h:"<ul><li><b>Alveole</b> – Lungenbläschen</li><li><b>Kapillare</b> – feinstes Blutgefäß, umläuft die Alveole</li>"+
+      "<li><b>Diffusion</b> – Wanderung von Teilchen von viel nach wenig</li><li><b>Gasaustausch</b> – Aufnahme von O₂ und Abgabe von CO₂</li>"+
+      "<li><b>Erythrozyt</b> – rotes Blutkörperchen</li><li><b>Hämoglobin</b> – roter Blutfarbstoff, bindet den Sauerstoff</li>"+
+      "<li><b>Hyperventilation / Hypoventilation</b> – zu viel bzw. zu wenig Atmung</li>"+
+      "<li><b>Obstruktion</b> – Verengung der Atemwege</li><li><b>Überblähung</b> – Luft bleibt in der Lunge gefangen</li>"+
+      "<li><b>Diffusionsstörung</b> – der Weg durch die Wand ist zu lang oder die Fläche zu klein</li></ul>"+
+      "<div class='merk'>Beschreibe die Reihenfolge: Wo ist wovon viel, wo wenig? In welche Richtung wandert es deshalb? Und woran erkennst du am Blut, dass es geklappt hat?</div>" }
+};
+var KARTEN_LISTE = [["diffusion", "Diffusion – die eine Regel"], ["wand", "Die Alveole und die dünne Wand"], ["farbe", "Warum das Blut die Farbe wechselt"],
+  ["co2", "Warum CO₂ andersherum wandert"], ["ventil", "Hyper- und Hypoventilation"], ["obstruktiv", "Asthma und COPD"], ["saeure", "Azidose und Alkalose"],
+  ["cheyne", "Cheyne-Stokes-Atmung"], ["kreislauf", "Warum der Kreislauf nicht anhalten darf"], ["begriffe", "Fachbegriffe zum Schreiben"]];
+var PROBIER = `      <ol>
+        <li><b>Zähle die roten Punkte</b> in einem Blutkörperchen, wenn es oben links ankommt – und noch einmal, wenn es oben rechts abfließt. Zähle danach die roten Punkte in der Alveole. Wo waren vorher viele, wo wenige?</li>
+        <li>Schalte auf <b>nur CO₂</b> und zähle dasselbe noch einmal. In welche Richtung sind hier viele und wenige verteilt?</li>
+        <li>Blutfluss auf <b>Stopp</b>. Der Übertritt läuft aus und kommt von selbst zum Stillstand. Warum hört er auf, obwohl niemand ihn abschaltet?</li>
+        <li>Atemtiefe ganz nach links (Atempause) und warten. Wie verändert sich die Punktdichte – und die Farbe des abfließenden Blutes?</li>
+        <li>Auf <b>nur CO₂</b> schalten und die Zuleitung oben beobachten. Wann verlässt das CO₂ die Alveole – beim Einatmen oder beim Ausatmen?</li>
+        <li>Vergleiche <b>Hyperventilation</b> und <b>Hypoventilation</b> im Ergebnisfeld rechts. Welcher Wert verändert sich stärker: O₂ oder CO₂?</li>
+        <li>Stelle <b>Asthmaanfall</b> ein und schau auf die kleine Lunge links. Warum bleibt sie größer als in Ruhe, obwohl der Mensch zu wenig Luft bekommt?</li>
+        <li>Bei <b>COPD</b>: Vergleiche im Ergebnisfeld den O₂ in der Alveole mit dem O₂ im Blut danach. Woran liegt es, dass beide nicht gleich sind?</li>
+        <li>Blutfluss auf <b>schnell</b>. An welcher Stelle der Rundreise ist ein Blutkörperchen fertig beladen?</li>
+        <li>Vergleiche den Balken <b>Gasaustausch</b> zwischen normaler Ruheatmung und <b>Asthmaanfall</b>. Zähle dazu die roten Punkte in einem abfließenden Blutkörperchen und schau, wie viele Moleküle den Bronchialast passieren.</li>
+        <li>Stelle <b>Respiratorische Azidose</b> ein und lies die unterste Zeile im Ergebnisfeld. Woher kommt die Übersäuerung – aus dem Sauerstoff oder aus dem Kohlendioxid?</li>
+        <li>Stelle <b>Cheyne-Stokes-Atmung</b> ein und beobachte eine volle Minute. Beschreibe, was mit den Werten während der Atempause passiert und was danach.</li>
+      </ol>`;
 var organ = { renderer: {}, aufbauen: aufbauen };
 var PI = Math.PI, DEG = PI / 180;
 /* Ausschnitt 'Uebersicht' (Breite und Hoehe im freien Bereich, Modelleinheiten) und Kamera: gemeinsam fuer das Modell und spaeter fuer die Fahrt aus der Lunge */
@@ -97,15 +396,15 @@ function abstandFuer(ext, r, fov, h) {
   var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
-/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (zwei Zeilen: Desktop 80, Handy 70, dazu je 32,
-   wenn eine der Reihen umbricht: unter Breite 379, dann unter 320); aufbauen misst sie selbst, die Werte stimmen ueberein. Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px
-   (CSS), bereichFuer schaltet erst darunter um. Kommt die Zeile "Gasaustausch" dazu, muessen die Werte neu gemessen werden. */
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (drei Zeilen: Desktop 115, Handy 100, dazu je 32,
+   wenn eine der Reihen umbricht: unter Breite 379, dann unter 320); aufbauen misst sie selbst, die Werte stimmen ueberein. Die Leiste folgt dem Handy-Layout
+   bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (70 + (w < 379 ? 32 : 0) + (w < 320 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 379 ? 32 : 0) + (w < 320 ? 32 : 0)), unten: u };
   }
-  return { oben: 18, unten: 18 + 80 };
+  return { oben: 18, unten: 18 + 115 };
 }
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.start = function (w, h) {
@@ -398,13 +697,14 @@ function kapillarnetz() {
     fertig();
   });
 }
-function farbeKap(g) {   /* Farbverlauf blau (links, Arterienseite) nach rot (rechts, Venenseite) nach x */
-  var p = g.attributes.position, col = new Float32Array(p.count * 3), i;
+function farbeKap(g, c0, c1) {   /* Farbverlauf von c0 (links, Arterienseite) nach c1 (rechts, Venenseite) nach x; ohne Angabe blau nach rot, mit Angabe (Gasaustausch) wird die Farbe je Bild nachgefuehrt */
+  c0 = c0 || BLAU; c1 = c1 || ROT;
+  var p = g.attributes.position, a = g.attributes.color, col = a ? a.array : new Float32Array(p.count * 3), i;
   for (i = 0; i < p.count; i++) {
     var t = Math.min(1, Math.max(0, (p.getX(i) + 2.2) / 4.4)); t = t * t * (3 - 2 * t);
-    col[i * 3] = BLAU.r + (ROT.r - BLAU.r) * t; col[i * 3 + 1] = BLAU.g + (ROT.g - BLAU.g) * t; col[i * 3 + 2] = BLAU.b + (ROT.b - BLAU.b) * t;
+    col[i * 3] = c0.r + (c1.r - c0.r) * t; col[i * 3 + 1] = c0.g + (c1.g - c0.g) * t; col[i * 3 + 2] = c0.b + (c1.b - c0.b) * t;
   }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  if (a) a.needsUpdate = true; else g.setAttribute('color', new THREE.BufferAttribute(col, 3));
 }
 /* Zufuehrendes und abfuehrendes Gefaess: Stamm neben dem Bronchiolus, Aeste zum naechsten Punkt des Kapillarnetzes */
 var STAMM = [[-3.2, 10.2, -0.2], [-3.3, 7.0, -0.2], [-3.4, 3.0, -0.2], [-3.65, -0.6, -0.2], [-3.95, -2.9, -0.2], [-4.0, -5.2, -0.2]];
@@ -471,6 +771,7 @@ async function bauen() {
     addMesh(id, g, MAT[id], STRUCT[id].de, 3); tris.gefaesse += anz(g);
   });
   await setLoad(0.96, 'Beschriftung'); if (abgebaut) return;
+  gas3DBauen();
   ankerBerechnen();
 }
 
@@ -483,9 +784,13 @@ ORDER.forEach(function (s) { enabled[s.id] = true; });
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (hier keine: auch die Glaswand zaehlt nur, wenn dahinter nichts anderes liegt) */
 function weichMat(o) { return o.material.transparent; }
+/* Teilchen des Gasaustauschs (userData.teilchen): Blutkoerperchen und ihre Punkte mit dem Kapillarnetz, Gasteilchen mit der aufgeschnittenen Alveole (innen sichtbar, wenn
+   sie offen ist oder die Wand durchsichtig) */
+function teilchenSichtbar(art) { return art === 'gas' ? !!enabled.alveoleOffen && (offenAn || seeThrough) : !!enabled.kapillaren; }
 function applyVisibility() {
   root.traverse(function (o) {
     if (!o.isMesh) return;
+    if (o.userData.teilchen) { o.visible = teilchenSichtbar(o.userData.teilchen); return; }
     var sid = o.userData.sid, z = o.userData.zustand;
     o.visible = !!sid && enabled[sid] && (!z || (z === 'offen') === offenAn);
   });
@@ -516,6 +821,7 @@ function setSelected(id, punkt) {
   lv++;
   var box = $('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
   $('iDe').textContent = s.de;
@@ -530,13 +836,38 @@ function setSelected(id, punkt) {
 }
 
 (function leiste() {
-  /* Reiter: vorerst nur Strukturen (weitere kommen spaeter dazu, z. B. Gasaustausch) */
+  /* Reiter: Strukturen, Gasaustausch, Hilfekarten, Ueben (weitere kommen spaeter dazu, z. B. Krankheiten) */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
-  var b = document.createElement('button'); b.className = 'tab on'; b.textContent = 'Strukturen';
-  tabs.appendChild(b);
+  var paneGas = document.createElement('div'); paneGas.id = 'paneGas'; paneGas.innerHTML = GAS_PANE;
+  var paneH = document.createElement('div'); paneH.id = 'paneHelp';
+  var paneU = document.createElement('div'); paneU.id = 'paneUeben';
+  var panes = [rail, paneGas, paneH, paneU];
+  ['Strukturen', 'Gasaustausch', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+    var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); panes.forEach(function (pn, pk) { pn.style.display = pk === k ? '' : 'none'; });
+    });
+    tabs.appendChild(b);
+  });
   $('rail').appendChild(tabs);
-  $('rail').appendChild(rail);
+  panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Hilfekarten: die zehn Karten des Alveolen-Modells und "Probier das aus" (Muster wie bei der Lunge) */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben: Strukturen finden */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Modell und tippe sie an. Die Beschriftung verschwindet solange.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  pb.appendChild(bq); paneU.appendChild(pb);
   var gruppen = [];
   ORDER.forEach(function (s) { if (gruppen.indexOf(s.grp) < 0) gruppen.push(s.grp); });
   var hex = function (c) { return c.toString(16).padStart(6, '0'); };
@@ -557,9 +888,9 @@ function setSelected(id, punkt) {
         applyVisibility();
       }
       sw.addEventListener('click', function (e) { e.stopPropagation(); flip(); });
-      row.addEventListener('click', function () { setSelected(s.id); });
+      row.addEventListener('click', function () { if (!quiz) setSelected(s.id); });
       row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); setSelected(s.id); }
+        if (e.key === 'Enter') { e.preventDefault(); if (!quiz) setSelected(s.id); }
         if (e.key === ' ') { e.preventDefault(); flip(); }
       });
       wrap.appendChild(row);
@@ -568,11 +899,83 @@ function setSelected(id, punkt) {
   });
 })();
 
+/* Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Inhalt als HTML (die Hilfekarten bringen ihr HTML aus dem Alveolen-Modell mit); unten links wie die Infokarte */
+function showCard(kick, title, html, istQuiz) {
+  $('sKick').textContent = kick; $('sTitle').textContent = title;
+  $('sLead').innerHTML = html;
+  $('sAfter').innerHTML = '';
+  $('sQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  $('scard').classList.add('show');
+  $('info').classList.remove('show');
+  lv++;
+}
+function closeCard() {
+  $('scard').classList.remove('show');
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  lv++;
+}
+function openHelp(key) {
+  var k = key === 'probier' ? { t: 'Probier das aus', u: 'Hilfekarte', h: PROBIER } : karten[key]; if (!k) return;
+  if (quiz) quizEnd();
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard(k.u, k.t, k.h, false);
+}
+/* Ueben: "Tippe auf: ..." - nur Strukturen, die in der aktuellen Ansicht sichtbar (eingeschaltet) sind */
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
+function quizPool() {
+  return ORDER.filter(function (s) { return s.meshes.length && enabled[s.id]; }).map(function (s) { return s.id; });
+}
+function quizNext() {
+  var pool = quizPool(); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  showCard('\u00dcben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe das Modell, wenn du die Struktur nicht gleich siehst.', true);
+  $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizStart() {
+  setSelected(null); closeCard();
+  if (schemaOn) setSchema(false);   /* das Schema verdeckt die 3D-Ansicht */
+  quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
+  $('bQuiz').classList.add('on'); $('bQuiz').textContent = '\u00dcben beenden';
+  lv++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+}
+function leuchte(id, an) {   /* Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte */
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = $('sLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben \u2013 die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+$('sClose').onclick = function () { if (quiz) quizEnd(); else closeCard(); };
+$('qNext').onclick = function () { if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); } };
+$('qStop').onclick = quizEnd;
+
 function durchsicht(an) {
   seeThrough = an;
   $('bSee').classList.toggle('on', an);
   applyLook();
-  lv++;
+  applyVisibility();   /* Gasteilchen in der geschlossenen Alveole sind bei Durchsicht zu sehen */
+  if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); }   /* andere Ansicht: neue Aufgabe aus den jetzt sichtbaren Strukturen */
 }
 $('bSee').onclick = function () { seeCam = false; durchsicht(!seeThrough); };
 /* aufgeschnitten oder geschlossen: die aufgeschnittene Alveole (und ihre vordere Kappe des Kapillarnetzes) wechselt, der Anker der Beschriftung folgt */
@@ -656,7 +1059,7 @@ function ansicht(theta, phi, dist, target) {
   orbit.anim = null;
 }
 
-/* Antippen: sichtbare Strukturen; durchscheinende Huellen (Wand bei Durchsicht) zaehlen nur, wenn dahinter nichts Dichteres getroffen wird */
+/* Antippen: sichtbare Strukturen; durchscheinende Huellen (Wand bei Durchsicht) zaehlen nur, wenn dahinter nichts Dichteres getroffen wird; die Teilchen sind nicht anklickbar */
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 function canvasKlick(e) {
   if (orbit.dragged) return;
@@ -664,13 +1067,15 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, punkt = null, weichPunkt = null;
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, punkt = null, weichPunkt = null, durch = [];
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
+    durch.push(sid);   /* Strukturen auf dem Strahl bis zum ersten undurchsichtigen Treffer (fuer das Ueben) */
     if (weichMat(o)) { if (!weich) { weich = sid; weichPunkt = hits[i].point; } }
     else { treffer = sid; punkt = hits[i].point; }
   }
+  if (quiz) { quizAntwort(treffer || weich || null, durch); return; }
   setSelected(treffer || weich || null, treffer ? punkt : weichPunkt);
 }
 canvas.addEventListener('click', canvasKlick);
@@ -713,7 +1118,7 @@ function ankerBerechnen() {
 var sKey = '', sT = 0, sOk = true, sichtVer = 0;
 var rayS = new THREE.Raycaster(), dirS = new THREE.Vector3();
 function frei(id, p) {
-  dirS.copy(p).sub(camera.position); var d = dirS.length(); dirS.normalize();
+  dirS.copy(p).applyMatrix4(root.matrixWorld).sub(camera.position); var d = dirS.length(); dirS.normalize();   /* Anker liegen in Modell-Koordinaten, root atmet (Skalierung) */
   rayS.set(camera.position, dirS); rayS.far = d;
   var hits = rayS.intersectObjects(root.children, true);
   for (var i = 0; i < hits.length; i++) {
@@ -765,7 +1170,7 @@ function schneiden(ax, ay, bx, by, cx, cy, dx, dy) {
   return d1 * d2 < 0 && d3 * d4 < 0;
 }
 function layoutLabels(w, h) {
-  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, offenAn, sichtVer].join('|');
+  var key = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv, offenAn, sichtVer, root.scale.x.toFixed(3)].join('|');   /* auch die Atmung (Skalierung von root): die Anker wandern mit */
   if (key === lastKey) return;
   lastKey = key;
   var narrow = w < 1000, r = bereich(w, h), a = AUSSCHNITTE[aktiv];
@@ -778,13 +1183,13 @@ function layoutLabels(w, h) {
   if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei */
+  if (showLabels && !quiz && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei; beim Ueben und bei einer Hilfekarte keine Beschriftung */
     LISTEN[aktiv].forEach(function (id) {
       if (!enabled[id]) return;
       var an = id in VIS ? VIS[id] : (KAND[id] || [])[0];
       if (!an) return;
-      pv.copy(an);
-      pv.project(camera);   /* Die Anker liegen schon im Raum der Szene */
+      pv.copy(an).applyMatrix4(root.matrixWorld);   /* Anker in Modell-Koordinaten: root atmet (leichte Skalierung) */
+      pv.project(camera);
       if (pv.z > 1) return;
       items.push({ id: id, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
     });
@@ -825,16 +1230,774 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
-   5. Renderschleife, Aufbau, Abbau
+   5. Gasaustausch (aus dem Alveolen-Modell): Zustand, Geometrie des Schemas, Simulation, Darstellung und Bedienung im Reiter "Gasaustausch"
+   Der Code steht unveraendert wie im Alveolen-Modell (eigener Gueltigkeitsbereich, weil S und $ hier anders belegt sind; Math.random wie im Original);
+   angepasst sind nur die IDs (Praefix la), die Schleife (tick wird aus der Renderschleife gerufen, erstes Bild 0.016, Pause), die Klasse on statt an bei den
+   Bedienelementen, die Suche der Bedienelemente nur im Reiter, der Wegfall der Hilfekarten-Modals (die Karten stehen oben, sie erscheinen in #scard) und der
+   Anschluss des 3D-Modells (haken: ein Aufruf am Ende von zeichne; Abschnitt 6). Die Liste "Situationen und Krankheitsbilder" fehlt noch (SZENARIEN und die
+   Zweige fuer Befund und Statushinweise stehen schon da, die Variablen behalten ihre Startwerte).
+   ===================================================================== */
+var gas = (function(){
+function $(id){ return document.getElementById(id); }
+function ID(k){ return "la" + k.charAt(0).toUpperCase() + k.slice(1); }   // Praefix la: eindeutige IDs im Atlas
+var NS = "http://www.w3.org/2000/svg";
+var PANE = $("paneGas");
+var haken = null;   // Einbindung: Anschluss des 3D-Modells (Abschnitt 6), wird am Ende von zeichne gerufen
+
+/* ---------------- Zustand ---------------- */
+var A = { o2:0.84, co2:0.21 };
+var ANKUNFT = { o2:0.28, co2:0.55 };
+var FRISCH = { o2:0.94, co2:0.02 };
+var fluss = 0.5, tiefe = 0.5, frequenz = 0.5, obstruktion = 0, flaeche = 1, tempo = 0.5;
+var atemP = 0, fLunge = 0, vLunge = 0;
+var cheyne = false, csP = 0, T_CS = 24, tiefeEff = 0.5;
+var gas = "beide", frei = false, freiAlv = 0.85, freiBlut = 0.28;
+var abO2 = 0.84, abCO2 = 0.21;
+var austausch = 1.41, REF_AUSTAUSCH = 1.41;   // Sauerstoffaufnahme bei normaler Ruheatmung
+var ausStufe = 2;                             // Haltespanne, damit das Urteil nicht flackert
+var szName = "Normale Ruheatmung";
+
+var K_BASIS = 2.14, R2 = 10.5, W_O2 = 0.14, W_CO2 = 0.42, BAHN = 0.857;
+
+var el = {};
+["alvO2","alvCO2","uebertritt","blut","kapWand","kapLumen","abflussRohr",
+ "legO2p","legO2t","legCO2p","legCO2t","tempoBadge","tempoFaktor",
+ "miniL1","miniL2","miniZwerch","miniText","stAtemwege","stFlaeche",
+ "ergSz","barAO","barAC","barBO","barBC","barAus","urtAus","urtO","urtC","urtS","stMuster",
+ "wegWand","wegLumen","engeMarke","befund","bef1","bef2","bef3","alveole",
+ "m1","w1","d1a","d1b","p2","w2","w3","b3","t4","w4","g1","g2","g3","g4",
+ "lblFluss","lblTiefe","lblFreq","freiFeld"].forEach(function(k){ el[k]=$(ID(k)); });
+
+/* ---------------- Geometrie: Kreis und Ringkapillare ---------------- */
+var CX = 400, CY = 300, RA = 148, RK = 190;
+var TH0 = 250, TH1 = -70;                     // Grad: Eintritt oben links, Austritt oben rechts
+function winkel(t){ return (TH0 + (TH1-TH0)*t) * Math.PI/180; }
+function ort(t, r){ var a = winkel(t); return { x: CX + r*Math.cos(a), y: CY + r*Math.sin(a), a:a }; }
+(function bahnZeichnen(){
+  var d = "", i, p;
+  for (i=0; i<=64; i++){
+    p = ort(i/64, RK);
+    d += (i ? " L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1);
+  }
+  el.kapWand.setAttribute("d", d);
+  el.kapLumen.setAttribute("d", d);
+})();
+
+/* ---------------- Farben ---------------- */
+var ARM=[70,112,155], REICH=[196,55,44];
+var ARM_B=[176,198,219], REICH_B=[240,197,190];
+function mische(a,b,o2){
+  var t = Math.max(0,Math.min(1,(o2-0.15)/0.75)), c=[0,0,0], i;
+  for(i=0;i<3;i++) c[i]=Math.round(a[i]+(b[i]-a[i])*t);
+  return "rgb("+c[0]+","+c[1]+","+c[2]+")";
+}
+function blutfarbe(o2){ return mische(ARM,REICH,o2); }        // kraeftig: Anzeigen, Abflussrohr
+function blutfarbeBlass(o2){ return mische(ARM_B,REICH_B,o2); } // blass: Zellkoerper
+
+// Feste Plaetze fuer die Punkte im Blutkoerperchen und im Plasma daneben
+var R_MOL = 4.2;                                                // gilt ueberall: Alveole, Flug, Zelle
+var PLATZ_O2  = [[-25,-7],[-15,-7],[-5,-7],[5,-7],[15,-7],[25,-7]];  // obere Reihe in der Zelle
+var PLATZ_CO2 = [[-15,7],[-5,7],[5,7],[15,7]];                       // untere Reihe in der Zelle
+function anzahlO2(v){ return Math.round(Math.max(0,Math.min(1,(v-0.18)/0.76))*PLATZ_O2.length); }
+function anzahlCO2(v){ return Math.round(Math.max(0,Math.min(1,v/0.60))*PLATZ_CO2.length); }
+
+/* ---------------- Bausteine ---------------- */
+var sparsam = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function kreis(eltern, r, farbe){
+  var c = document.createElementNS(NS,"circle");
+  c.setAttribute("r", r); c.setAttribute("fill", farbe);
+  c.setAttribute("stroke","rgba(255,255,255,.85)"); c.setAttribute("stroke-width","0.9");
+  eltern.appendChild(c); return c;
+}
+function schwarm(eltern, anzahl, farbe){
+  var a = [], i, w, rr;
+  for (i=0;i<anzahl;i++){
+    w = Math.random()*Math.PI*2; rr = Math.sqrt(Math.random())*(RA-26);
+    a.push({ el:kreis(eltern, R_MOL, farbe), x:CX+rr*Math.cos(w), y:CY+rr*Math.sin(w),
+             vx:(Math.random()*2-1)*24, vy:(Math.random()*2-1)*24 });
+  }
+  return a;
+}
+var O2MAX = sparsam ? 20 : 32, CO2MAX = sparsam ? 12 : 20;
+var punkteO2 = schwarm(el.alvO2, O2MAX, "var(--o2)");
+var punkteCO2 = schwarm(el.alvCO2, CO2MAX, "var(--co2)");
+
+var ERY = sparsam ? 4 : 6, ery = [];
+(function(){
+  for (var i=0;i<ERY;i++){
+    var g = document.createElementNS(NS,"g");
+    var k = document.createElementNS(NS,"ellipse");
+    k.setAttribute("rx","34"); k.setAttribute("ry","21");
+    k.setAttribute("stroke","rgba(0,0,0,.22)"); k.setAttribute("stroke-width","1.5");
+    g.appendChild(k);
+    var pC = [], pO = [], j, c;
+    function punktReihe(plaetze, farbe, ziel){   // beide Gase liegen IN der Zelle
+      for (var q=0;q<plaetze.length;q++){
+        var pt = document.createElementNS(NS,"circle");
+        pt.setAttribute("r",R_MOL); pt.setAttribute("fill",farbe);
+        pt.setAttribute("stroke","rgba(255,255,255,.85)"); pt.setAttribute("stroke-width","0.9");
+        pt.setAttribute("cx",plaetze[q][0]); pt.setAttribute("cy",plaetze[q][1]);
+        pt.setAttribute("opacity","0"); g.appendChild(pt); ziel.push(pt);
+      }
+    }
+    punktReihe(PLATZ_CO2, "var(--co2)", pC);
+    punktReihe(PLATZ_O2, "var(--o2)", pO);
+    el.blut.appendChild(g);
+    ery.push({ g:g, k:k, pO:pO, pC:pC, rO:-1, rC:-1, x:i/ERY, o2:ANKUNFT.o2, co2:ANKUNFT.co2,
+               sO2:anzahlO2(ANKUNFT.o2), sCO2:anzahlCO2(ANKUNFT.co2),
+               zuO2:0, abfO2:0, zuCO2:0, abfCO2:0 });
+  }
+})();
+
+/* --- Molekuelbuchhaltung: nichts entsteht, nichts verschwindet --- */
+var FLUG = [], FLUGDAUER = 0.34;
+(function(){
+  var n = sparsam ? 16 : 30, i, c;
+  for (i=0;i<n;i++){
+    c = kreis(el.uebertritt, R_MOL, "var(--o2)");
+    c.setAttribute("opacity","0");
+    FLUG.push({ el:c, aktiv:false });
+  }
+})();
+function alvZielO2(){ return Math.round(Math.max(0,Math.min(1,(A.o2-0.25)/0.70))*O2MAX); }
+function alvZielCO2(){ return Math.round(Math.max(0,Math.min(1,A.co2/0.60))*CO2MAX); }
+
+function zufallImBlaeschen(){
+  var w = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*(RA-40);
+  return { x:CX + r*Math.cos(w), y:CY + r*Math.sin(w) };
+}
+function platzAmKoerperchen(e, art, slot){
+  var p = ort(e.x, RK), th = p.a + Math.PI/2;
+  var v = (art === "o2" ? PLATZ_O2 : PLATZ_CO2)[Math.max(0,Math.min(slot,(art==="o2"?PLATZ_O2:PLATZ_CO2).length-1))];
+  return { x: p.x + v[0]*Math.cos(th) - v[1]*Math.sin(th),
+           y: p.y + v[0]*Math.sin(th) + v[1]*Math.cos(th) };
+}
+function freierFlug(){ for (var i=0;i<FLUG.length;i++) if (!FLUG[i].aktiv) return FLUG[i]; return null; }
+var MUND = { x:CX, y:150 };      // Uebergang Alveole -> Bronchialast
+var AUSSEN = { x:CX, y:6 };      // oberes Ende des Bronchialastes
+
+function punktAufBahn(bahn, t){
+  var i, L = [], ges = 0, dx, dy, d;
+  for (i=0;i<bahn.length-1;i++){
+    dx = bahn[i+1].x-bahn[i].x; dy = bahn[i+1].y-bahn[i].y;
+    d = Math.sqrt(dx*dx+dy*dy); L.push(d); ges += d;
+  }
+  var rest = t*ges, q;
+  for (i=0;i<L.length;i++){
+    if (rest <= L[i] || i === L.length-1){
+      q = L[i] > 0 ? Math.max(0, Math.min(1, rest/L[i])) : 0;
+      return { x: bahn[i].x + (bahn[i+1].x-bahn[i].x)*q,
+               y: bahn[i].y + (bahn[i+1].y-bahn[i].y)*q };
+    }
+    rest -= L[i];
+  }
+  return bahn[bahn.length-1];
+}
+
+function starteFlug(art, richtung, e, slot, von, nach){
+  var f = freierFlug(); if (!f) return null;
+  f.aktiv = true; f.art = art; f.richtung = richtung; f.zelle = e || null; f.slot = slot;
+  f.von = von; f.nach = nach || null; f.t = 0; f.bahn = null; f.dauer = FLUGDAUER;
+  f.el.setAttribute("fill", art === "o2" ? "var(--o2)" : "var(--co2)");
+  return f;
+}
+function flugZiel(f){
+  if (f.richtung === "zuZelle") return platzAmKoerperchen(f.zelle, f.art, f.slot);
+  if (f.richtung === "zuAlveole") return f.nach;
+  if (f.richtung === "einatmen") return f.nach;
+  return { x:CX, y:8 };                       // ausatmen: hinaus durch den Atemweg
+}
+function fluegeSchritt(dt){
+  for (var i=0;i<FLUG.length;i++){
+    var f = FLUG[i]; if (!f.aktiv) continue;
+    f.t += dt/f.dauer;
+    var z = flugZiel(f);
+    if (f.t >= 1){
+      f.aktiv = false; f.el.setAttribute("opacity","0");
+      if (f.richtung === "zuZelle"){
+        if (f.art === "o2"){ f.zelle.sO2++; f.zelle.zuO2--; } else { f.zelle.sCO2++; f.zelle.zuCO2--; }
+      } else if (f.richtung === "zuAlveole"){
+        if (f.art === "o2") f.zelle.abfO2--; else f.zelle.abfCO2--;
+      }
+    } else {
+      var pos = f.bahn ? punktAufBahn(f.bahn, f.t)
+                       : { x: f.von.x + (z.x-f.von.x)*f.t, y: f.von.y + (z.y-f.von.y)*f.t };
+      f.el.setAttribute("cx", pos.x.toFixed(1));
+      f.el.setAttribute("cy", pos.y.toFixed(1));
+      f.el.setAttribute("opacity","1");
+    }
+  }
+}
+function neueZelle(e){
+  for (var i=0;i<FLUG.length;i++){
+    var f = FLUG[i];
+    if (f.aktiv && f.zelle === e){ f.aktiv = false; f.el.setAttribute("opacity","0"); }
+  }
+  e.zuO2 = e.abfO2 = e.zuCO2 = e.abfCO2 = 0;
+  e.sO2 = anzahlO2(e.o2); e.sCO2 = anzahlCO2(e.co2);
+}
+
+/* Jede sichtbare Aenderung laeuft als Flug: erst abbuchen, bei Ankunft gutschreiben */
+function ereignisse(dt){
+  var i, e, ziel;
+  atemwegVerkehr(dt);
+  for (i=0;i<ery.length;i++){
+    e = ery[i];
+    // Sauerstoff
+    ziel = anzahlO2(e.o2);
+    if (ziel > e.sO2 + e.zuO2 && alvZielO2() > 0){
+      if (starteFlug("o2","zuZelle", e, e.sO2 + e.zuO2, ort(e.x, RA))){ e.zuO2++; bremse(); }
+    } else if (ziel < e.sO2 - e.abfO2){
+      if (starteFlug("o2","zuAlveole", e, 0,
+                     platzAmKoerperchen(e,"o2", e.sO2 - e.abfO2 - 1), ort(e.x, RA-30))){
+        e.sO2--; e.abfO2++;
+      }
+    }
+    // Kohlendioxid
+    ziel = anzahlCO2(e.co2);
+    if (ziel < e.sCO2 - e.abfCO2){
+      if (starteFlug("co2","zuAlveole", e, 0,
+                     platzAmKoerperchen(e,"co2", e.sCO2 - e.abfCO2 - 1), ort(e.x, RA-30))){
+        e.sCO2--; e.abfCO2++;
+      }
+    } else if (ziel > e.sCO2 + e.zuCO2 && alvZielCO2() > 0){
+      if (starteFlug("co2","zuZelle", e, e.sCO2 + e.zuCO2, ort(e.x, RA))){ e.zuCO2++; bremse(); }
+    }
+  }
+}
+/* Luftverkehr im Atemweg: beim Einatmen kommt O2 herein,
+   beim Ausatmen geht ueberwiegend CO2 hinaus - etwas O2 aber auch. */
+function bremse(){                       // zuletzt gestarteter Flug: langsamer bei geschaedigter Wand
+  for (var i=FLUG.length-1;i>=0;i--) if (FLUG[i].aktiv && FLUG[i].t === 0){
+    FLUG[i].dauer = FLUGDAUER * Math.min(2.5, 1/Math.max(0.3, flaeche)); return;
+  }
+}
+function atemwegVerkehr(dt){
+  if (Math.abs(vLunge) < 0.012) return;
+  if (Math.random() > Math.abs(vLunge)*14*(1 - 0.85*obstruktion)*dt) return;
+  var f, innen = zufallImBlaeschen();
+  if (vLunge > 0){
+    f = starteFlug("o2", "einatmen", null, 0, AUSSEN, innen);
+    if (f){ f.bahn = [AUSSEN, MUND, innen]; f.dauer = 0.9; }   // Ast hinunter, dann ins Blaeschen
+  } else {
+    f = starteFlug(Math.random() < 0.25 ? "o2" : "co2", "ausatmen", null, 0, innen);
+    if (f){ f.bahn = [innen, MUND, AUSSEN]; f.dauer = 0.9; }   // zur Öffnung, dann den Ast hinauf
+  }
+}
+
+/* ---------------- Atemzyklus ---------------- */
+function atemSchritt(dt){
+  tiefeEff = tiefe;
+  if (cheyne){                                  // An- und Abschwellen mit Atempause
+    csP = (csP + dt/T_CS) % 1;
+    tiefeEff = tiefe * (csP < 0.62 ? 0.5*(1 - Math.cos(2*Math.PI*csP/0.62)) : 0);
+  }
+  var T = 8.0 - 6.0*frequenz;   // Regler 0,5 = 12 Atemzuege/min
+  atemP = (atemP + dt/T) % 1;
+  var trap = 0.35*obstruktion;
+  var f = (atemP < 0.42)
+    ? trap + tiefeEff*(1 - Math.cos(Math.PI*(atemP/0.42)))/2
+    : trap + tiefeEff*Math.pow(1 - (atemP-0.42)/0.58, 2.2*(1 - 0.6*obstruktion));
+  vLunge = dt > 0 ? (f - fLunge)/dt : 0;
+  fLunge = f;
+}
+
+/* ---------------- Rechenschritt ---------------- */
+function schritt(dt){
+  var i, e, dO2 = 0, dCO2 = 0, K = K_BASIS*flaeche;
+  atemSchritt(dt);
+  if (frei) A.o2 = freiAlv;
+
+  for (i=0;i<ery.length;i++){
+    e = ery[i];
+    e.x += fluss*BAHN*dt;
+    if (e.x >= 1){
+      abO2 = e.o2; abCO2 = e.co2; e.x -= 1;
+      e.o2 = frei ? freiBlut : ANKUNFT.o2; e.co2 = ANKUNFT.co2;
+      neueZelle(e);
+    }
+    var n1 = K*(A.o2 - e.o2)*dt, n2 = K*(A.co2 - e.co2)*dt;
+    e.o2 += n1; e.co2 += n2; dO2 += n1; dCO2 += n2;
+  }
+
+  if (!frei){
+    var ern = Math.abs(vLunge)*R2*(1 - 0.85*obstruktion);
+    A.o2  += ern*(FRISCH.o2 - A.o2)*dt  - dO2*W_O2;
+    A.co2 += ern*(FRISCH.co2 - A.co2)*dt - dCO2*W_CO2;
+    A.o2 = Math.max(0.02, Math.min(1, A.o2));
+    A.co2 = Math.max(0, Math.min(1, A.co2));
+  }
+
+  if (dt > 0) austausch += ((dO2/dt) - austausch)*Math.min(1, dt*0.14);
+  var mo=0, mc=0;
+  for (i=0;i<ery.length;i++){ mo += ery[i].o2; mc += ery[i].co2; }
+  mo /= ery.length; mc /= ery.length;
+  return { mo2:mo, mco2:mc, uo2:A.o2-mo, uco2:A.co2-mc };
+}
+
+/* ---------------- Darstellung ---------------- */
+var zeigO2 = true, zeigCO2 = true;
+function drift(liste, dt, sicht){
+  for (var i=0;i<liste.length;i++){
+    var p = liste[i];
+    p.x += p.vx*dt; p.y += p.vy*dt;
+    var dx = p.x-CX, dy = p.y-CY;
+    if (dx*dx + dy*dy > (RA-24)*(RA-24)){ p.vx = -p.vx; p.vy = -p.vy; p.x += p.vx*dt*2; p.y += p.vy*dt*2; }
+    p.el.setAttribute("cx", p.x.toFixed(1));
+    p.el.setAttribute("cy", p.y.toFixed(1));
+    p.el.setAttribute("opacity", i < sicht ? "1" : "0");
+  }
+}
+
+function zeichne(m, dt){
+  var i;
+  ereignisse(dt);
+  fluegeSchritt(dt);
+  drift(punkteO2, dt, zeigO2 ? alvZielO2() : 0);
+  drift(punkteCO2, dt, zeigCO2 ? alvZielCO2() : 0);
+
+  for (i=0;i<ery.length;i++){
+    var e = ery[i], p = ort(e.x, RK), j;
+    e.g.setAttribute("transform","translate("+p.x.toFixed(1)+","+p.y.toFixed(1)+") rotate("+(p.a*180/Math.PI+90).toFixed(1)+")");
+    e.k.setAttribute("fill", blutfarbeBlass(e.o2));
+    var nO = zeigO2 ? e.sO2 : 0;
+    if (nO !== e.rO){
+      for (j=0;j<e.pO.length;j++) e.pO[j].setAttribute("opacity", j < nO ? "1" : "0");
+      e.rO = nO;
+    }
+    var nC = zeigCO2 ? e.sCO2 : 0;
+    if (nC !== e.rC){
+      for (j=0;j<e.pC.length;j++) e.pC[j].setAttribute("opacity", j < nC ? "1" : "0");
+      e.rC = nC;
+    }
+  }
+
+  var stroemt = Math.abs(vLunge) > 0.035, ein = vLunge > 0;
+
+  var fL = fLunge;
+  el.miniL1.setAttribute("cy", (88 + 7*fL).toFixed(1));
+  el.miniL2.setAttribute("cy", (88 + 7*fL).toFixed(1));
+  el.miniL1.setAttribute("ry", (20 + 7*fL).toFixed(1));
+  el.miniL2.setAttribute("ry", (20 + 7*fL).toFixed(1));
+  el.miniL1.setAttribute("rx", (15 + 1.5*fL).toFixed(1));
+  el.miniL2.setAttribute("rx", (15 + 1.5*fL).toFixed(1));
+  var apex = 112 + 14*fL;
+  el.miniZwerch.setAttribute("d","M58 124 Q98 "+(2*apex-124).toFixed(1)+" 138 124");
+  el.miniText.textContent = !stroemt ? (tiefeEff < 0.03 ? "Atempause" : "…") : (ein ? "einatmen ↓" : "ausatmen ↑");
+  el.miniText.setAttribute("fill", !stroemt ? "#6E7C7A" : (ein ? "var(--o2)" : "var(--co2)"));
+
+  el.abflussRohr.setAttribute("stroke", blutfarbe(abO2));
+  zeichneErgebnis();
+  zeichneKette(m);
+  if (haken) haken(zustand(), dt);   // Einbindung: das 3D-Modell folgt dem Zustand
+}
+
+function zeichneErgebnis(){
+  el.barAO.setAttribute("width", (Math.max(0,Math.min(1,A.o2))*200).toFixed(0));
+  el.barAC.setAttribute("width", (Math.max(0,Math.min(1,A.co2/0.6))*200).toFixed(0));
+  el.barBO.setAttribute("width", (Math.max(0,Math.min(1,abO2))*200).toFixed(0));
+  el.barBC.setAttribute("width", (Math.max(0,Math.min(1,abCO2/0.6))*200).toFixed(0));
+
+  var to, fo;
+  if (abO2 > 0.78){ to = "in Ordnung"; fo = "var(--gut)"; }
+  else if (abO2 > 0.60){ to = "vermindert"; fo = "var(--warn)"; }
+  else { to = "stark vermindert"; fo = "var(--schlecht)"; }
+  el.urtO.textContent = to; el.urtO.setAttribute("fill", fo);
+
+  var tc, fc;
+  if (abCO2 < 0.16){ tc = "zu niedrig"; fc = "var(--warn)"; }
+  else if (abCO2 < 0.27){ tc = "in Ordnung"; fc = "var(--gut)"; }
+  else if (abCO2 < 0.42){ tc = "erhöht"; fc = "var(--warn)"; }
+  else { tc = "stark erhöht"; fc = "var(--schlecht)"; }
+  el.urtC.textContent = tc; el.urtC.setAttribute("fill", fc);
+
+  var anteil = Math.max(0, austausch/REF_AUSTAUSCH);
+  el.barAus.setAttribute("width", (Math.min(1, anteil*0.65)*230).toFixed(0));
+  if (anteil > (ausStufe >= 2 ? 0.88 : 0.94)) ausStufe = 2;
+  else if (anteil > (ausStufe >= 1 ? 0.64 : 0.72)) ausStufe = 1;
+  else ausStufe = 0;
+  var ta = ["stark vermindert","vermindert","voll"][ausStufe];
+  var fa = ["var(--schlecht)","var(--warn)","var(--gut)"][ausStufe];
+  el.barAus.setAttribute("fill", fa);
+  el.urtAus.textContent = ta; el.urtAus.setAttribute("fill", fa);
+
+  var ts, fs;
+  if (abCO2 < 0.16){ ts = "alkalisch"; fs = "var(--warn)"; }
+  else if (abCO2 < 0.27){ ts = "ausgeglichen"; fs = "var(--gut)"; }
+  else if (abCO2 < 0.42){ ts = "leicht übersäuert"; fs = "var(--warn)"; }
+  else { ts = "übersäuert (Azidose)"; fs = "var(--schlecht)"; }
+  el.urtS.textContent = ts; el.urtS.setAttribute("fill", fs);
+}
+
+function zeichneKette(m){
+  var istCO2 = (gas === "co2");
+  var u = istCO2 ? m.uco2 : m.uo2;
+  var alvW = istCO2 ? Math.min(1,A.co2/0.6) : A.o2;
+  var blutW = istCO2 ? Math.min(1,m.mco2/0.6) : m.mo2;
+  var farbe = istCO2 ? "var(--co2)" : "var(--o2)";
+  var betrag = Math.abs(u), spuerbar = betrag > 0.02;
+
+  el.m1.textContent = (istCO2 ? "CO₂ · " : "O₂ · ") + "Unterschied";
+  el.g1.classList.toggle("aktiv", spuerbar);
+  el.w1.textContent = betrag < 0.02 ? "kein Unterschied mehr" : betrag < 0.18 ? "klein" : "groß";
+  el.d1a.style.width = Math.round(alvW*100)+"%"; el.d1a.style.background = farbe;
+  el.d1b.style.width = Math.round(blutW*100)+"%"; el.d1b.style.background = farbe;
+
+  el.g2.classList.toggle("aktiv", spuerbar);
+  el.p2.textContent = !spuerbar ? "–" : (u > 0 ? "→" : "←");
+  el.p2.style.color = spuerbar ? farbe : "#7C949B";
+  el.w2.textContent = !spuerbar ? "keine Richtung" : (u > 0 ? "in das Blut" : "in die Alveole");
+
+  el.g3.classList.toggle("aktiv", spuerbar);
+  el.w3.textContent = betrag < 0.02 ? "keiner" : betrag < 0.18 ? "schwach" : "stark";
+  el.b3.style.width = Math.min(100, betrag*220)+"%";
+  el.b3.style.background = farbe;
+
+  el.g4.classList.add("aktiv");
+  el.t4.style.background = blutfarbe(abO2);
+  el.w4.textContent = abO2 > 0.78 ? "sauerstoffreich" : abO2 > 0.6 ? "nur teilweise beladen" : "bleibt sauerstoffarm";
+}
+
+/* --- Krankheitszeichen im Bild sichtbar machen --- */
+function zeichneBefund(){
+  // Bronchialast: Lumen verengt sich, die Wand schwillt an und färbt sich
+  el.wegLumen.setAttribute("stroke-width", (24 - 13*obstruktion).toFixed(1));
+  var rot = Math.round(169 + (181-169)*obstruktion),
+      gr  = Math.round(180 + (118-180)*obstruktion),
+      bl  = Math.round(177 + (106-177)*obstruktion);
+  el.wegWand.setAttribute("stroke", "rgb("+rot+","+gr+","+bl+")");
+  el.engeMarke.setAttribute("opacity", obstruktion >= 0.05 ? "1" : "0");
+
+  // Alveolenwand: zerstörte Wandabschnitte als Lücken
+  if (flaeche < 0.9){
+    el.alveole.setAttribute("stroke-dasharray", "34 18");
+    el.alveole.setAttribute("stroke-width", "4.5");
+    el.alveole.setAttribute("stroke", "#C9A48E");
+  } else {
+    el.alveole.removeAttribute("stroke-dasharray");
+    el.alveole.setAttribute("stroke-width", "3");
+    el.alveole.setAttribute("stroke", "var(--wand)");
+  }
+
+  var zeilen = [];
+  if (obstruktion >= 0.05) zeilen.push(obstruktion >= 0.5 ? "Atemwege stark verengt" : "Atemwege verengt");
+  if (obstruktion >= 0.30) zeilen.push("Lunge überbläht");
+  if (flaeche <= 0.9)      zeilen.push("Austauschfläche zerstört");
+  if (cheyne)              zeilen.push("Atmung schwillt an und ab");
+  el.befund.setAttribute("opacity", zeilen.length ? "1" : "0");
+  el.bef1.textContent = zeilen[0] || "";
+  el.bef2.textContent = zeilen[1] || "";
+  el.bef3.textContent = zeilen[2] || "";
+}
+
+/* ---------------- Schleife ---------------- */
+var tAlt = 0, pausiert = false, takte = 0;
+function tick(t){
+  if (pausiert){                    // Pause: Schritt ganz uebersprungen (alles steht); tAlt mitfuehren, damit nach der Pause kein Sprung entsteht
+    tAlt = t;
+    return;
+  }
+  var dtEcht = tAlt ? Math.min(0.05,(t-tAlt)/1000) : 0.016;
+  tAlt = t;
+  var dt = dtEcht*tempo;
+  takte++;
+  zeichne(schritt(dt), dt);
+}
+
+/* ---------------- Bedienung ---------------- */
+function stufeFluss(v){ return v<0.03?"angehalten":v<0.4?"langsam":v<0.75?"ruhig":"schnell"; }
+function stufeTiefe(v){ return v<0.03?"Atempause":v<0.4?"flach":v<0.75?"ruhig":"tief"; }
+function stufeFreq(v){ return v<0.3?"langsam":v<0.75?"ruhig":"schnell"; }
+function beschrifte(){
+  el.lblFluss.textContent = stufeFluss(fluss);
+  el.lblTiefe.textContent = stufeTiefe(tiefe);
+  el.lblFreq.textContent = stufeFreq(frequenz);
+  el.stAtemwege.textContent = obstruktion < 0.05 ? "Atemwege frei" : (obstruktion < 0.5 ? "Atemwege verengt" : "Atemwege stark verengt");
+  el.stAtemwege.classList.toggle("warn", obstruktion >= 0.05);
+  el.stFlaeche.textContent = flaeche > 0.9 ? "Austauschfläche normal" : "Austauschfläche vermindert";
+  el.stFlaeche.classList.toggle("warn", flaeche <= 0.9);
+  el.stMuster.textContent = cheyne ? "Cheyne-Stokes-Atmung" : "Atemmuster regelmäßig";
+  el.stMuster.classList.toggle("warn", cheyne);
+  zeichneBefund();
+  el.ergSz.textContent = szName;
+}
+function eigeneEinstellung(){
+  PANE.querySelectorAll("[data-sz]").forEach(function(x){ x.classList.remove("on"); });
+  szName = "Eigene Einstellung";
+  beschrifte();
+}
+
+$(ID("fluss")).addEventListener("input", function(){ fluss = +this.value/100; eigeneEinstellung(); });
+$(ID("tiefe")).addEventListener("input", function(){ tiefe = +this.value/100; eigeneEinstellung(); });
+$(ID("freq")).addEventListener("input", function(){ frequenz = +this.value/100; eigeneEinstellung(); });
+$(ID("freiAlv")).addEventListener("input", function(){ freiAlv = +this.value/100; });
+$(ID("freiBlut")).addEventListener("input", function(){ freiBlut = +this.value/100; });
+
+PANE.querySelectorAll("[data-set]").forEach(function(b){
+  b.addEventListener("click", function(){
+    fluss = +b.dataset.wert/100; $(ID("fluss")).value = b.dataset.wert; eigeneEinstellung();
+  });
+});
+
+var SZENARIEN = {
+  normal: { n:"Normale Ruheatmung", t:0.50, f:0.50, o:0.00, a:1.00 },
+  hyper:  { n:"Hyperventilation",   t:0.85, f:0.95, o:0.00, a:1.00 },
+  hypo:   { n:"Hypoventilation",    t:0.16, f:0.20, o:0.00, a:1.00 },
+  asthma: { n:"Asthmaanfall",       t:0.40, f:0.75, o:0.85, a:1.00 },
+  copd:   { n:"COPD",               t:0.38, f:0.55, o:0.60, a:0.35 },
+  azidose:{ n:"Respiratorische Azidose", t:0.12, f:0.15, o:0.25, a:1.00 },
+  cheyne: { n:"Cheyne-Stokes-Atmung",    t:0.75, f:0.50, o:0.00, a:1.00, cs:true }
+};
+function segment(attr, aktion){
+  PANE.querySelectorAll("["+attr+"]").forEach(function(b){
+    b.addEventListener("click", function(){
+      PANE.querySelectorAll("["+attr+"]").forEach(function(x){ x.classList.remove("on"); });
+      b.classList.add("on");
+      aktion(b.dataset[attr.replace("data-","")]);
+    });
+  });
+}
+segment("data-sz", function(w){
+  var s = SZENARIEN[w];
+  szName = s.n; tiefe = s.t; frequenz = s.f; obstruktion = s.o; flaeche = s.a;
+  cheyne = !!s.cs; csP = 0;
+  $(ID("tiefe")).value = Math.round(s.t*100); $(ID("freq")).value = Math.round(s.f*100);
+  beschrifte();
+});
+segment("data-gas", function(w){
+  gas = w; zeigO2 = (w!=="co2"); zeigCO2 = (w!=="o2");
+  for (var q=0;q<ery.length;q++){ ery[q].rO = -1; ery[q].rC = -1; }
+  [el.legO2p, el.legO2t].forEach(function(x){ x.setAttribute("opacity", zeigO2?"1":"0.18"); });
+  [el.legCO2p, el.legCO2t].forEach(function(x){ x.setAttribute("opacity", zeigCO2?"1":"0.18"); });
+});
+segment("data-tempo", function(w){
+  tempo = parseFloat(w);
+  el.tempoBadge.classList.toggle("an", tempo < 1);
+  el.tempoFaktor.textContent = tempo === 0.5 ? "½×" : "¼×";
+});
+
+$(ID("freiAn")).addEventListener("change", function(){
+  frei = this.checked;
+  el.freiFeld.classList.toggle("auf", frei);
+  if (frei){
+    PANE.querySelectorAll("[data-gas]").forEach(function(x){ x.classList.remove("on"); });
+    PANE.querySelector('[data-gas="o2"]').classList.add("on");
+    gas = "o2"; zeigO2 = true; zeigCO2 = false;
+    el.legCO2p.setAttribute("opacity","0.18"); el.legCO2t.setAttribute("opacity","0.18");
+  }
+});
+
+el.tempoBadge.classList.add("an"); el.tempoFaktor.textContent = "½×";
+beschrifte();
+
+/* Einbindung: Zustand fuer das 3D-Modell (nur lesen) */
+function zustand(){
+  return { A:A, ery:ery, ANKUNFT:ANKUNFT, frei:frei, freiBlut:freiBlut, abO2:abO2, abCO2:abCO2, fLunge:fLunge, zeigO2:zeigO2, zeigCO2:zeigCO2,
+           nO2:alvZielO2(), nCO2:alvZielCO2(), O2MAX:O2MAX, CO2MAX:CO2MAX, PLATZ_O2:PLATZ_O2, PLATZ_CO2:PLATZ_CO2, ERY:ERY,
+           blutfarbe:blutfarbe, blutfarbeBlass:blutfarbeBlass };
+}
+/* Zugriff fuer die Bedienung ausserhalb (Pause) und fuer die Pruefung (nur lesen) */
+function lesen(){
+  var r4 = function(x){ return Math.round(x*10000)/10000; };
+  var T = function(k){ return el[k].textContent; }, W = function(k){ return el[k].getAttribute("width"); };
+  return {
+    A: { o2: r4(A.o2), co2: r4(A.co2) }, abO2: r4(abO2), abCO2: r4(abCO2), austausch: r4(austausch), fluss: r4(fluss), tiefe: r4(tiefe), frequenz: r4(frequenz),
+    tempo: tempo, gas: gas, frei: frei, pausiert: pausiert, takte: takte,
+    kette: { m1: T("m1"), w1: T("w1"), p2: T("p2"), w2: T("w2"), w3: T("w3"), w4: T("w4") },
+    ergebnis: { sz: T("ergSz"), barAO: W("barAO"), barAC: W("barAC"), barBO: W("barBO"), barBC: W("barBC"), barAus: W("barAus"),
+                urtAus: T("urtAus"), urtO: T("urtO"), urtC: T("urtC"), urtS: T("urtS") },
+    ery: ery.map(function(e){ return { x: r4(e.x), o2: r4(e.o2), co2: r4(e.co2), sO2: e.sO2, sCO2: e.sCO2 }; })
+  };
+}
+return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zustand: zustand, anschliessen: function (f) { haken = f; } };
+})();
+
+/* =====================================================================
+   6. Gasaustausch in 3D: die Simulation (gas) steuert das Modell, an der Physik des Originals aendert sich nichts. Neu gegenueber dem Original (Darstellung):
+   - Blutkoerperchen: genau die ERY Zellen der Simulation (Position e.x entlang EINER Kapillarbahn um die aufgeschnittene Alveole, vom linken, blauen Ende der
+     Arterienseite zum rechten, roten der Venenseite), als flache bikonkave Scheiben, Farbe blutfarbeBlass(e.o2) wie im Original; ihre Punkte (sO2 oben, sCO2 unten, mit
+     Gasfilter) liegen auf den festen Plaetzen PLATZ_O2/PLATZ_CO2. Darstellungsgroesse: Laenge 0,26, Breite 0,16 Modelleinheiten (wirklich ca. 0,075, also etwa Faktor 2-3).
+   - Gasteilchen in der aufgeschnittenen Alveole: alvZielO2() rote, alvZielCO2() graublaue Kugeln (mit Gasfilter), feste Plaetze (Halton-Folge, keine Zufallszahlen) mit
+     ruhiger Bewegung aus der Uhr der Simulation; Kugelradius 0,07 (gross genug zum Sehen).
+   - Gefaesse: Arterie und zufuehrende Seite des Kapillarnetzes in blutfarbe(Ankunft bzw. freies Blut), Vene und abfuehrende Seite in blutfarbe(abO2) (wie abflussRohr).
+   - Atmung: root dehnt sich um die Mitte des Saeckchens mit 1 + 0,04 * fLunge.
+   Alles ist je Bild aus dem Zustand der Simulation gesetzt (Pause haelt es an); die Teilchen tragen userData.teilchen und noexport und sind nicht anklickbar.
+   ===================================================================== */
+var G3 = null;                                   /* Zustand der 3D-Darstellung (wird nach dem Kapillarnetz gebaut) */
+var ERY_L = 0.26, ERY_B = 0.16, ERY_Z = 0.10;    /* Halbachsen der Scheibe: Laenge/2 = 0,13, Breite/2 = 0,08, Dicke (Skala der Wolbung) */
+var ERY_PX = 0.0038;                             /* Modelleinheiten je Bildpunkt der Plaetze PLATZ_* (Zelle 68 x 42 Bildpunkte -> 0,26 x 0,16) */
+var PT_R = 0.02, GAS_R = 0.07, GAS_AMP = 0.10;   /* Radius der Punkte an der Zelle, der Gasteilchen, Schwingung der Gasteilchen */
+var ATEM_DEHNUNG = 0.04, ATEM_MITTE_Y = -2.8;    /* Atmung: Skalierung 1 + ATEM_DEHNUNG * fLunge um den Punkt (0, ATEM_MITTE_Y, 0) */
+function rgbFarbe(str) {                         /* "rgb(r,g,b)" aus der Simulation -> Farbe (linear, wie srgb) */
+  var m = /(\d+),\s*(\d+),\s*(\d+)/.exec(str);
+  return srgb((+m[1] << 16) | (+m[2] << 8) | +m[3]);
+}
+function halton(i, b) { var f = 1, r = 0; i++; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; }
+function scheibeGeo() {                          /* bikonkave Scheibe (Rotationskoerper, Evans-Fung-Profil), Radius 1, Achse z */
+  var prof = [], k, rho, h, n = 10;
+  for (k = 0; k <= n; k++) { rho = k / n; h = Math.sqrt(Math.max(0, 1 - rho * rho)) * (0.207 + 0.5006 * rho * rho - 0.0702 * rho * rho * rho * rho); prof.push(new THREE.Vector2(rho, -h)); }
+  for (k = n; k >= 0; k--) { rho = k / n; h = Math.sqrt(Math.max(0, 1 - rho * rho)) * (0.207 + 0.5006 * rho * rho - 0.0702 * rho * rho * rho * rho); prof.push(new THREE.Vector2(rho, h)); }
+  var g = new THREE.LatheGeometry(prof, 20);
+  g.rotateX(Math.PI / 2);                        /* Achse y -> z */
+  return g;
+}
+function gas3DBauen() {
+  var Z0 = gas.zustand(), bahn = KAP_BAHNEN[0], i, k;
+  KAP_BAHNEN.forEach(function (b) { if (b.pts.length > bahn.pts.length) bahn = b; });   /* die laengste zusammenhaengende Bahn */
+  var kurve = new THREE.CatmullRomCurve3(bahn.pts.map(function (q) { return V(q[0], q[1], q[2]); }), false, 'catmullrom', 0.5), NB = 240, bp = [], bt = [];
+  for (i = 0; i <= NB; i++) { bp.push(kurve.getPointAt(i / NB)); bt.push(kurve.getTangentAt(i / NB)); }
+  /* Blutkoerperchen und ihre Punkte */
+  var ery = new THREE.InstancedMesh(scheibeGeo(), mat(0xffffff, { rough: 0.5 }), Z0.ERY);
+  ery.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  ery.setColorAt(0, new THREE.Color(1, 1, 1));
+  ery.instanceColor.setUsage(THREE.DynamicDrawUsage);
+  var dotGeo = new THREE.SphereGeometry(PT_R, 8, 6);
+  var dO = new THREE.InstancedMesh(dotGeo, mat(0xCE3A2F, { rough: 0.35 }), Z0.ERY * Z0.PLATZ_O2.length);
+  var dC = new THREE.InstancedMesh(dotGeo, mat(0x6B7F8C, { rough: 0.35 }), Z0.ERY * Z0.PLATZ_CO2.length);
+  /* Gasteilchen in der aufgeschnittenen Alveole: feste Plaetze im Innenraum (Kugel um die Mitte, vor der Schnittebene) */
+  var OFd = App.daten.offen, c = OFd.mitte, Rin = OFd.radius - T_WAND - GAS_R - 0.06, zmax = OFd.schnittZ - 0.14;
+  var geoG = new THREE.SphereGeometry(GAS_R, 10, 7);
+  var gO = new THREE.InstancedMesh(geoG, mat(0xCE3A2F, { rough: 0.35 }), Z0.O2MAX);
+  var gC = new THREE.InstancedMesh(geoG, mat(0x6B7F8C, { rough: 0.35 }), Z0.CO2MAX);
+  function plaetze(n, versatz) {
+    var a = [];
+    for (k = 0; k < n; k++) {
+      var rr = Rin * Math.cbrt(halton(k + versatz, 2)), ct = 1 - 2 * halton(k + versatz, 3), st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * halton(k + versatz, 5);
+      var x = rr * st * Math.cos(ph), y = rr * st * Math.sin(ph), z = rr * ct;
+      if (c[2] + z > zmax) z = 2 * (zmax - c[2]) - z;   /* hinter der Schnittebene bleiben (spiegeln) */
+      a.push({ b: [c[0] + x, c[1] + y, c[2] + z], w: [0.7 + 0.6 * halton(k + versatz, 7), 0.7 + 0.6 * halton(k + versatz, 11), 0.7 + 0.6 * halton(k + versatz, 13)], p: [6.28 * halton(k + versatz, 17), 6.28 * halton(k + versatz, 19), 6.28 * halton(k + versatz, 23)] });
+    }
+    return a;
+  }
+  G3 = { bp: bp, bt: bt, NB: NB, ery: ery, dO: dO, dC: dC, gO: gO, gC: gC, pO: plaetze(Z0.O2MAX, 0), pC: plaetze(Z0.CO2MAX, 41), c: c, Rin: Rin, zmax: zmax, t: 0,
+         cA: '', cV: '', M: new THREE.Matrix4(), v: new THREE.Vector3(), X: new THREE.Vector3(), Y: new THREE.Vector3(), Zv: new THREE.Vector3(0, 0, 1), P: new THREE.Vector3(), nul: new THREE.Matrix4().makeScale(0, 0, 0) };
+  [[ery, 'Blutkörperchen'], [dO, 'Sauerstoff am Blutkörperchen'], [dC, 'Kohlendioxid am Blutkörperchen'], [gO, 'Sauerstoff in der Alveole'], [gC, 'Kohlendioxid in der Alveole']].forEach(function (q, j) {
+    var m = q[0];
+    m.name = q[1]; m.userData.teilchen = j < 3 ? 'ery' : 'gas'; m.userData.noexport = true;
+    m.frustumCulled = false; m.renderOrder = 4;
+    m.raycast = function () {};                  /* Teilchen sind nicht anklickbar */
+    if (m !== ery) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    dyn.add(m);
+  });
+}
+/* Punkt (P) und Richtung (X, in der Bildebene) auf der Bahn bei u (0..1) */
+function bahnAn(u) {
+  var f = Math.max(0, Math.min(1, u)) * G3.NB, i = Math.min(G3.NB - 1, Math.floor(f)), t = f - i, a = G3.bp[i], b = G3.bp[i + 1], ta = G3.bt[i], tb = G3.bt[i + 1];
+  G3.P.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+  G3.X.set(ta.x + (tb.x - ta.x) * t, ta.y + (tb.y - ta.y) * t, 0);
+  if (G3.X.lengthSq() < 1e-6) G3.X.set(1, 0, 0);
+  G3.X.normalize();
+  G3.Y.set(-G3.X.y, G3.X.x, 0);                  /* z x X: nach oben, wo die Bahn nach rechts laeuft */
+}
+function gas3D(Z, dt) {
+  if (!G3) return;
+  var i, j, e, g = G3, M = g.M, v = g.v;
+  g.t += dt;
+  /* Atmung */
+  var sk = 1 + ATEM_DEHNUNG * Z.fLunge;
+  root.scale.setScalar(sk); root.position.set(0, ATEM_MITTE_Y * (1 - sk), 0);
+  /* Gefaesse: Arterienseite in der Farbe des ankommenden Blutes, Venenseite in der des abfliessenden */
+  var cA = Z.blutfarbe(Z.frei ? Z.freiBlut : Z.ANKUNFT.o2), cV = Z.blutfarbe(Z.abO2);
+  if (cA !== g.cA || cV !== g.cV) {
+    g.cA = cA; g.cV = cV;
+    var kA = rgbFarbe(cA), kV = rgbFarbe(cV);
+    MAT.arteriole.color.copy(kA); MAT.venole.color.copy(kV);
+    STRUCT.kapillaren.meshes.forEach(function (m) { farbeKap(m.geometry, kA, kV); });
+  }
+  /* Blutkoerperchen und ihre Punkte */
+  var lift = KAP_R_OFFEN + ERY_Z * 0.31 + 0.01, vo = Z.PLATZ_O2.length, vc = Z.PLATZ_CO2.length;
+  for (i = 0; i < Z.ery.length; i++) {
+    e = Z.ery[i];
+    bahnAn(e.x);
+    g.P.z += lift;
+    M.makeBasis(v.copy(g.X).multiplyScalar(ERY_L / 2), g.Y.clone().multiplyScalar(ERY_B / 2), g.Zv.clone().multiplyScalar(ERY_Z)); M.setPosition(g.P);
+    g.ery.setMatrixAt(i, M);
+    g.ery.setColorAt(i, rgbFarbe(Z.blutfarbe(e.o2)).lerp(rgbFarbe(Z.blutfarbeBlass(e.o2)), 0.4));   /* Mischung: das blasse Original-Blau/Rot wirkt im beleuchteten 3D fast weiss */
+    var nO = Z.zeigO2 ? e.sO2 : 0, nC = Z.zeigCO2 ? e.sCO2 : 0;
+    for (j = 0; j < vo; j++) {
+      if (j < nO) { v.copy(g.P).addScaledVector(g.X, Z.PLATZ_O2[j][0] * ERY_PX).addScaledVector(g.Y, -Z.PLATZ_O2[j][1] * ERY_PX); v.z += ERY_Z * 0.36 + PT_R * 0.5; M.makeTranslation(v.x, v.y, v.z); g.dO.setMatrixAt(i * vo + j, M); }
+      else g.dO.setMatrixAt(i * vo + j, g.nul);
+    }
+    for (j = 0; j < vc; j++) {
+      if (j < nC) { v.copy(g.P).addScaledVector(g.X, Z.PLATZ_CO2[j][0] * ERY_PX).addScaledVector(g.Y, -Z.PLATZ_CO2[j][1] * ERY_PX); v.z += ERY_Z * 0.36 + PT_R * 0.5; M.makeTranslation(v.x, v.y, v.z); g.dC.setMatrixAt(i * vc + j, M); }
+      else g.dC.setMatrixAt(i * vc + j, g.nul);
+    }
+  }
+  g.ery.instanceMatrix.needsUpdate = true; g.ery.instanceColor.needsUpdate = true; g.dO.instanceMatrix.needsUpdate = true; g.dC.instanceMatrix.needsUpdate = true;
+  /* Gasteilchen: die ersten alvZiel sind sichtbar (wie im Original), ruhig schwebend */
+  [[g.gO, g.pO, Z.zeigO2 ? Z.nO2 : 0], [g.gC, g.pC, Z.zeigCO2 ? Z.nCO2 : 0]].forEach(function (q) {
+    var im = q[0], pl = q[1], n = q[2], a, x, y, z, dx, dy, dz, d;
+    for (i = 0; i < pl.length; i++) {
+      if (i >= n) { im.setMatrixAt(i, g.nul); continue; }
+      a = pl[i];
+      x = a.b[0] + GAS_AMP * Math.sin(a.w[0] * g.t + a.p[0]); y = a.b[1] + GAS_AMP * Math.sin(a.w[1] * g.t + a.p[1]); z = a.b[2] + GAS_AMP * Math.sin(a.w[2] * g.t + a.p[2]);
+      if (z > g.zmax) z = g.zmax;
+      dx = x - g.c[0]; dy = y - g.c[1]; dz = z - g.c[2]; d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d > g.Rin) { d = g.Rin / d; x = g.c[0] + dx * d; y = g.c[1] + dy * d; z = g.c[2] + dz * d; }
+      M.makeTranslation(x, y, z); im.setMatrixAt(i, M);
+    }
+    im.instanceMatrix.needsUpdate = true;
+  });
+}
+gas.anschliessen(gas3D);
+
+/* Knoepfe der Werkzeugleiste: Pause/Weiter des Gasaustauschs und Schema (Muster wie bei der Lunge) */
+var gasLaeuft = true;
+$('bPlay').onclick = function () {
+  gasLaeuft = !gasLaeuft;
+  gas.pause(!gasLaeuft);
+  this.textContent = gasLaeuft ? 'Pause' : 'Abspielen';
+  this.classList.toggle('on', gasLaeuft);
+};
+/* Schema: Panel rechts (Desktop) bzw. oben (Handy); die 3D-Ansicht wird dabei ausgeblendet und nicht gezeichnet, die Beschriftung ebenso.
+   Handy: Hoehe der Werkzeugleiste als --wz (das Schema endet darueber); aendert sich die Leiste (Umbruch), misst der Beobachter neu */
+var schemaOn = false, schemaWz = null;
+/* Abzeichen im Schema: Skala = Breite des Bildes / 950 px (Buehnenbreite des Originals bei 1280 x 800), Variable --sk am Bild */
+var BUEHNE_B = 950;
+function schemaSkala() {
+  var b = $('laBild'), w = b && b.clientWidth;
+  if (w) b.style.setProperty('--sk', (w / BUEHNE_B).toFixed(4));
+}
+function schemaMessen() {
+  schemaSkala();
+  if (!window.matchMedia('(max-width:1000px)').matches) { schemaWzLoeschen(); return; }   /* Desktop: nichts setzen */
+  document.body.style.setProperty('--wz', Math.ceil($('tools').getBoundingClientRect().height) + 'px');
+}
+function schemaWzLoeschen() {
+  document.body.style.removeProperty('--wz');
+  if (!document.body.getAttribute('style')) document.body.removeAttribute('style');
+}
+function schemaWzEnde() {
+  if (schemaWz) { schemaWz.disconnect(); schemaWz = null; }
+  schemaWzLoeschen();
+}
+function setSchema(on) {
+  schemaOn = on;
+  $('bSchema').classList.toggle('on', on);
+  $('schema').classList.toggle('show', on);
+  document.body.classList.toggle('schema', on);
+  if (on) {
+    schemaMessen();
+    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe($('tools')); schemaWz.observe($('laBild')); }
+  } else schemaWzEnde();
+  canvas.style.visibility = on ? 'hidden' : '';
+  lv++;
+}
+$('bSchema').onclick = function () { setSchema(!schemaOn); };
+$('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
+   7. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
 /* daten: Andockpunkte fuer die Simulation (B2): Kapillarbahnen und Innenraum der aufgeschnittenen Alveole (Modelleinheiten), dyn = Gruppe der Teilchen */
-var App = window.AlveoleApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, offen: offen, ansicht: ansicht, dreiecke: tris,
+var App = window.AlveoleApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, offen: offen, ansicht: ansicht, dreiecke: tris, gas: gas.lesen,
   daten: { kapBahnen: KAP_BAHNEN, offen: { mitte: OF.c, radius: OF.r, richtung: OF.n, schnittZ: OF_ZC }, dyn: dyn } };
 function loop(now) {
+  gas.tick(now);
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
-  renderer.render(scene, camera);
+  if (!schemaOn) renderer.render(scene, camera);   /* bei offenem Schema ist die 3D-Ansicht ausgeblendet */
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
 }
@@ -844,6 +2007,7 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   abgebaut = true;
   clearTimeout(Kern.toast._t);
+  clearTimeout(quizT);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
@@ -853,6 +2017,7 @@ organ.abbauen = function () {
   /* DOM */
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; [b.el, b.ln, b.dot].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }); });
   labelBox.style.display = ''; leaderSvg.style.display = '';
+  schemaWzEnde(); document.body.classList.remove('schema'); canvas.style.visibility = '';
   umg.bereich.innerHTML = '';
   $('bootBar').style.width = ''; $('bootSt').textContent = '';
   var tt = $('toast'); tt.classList.remove('show'); tt.innerHTML = '';

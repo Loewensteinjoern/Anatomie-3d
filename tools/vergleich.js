@@ -45,7 +45,10 @@
 
    Modell alveole (index.html#lunge/alveole): Alveolarsäckchen stark vergrößert mit Bronchiolus, Alveolargang, einer aufgeschnittenen Alveole, Kapillarnetz und den
    Gefäßen. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Alveole, Kapillarnetz, Bronchiolus), geschlossen (#bZu), Durchsicht, aufgeschnitten
-   ohne Beschriftung, Info), handy (Übersicht, Info), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus enthalten zusätzlich alveoleApp.
+   ohne Beschriftung, Info; am Ende Gasaustausch: Reiter, 3D nach 3 s (Blutkörperchen, Gasteilchen), Schema (#bSchema), nur CO₂, Blutfluss Stopp, schnell mit Atempause,
+   Freier Modus, Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von AlveoleApp.gas() stehen in erg.gas),
+   Hilfekarte, „Probier das aus“ und Üben), handy (Übersicht, Info; am Ende Schema und 3D), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus
+   enthalten zusätzlich alveoleApp. Das Schema gegen das Original prüft nicht vergleich.js, sondern nachweis.js (alveole).
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -621,10 +624,33 @@ const MODELLE = {
         await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
         await t.klick('#bSee'); await t.klick('#bOffen'); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Gasaustausch (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben): Reiter, 3D mit Blutkörperchen und Gasteilchen, Schema (#bSchema), Gas, Blutfluss,
+           Atemtiefe, Freier Modus, Tempo und Pause (#bPlay); nach den Schema-Bildern die Werte von AlveoleApp.gas() in erg.gas */
+        const werte = async (name) => { (t.erg.gas || (t.erg.gas = {}))[t.kname + '-' + name] = await t.js(() => window.AlveoleApp.gas()); };
+        const regler = (id, v) => t.js(([i, w]) => { const e = document.getElementById(i); e.value = w; e.dispatchEvent(new Event('input', { bubbles: true })); }, [id, v]);
+        await t.klick('#bCls'); await t.klick('#rail .tabs .tab:text-is("Gasaustausch")'); await t.weiter(300); await t.bild('gasaustausch');
+        await t.weiter(3000); await t.bild('3d-gasaustausch');
+        await t.klick('#bSchema'); await t.weiter(300); await t.bild('schema'); await werte('schema');
+        await t.klick('#laGasWahl button[data-gas="co2"]'); await t.weiter(1500); await t.bild('schema-co2'); await werte('schema-co2');
+        await t.klick('#laGasWahl button[data-gas="beide"]');
+        await t.klick('#paneGas button[data-set="fluss"][data-wert="0"]'); await t.weiter(3000); await t.bild('schema-stopp'); await werte('schema-stopp');
+        await t.klick('#paneGas button[data-set="fluss"][data-wert="100"]'); await regler('laTiefe', 0); await t.weiter(4000); await t.bild('schema-atempause'); await werte('schema-atempause');
+        await t.klick('#laFreiAn'); await t.weiter(1500); await t.bild('schema-frei'); await werte('schema-frei');
+        await t.klick('#laTempoWahl button[data-tempo="0.25"]'); await t.weiter(800);
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('schema-pause'); await werte('schema-pause-1');
+        await t.weiter(1000); await t.bild('schema-pause'); await werte('schema-pause-2');   /* beide Bilder müssen gleich aussehen, die Werte ebenso */
+        await t.klick('#bPlay'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(300); await t.bild('hilfekarte');
+        await t.klick('#paneHelp .dis >> nth=10'); await t.weiter(300); await t.bild('probier');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Gasaustausch (neue Bilder am Ende): Reiter, Schema offen; die Leiste bleibt bedienbar; dann Schema zu: 3D mit Blutkörperchen und Gasteilchen */
+        await t.klick('#bCls'); await t.klick('#rail .tabs .tab:text-is("Gasaustausch")'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
+        (t.erg.gas || (t.erg.gas = {}))[t.kname + '-schema'] = await t.js(() => window.AlveoleApp.gas());
+        await t.klick('#bSchemaX'); await t.weiter(300); await t.bild('3d-gasaustausch');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -632,6 +658,7 @@ const MODELLE = {
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'alveole', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('alveole');
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
+        await t.klick('#rail .tabs .tab:text-is("Gasaustausch")'); await t.klick('#bSchema'); await t.weiter(600); await t.bild('schema');   /* Schema bleibt offen: der Abbau muss es samt Klasse schema wegräumen */
       }) }
     }
   },
