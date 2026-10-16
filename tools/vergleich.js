@@ -40,7 +40,8 @@
    Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von LungeApp.atmung() stehen in erg.atmung
    und werden von `vergleichen` verglichen); danach die 3D-Lunge, die mitatmet (Schema zu, Ruheatmung „3d-einatmen“, angestrengte Atmung „3d-stress“, Rippen
    durchsichtig), die Hilfekarte („hilfekarte“, „probier“ = „Probier das aus“) und das Üben („ueben“)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung
-   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR.
+   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR. Am Ende von desktop steht „auswahl-lappen“ (rechter Unterlappen
+   an einem festen Punkt angetippt, Infokarte mit „Alveole hier ansehen“).
    Der Vergleich des Atmungs-Schemas mit dem Original-Modell (Ebene 1) ist ein eigenes Werkzeug: tools/nachweis.js (Vorlage: tools/originale/).
 
    Modell alveole (index.html#lunge/alveole): Alveolarsäckchen stark vergrößert mit Bronchiolus, Alveolargang, einer aufgeschnittenen Alveole, Kapillarnetz und den
@@ -62,7 +63,7 @@
    nach der Kamerafahrt) haben kein Gegenstück und sind nur anzusehen. Zusätzlich wird der Endzustand nach
    Übergängen geprüft (Standbild #uebergang verborgen, keine inline-opacity/pointer-events auf den Kindern
    von #organ, body und Canvas): bei m1/m2 von uebergaenge, im Kontext uebergaenge-niere (Fahrt zur Niere,
-   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Der Kontext uebergaenge-lunge (Körper → Lunge mit Kamerafahrt, Browser-Zurück mit Rückfahrt, Adresse #lunge, Zurück-Knopf „← Körper“) prüft den Endzustand ebenso, uebergaenge-lunge-handy zeigt dieselbe Fahrt auf dem Handy (Bilder fahrt-lunge und lunge). Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
+   Standbild, Rückfahrt, Nephron und zurück zur Niere, Fahrt in das Nephron an einer angetippten Stelle der Rinde und zurück) und in fehler (Standbild nach Fahrt mit Ladefehler verborgen). Der Kontext uebergaenge-lunge (Körper → Lunge mit Kamerafahrt, Browser-Zurück mit Rückfahrt, Adresse #lunge, Zurück-Knopf „← Körper“) prüft den Endzustand ebenso, uebergaenge-lunge-handy zeigt dieselbe Fahrt auf dem Handy (Bilder fahrt-lunge und lunge). Der Kontext uebergaenge-alveole (#lunge → Knopf „Alveole“ mit Kamerafahrt, Bild fahrt-alveole, Alveole, Zurück-Knopf „← Lunge“, Browser-Zurück mit Rückfahrt, dann einen Lappen antippen und „Alveole hier ansehen“ (fahrt-alveole-punkt), Alveole, Zurück-Knopf des Atlas; Endzustand wie oben, Ergebnis in erg.uebergaengeAlveole) und uebergaenge-alveole-handy (Bilder fahrt-alveole und alveole auf dem Handy) prüfen die Zoomstufe Lunge → Alveole. Die Kontexte weiterleitung und weiterleitung-datei (file://) prüfen die
    alten Adressen nephron.html, atlas.html#herz, atlas.html und index.html#nephron (im Atlas auf
    #niere/nephron umgeleitet; wird frisch geladen, auch wenn davor index.html offen war): Ziel-Adresse muss stimmen,
    das Organ bzw. der Körper muss bereit sein. Erwartete Fehlermeldungen des Kontexts fehler werden
@@ -592,6 +593,8 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(300); await t.bild('hilfekarte');
         await t.klick('#paneHelp .dis >> nth=7'); await t.weiter(300); await t.bild('probier');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
+        /* Zoomstufe (neues Bild am Ende): rechten Unterlappen an einem festen Punkt antippen, die Infokarte zeigt „Alveole hier ansehen“ */
+        await t.js(() => window.LungeApp.waehle('unterlappenR', [-5.5, -8.2, -4.0])); await t.weiter(300); await t.bild('auswahl-lappen');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -818,6 +821,35 @@ MODELLE.atlas.kontexte['uebergaenge-lunge'] = { opt: DESKTOP, init: [initListene
   const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Körper/.test(knopf);
   t.erg.uebergaengeLunge = { endzustand: [z1, z2], knopf, ok };
   process.stdout.write('  uebergaenge-lunge: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+/* Kontext uebergaenge-alveole: die Lunge (Adresse #lunge, das Saeckchen ist im Hintergrund gebaut), Knopf „Alveole“ (Kamerafahrt, Bild mitten in der Fahrt), Alveole (Adresse
+   #lunge/alveole, Zurück-Knopf „← Lunge“), Browser-Zurück (Lunge startet gedreht im Nahbild, Rückfahrt); dann einen Lappen an einem festen Punkt antippen, „Alveole hier ansehen“
+   (Fahrt zu dem Endast), Alveole, Zurück-Knopf des Atlas zurück zur Lunge; Endzustand prüfen. uebergaenge-alveole-handy: Knopf „Alveole“ auf dem Handy (Bilder fahrt-alveole und alveole) */
+const ATLAS_LUNGE_ALVEOLE_BEREIT = () => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-lunge' && !!(window.LungeApp && window.LungeApp.ready && window.LungeApp.alveoleBereit());
+MODELLE.atlas.kontexte['uebergaenge-alveole'] = { opt: DESKTOP, adresse: '#lunge', init: [initListener], bereit: ATLAS_LUNGE_ALVEOLE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500); await t.bild('lunge');
+  await t.klick('#bAlveole'); await t.weiter(600); await t.bild('fahrt-alveole'); await t.bisAdresse('#lunge/alveole');
+  await organ('alveole'); await t.bild('standbild');
+  await t.weiter(1500); await t.bild('alveole');
+  const knopf = await t.js(() => document.getElementById('atlasZurueck').textContent.trim());   /* „← Lunge“ */
+  await t.zurueck(); await organ('lunge'); await t.weiter(1000); await t.bild('rueckfahrt-lunge'); await t.weiter(1200); await t.bild('lunge-zurueck');
+  const z1 = await t.js(ATLAS_ENDZUSTAND);
+  await t.warteAuf(ATLAS_LUNGE_ALVEOLE_BEREIT);
+  /* Zoomstufe: rechten Unterlappen antippen (fester Punkt), „Alveole hier ansehen“, Alveole, Zurück-Knopf des Atlas */
+  await t.js(() => window.LungeApp.waehle('unterlappenR', [-5.5, -8.2, -4.0])); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-alveole-punkt'); await t.bisAdresse('#lunge/alveole');
+  await organ('alveole'); await t.weiter(1500); await t.bild('alveole-von-lunge');
+  await t.klick('#atlasZurueck'); await organ('lunge'); await t.weiter(1000); await t.bild('rueckfahrt-lunge-punkt'); await t.weiter(1200); await t.bild('lunge-von-alveole');
+  const z2 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Lunge/.test(knopf);
+  t.erg.uebergaengeAlveole = { endzustand: [z1, z2], knopf, ok };
+  process.stdout.write('  uebergaenge-alveole: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+MODELLE.atlas.kontexte['uebergaenge-alveole-handy'] = { opt: HANDY, adresse: '#lunge', init: [initListener], bereit: ATLAS_LUNGE_ALVEOLE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.klick('#bAlveole'); await t.weiter(600); await t.bild('fahrt-alveole'); await t.bisAdresse('#lunge/alveole');
+  await organ('alveole'); await t.weiter(1500); await t.bild('alveole');
 } };
 MODELLE.atlas.kontexte['uebergaenge-lunge-handy'] = { opt: HANDY, init: [initListener], bereit: ATLAS_LUNGE_BEREIT, async ablauf(t) {
   const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
@@ -1235,7 +1267,7 @@ async function vergleichen(va, vb) {
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
       if (b.uebergaenge.endzustandOk === false) probleme.push(m + ' Übergänge: Endzustand falsch (Standbild sichtbar oder inline-Styles)\n    ' + JSON.stringify([b.uebergaenge.m1.endzustand, b.uebergaenge.m2.endzustand]));
     }
-    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
+    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
       if (!b[k]) continue;
       if (!b[k].ok) probleme.push(m + ' ' + tx + ': Endzustand falsch\n    ' + JSON.stringify(b[k].endzustand));
       else ok.push(m + ' ' + tx + ': Endzustand stimmt');

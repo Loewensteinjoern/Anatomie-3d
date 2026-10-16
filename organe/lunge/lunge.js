@@ -7,6 +7,9 @@
    hier wird sie vernetzt, eingefaerbt und bedient.
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste. Atmung: Reiter Atmung und Schema aus dem Thorax-Modell
    (Abschnitt 6), dazu atmet das 3D-Modell mit (Abschnitt 7: Zwerchfell, Lunge, Rippen, Luftteilchen). Hilfekarten und Ueben wie bei der Niere.
+   Zoomstufe: Wer einen Lungenlappen antippt, bekommt in der Infokarte "Alveole hier ansehen" (der Punkt bestimmt den naechsten Endast des Bronchialbaums
+   im selben Lappen); der Knopf "Alveole" faehrt an eine feste Stelle im rechten Unterlappen (Abschnitt 7b). Das Saeckchen entsteht aus der Form des
+   Alveolen-Moduls (organe/lunge/alveole.js, organ.form), die Kamera landet in dessen Startansicht (Adresse lunge/alveole).
    ===================================================================== */
 (function () {
 'use strict';
@@ -79,6 +82,7 @@ var MARKUP = `<div id="title">
     <button id="cam1" class="gh">Bronchialbaum</button>
     <button id="cam2" class="gh">Hilus und Gef&auml;&szlig;e</button>
     <button id="cam3" class="gh">Zwerchfell und Pleura</button>
+    <button id="bAlveole" class="gh" title="In ein Lungenbl&auml;schen hineinzoomen">Alveole</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -214,6 +218,7 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
+  <button class="gh" id="iOpen" style="display:none">Alveole hier ansehen</button>
 </div>
 
 <div class="panel" id="scard">
@@ -375,12 +380,12 @@ function abstandFuer(ext, r, fov, h) {
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
-   32 mehr, wenn eine der ersten Reihen umbricht: Reihe 1 (Ausschnitt) unter Breite 440, dann unter 274 und unter 264); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   32 mehr, wenn eine der ersten Reihen umbricht: Reihe 1 (Ausschnitt, mit dem Knopf Alveole) unter Breite 497, dann unter 308 und unter 264); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (100 + (w < 440 ? 32 : 0) + (w < 274 ? 32 : 0) + (w < 264 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 497 ? 32 : 0) + (w < 308 ? 32 : 0) + (w < 264 ? 32 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + 115 };
 }
@@ -398,6 +403,8 @@ if (!form) throw new Error('Die Form der Lunge ist nicht geladen.');
 umg.bereich.innerHTML = MARKUP;
 /* Herz-Modell nur als Skript nachladen (ohne Gestaltung): das Herz zur Orientierung und die Herzbucht der Lunge; ohne Modul gilt ein einfaches Ersatzherz */
 var herzP = Kern.organLaden('herz', { ohneCss: true }).then(function (o) { return o.form || null; }, function (e) { console.warn(e && e.message || e); return null; });
+/* Alveolen-Modul nur als Skript nachladen (ohne Gestaltung): liefert die Form des Saeckchens und die Startansicht der Fahrt (Abschnitt 7b); ohne Modul fehlt das Saeckchen, die Fahrt bleibt moeglich (Ersatz-Startansicht) */
+var alvP = Kern.organLaden('alveole', { ohneCss: true }).then(function (o) { return o; }, function (e) { console.warn(e && e.message || e); return null; });
 
 var abgebaut = false;
 var $ = function (id) { return document.getElementById(id); };
@@ -774,9 +781,10 @@ function stelleMat(m, transparent, opacity) {
 function applyLook() {
   LAPPEN.forEach(function (sid) { stelleMat(MAT[sid], seeThrough, seeThrough ? GLAS : 1); });
 }
-/* punkt (optional, Vector3 oder [x, y, z]): wo die Struktur angetippt wurde (spaeter z. B. fuer die Alveole) */
+/* punkt (optional, Vector3 oder [x, y, z] im Raum der Szene wie ein Treffer beim Antippen): wo die Struktur angetippt wurde; bestimmt bei den Lappen die Stelle fuer "Alveole hier ansehen" */
 function setSelected(id, punkt) {
   selected = id;
+  alWahl = id && LAPPEN.indexOf(id) >= 0 ? alveoleWahl(id, punkt) : null;
   var brass = srgb(0xE0A94A);
   ORDER.forEach(function (s) {
     var em = (s.id === id) ? 0.28 : 0;
@@ -801,6 +809,7 @@ function setSelected(id, punkt) {
     var dd = document.createElement('dd'); dd.textContent = s.facts[k];
     dl.appendChild(dt); dl.appendChild(dd);
   });
+  $('iOpen').style.display = alWahl !== null ? '' : 'none';   /* Knopf "Alveole hier ansehen" nur bei den Lungenlappen */
   box.classList.add('show');
 }
 
@@ -2069,15 +2078,246 @@ $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 
 /* =====================================================================
+   7b. Kamerafahrt zur Alveole (Infokarte "Alveole hier ansehen" bei den Lungenlappen, Knopf "Alveole"): Der Brustkorb und alles Uebrige blenden aus, die Lappen werden in
+   der ersten Haelfte zu Glas (danach noch blasser), der Bronchialbaum bleibt und fuehrt zur Stelle. Dort waechst in der zweiten Haelfte das Alveolarsaeckchen aus der Form
+   des Alveolen-Moduls (organ.form) an den Endast des Bronchialbaums; es erscheint vergroessert (Massstab AL_S: der Bronchiolus des Saeckchens hat den Radius des Endasts).
+   Die Lunge dreht sich dabei (alle Achsen, um die Mitte des Saeckchens), bis der Endast senkrecht nach unten zeigt: dann gilt in Weltachsen dieselbe Lage wie im Alveolen-Modell,
+   und die Kamera landet in dessen Startansicht (umgerechnet in Welt-Koordinaten); dann wird die Adresse gesetzt. Beim Zurueckkommen (umg.von === 'alveole') steht die Lunge
+   gedreht im Nahbild und faehrt nach 450 ms zur Uebersicht zurueck (Drehung zurueck, Saeckchen blendet aus, Lappen werden wieder deckend).
+   Die Atmung steht waehrend der Fahrt (Pause), damit der Endast an seinem Platz bleibt.
+   ===================================================================== */
+var AL_S = 0.12 / 0.9;                    /* Massstab (cm je Einheit des Alveolen-Modells): Radius des Endasts (0,12 cm) durch Radius des Bronchiolus (0,9) */
+var AL_STANDARD = [-5.5, 118.5, -5.0];     /* Standardstelle (Knopf "Alveole"): der naechste Endast im rechten Unterlappen, vorn-seitlich (Koerper-Koordinaten, cm) */
+var AL_START = { theta: 0, phi: PI / 2, dist: 26, target: [0, 1.6, 0] };   /* Ersatz fuer die Startansicht des Alveolen-Moduls, falls dessen Skript fehlt */
+var AL_LOBE_ENDE = 0.08;                  /* Deckkraft der Lappen am Ende der Fahrt (Glas: GLAS) */
+var alWahl = null, alLetzte = null;       /* Endast (Index in BAUM.endpunkte) zum angetippten Punkt; zuletzt gewaehlter (fuer die Rueckfahrt; nur im Speicher der Seite) */
+var alG = null, alFertig = false, alWartet = false, sackP = null;   /* Teile des Saeckchens (Geometrien im Raum des Alveolen-Modells), fertig, Wartezeit nach dem Klick, Versprechen */
+var AL = null;                            /* Lage der aktuellen Fahrt: { idx, pc (Mitte des Saeckchens, Raum der Lunge), qa (Saeckchen -> Lunge), qEnd (Lunge -> Welt am Ende) } */
+var alGruppe = null, alM = [];            /* Gruppe des Saeckchens (Kind von root) und seine Materialien [{ m, op }] */
+var fz = null;                            /* laufende Fahrt */
+var sstep = function (a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+var ROOT0 = V(-M[0], -M[1], -M[2]), Q_ID = new THREE.Quaternion();
+/* Punkt der Ruhelage -> Lage bei der gerade eingestellten Atmung (wie die Atemwege) */
+function verschoben(p) { var o = { x: 0, y: 0, z: 0, a: 1, bx: 0, by: 1, bz: 0 }; lungeFeld(p[0], p[1], p[2], o); return [o.x, o.y, o.z]; }
+/* naechster Endast im Lappen id zum Punkt punkt (Vector3 oder [x, y, z], Raum der Szene); ohne Punkt der am weitesten vorn gelegene. null, wenn es keinen gibt */
+function alveoleWahl(id, punkt) {
+  if (!BAUM || !BAUM.endpunkte) return null;
+  var q = punkt ? root.worldToLocal(punkt.isVector3 ? punkt.clone() : V(punkt[0], punkt[1], punkt[2])) : null, best = null, bd = 1e9;
+  BAUM.endpunkte.forEach(function (e, i) {
+    if (e.lappen !== id) return;
+    var v = verschoben(e.p), d = q ? (v[0] - q.x) * (v[0] - q.x) + (v[1] - q.y) * (v[1] - q.y) + (v[2] - q.z) * (v[2] - q.z) : -v[2];
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function alStandard() {   /* Index des Endasts im rechten Unterlappen, der AL_STANDARD am naechsten liegt (Ruhelage) */
+  var best = null, bd = 1e9;
+  BAUM.endpunkte.forEach(function (e, i) {
+    if (e.lappen !== 'unterlappenR') return;
+    var d = Math.pow(e.p[0] - AL_STANDARD[0], 2) + Math.pow(e.p[1] - AL_STANDARD[1], 2) + Math.pow(e.p[2] - AL_STANDARD[2], 2);
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+/* Das Saeckchen im Raum des Alveolen-Modells als Geometrien (Wand mit Farben, Kapillarnetz, Arterie, Vene), einmal je Sitzung; ohne Modul oder bei Fehler null */
+async function alveoleNetze() {
+  try {
+    var am = await alvP; if (abgebaut || !am || !am.form) { alFertig = true; return null; }
+    var af = am.form, H = klein ? 0.12 : 0.09, F = af.feld(H), G = S.makeGrid(af.gitter, H);
+    var pause = function () { return new Promise(function (r) { setTimeout(r, 0); }); };   /* zwischen den Schritten ein Bild zeichnen lassen (je Schritt unter einer halben Sekunde) */
+    await pause(); if (abgebaut) return null;
+    var T = await S.evalFeld(G, F.wand); if (abgebaut) return null;
+    await pause(); if (abgebaut) return null;
+    var g = S.geometrie(G, T), P = g.attributes.position.array, col = new Float32Array(P.length), i, c;
+    for (i = 0; i < P.length; i += 3) { c = F.farbe(P[i], P[i + 1], P[i + 2]); col[i] = c.r; col[i + 1] = c.g; col[i + 2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    await pause(); if (abgebaut) return null;
+    var kn = af.kapillaren(F), BLAU = srgb(0x3F63B5), ROT = srgb(0xC8372D);
+    var gk = rohre(kn.linien.map(function (l) { return { pts: l.pts, r0: l.r, r1: l.r, seiten: 5, segmente: Math.max(3, l.pts.length - 1) }; })), pk = gk.attributes.position, ck = new Float32Array(pk.count * 3);
+    for (i = 0; i < pk.count; i++) {   /* Farbverlauf nach x: blau (Arterienseite, links) nach rot (Venenseite, rechts) */
+      var t = Math.min(1, Math.max(0, (pk.getX(i) + 2.2) / 4.4)); t = t * t * (3 - 2 * t);
+      ck[i * 3] = BLAU.r + (ROT.r - BLAU.r) * t; ck[i * 3 + 1] = BLAU.g + (ROT.g - BLAU.g) * t; ck[i * 3 + 2] = BLAU.b + (ROT.b - BLAU.b) * t;
+    }
+    gk.setAttribute('color', new THREE.BufferAttribute(ck, 3));
+    alG = { wand: g, kap: gk, art: rohre(af.gefaesse(-1, kn.punkte)), ven: rohre(af.gefaesse(1, kn.punkte)) };
+  } catch (e) { console.warn(e && e.message || e); alG = null; }
+  alFertig = true;
+  return alG;
+}
+/* Lage des Saeckchens am Endast idx (bei der gerade eingestellten Atmung): das Ende des Bronchiolus (Alveolen-Modell y = Y_OBEN0) liegt auf dem Ende des Endasts, die
+   Achse des Saeckchens (Modell -y) zeigt in Richtung des Endasts, die Vorderseite (Modell +z) moeglichst nach vorn (+z der Lunge); AL.qEnd dreht das zurueck */
+function alveoleLage(idx) {
+  var ep = BAUM.endpunkte[idx], ast = BAUM.filter(function (a) { return a.pts[a.pts.length - 1] === ep.p; })[0];
+  var e = V.apply(null, verschoben(ep.p)), m = V.apply(null, verschoben(ast.pts[1]));
+  var d = e.clone().sub(m).normalize(), vorn = V(0, 0, 1);
+  if (Math.abs(d.z) > 0.95) vorn = V(1, 0, 0);
+  var az = vorn.sub(d.clone().multiplyScalar(vorn.dot(d))).normalize(), ay = d.clone().negate(), ax = new THREE.Vector3().crossVectors(ay, az);
+  var qa = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(ax, ay, az));
+  var yO = (Kern.Organe.alveole && Kern.Organe.alveole.form ? Kern.Organe.alveole.form.yOben : 9.6);
+  return { idx: idx, pc: e.clone().addScaledVector(d, AL_S * yO), qa: qa, qEnd: qa.clone().invert() };
+}
+/* Startansicht des Alveolen-Modells in Welt-Koordinaten: gleiche Blickrichtung, Abstand und Ziel mit dem Massstab und der Lage des Saeckchens umgerechnet, Versatz des Bildbereichs wie im Modell */
+function alveoleZiel(w, h) {
+  var am = Kern.Organe && Kern.Organe.alveole, st = am && am.start ? am.start(w, h) : null, r = bereich(w, h);
+  if (!st) st = Object.assign({ versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] }, AL_START);
+  return { theta: st.theta, phi: st.phi, dist: AL_S * st.dist, target: ROOT0.clone().add(AL.pc).addScaledVector(V(st.target[0], st.target[1], st.target[2]), AL_S), versatz: st.versatz };
+}
+/* Die ganze Lunge um die Mitte des Saeckchens drehen: f = 0 ohne Drehung, 1 mit dem Endast senkrecht (die Mitte bleibt an ihrem Platz) */
+function alDrehung(f) {
+  root.quaternion.copy(Q_ID).slerp(AL.qEnd, f);
+  root.position.copy(ROOT0).add(AL.pc).sub(V(AL.pc.x, AL.pc.y, AL.pc.z).applyQuaternion(root.quaternion));
+}
+/* Das Saeckchen in der Lunge (unsichtbar bis zum Einblenden); ohne Teile bleibt die Gruppe leer */
+function alBauen() {
+  alGruppe = new THREE.Group(); alGruppe.name = 'Alveole'; alGruppe.visible = false;
+  alGruppe.position.copy(AL.pc); alGruppe.quaternion.copy(AL.qa); alGruppe.scale.setScalar(AL_S); root.add(alGruppe);
+  alM = [];
+  if (!alG) return;
+  var teile = [['wand', mat(0xffffff, { vc: true, rough: 0.5, coat: 0.3, coatRough: 0.45 }), 'Alveolarsäckchen'], ['kap', mat(0xffffff, { vc: true, rough: 0.45, coat: 0.2 }), 'Kapillarnetz'],
+    ['art', mat(0x3F63B5, { rough: 0.4, coat: 0.3 }), 'Arteriole'], ['ven', mat(0xC8372D, { rough: 0.4, coat: 0.3 }), 'Venole']];
+  teile.forEach(function (q) {
+    q[1].transparent = true; q[1].opacity = 0; alM.push({ m: q[1], op: 1 });
+    var m = new THREE.Mesh(alG[q[0]], q[1]); m.name = q[2]; m.renderOrder = 3; alGruppe.add(m);
+  });
+}
+function alDeckkraft(f) {   /* Deckkraft des Saeckchens 0..1 */
+  alM.forEach(function (e) { e.m.opacity = e.op * f; });
+  alGruppe.visible = f > 0.002;
+}
+function alAbbau() {   /* Saeckchen entsorgen (die Geometrien bleiben im Speicher), Lunge in die Ausgangslage */
+  if (alGruppe) { root.remove(alGruppe); alM.forEach(function (e) { e.m.dispose(); }); }
+  alGruppe = null; alM = [];
+  root.quaternion.copy(Q_ID); root.position.copy(ROOT0);
+}
+/* Alles ausser Atemwegen und Lappen zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte. Die Lappen werden Glas (transparent, ohne Tiefenschreiben). */
+function ausblendVorbereiten() {
+  var keep = new Set(), ausMat = new Map(), glas = new Map(), altT = new Map(), altD = new Map(), ausObj = [];
+  ['luftroehre', 'hauptbronchien', 'bronchien'].forEach(function (sid) { STRUCT[sid].meshes.forEach(function (m) { keep.add(m.material); }); });
+  LAPPEN.forEach(function (sid) {
+    STRUCT[sid].meshes.forEach(function (m) {
+      var x = m.material; keep.add(x);
+      if (glas.has(x)) return;
+      glas.set(x, x.opacity); altT.set(x, x.transparent); altD.set(x, x.depthWrite);
+      x.transparent = true; x.depthWrite = false; x.needsUpdate = true;
+    });
+  });
+  root.traverse(function (o) {
+    if (!o.material || !o.visible || o === alGruppe || o.parent === alGruppe || keep.has(o.material)) return;
+    var ms = [].concat(o.material);
+    ausObj.push(o);
+    ms.forEach(function (x) { if (!ausMat.has(x)) { ausMat.set(x, x.opacity); altT.set(x, x.transparent); altD.set(x, x.depthWrite); x.transparent = true; x.needsUpdate = true; } });
+  });
+  var ui = Array.prototype.slice.call(umg.bereich.children);
+  var altUi = ui.map(function (e) { return { op: e.style.opacity, pe: e.style.pointerEvents }; });
+  ui.forEach(function (e) { e.style.pointerEvents = 'none'; });
+  canvas.style.pointerEvents = 'none';
+  labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+  return { mats: ausMat, glas: glas, altT: altT, altD: altD, obj: ausObj, ui: ui, altUi: altUi, fertig: false };
+}
+/* Fahrt zur Alveole am Endast idx (null: die Standardstelle); wartet, falls das Saeckchen noch im Hintergrund entsteht */
+function alveoleOeffnen(idx) {
+  if (fz || abgebaut || alWartet || !BAUM || !BAUM.endpunkte.length) return;
+  if (sackP && !alFertig) { alWartet = true; sackP.then(function () { alWartet = false; if (!abgebaut) alveoleOeffnen(idx); }); return; }
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  closeCard();
+  atmen.pause(true);   /* der Endast bleibt an seinem Platz */
+  alLetzte = idx = (idx === null || idx === undefined) ? alStandard() : idx;
+  AL = alveoleLage(idx);
+  var w = window.innerWidth, h = window.innerHeight, ziel = alveoleZiel(w, h), r = bereich(w, h);
+  var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
+  ORDER.forEach(function (d) { d.meshes.forEach(function (m) { var mt = m.material; if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)); }); });   /* Hervorhebung weg */
+  alBauen();
+  var f = ausblendVorbereiten();
+  orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);
+  f.hin = true; f.adresse = Kern.organAdresse('alveole'); f.a = orbit.anim;
+  f.von = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2]; f.nach = ziel.versatz;
+  fz = f;
+}
+$('iOpen').onclick = function () { alveoleOeffnen(alWahl); };
+$('bAlveole').onclick = function () { alveoleOeffnen(null); };
+/* Rueckkehr aus dem Alveolen-Modell: die Lunge steht gedreht im Nahbild (am zuletzt gewaehlten Endast), das Saeckchen ist sichtbar, alles andere ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
+function rueckkehr() {
+  if (!BAUM || !BAUM.endpunkte.length) return;
+  atmen.pause(true);
+  AL = alveoleLage(alLetzte !== null ? alLetzte : alStandard());
+  var w = window.innerWidth, h = window.innerHeight, ziel = alveoleZiel(w, h), r = bereich(w, h);
+  alBauen();
+  var f = ausblendVorbereiten();
+  f.mats.forEach(function (op, m) { m.opacity = 0; });
+  f.glas.forEach(function (op, m) { m.opacity = AL_LOBE_ENDE; });
+  f.ui.forEach(function (e) { e.style.opacity = '0'; });
+  f.obj.forEach(function (o) { o.visible = false; });
+  alDrehung(1); alDeckkraft(1);
+  view.theta = ziel.theta; view.phi = ziel.phi; view.dist = ziel.dist; view.target.copy(ziel.target);
+  orbit.anim = null;
+  f.hin = false; f.a = null; f.warte = performance.now() + 450;
+  f.von = ziel.versatz; f.nach = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
+  camera.setViewOffset(w, h, f.von[0], f.von[1], w, h);
+  camera.updateProjectionMatrix();
+  fz = f;
+}
+function rueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
+  var w = window.innerWidth, h = window.innerHeight, r = bereich(w, h), a0 = AUSSCHNITTE[0], d = distFuer(a0, w, h);
+  var zurueck = function (op, m) {
+    m.opacity = op;
+    if (m.transparent !== fz.altT.get(m) || m.depthWrite !== fz.altD.get(m)) { m.transparent = fz.altT.get(m); m.depthWrite = fz.altD.get(m); m.needsUpdate = true; }
+  };
+  fz.mats.forEach(zurueck); fz.glas.forEach(zurueck);
+  fz.obj.forEach(function (o) { o.visible = true; });
+  fz.ui.forEach(function (e, i) { e.style.opacity = fz.altUi[i].op; e.style.pointerEvents = fz.altUi[i].pe; });
+  canvas.style.pointerEvents = '';
+  labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+  alAbbau();
+  view.theta = 0; view.phi = PI / 2; view.dist = d; view.target.copy(a0.target);
+  orbit.anim = null;
+  camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
+  camera.updateProjectionMatrix();
+  aktiv = 0; fitDist = d;
+  for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === 0);
+  atmen.pause(!atmenLaeuft);
+  lv++;
+  fz = null;
+}
+/* je Bild waehrend der Fahrt: Bildbereich, Deckkraft und Drehung mit derselben Glaettung wie die Kamera; u: 0 = Ausgangslage (Uebersicht), 1 = Nahbild */
+function fahrtBild(now) {
+  if (!fz.a && now >= fz.warte) {   /* Rueckfahrt beginnt: zur Uebersicht, kuerzester Weg beim Drehen */
+    var w0 = window.innerWidth, h0 = window.innerHeight, a0 = AUSSCHNITTE[0];
+    var dth = a0.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI;
+    orbit.anim = fz.a = Kern.fahrt(view, { theta: view.theta + dth, phi: PI / 2, dist: distFuer(a0, w0, h0), target: a0.target.clone() }, 1200);
+    fz.obj.forEach(function (o) { o.visible = true; });
+  }
+  var t = fz.a ? Math.min(1, Math.max(0, (now - fz.a.t0) / fz.a.d)) : 0, s = t * t * (3 - 2 * t), u = fz.hin ? s : 1 - s;
+  var w = window.innerWidth, h = window.innerHeight;
+  camera.setViewOffset(w, h, fz.von[0] + (fz.nach[0] - fz.von[0]) * s, fz.von[1] + (fz.nach[1] - fz.von[1]) * s, w, h);
+  camera.updateProjectionMatrix();
+  fz.mats.forEach(function (op, m) { m.opacity = op * (1 - u); });
+  fz.glas.forEach(function (op, m) { m.opacity = u < 0.5 ? op + (GLAS - op) * sstep(0, 0.5, u) : GLAS + (AL_LOBE_ENDE - GLAS) * sstep(0.5, 1, u); });   /* erst Glas, dann noch blasser */
+  fz.ui.forEach(function (e) { e.style.opacity = String(1 - u); });
+  if (!fz.hin && t >= 1) { rueckEnde(); return false; }
+  alDrehung(u);
+  alDeckkraft(sstep(0.5, 1, u));                                      /* erscheint in der zweiten Haelfte der Hinfahrt, geht in der ersten der Rueckfahrt */
+  if (!fz.hin) return false;
+  if (t >= 1 && !fz.fertig) { fz.fertig = true; fz.obj.forEach(function (o) { o.visible = false; }); return false; }
+  return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
-var App = window.LungeApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, brust: brust, ansicht: ansicht, dreiecke: tris, atmung: atmen.lesen };
+var App = window.LungeApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, brust: brust, ansicht: ansicht, dreiecke: tris, atmung: atmen.lesen,
+  alveole: function (i) { alveoleOeffnen(i === undefined ? null : i); }, alveoleBereit: function () { return alFertig; }, endpunkte: function () { return BAUM ? BAUM.endpunkte.map(function (e) { return { p: e.p.slice(), lappen: e.lappen }; }) : []; } };
 function loop(now) {
   atmen.tick(now);
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
+  var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
   if (!schemaOn) renderer.render(scene, camera);   /* bei offenem Schema ist die 3D-Ansicht ausgeblendet */
+  if (fz) {
+    if (weiter && fz.hin && !fz.gesetzt) { fz.gesetzt = true; location.hash = fz.adresse; }   /* Endbild ist gezeichnet */
+    return;
+  }
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
 }
@@ -2087,12 +2327,14 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  fz = null; canvas.style.pointerEvents = '';
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
+  if (alG) Object.keys(alG).forEach(function (k) { alG[k].dispose(); });   /* Teile des Saeckchens (nur bei einer Fahrt in der Szene) */
   camera.clearViewOffset();
   camera.updateProjectionMatrix();
   /* DOM */
@@ -2111,6 +2353,11 @@ return bauen().then(function () {
   if (abgebaut) return;
   applyVisibility();
   setSelected(selected);
+  sackP = alveoleNetze();   /* das Saeckchen entsteht im Hintergrund; die Rueckkehr aus der Alveole wartet darauf */
+  return umg.von === 'alveole' ? sackP : null;
+}).then(function () {
+  if (abgebaut) return;
+  if (umg.von === 'alveole') rueckkehr();   /* Rueckweg aus dem Alveolen-Modell */
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });

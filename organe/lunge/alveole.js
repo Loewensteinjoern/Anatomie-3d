@@ -444,6 +444,129 @@ var OFFEN_I = -1;        /* Index der aufgeschnittenen Alveole in ALV */
 var SCHNITT_DZ = 0.3;    /* Ebene liegt so weit vor der Mitte der Alveole */
 
 /* =====================================================================
+   organ.form: Geometrie des Saeckchens fuer die Zoomstufe der Lunge (Kamerafahrt "Alveole hier ansehen"). Nur Funktionen und Daten (Modelleinheit wie oben,
+   keine three.js-Objekte, kein Math.random); das Modell selbst nutzt sie nicht und bleibt unveraendert. Die Lunge vernetzt das Abstandsfeld mit groeberem
+   Gitter (feld(H).wand), faerbt es (feld(H).farbe), baut aus kapillaren(F) und gefaesse(seite, punkte) die Rohre und setzt alles an den Endast
+   des Bronchialbaums. Die Wand ist der aufgeschnittene Zustand des Modells (vordere Kappe der Alveole OFFEN_I fehlt, Kapillarnetz ohne diese Kappe).
+   Gleiche Rechnung wie im Aufbau des Modells (Abstandsfeld, Farbe, Kapillarnetz, Gefaesse), Kapillarnetz und Gefaesse ohne die Feinheiten des Modells.
+   ===================================================================== */
+var FORM_GITTER = [[-4.0, -7.0, -4.0], [4.0, 9.8, 4.0]];   /* Grenzen des Gitters (wie im Aufbau des Modells) */
+var FORM_STAMM = [[-3.2, 10.2, -0.2], [-3.3, 7.0, -0.2], [-3.4, 3.0, -0.2], [-3.65, -0.6, -0.2], [-3.95, -2.9, -0.2], [-4.0, -5.2, -0.2]];   /* Stamm der Arterie (links), die Vene spiegelt ihn */
+var FORM_ASTHOEHEN = [8.0, 5.6, 3.0, 0.4, -1.8, -4.0];     /* y der Abzweigungen der Gefaessaeste */
+/* Abstandsfeld der Schale mit Gitterweite H: wand(x, y, z) (aufgeschnitten, oben am Bronchiolus abgeschnitten), farbe(x, y, z) -> THREE.Color (linear, wiederverwendet),
+   U (Luftraum), besitzer (Index des naechsten Koerpers), PA (Index des ersten Blaeschens), yOben, T (Dicke) */
+function formFeld(H) {
+  var S = Kern.SDF, srgb = Kern.srgb, T = 2.2 * H, K = K_SM, i;
+  var PK = [{ s: false, a: [0, 10.8, 0], b: [0, 4.8, 0], r: 0.9, kl: 'bronchiolus' }, { s: false, a: [0, 4.8, 0], b: [0, -0.2, 0], r: 1.0, kl: 'gang' },
+    { s: true, c: [0, -2.8, 0], r: 1.35, kl: 'alveolen' }, { s: true, c: [0, -4.3, 0], r: 1.0, kl: 'alveolen' }];
+  var PA = PK.length;
+  ALV.forEach(function (a, k) { PK.push({ s: true, c: a.c, r: a.r, kl: k === OFFEN_I ? 'alveoleOffen' : 'alveolen' }); });
+  var mitteZelle = function (w, achse) { var o = FORM_GITTER[0][achse]; return o + (Math.round((w - o) / H - 0.5) + 0.5) * H; };
+  var yOben = mitteZelle(Y_OBEN0, 1), OF = ALV[OFFEN_I], zc = mitteZelle(OF.c[2] + SCHNITT_DZ, 2), rc = OF.r + 0.18;
+  function dPrim(p, x, y, z) {
+    if (p.s) { var dx = x - p.c[0], dy = y - p.c[1], dz = z - p.c[2]; return Math.sqrt(dx * dx + dy * dy + dz * dz) - p.r; }
+    return S.kapsel(x, y, z, p.a[0], p.a[1], p.a[2], p.b[0], p.b[1], p.b[2], p.r);
+  }
+  function U(x, y, z) { var d = dPrim(PK[0], x, y, z); for (i = 1; i < PK.length; i++) d = S.smin(d, dPrim(PK[i], x, y, z), K); return d; }
+  function besitzer(x, y, z) { var b = 0, bd = 1e9; for (var k = 0; k < PK.length; k++) { var d = dPrim(PK[k], x, y, z); if (d < bd) { bd = d; b = k; } } return b; }
+  function schnitt(x, y, z) { return Math.max(S.kugel(x, y, z, OF.c[0], OF.c[1], OF.c[2], rc), zc - z); }
+  function wand(x, y, z) { var u = U(x, y, z); return Math.max(Math.max(Math.max(u, -u - T), y - yOben), -schnitt(x, y, z)); }
+  var BA = { bronchiolus: srgb(0xB4C3C1), gang: srgb(0xA6B6B4), alveolen: srgb(0xEDBABF), alveoleOffen: srgb(0xE6B0B6) }, KANTE = srgb(0xFFF3EE), C = new THREE.Color();
+  var sm = function (t) { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  function farbe(x, y, z) {   /* Grundfarbe ueberblendet nach dem Abstand zu den Koerpern, innen dunkler, Kanten (oben, Schnitt) hell */
+    var dB = 1e9, dG = 1e9, dA = 1e9, dO = 1e9, k, d, p;
+    for (k = 0; k < PK.length; k++) {
+      p = PK[k]; d = dPrim(p, x, y, z);
+      if (p.kl === 'bronchiolus') { if (d < dB) dB = d; } else if (p.kl === 'gang') { if (d < dG) dG = d; }
+      else if (p.kl === 'alveoleOffen') { if (d < dO) dO = d; } else if (d < dA) dA = d;
+    }
+    var wb = sm(0.5 + (dG - dB) / 0.5), wa = sm(0.5 + (Math.min(dB, dG) - Math.min(dA, dO)) / 0.5), wo = sm(0.5 + (dA - dO) / 0.5);
+    var r = BA.gang.r + (BA.bronchiolus.r - BA.gang.r) * wb, g = BA.gang.g + (BA.bronchiolus.g - BA.gang.g) * wb, b = BA.gang.b + (BA.bronchiolus.b - BA.gang.b) * wb;
+    var ar = BA.alveolen.r + (BA.alveoleOffen.r - BA.alveolen.r) * wo, ag = BA.alveolen.g + (BA.alveoleOffen.g - BA.alveolen.g) * wo, ab = BA.alveolen.b + (BA.alveoleOffen.b - BA.alveolen.b) * wo;
+    r += (ar - r) * wa; g += (ag - g) * wa; b += (ab - b) * wa;
+    var f = U(x, y, z) < -T * 0.5 ? 0.9 : 1;
+    var ke = Math.max(Math.max(0, 1 - Math.abs(y - yOben) / 0.08), 1 - Math.abs(schnitt(x, y, z)) / 0.07);
+    ke = Math.min(1, Math.max(0, ke)); ke = ke * ke * (3 - 2 * ke);
+    return C.setRGB(r * f + (KANTE.r - r * f) * ke, g * f + (KANTE.g - g * f) * ke, b * f + (KANTE.b - b * f) * ke);
+  }
+  return { wand: wand, farbe: farbe, U: U, besitzer: besitzer, schnitt: schnitt, PA: PA, yOben: yOben, T: T };
+}
+/* Kapillarnetz der Aussenseite: Breiten- und Laengenkreise je Blaeschen auf die Wand projiziert (wie im Modell, Laeufe ohne die vordere Kappe);
+   F = formFeld(H); Rueckgabe { linien: [{ pts, r }], punkte: alle Punkte } */
+function formKapillaren(F) {
+  var U = F.U, besitzer = F.besitzer, PA = F.PA, linien = [], punkte = [];
+  var hash = function (i, j) { var s = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return s - Math.floor(s); };
+  function flaeche(i, dx, dy, dz) {   /* Punkt auf der Aussenseite der Wand von Blaeschen i in Richtung d, null wenn dort die Wand eines anderen Koerpers liegt */
+    var a = ALV[i], c = a.c, s = a.r * 0.55, ds = 0.04, smax = a.r + 1.0, x, y, z;
+    while (s < smax) { s += ds; if (U(c[0] + dx * s, c[1] + dy * s, c[2] + dz * s) > 0) break; }
+    if (s >= smax) return null;
+    var lo = s - ds, hi = s;
+    for (var k = 0; k < 14; k++) { var m = (lo + hi) / 2; if (U(c[0] + dx * m, c[1] + dy * m, c[2] + dz * m) > 0) hi = m; else lo = m; }
+    s = (lo + hi) / 2; x = c[0] + dx * s; y = c[1] + dy * s; z = c[2] + dz * s;
+    if (besitzer(x, y, z) !== PA + i) return null;
+    var e = 0.03, gx = U(x + e, y, z) - U(x - e, y, z), gy = U(x, y + e, z) - U(x, y - e, z), gz = U(x, y, z + e) - U(x, y, z - e), gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1;
+    return [x + gx / gl * 0.02, y + gy / gl * 0.02, z + gz / gl * 0.02];
+  }
+  function basis(n) {
+    var u = [n[2], 0, -n[0]], l = Math.sqrt(u[0] * u[0] + u[2] * u[2]) || 1;
+    u = [u[0] / l, 0, u[2] / l];
+    return { u: u, v: [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]] };
+  }
+  var B = ALV.map(function (a) { return basis(a.n); });
+  function punkt(i, th, ph) {
+    var a = ALV[i], b = B[i], st = Math.sin(th), ct = Math.cos(th), cp = Math.cos(ph), sp = Math.sin(ph);
+    var p = flaeche(i, a.n[0] * ct + (b.u[0] * cp + b.v[0] * sp) * st, a.n[1] * ct + (b.u[1] * cp + b.v[1] * sp) * st, a.n[2] * ct + (b.u[2] * cp + b.v[2] * sp) * st);
+    return p && !(i === OFFEN_I && F.schnitt(p[0], p[1], p[2]) < 0.04) ? p : null;   /* in der entfernten Kappe: Unterbrechung */
+  }
+  function sammeln(folge, r) {   /* Folge von Punkten (null = Unterbrechung) in Laeufe teilen */
+    var cur = [];
+    var fertig = function () { if (cur.length >= 2) { linien.push({ pts: cur, r: r }); cur.forEach(function (p) { punkte.push(p); }); } cur = []; };
+    folge.forEach(function (p) { if (p) cur.push(p); else fertig(); });
+    fertig();
+  }
+  ALV.forEach(function (a, i) {
+    var offen = i === OFFEN_I, rad = offen ? 0.06 : 0.05, j, k;
+    var breiten = offen ? [30, 50, 70, 82, 90, 98, 110, 122] : [35, 60, 85, 110, 135], laengen = offen ? 12 : 7;
+    breiten.forEach(function (gr, bk) {
+      var th = (gr + (offen ? 0 : 5 * (hash(i, bk) - 0.5))) * PI / 180, folge = [];
+      for (j = 0; j <= 36; j++) folge.push(punkt(i, th, j / 36 * 2 * PI + (offen ? 0 : 0.2 * hash(i, 9 + bk))));
+      sammeln(folge, rad);
+    });
+    for (k = 0; k < laengen; k++) {
+      var ph = (k / laengen + 0.04 * (offen ? 0 : hash(i, 40 + k))) * 2 * PI, folge = [];
+      for (j = 0; j <= 18; j++) folge.push(punkt(i, (32 + j * 6.55) * PI / 180, ph));
+      sammeln(folge, rad);
+    }
+  });
+  return { linien: linien, punkte: punkte };
+}
+/* Zufuehrendes (seite -1, Arterie, links) und abfuehrendes Gefaess (seite +1, Vene): Stamm neben dem Bronchiolus, Aeste zum naechsten Punkt des Kapillarnetzes
+   (punkte aus formKapillaren); Rueckgabe Linien { pts, r0, r1, seiten, segmente } */
+function formGefaesse(seite, punkte) {
+  var stamm = FORM_STAMM.map(function (p) { return [p[0] * (seite < 0 ? 1 : -1), p[1], p[2]]; });
+  var linien = [{ pts: stamm, r0: 0.27, r1: 0.18, seiten: 14, segmente: 40 }];
+  var stammPunkt = function (y) {
+    for (var i = 0; i < stamm.length - 1; i++) {
+      var a = stamm[i], b = stamm[i + 1];
+      if (y <= a[1] && y >= b[1]) { var t = (a[1] - y) / (a[1] - b[1]); return [a[0] + (b[0] - a[0]) * t, y, a[2] + (b[2] - a[2]) * t]; }
+    }
+    return stamm[stamm.length - 1].slice();
+  };
+  FORM_ASTHOEHEN.forEach(function (y) {
+    var Tp = stammPunkt(y), best = null, bd = 1e9;
+    punkte.forEach(function (p) {
+      if (p[0] * seite < 0.2 || p[2] < -1.5) return;
+      var d = (p[0] - Tp[0]) * (p[0] - Tp[0]) + (p[1] - Tp[1]) * (p[1] - Tp[1]) + (p[2] - Tp[2]) * (p[2] - Tp[2]);
+      if (d < bd) { bd = d; best = p; }
+    });
+    if (!best) return;
+    linien.push({ pts: [Tp, [(Tp[0] + best[0]) / 2, (Tp[1] + best[1]) / 2, (Tp[2] + best[2]) / 2 + 0.25], best], r0: 0.11, r1: 0.06, seiten: 8, segmente: 10 });
+  });
+  return linien;
+}
+organ.form = { gitter: FORM_GITTER, yOben: Y_OBEN0, feld: formFeld, kapillaren: formKapillaren, gefaesse: formGefaesse };
+
+/* =====================================================================
    Aufbau
    ===================================================================== */
 function aufbauen(umg) {
