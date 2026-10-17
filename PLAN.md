@@ -6,7 +6,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 
 ✓ = vorhanden, – = fehlt, (✓) = teilweise
 
-| Baustein | Herz | Nephron | Niere | Lunge |
+| Baustein | Herz | Nephron | Niere | Lunge (mit Alveole) |
 |---|---|---|---|---|
 | Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ |
 | Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ |
@@ -172,7 +172,9 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] A: Form-Baustein `organe/lunge/lunge-form.js` (Rippenparameter, Brustkorb-Innenraum, Zwerchfellkuppel, Lungenflügel aus dem Körper, bytegleich umgezogen; dazu Lappen, Bronchialbaum, `rippeStuetz`); Detailmodell `#lunge` mit fünf Lappen, Atemwegen, Rippenfell/Pleuraspalt, Zwerchfell, Rippen, Brustbein, Zwischenrippenmuskeln, Lungengefäßen und Herz zur Orientierung; Ausschnitte Übersicht, Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura
   - [x] A: Atemmechanik aus dem Thorax-Modell (Reiter „Atmung“ im App-Stil, Schema-Panel mit Original-SVG und Kette im hellen Originalaussehen, Pause); abgestimmte Abweichung: doppelte ID `rippen` im Original aufgelöst, die weißen Rippen sind sichtbar; 3D-Lunge atmet mit (Zwerchfell flacht im selben Anteil ab wie im Schema, seitliche Weitung, Rippen drehen, Pleura-Deckkraft gedämpft, 14 Luftteilchen); Hilfekarten und „Probier das aus“ wörtlich, Üben; Kopfzeile „Ebene 1 von 4“ entfällt
   - [x] A: Kamerafahrt Körper → Lunge und zurück („Lunge öffnen“; Lunge, Atemwege, Zwerchfell, Brustkorb und Herz bleiben bei der Fahrt sichtbar)
-  - [ ] B: Alveole (`#lunge/alveole`) als Alveolarsäckchen mit Kapillarnetz, Zoomstufe aus der Lunge (Antippen, Knopf „Alveole“), Simulation und Schema aus dem Alveolen-Modell
+  - [x] B: Alveole (`#lunge/alveole`, `organe/lunge/alveole.js`): Alveolarsäckchen (Bronchiolus respiratorius, Alveolargang, 22 Bläschen, eine aufgeschnitten), Kapillarnetz von blau nach rot, Äste von Lungenarterie und -vene; Strukturliste, Ausschnitte, aufgeschnitten/geschlossen, Durchsicht, Beschriftung
+  - [x] B: Gasaustausch aus dem Alveolen-Modell unverändert übernommen (Reiter „Gasaustausch“, Schema-Panel mit Original-SVG und Kette, Pause, Hilfekarten mit „Probier das aus“, Üben); 3D folgt der Simulation (Blutkörperchen färben sich, O₂/CO₂-Teilchen in der aufgeschnittenen Alveole, Gefäßfarben, leichte Atembewegung); Nachweis `node tools/nachweis.js alveole` mit 11 Fällen gleich (beide Seiten mit demselben Zufallsstrom); die Liste der Krankheitsbilder folgt in C
+  - [x] B: Zoomstufe Lunge → Alveole: Lappen antippen („Alveole hier ansehen“, nächster Endast des Bronchialbaums im Lappen) oder Knopf „Alveole“ (Endast im rechten Unterlappen); das Säckchen entsteht aus `organ.form` der Alveole am Endast, die Lunge dreht sich, bis der Endast senkrecht steht, die Fahrt endet in der Startansicht der Alveole; Rückfahrt dreht zurück; die zuletzt gewählte Stelle merkt sich die Seite nur im Speicher
   - [ ] C: Krankheitsbilder aus dem Alveolen-Modell mit neuen Erklärkarten (auch in der Lunge, dort nur sichtbar in 3D), Medikamente (Vorschläge mit Text zur Freigabe), Lupe (Pleuraspalt, Blut-Luft-Schranke), Export, AR
   - Später: Lunge und Herz im Kreislauf verbinden (eigener Schritt), Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert
 - [ ] Leber mit Leberläppchen

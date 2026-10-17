@@ -26,6 +26,7 @@ var Kern = window.Kern = window.Kern || {};
     niere: { titel: 'Niere', seitentitel: 'Niere \u2013 Rinde, Mark und Nierenbecken', skript: 'organe/niere/niere.js', css: 'organe/niere/niere.css' },
     nephron: { titel: 'Nephron', seitentitel: 'Nephron \u2013 Nierenk\u00f6rperchen und Tubulussystem', skript: 'organe/niere/nephron.js', css: 'organe/niere/nephron.css', adresse: 'niere/nephron', alt: ['nephron'] },
     lunge: { titel: 'Lunge', seitentitel: 'Lunge \u2013 Lappen, Atemwege und Atemmechanik', skript: 'organe/lunge/lunge.js', css: 'organe/lunge/lunge.css' },
+    alveole: { titel: 'Alveole', seitentitel: 'Alveole \u2013 Lungenbl\u00e4schen und Gasaustausch', skript: 'organe/lunge/alveole.js', css: 'organe/lunge/alveole.css', adresse: 'lunge/alveole' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
 
