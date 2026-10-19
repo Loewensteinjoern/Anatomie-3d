@@ -7,6 +7,7 @@
    hier wird sie vernetzt, eingefaerbt und bedient.
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste. Atmung: Reiter Atmung und Schema aus dem Thorax-Modell
    (Abschnitt 6), dazu atmet das 3D-Modell mit (Abschnitt 7: Zwerchfell, Lunge, Rippen, Luftteilchen). Hilfekarten und Ueben wie bei der Niere.
+   Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.atmung): Reiter und Erklaerkarte; in 3D wirkt die Obstruktion (Abschnitt 7c).
    Zoomstufe: Wer einen Lungenlappen antippt, bekommt in der Infokarte "Alveole hier ansehen" (der Punkt bestimmt den naechsten Endast des Bronchialbaums
    im selben Lappen); der Knopf "Alveole" faehrt an eine feste Stelle im rechten Unterlappen (Abschnitt 7b). Das Saeckchen entsteht aus der Form des
    Alveolen-Moduls (organe/lunge/alveole.js, organ.form), die Kamera landet in dessen Startansicht (Adresse lunge/alveole).
@@ -490,16 +491,17 @@ function zusammen(liste) {
   geo.setIndex(idx);
   return geo;
 }
-/* Rohre entlang von Linien { pts, r0, r1 } (Koerper-Koordinaten), Radius gleitet von r0 nach r1; Enden mit Kappe; alle zu einer Geometrie */
-function rohre(linien) {
-  var pos = [], nor = [], idx = [];
+/* Rohre entlang von Linien { pts, r0, r1 } (Koerper-Koordinaten), Radius gleitet von r0 nach r1; Enden mit Kappe; alle zu einer Geometrie.
+   mitZentren: je Eckpunkt die Mitte seines Rings (geo.userData.zentren, x y z), damit sich der Radius spaeter verstellen laesst (Verengung bei Asthma und COPD) */
+function rohre(linien, mitZentren) {
+  var pos = [], nor = [], idx = [], zen = [];
   linien.forEach(function (l) {
     var kurve = new THREE.CatmullRomCurve3(l.pts.map(function (p) { return V(p[0], p[1], p[2]); }), false, 'catmullrom', 0.5);
     var rm = Math.max(l.r0, l.r1), rad = l.seiten || (rm > 0.5 ? 14 : rm > 0.2 ? 10 : 7), tub = l.segmente || Math.max(6, l.pts.length * 5);
     var g = new THREE.TubeGeometry(kurve, tub, rm, rad, false), p = g.attributes.position, n = g.attributes.normal, base = pos.length / 3, i, j;
     for (i = 0; i <= tub; i++) {   /* jeden Ring um seine Mitte auf den Radius an dieser Stelle skalieren */
       var f = (l.r0 + (l.r1 - l.r0) * (i / tub)) / rm, c0 = kurve.getPointAt(i / tub);
-      for (j = 0; j <= rad; j++) { var v0 = i * (rad + 1) + j; p.setXYZ(v0, c0.x + (p.getX(v0) - c0.x) * f, c0.y + (p.getY(v0) - c0.y) * f, c0.z + (p.getZ(v0) - c0.z) * f); }
+      for (j = 0; j <= rad; j++) { var v0 = i * (rad + 1) + j; p.setXYZ(v0, c0.x + (p.getX(v0) - c0.x) * f, c0.y + (p.getY(v0) - c0.y) * f, c0.z + (p.getZ(v0) - c0.z) * f); if (mitZentren) zen.push(c0.x, c0.y, c0.z); }
     }
     for (i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); }
     for (i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
@@ -507,6 +509,7 @@ function rohre(linien) {
       var c = kurve.getPointAt(e[0]), T = kurve.getTangentAt(e[0]), b0 = pos.length / 3;
       pos.push(c.x, c.y, c.z); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]);
       for (j = 0; j < rad; j++) { var v = e[2] + j; pos.push(p.getX(v), p.getY(v), p.getZ(v)); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); }
+      if (mitZentren) for (j = 0; j <= rad; j++) zen.push(c.x, c.y, c.z);
       for (j = 0; j < rad; j++) {
         var a = b0 + 1 + j, b = b0 + 1 + (j + 1) % rad;
         var ax = pos[a * 3] - c.x, ay = pos[a * 3 + 1] - c.y, az = pos[a * 3 + 2] - c.z, bx = pos[b * 3] - c.x, by = pos[b * 3 + 1] - c.y, bz = pos[b * 3 + 2] - c.z;
@@ -520,6 +523,7 @@ function rohre(linien) {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   geo.setIndex(idx);
+  if (mitZentren) geo.userData.zentren = new Float32Array(zen);
   return geo;
 }
 
@@ -736,7 +740,7 @@ async function bauen() {
   await setLoad(0.76, 'Atemwege'); if (abgebaut) return;
   luftroehreBauen();
   BAUM = form.bronchien(LH, RUND);
-  var bg = rohre(BAUM.map(function (a) { return { pts: a.pts, r0: a.r0, r1: a.r1 }; }));
+  var bg = rohre(BAUM.map(function (a) { return { pts: a.pts, r0: a.r0, r1: a.r1 }; }), true);
   addMesh('bronchien', bg, MAT.bronchien, 'Lappen- und Segmentbronchien', 2); tris.atemwege += anz(bg);
   await setLoad(0.82, 'Gefäße'); if (abgebaut) return;
   GEF = gefaesseBauen(BAUM);
@@ -797,7 +801,7 @@ function setSelected(id, punkt) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -811,17 +815,53 @@ function setSelected(id, punkt) {
   });
   $('iOpen').style.display = alWahl !== null ? '' : 'none';   /* Knopf "Alveole hier ansehen" nur bei den Lungenlappen */
   box.classList.add('show');
+  kartenLage();
+}
+
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, gemeinsame Daten mit der Alveole: Kern.Szenarien.daten.atmung): Reiter und Erklaerkarte (id kcard) unten links wie die
+   Infokarte. In 3D wirkt nur die Obstruktion (Abschnitt 7c): die Segmentbronchien werden enger und die Lunge ueberblaeht; Thorax-Physik und Schema bleiben unveraendert.
+   Alle anderen Eintraege zeigen nur die Karte. */
+var SZ_DATEN = Kern.Szenarien.daten.atmung;
+var SZW = { o: 0, trap: 0 };   /* Wirkgroessen (weich ueberblendet): o = Obstruktion, trap = 0,35 * o (Ueberblaehung, wie im Alveolen-Modell) */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: 'Krankheitsbild oder Medikament ausschalten',
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      setSelected(null); closeCard();
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Lunge, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  lv++;
 }
 
 (function leiste() {
-  /* Reiter: Strukturen, Atmung, Hilfekarten, Ueben (weitere kommen spaeter dazu, z. B. Krankheiten) */
+  /* Reiter: Strukturen, Atmung, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneAtmung = document.createElement('div'); paneAtmung.id = 'paneAtmung'; paneAtmung.innerHTML = ATMUNG_PANE;
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneAtmung, paneH, paneU];
-  ['Strukturen', 'Atmung', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneAtmung, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Atmung', 'Hilfekarten', '\u00dcben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -831,6 +871,9 @@ function setSelected(id, punkt) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'W\u00e4hle ein Krankheitsbild \u2013 bei Asthma und COPD verengen sich die Bronchien und die Lunge bl\u00e4ht sich auf.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'W\u00e4hle ein Medikament \u2013 es wirkt an dem genannten Krankheitsbild.');
   /* Hilfekarten: die sieben Karten des Thorax-Modells und "Probier das aus" (Muster wie bei der Niere) */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
   KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
@@ -886,11 +929,13 @@ function showCard(kick, title, html, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1717,7 +1762,7 @@ var Z_GELENK = -7, WAND_Z0 = -2, WAND_Z1 = 6, WAND_Y0 = 118, WAND_Y1 = 128;   /*
 var PLEURA_3D = 0.45;                    /* Daempfung der Rippenfell-Deckkraft in 3D (0,10 in Ruhe bis ca. 0,28) */
 var KUPPEL_PX = 80;                      /* Hoehe der Zwerchfellkuppel im Schema (px): BASIS_Y 452 - apexY 372 */
 var STERNUM_ZU_VOR = 0.5;                /* das Brustbein geht um diesen Anteil seines Hubs auch nach vorn */
-var A3 = { bereit: false, neu: false, sig: '', q: '', S: null, dB: 0, rc: 1, rs: 0, sx: 1, dyS: 0, dzS: 0, dA: 0, sinW: 0, rest: new Map(), feld: [], zwerch: null, sternum: null, luft: null };
+var A3 = { bereit: false, neu: false, sig: '', q: '', S: null, S0: null, bronch: null, dB: 0, rc: 1, rs: 0, sx: 1, dyS: 0, dzS: 0, dA: 0, sinW: 0, rest: new Map(), feld: [], zwerch: null, sternum: null, luft: null };
 var KQ = { h: 0, hx: 0, hz: 0, w: 0, wx: 0, wz: 0, dA: 0 }, FO = { x: 0, y: 0, z: 0, a: 1, bx: 0, by: 1, bz: 0 };
 var clamp01 = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x; };
 
@@ -1990,6 +2035,9 @@ function atmungVorbereiten() {
       A3.feld.push(e);
     });
   });
+  var be = A3.rest.get(STRUCT.bronchien.meshes[0]);   /* Segmentbronchien: Ruhelage und Ringmitten, der Radius laesst sich damit verstellen (Abschnitt 7c) */
+  be.zen = STRUCT.bronchien.meshes[0].geometry.userData.zentren; be.roh = new Float32Array(be.pos0); A3.bronch = be;
+  bronchienRadius();
   A3.zwerch = festhalten(STRUCT.zwerchfell.meshes[0], 'zwerchfell');
   [-1, 1].forEach(function (sd) {
     var i;
@@ -2012,8 +2060,19 @@ function atmungVorbereiten() {
 }
 /* Anschluss an die Atmung: am Ende von zeichne (Abschnitt 6) mit dem Zustand S, den Werten m der Physik und den Luftpunkten */
 function atmung3D(S, m, dt, punkte) {
-  A3.S = S;
+  A3.S0 = S;
   if (!A3.bereit) return;
+  atmungForm();
+  var pStaerke = Math.min(1, (Math.abs(m.pPleura) - 5) / 3);
+  MAT.pleura.opacity = PLEURA_3D * (0.22 + 0.40 * pStaerke);   /* Rippenfell: Deckkraft aus der Formel des Schemas (dort ein Saum hinter der Lunge), in 3D als Huelle vor der Lunge gedaempft */
+  luftSetzen(m, punkte);
+}
+/* Form von Lunge, Zwerchfell und Brustkorb aus den Muskeln S0 des Schemas plus der Ueberblaehung bei verengten Atemwegen (SZW.trap, Abschnitt 7c: wie eine Einatmung
+   mit d = i = trap, additiv); nur bei geaenderten Werten neu gerechnet. Auch ohne Takt des Schemas (Pause) nach einem Wechsel des Krankheitsbildes gerufen. */
+function atmungForm() {
+  var S0 = A3.S0;
+  if (!A3.bereit || !S0) return;
+  var S = A3.S = { d: S0.d + SZW.trap, i: S0.i + SZW.trap };
   var sig = S.d.toFixed(3) + '|' + S.i.toFixed(3);
   if (sig !== A3.sig || A3.neu) {
     A3.sig = sig; A3.neu = false;
@@ -2026,9 +2085,6 @@ function atmung3D(S, m, dt, punkte) {
     zwerchfellAnwenden();
     luftPfade();
   }
-  var pStaerke = Math.min(1, (Math.abs(m.pPleura) - 5) / 3);
-  MAT.pleura.opacity = PLEURA_3D * (0.22 + 0.40 * pStaerke);   /* Rippenfell: Deckkraft aus der Formel des Schemas (dort ein Saum hinter der Lunge), in 3D als Huelle vor der Lunge gedaempft */
-  luftSetzen(m, punkte);
 }
 atmen.anschliessen(atmung3D, atmungWahl);
 
@@ -2076,6 +2132,27 @@ function setSchema(on) {
 }
 $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
+   7c. Krankheitsbilder und Medikamente in 3D: Obstruktion o (Summe der Anteile * Wert des Eintrags, weich ueberblendet; asthma 0,85, copd 0,60, azidose 0,25, Salbutamol 0,25,
+   Sauerstoff 0,60, sonst 0) verengt die Segmentbronchien (Radius * (1 - 0,5 * o), aus den Ringmitten der Ruhelage) und ueberblaeht die Lunge: zusaetzliche Grundverformung
+   wie eine Einatmung mit d = i = 0,35 * o (im Alveolen-Modell "trap = 0,35 * Obstruktion"), additiv zur Atmung des Schemas (atmungForm). Sonst aendert sich nichts.
+   ===================================================================== */
+function bronchienRadius() {
+  var e = A3.bronch;
+  if (!e) return;
+  var f = 1 - 0.5 * SZW.o, P = e.pos0, R = e.roh, Z = e.zen, i;
+  for (i = 0; i < P.length; i++) P[i] = Z[i] + (R[i] - Z[i]) * f;
+}
+function szenarioWirkung() {
+  var o = 0;
+  SZ_DATEN.forEach(function (sc) { o += SZ.anteil[sc.id] * sc.modell.o; });
+  if (o === SZW.o) return;
+  SZW.o = o; SZW.trap = 0.35 * o;
+  if (!A3.bereit) return;
+  bronchienRadius();
+  A3.neu = true; atmungForm();   /* neu rechnen, auch wenn die Atmung pausiert */
+}
 
 /* =====================================================================
    7b. Kamerafahrt zur Alveole (Infokarte "Alveole hier ansehen" bei den Lungenlappen, Knopf "Alveole"): Der Brustkorb und alles Uebrige blenden aus, die Lappen werden in
@@ -2221,6 +2298,7 @@ function alveoleOeffnen(idx) {
   if (schemaOn) setSchema(false);
   if (quiz) quizEnd();
   closeCard();
+  SZ.el.classList.add('weg');   /* die Szenariokarte weicht der Fahrt (bei der Rueckkehr ist alles neu aufgebaut) */
   atmen.pause(true);   /* der Endast bleibt an seinem Platz */
   alLetzte = idx = (idx === null || idx === undefined) ? alStandard() : idx;
   AL = alveoleLage(idx);
@@ -2308,8 +2386,11 @@ function fahrtBild(now) {
 var t0 = performance.now();
 var App = window.LungeApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, brust: brust, ansicht: ansicht, dreiecke: tris, atmung: atmen.lesen,
   alveole: function (i) { alveoleOeffnen(i === undefined ? null : i); }, alveoleBereit: function () { return alFertig; }, endpunkte: function () { return BAUM ? BAUM.endpunkte.map(function (e) { return { p: e.p.slice(), lappen: e.lappen }; }) : []; } };
+var szT = 0;
 function loop(now) {
   atmen.tick(now);
+  if (SZ.schritt(szT ? Math.min(0.05, (now - szT) / 1000) : 0.016)) szenarioWirkung();   /* Anteile weich ueberblenden, auch in der Pause */
+  szT = now;
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -2330,6 +2411,7 @@ organ.abbauen = function () {
   fz = null; canvas.style.pointerEvents = '';
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
+  SZ.abbauen();
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */

@@ -17,6 +17,8 @@
    und bei Körper, Herz, Niere und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB);
    Niere-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Harnstau, Stenose, Ramipril, Ibuprofen, GLB).
+   Alveole-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Reiter, Karte, je Eintrag 3D und Schema, Werte in erg.gas); Lunge-Kontext szenarien:
+   Asthmaanfall, COPD und Salbutamol in 3D (verengte Bronchien, überblähte Lunge).
    In den Modellen koerper, herz, niere und nephron ist der Zurück-Knopf des Atlas ausgeblendet; die
    virtuelle Zeit steht, solange das Organ nachgeladen wird (Bilder sind so unabhängig
    von der Ladezeit und bytegleich zu denen der früheren Einzelseiten).
@@ -605,6 +607,20 @@ const MODELLE = {
         (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-schema'] = await t.js(() => window.LungeApp.atmung());
         await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.weiter(300); await t.bild('3d-atmung');   /* Schema zu, Infokarte zu: die 3D-Lunge atmet mit */
       } },
+      szenarien: { opt: DESKTOP, timeout: 60000, async ablauf(t) {     /* Krankheitsbilder und Medikamente: 3D 1,5 s nach dem Einschalten (Bronchien enger, Lunge überbläht), Karte unten links */
+        const zeile = (name) => '#rail .dis:not([data-card]):has(b:text-is("' + name + '"))';   /* ohne die Hilfekarten (gleiche Namen) */
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")');
+        for (const [name, datei] of [['Asthmaanfall', 'asthma'], ['COPD', 'copd']]) {
+          await t.klick(zeile(name)); await t.weiter(1500); await t.bild(datei);
+          await t.klick('#cam1'); await t.weiter(900); await t.bild(datei + '-bronchialbaum'); await t.klick('#cam0'); await t.weiter(900);   /* Ausschnitt Bronchialbaum: die verengten Bronchien */
+          await t.klick(zeile(name)); await t.weiter(1500);
+        }
+        await t.klick('#rail .tabs .tab:text-is("Medikamente")');
+        await t.klick(zeile('Salbutamol beim Asthmaanfall (z. B. Sultanol®)')); await t.weiter(1500); await t.bild('salbutamol');
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('salbutamol-bronchialbaum'); await t.klick('#cam0'); await t.weiter(900);
+        await t.klick(zeile('Salbutamol beim Asthmaanfall (z. B. Sultanol®)')); await t.weiter(1500); await t.bild('zurueck');   /* alles wieder neutral */
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('zurueck-bronchialbaum');
+      } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
       } },
@@ -618,7 +634,7 @@ const MODELLE = {
     datei: 'index.html',
     bereit: () => !!(window.AlveoleApp && window.AlveoleApp.ready),
     kontexte: {
-      desktop: { opt: DESKTOP, async ablauf(t) {
+      desktop: { opt: DESKTOP, timeout: 60000, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
         await t.klick('#cam1'); await t.weiter(900); await t.bild('alveole');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('kapillarnetz');
@@ -655,6 +671,33 @@ const MODELLE = {
         await t.klick('#bCls'); await t.klick('#rail .tabs .tab:text-is("Gasaustausch")'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
         (t.erg.gas || (t.erg.gas = {}))[t.kname + '-schema'] = await t.js(() => window.AlveoleApp.gas());
         await t.klick('#bSchemaX'); await t.weiter(300); await t.bild('3d-gasaustausch');
+      } },
+      szenarien: { opt: DESKTOP, timeout: 90000, async ablauf(t) {     /* Krankheitsbilder und Medikamente: je Eintrag 3D und Schema (Werte in erg.gas) nach 4 s (Cheyne-Stokes 15 s, Naloxon 6 s, dann noch 8 s) */
+        const zeile = (name) => '#rail .dis:not([data-card]):has(b:text-is("' + name + '"))';   /* ohne die Hilfekarten (gleiche Namen) */
+        const gruppen = [['Krankheitsbilder', [['Hyperventilation', 'hyper', 4000], ['Hypoventilation', 'hypo', 4000], ['Asthmaanfall', 'asthma', 4000], ['COPD', 'copd', 4000],
+            ['Respiratorische Azidose', 'azidose', 4000], ['Cheyne-Stokes-Atmung', 'cheyne', 15000]]],
+          ['Medikamente', [['Salbutamol beim Asthmaanfall (z. B. Sultanol®)', 'salbutamol', 4000], ['Sauerstoffgabe bei COPD', 'sauerstoff', 4000], ['Naloxon bei Opiat-Hypoventilation', 'naloxon', 6000]]]];
+        await t.weiter(1500);
+        for (const [tab, eintraege] of gruppen) {
+          await t.klick('#rail .tabs .tab:text-is("' + tab + '")');
+          for (const [name, datei, ms] of eintraege) {
+            await t.klick(zeile(name)); await t.weiter(ms); await t.bild(datei);
+            await t.klick('#bSchema'); await t.weiter(300); await t.bild(datei + '-schema');
+            (t.erg.gas || (t.erg.gas = {}))[t.kname + '-' + datei] = await t.js(() => window.AlveoleApp.gas());
+            if (datei === 'naloxon') {   /* Tempo „langsam“ (½×): 4 s Simulationszeit = 8 s; nach den 6 s steht noch die Hypoventilation, danach Tiefe und Frequenz auf Ruhewerten */
+              await t.weiter(8000); await t.bild(datei + '-schema-spaeter');
+              (t.erg.gas || (t.erg.gas = {}))[t.kname + '-' + datei + '-spaeter'] = await t.js(() => window.AlveoleApp.gas());
+            }
+            await t.klick('#bSchemaX'); await t.klick(zeile(name)); await t.weiter(1500);
+          }
+        }
+      } },
+      'szenarien-handy': { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")');
+        await t.klick('#paneDis .dis:has(b:text-is("Asthmaanfall"))'); await t.weiter(4000); await t.bild('asthma-eingeklappt');   /* Handy: die Karte beginnt eingeklappt */
+        await t.klick('#bCardMin'); await t.weiter(900); await t.bild('asthma');
+        await t.klick('#bCardMin'); await t.klick('#bSchema'); await t.weiter(300); await t.bild('asthma-schema');
+        (t.erg.gas || (t.erg.gas = {}))[t.kname + '-asthma'] = await t.js(() => window.AlveoleApp.gas());
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1043,7 +1086,7 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   await ctx.addInitScript(initDownloads);
   for (const f of K.init || []) await ctx.addInitScript(f);
   const page = await ctx.newPage();
-  page.setDefaultTimeout(20000);
+  page.setDefaultTimeout(K.timeout || 20000);   /* K.timeout: Kontexte mit sehr schwerem 3D (SwiftShader braucht für Klick und Bild dann bis zu 15 s) */
   const log = []; erg.konsole[kname] = log;
   /* erwartete Meldungen (nur Kontext fehler) werden gesondert gezählt */
   const melde = (s) => { if (K.erwartet && K.erwartet.some((re) => re.test(s))) { const x = erg.erwartet || (erg.erwartet = {}); x[kname] = (x[kname] || 0) + 1; } else log.push(s); };

@@ -8,6 +8,7 @@
    Grundgerüst: Strukturen, Ausschnitte, Durchsicht, aufgeschnitten/geschlossen, Beschriftung, Infokarte, Strukturliste. Andockpunkte für später:
    KAP_BAHNEN (Kapillarbahnen um die aufgeschnittene Alveole für die fließenden Gasteilchen) und OFFEN (Innenraum für die Gasteilchen), beide
    in AlveoleApp.daten; Teilchen kommen in eine eigene Gruppe `dyn` (noexport) und werden je Bild aus der Uhr gesetzt. organ.start für die Kamerafahrt.
+   Reiter Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.atmung): setzen die Werte des Gasaustauschs (gas.szenario, Abschnitt 5).
    ===================================================================== */
 (function () {
 'use strict';
@@ -252,7 +253,12 @@ var MARKUP = `<div id="title">
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
 </div>`;
 /* Reiter "Gasaustausch" (Regler und Schalter aus dem Alveolen-Modell; die IDs tragen das Praefix la). Die Statushinweise des Originals (laStAtemwege usw.) stehen
-   unsichtbar darin: der Code schreibt hinein, die Liste "Situationen und Krankheitsbilder" folgt spaeter. */
+   im Reiter "Krankheitsbilder" (STATUS, unter der Liste). */
+var STATUS = `<div class="status" id="laStatus">
+  <span id="laStAtemwege">Atemwege frei</span>
+  <span id="laStFlaeche">Austauschfläche normal</span>
+  <span id="laStMuster">Atemmuster regelmäßig</span>
+</div>`;
 var GAS_PANE = `<div class="karte">
   <div class="titel"><span>Was soll sichtbar sein?</span></div>
   <div class="segment" id="laGasWahl">
@@ -301,12 +307,7 @@ var GAS_PANE = `<div class="karte">
     <button data-tempo="0.25">Zeitlupe</button>
   </div>
 </div>
-
-<div id="laStatus" hidden>
-  <span id="laStAtemwege">Atemwege frei</span>
-  <span id="laStFlaeche">Austauschfläche normal</span>
-  <span id="laStMuster">Atemmuster regelmäßig</span>
-</div>`;
+`;
 /* Hilfekarten und "Probier das aus" (aus dem Alveolen-Modell, Texte und HTML woertlich): t = Titel, u = Untertitel, h = Inhalt als HTML.
    Die Liste KARTEN_LISTE traegt die Knopftexte des Originals (data-karte) in dessen Reihenfolge. */
 var karten = {
@@ -943,7 +944,7 @@ function setSelected(id, punkt) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -956,17 +957,56 @@ function setSelected(id, punkt) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  kartenLage();
+}
+
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, gemeinsame Daten mit der Lunge: Kern.Szenarien.daten.atmung): Reiter und Erklaerkarte (id kcard) unten links wie die
+   Infokarte. Wirkung: beim Wechsel setzt gas.szenario die Werte des Original-Handlers (sofort, kein Ueberblenden); "Eigene Einstellung" (Regler bewegt) schliesst
+   Karte und Liste (gas.beiEigene, unten nach dem Gasaustausch). */
+var SZ_DATEN = Kern.Szenarien.daten.atmung, szEigen = false;
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', ausTitel: 'Krankheitsbild oder Medikament ausschalten',
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      setSelected(null); closeCard();
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt das Modell, sie beginnt eingeklappt (Titelzeile) */
+    }
+    if (!szEigen) {
+      var sc = id ? SZ_DATEN.filter(function (x) { return x.id === id; })[0] : null, m = sc && sc.modell;
+      gas.szenario(m ? m.sz : null, m && sc.kind === 'drug' ? { name: sc.name, o: m.o, frisch: m.frisch, spaeter: m.spaeter } : null);
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  lv++;
 }
 
 (function leiste() {
-  /* Reiter: Strukturen, Gasaustausch, Hilfekarten, Ueben (weitere kommen spaeter dazu, z. B. Krankheiten) */
+  /* Reiter: Strukturen, Gasaustausch, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneGas = document.createElement('div'); paneGas.id = 'paneGas'; paneGas.innerHTML = GAS_PANE;
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneGas, paneH, paneU];
-  ['Strukturen', 'Gasaustausch', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneGas, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Gasaustausch', 'Hilfekarten', '\u00dcben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -976,6 +1016,10 @@ function setSelected(id, punkt) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Krankheitsbilder (mit den Statushinweisen des Originals darunter), Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'W\u00e4hle ein Krankheitsbild \u2013 die Simulation und das Schema zeigen die Wirkung.');
+  paneD.insertAdjacentHTML('beforeend', STATUS);
+  SZ.liste(paneM, 'drug', 'Medikamente', 'W\u00e4hle ein Medikament \u2013 es wirkt an dem genannten Krankheitsbild.');
   /* Hilfekarten: die zehn Karten des Alveolen-Modells und "Probier das aus" (Muster wie bei der Lunge) */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
   KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
@@ -1031,11 +1075,13 @@ function showCard(kick, title, html, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1357,8 +1403,9 @@ function layoutLabels(w, h) {
    Der Code steht unveraendert wie im Alveolen-Modell (eigener Gueltigkeitsbereich, weil S und $ hier anders belegt sind; Math.random wie im Original);
    angepasst sind nur die IDs (Praefix la), die Schleife (tick wird aus der Renderschleife gerufen, erstes Bild 0.016, Pause), die Klasse on statt an bei den
    Bedienelementen, die Suche der Bedienelemente nur im Reiter, der Wegfall der Hilfekarten-Modals (die Karten stehen oben, sie erscheinen in #scard) und der
-   Anschluss des 3D-Modells (haken: ein Aufruf am Ende von zeichne; Abschnitt 6). Die Liste "Situationen und Krankheitsbilder" fehlt noch (SZENARIEN und die
-   Zweige fuer Befund und Statushinweise stehen schon da, die Variablen behalten ihre Startwerte).
+   Anschluss des 3D-Modells (haken: ein Aufruf am Ende von zeichne; Abschnitt 6). Die Liste "Situationen und Krankheitsbilder" steht im Reiter
+   "Krankheitsbilder" (Kern.Szenarien, Abschnitt 2): ihr Einstieg in den Original-Code ist gas.szenario (unten, ruft den unveraenderten Handler von data-sz) und
+   gas.beiEigene (Rueckmeldung bei "Eigene Einstellung"); die drei Medikamente (Salbutamol, Sauerstoff, Naloxon) setzen dazu eine neue Wirkung (zusatz).
    ===================================================================== */
 var gas = (function(){
 function $(id){ return document.getElementById(id); }
@@ -1824,6 +1871,7 @@ function tick(t){
   tAlt = t;
   var dt = dtEcht*tempo;
   takte++;
+  zeitplan(dt);   // Einbindung: Naloxon stellt nach 4 s Simulationszeit Tiefe und Frequenz um (zaehlt mit Tempo, steht in der Pause)
   zeichne(schritt(dt), dt);
 }
 
@@ -1847,7 +1895,9 @@ function beschrifte(){
 function eigeneEinstellung(){
   PANE.querySelectorAll("[data-sz]").forEach(function(x){ x.classList.remove("on"); });
   szName = "Eigene Einstellung";
+  spaeter = null; FRISCH.o2 = 0.94;   // Einbindung: ein Medikament endet mit der eigenen Einstellung (kein Zeitplan, Frischluft wie im Original)
   beschrifte();
+  if (beiEigene) beiEigene();   // Einbindung: die Liste markiert dann keinen Eintrag, die Karte schliesst sich
 }
 
 $(ID("fluss")).addEventListener("input", function(){ fluss = +this.value/100; eigeneEinstellung(); });
@@ -1880,13 +1930,14 @@ function segment(attr, aktion){
     });
   });
 }
-segment("data-sz", function(w){
+function szenarioSetzen(w){   // Einbindung: der Handler als benannte Funktion (Inhalt unveraendert), damit gas.szenario ihn aufrufen kann
   var s = SZENARIEN[w];
   szName = s.n; tiefe = s.t; frequenz = s.f; obstruktion = s.o; flaeche = s.a;
   cheyne = !!s.cs; csP = 0;
   $(ID("tiefe")).value = Math.round(s.t*100); $(ID("freq")).value = Math.round(s.f*100);
   beschrifte();
-});
+}
+segment("data-sz", szenarioSetzen);
 segment("data-gas", function(w){
   gas = w; zeigO2 = (w!=="co2"); zeigCO2 = (w!=="o2");
   for (var q=0;q<ery.length;q++){ ery[q].rO = -1; ery[q].rC = -1; }
@@ -1913,6 +1964,31 @@ $(ID("freiAn")).addEventListener("change", function(){
 el.tempoBadge.classList.add("an"); el.tempoFaktor.textContent = "½×";
 beschrifte();
 
+/* Einbindung: Krankheitsbilder und Medikamente (Reiter, Kern.Szenarien). szenario(w, zusatz) tut genau das, was der Handler von data-sz tut (szenarioSetzen,
+   Werte aus SZENARIEN, Regler setzen, beschrifte); w = null: "normal" (Karte zu). Die Werte springen sofort. zusatz (nur Medikamente): name (statt des Namens aus
+   SZENARIEN), o (Obstruktion), frisch (Sauerstoff der Frischluft, sonst 0,94), spaeter { nach (s Simulationszeit), t, f } (danach Tiefe und Frequenz, Regler mit). */
+var spaeter = null, beiEigene = null;
+function szenario(w, zusatz){
+  spaeter = null; FRISCH.o2 = 0.94;
+  szenarioSetzen(w || "normal");
+  if (zusatz){
+    if (zusatz.o !== undefined) obstruktion = zusatz.o;
+    if (zusatz.frisch !== undefined) FRISCH.o2 = zusatz.frisch;
+    if (zusatz.spaeter) spaeter = { rest: zusatz.spaeter.nach, t: zusatz.spaeter.t, f: zusatz.spaeter.f };
+    if (zusatz.name) szName = zusatz.name;
+    beschrifte();
+  }
+}
+function zeitplan(dt){
+  if (!spaeter) return;
+  spaeter.rest -= dt;
+  if (spaeter.rest > 0) return;
+  tiefe = spaeter.t; frequenz = spaeter.f;
+  $(ID("tiefe")).value = Math.round(tiefe*100); $(ID("freq")).value = Math.round(frequenz*100);
+  spaeter = null;
+  beschrifte();
+}
+
 /* Einbindung: Zustand fuer das 3D-Modell (nur lesen) */
 function zustand(){
   return { A:A, ery:ery, ANKUNFT:ANKUNFT, frei:frei, freiBlut:freiBlut, abO2:abO2, abCO2:abCO2, fLunge:fLunge, zeigO2:zeigO2, zeigCO2:zeigCO2,
@@ -1933,8 +2009,10 @@ function lesen(){
     ery: ery.map(function(e){ return { x: r4(e.x), o2: r4(e.o2), co2: r4(e.co2), sO2: e.sO2, sCO2: e.sCO2 }; })
   };
 }
-return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zustand: zustand, anschliessen: function (f) { haken = f; } };
+return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zustand: zustand, anschliessen: function (f) { haken = f; },
+         szenario: szenario, beiEigene: function (f) { beiEigene = f; } };
 })();
+gas.beiEigene(function () { szEigen = true; SZ.setzen(null); szEigen = false; });   /* eigene Reglerbewegung: kein Eintrag markiert, Karte zu */
 
 /* =====================================================================
    6. Gasaustausch in 3D: die Simulation (gas) steuert das Modell, an der Physik des Originals aendert sich nichts. Neu gegenueber dem Original (Darstellung),
@@ -2201,6 +2279,7 @@ organ.abbauen = function () {
   abgebaut = true;
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
+  SZ.abbauen();
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
