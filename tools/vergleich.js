@@ -46,7 +46,7 @@
 
    Modell alveole (index.html#lunge/alveole): Alveolarsäckchen stark vergrößert mit Bronchiolus, Alveolargang, einer aufgeschnittenen Alveole, Kapillarnetz und den
    Gefäßen. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Alveole, Kapillarnetz, Bronchiolus), geschlossen (#bZu), Durchsicht, aufgeschnitten
-   ohne Beschriftung, Info; am Ende Gasaustausch: Reiter, 3D nach 3 s (Blutkörperchen, Gasteilchen), Schema (#bSchema), nur CO₂, Blutfluss Stopp, schnell mit Atempause,
+   ohne Beschriftung, Info; am Ende Gasaustausch: Reiter, 3D nach 3 s (Gasteilchen im Blut und in der Alveole), Schema (#bSchema), nur CO₂, Blutfluss Stopp, schnell mit Atempause,
    Freier Modus, Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von AlveoleApp.gas() stehen in erg.gas),
    Hilfekarte, „Probier das aus“ und Üben), handy (Übersicht, Info; am Ende Schema und 3D), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus
    enthalten zusätzlich alveoleApp. Das Schema gegen das Original prüft nicht vergleich.js, sondern nachweis.js (alveole).
@@ -646,6 +646,7 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(300); await t.bild('hilfekarte');
         await t.klick('#paneHelp .dis >> nth=10'); await t.weiter(300); await t.bild('probier');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
+        await t.klick('#cam1'); await t.weiter(3000); await t.bild('3d-austausch-nah');   /* Ausschnitt Alveole bei laufendem Gasaustausch: Punkte im Netz, Austausch an der aufgeschnittenen Alveole */
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

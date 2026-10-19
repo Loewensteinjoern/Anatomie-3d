@@ -6,7 +6,7 @@
    die zuführenden und abführenden Gefäße. Achsen wie im Körper: x + links im Bild nach rechts, y oben, z zur Kamera. Alles aus Abstandsfeldern
    (Kern.SDF) und festen Tabellen, ohne Zufall.
    Grundgerüst: Strukturen, Ausschnitte, Durchsicht, aufgeschnitten/geschlossen, Beschriftung, Infokarte, Strukturliste. Andockpunkte für später:
-   KAP_BAHNEN (Kapillarbahnen um die aufgeschnittene Alveole für die roten Blutkörperchen) und OFFEN (Innenraum für die Gasteilchen), beide
+   KAP_BAHNEN (Kapillarbahnen um die aufgeschnittene Alveole für die fließenden Gasteilchen) und OFFEN (Innenraum für die Gasteilchen), beide
    in AlveoleApp.daten; Teilchen kommen in eine eigene Gruppe `dyn` (noexport) und werden je Bild aus der Uhr gesetzt. organ.start für die Kamerafahrt.
    ===================================================================== */
 (function () {
@@ -907,9 +907,9 @@ ORDER.forEach(function (s) { enabled[s.id] = true; });
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (hier keine: auch die Glaswand zaehlt nur, wenn dahinter nichts anderes liegt) */
 function weichMat(o) { return o.material.transparent; }
-/* Teilchen des Gasaustauschs (userData.teilchen): Blutkoerperchen und ihre Punkte mit dem Kapillarnetz, Gasteilchen mit der aufgeschnittenen Alveole (innen sichtbar, wenn
+/* Teilchen des Gasaustauschs (userData.teilchen): Punkte im Blut (Netz, Arterie, Vene; je Bahn nach enabled), Gasteilchen mit der aufgeschnittenen Alveole (innen sichtbar, wenn
    sie offen ist oder die Wand durchsichtig) */
-function teilchenSichtbar(art) { return art === 'gas' ? !!enabled.alveoleOffen && (offenAn || seeThrough) : !!enabled.kapillaren; }
+function teilchenSichtbar(art) { return art === 'gas' ? !!enabled.alveoleOffen && (offenAn || seeThrough) : !!(enabled.kapillaren || enabled.arteriole || enabled.venole); }
 function applyVisibility() {
   root.traverse(function (o) {
     if (!o.isMesh) return;
@@ -1917,6 +1917,7 @@ beschrifte();
 function zustand(){
   return { A:A, ery:ery, ANKUNFT:ANKUNFT, frei:frei, freiBlut:freiBlut, abO2:abO2, abCO2:abCO2, fLunge:fLunge, zeigO2:zeigO2, zeigCO2:zeigCO2,
            nO2:alvZielO2(), nCO2:alvZielCO2(), O2MAX:O2MAX, CO2MAX:CO2MAX, PLATZ_O2:PLATZ_O2, PLATZ_CO2:PLATZ_CO2, ERY:ERY,
+           fluss:fluss, BAHN:BAHN, FLUG:FLUG,   // nur lesen: Blutfluss und Flugliste (aktiv, art, richtung, zelle, t) fuer den Austausch in 3D
            blutfarbe:blutfarbe, blutfarbeBlass:blutfarbeBlass };
 }
 /* Zugriff fuer die Bedienung ausserhalb (Pause) und fuer die Pruefung (nur lesen) */
@@ -1936,52 +1937,88 @@ return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zust
 })();
 
 /* =====================================================================
-   6. Gasaustausch in 3D: die Simulation (gas) steuert das Modell, an der Physik des Originals aendert sich nichts. Neu gegenueber dem Original (Darstellung):
-   - Blutkoerperchen: genau die ERY Zellen der Simulation (Position e.x entlang EINER Kapillarbahn um die aufgeschnittene Alveole, vom linken, blauen Ende der
-     Arterienseite zum rechten, roten der Venenseite), als flache bikonkave Scheiben, Farbe blutfarbeBlass(e.o2) wie im Original; ihre Punkte (sO2 oben, sCO2 unten, mit
-     Gasfilter) liegen auf den festen Plaetzen PLATZ_O2/PLATZ_CO2. Darstellungsgroesse: Laenge 0,26, Breite 0,16 Modelleinheiten (wirklich ca. 0,075, also etwa Faktor 2-3).
-   - Gasteilchen in der aufgeschnittenen Alveole: alvZielO2() rote, alvZielCO2() graublaue Kugeln (mit Gasfilter), feste Plaetze (Halton-Folge, keine Zufallszahlen) mit
-     ruhiger Bewegung aus der Uhr der Simulation; Kugelradius 0,07 (gross genug zum Sehen).
+   6. Gasaustausch in 3D: die Simulation (gas) steuert das Modell, an der Physik des Originals aendert sich nichts. Neu gegenueber dem Original (Darstellung),
+   ohne Blutkoerperchen, nur Gasteilchen einer einzigen Groesse (GAS_R) in den Farben des Schemas (O2 #CE3A2F, CO2 #6B7F8C), alle Plaetze fest (Halton-Folge, kein Math.random):
+   - Kapillarnetz, Arterie und Vene: auf jeder Bahn (Lauf des Kapillarnetzes, Aeste und Stamm der Gefaesse) fliessen Punkte von der Arterienseite zur Venenseite (Lauf: vom
+     linken zum rechten Ende; Arterie von oben nach unten, Vene von unten nach oben). Weg je Bild = fluss * BAHN * dt * Laenge der Ringbahn (Stopp und Pause: sie stehen).
+     Mischung entlang der Bahn (relative Lage u = 0 Eingang, 1 Ausgang) aus den sichtbaren Zaehlern der Zellen der Simulation (ery[i].sO2/sCO2 bei Lage e.x, vom Eingang
+     mit anzahlO2/anzahlCO2 des ankommenden Blutes bis zum Ausgang mit dem abfliessenden Blut abO2/abCO2, Skala PLATZ_*.length wie im Original): jeder Platz hat einen festen
+     Rang; er ist da, wenn der Anteil an seiner Stelle ueber dem Rang liegt (O2 kommen im Lauf dazu, CO2 gehen weg, nichts wechselt die Art). Arterie: Ankunft, Vene: Abfluss.
+   - Austausch an der aufgeschnittenen Alveole: jeder aktive Flug der Simulation (FLUG: zuZelle = O2 aus der Alveole ins Blut, zuAlveole = CO2/O2 aus dem Blut in die Alveole,
+     Fortschritt f.t, Lage der Zelle f.zelle.x) wird als Punkt zwischen Innenraum und Kapillare an der Stelle e.x der Ringbahn gezeigt (Rate und Richtung also wie im Schema).
+   - Gasteilchen in der aufgeschnittenen Alveole: alvZielO2() rote, alvZielCO2() graublaue Kugeln (mit Gasfilter), feste Plaetze mit ruhiger Bewegung aus der Uhr der Simulation.
    - Gefaesse: Arterie und zufuehrende Seite des Kapillarnetzes in blutfarbe(Ankunft bzw. freies Blut), Vene und abfuehrende Seite in blutfarbe(abO2) (wie abflussRohr).
    - Atmung: root dehnt sich um die Mitte des Saeckchens mit 1 + 0,04 * fLunge.
    Alles ist je Bild aus dem Zustand der Simulation gesetzt (Pause haelt es an); die Teilchen tragen userData.teilchen und noexport und sind nicht anklickbar.
    ===================================================================== */
 var G3 = null;                                   /* Zustand der 3D-Darstellung (wird nach dem Kapillarnetz gebaut) */
-var ERY_L = 0.26, ERY_B = 0.16, ERY_Z = 0.10;    /* Halbachsen der Scheibe: Laenge/2 = 0,13, Breite/2 = 0,08, Dicke (Skala der Wolbung) */
-var ERY_PX = 0.0038;                             /* Modelleinheiten je Bildpunkt der Plaetze PLATZ_* (Zelle 68 x 42 Bildpunkte -> 0,26 x 0,16) */
-var PT_R = 0.02, GAS_R = 0.07, GAS_AMP = 0.10;   /* Radius der Punkte an der Zelle, der Gasteilchen, Schwingung der Gasteilchen */
+var GAS_R = 0.06, GAS_AMP = 0.10;               /* Radius ALLER Gasteilchen (passt neben die Kapillaren, Radius 0,05-0,06), Schwingung der Gasteilchen in der Alveole */
+var NETZ_ABST = 0.42, GEF_ABST = 0.60;           /* Abstand der festen Plaetze entlang einer Bahn (Netz, Gefaesse) */
 var ATEM_DEHNUNG = 0.04, ATEM_MITTE_Y = -2.8;    /* Atmung: Skalierung 1 + ATEM_DEHNUNG * fLunge um den Punkt (0, ATEM_MITTE_Y, 0) */
 function rgbFarbe(str) {                         /* "rgb(r,g,b)" aus der Simulation -> Farbe (linear, wie srgb) */
   var m = /(\d+),\s*(\d+),\s*(\d+)/.exec(str);
   return srgb((+m[1] << 16) | (+m[2] << 8) | +m[3]);
 }
 function halton(i, b) { var f = 1, r = 0; i++; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; }
-function scheibeGeo() {                          /* bikonkave Scheibe (Rotationskoerper, Evans-Fung-Profil), Radius 1, Achse z */
-  var prof = [], k, rho, h, n = 10;
-  for (k = 0; k <= n; k++) { rho = k / n; h = Math.sqrt(Math.max(0, 1 - rho * rho)) * (0.207 + 0.5006 * rho * rho - 0.0702 * rho * rho * rho * rho); prof.push(new THREE.Vector2(rho, -h)); }
-  for (k = n; k >= 0; k--) { rho = k / n; h = Math.sqrt(Math.max(0, 1 - rho * rho)) * (0.207 + 0.5006 * rho * rho - 0.0702 * rho * rho * rho * rho); prof.push(new THREE.Vector2(rho, h)); }
-  var g = new THREE.LatheGeometry(prof, 20);
-  g.rotateX(Math.PI / 2);                        /* Achse y -> z */
-  return g;
-}
+/* Anzahl sichtbarer Punkte einer Zelle im Schema bei Konzentration v (Formeln wie anzahlO2/anzahlCO2 des Originals), als Anteil der Plaetze */
+function anteilO2(Z, v) { return Math.round(Math.max(0, Math.min(1, (v - 0.18) / 0.76)) * Z.PLATZ_O2.length) / Z.PLATZ_O2.length; }
+function anteilCO2(Z, v) { return Math.round(Math.max(0, Math.min(1, v / 0.60)) * Z.PLATZ_CO2.length) / Z.PLATZ_CO2.length; }
 function gas3DBauen() {
   var Z0 = gas.zustand(), bahn = KAP_BAHNEN[0], i, k;
-  KAP_BAHNEN.forEach(function (b) { if (b.pts.length > bahn.pts.length) bahn = b; });   /* die laengste zusammenhaengende Bahn */
-  var kurve = new THREE.CatmullRomCurve3(bahn.pts.map(function (q) { return V(q[0], q[1], q[2]); }), false, 'catmullrom', 0.5), NB = 240, bp = [], bt = [];
-  for (i = 0; i <= NB; i++) { bp.push(kurve.getPointAt(i / NB)); bt.push(kurve.getTangentAt(i / NB)); }
-  /* Blutkoerperchen und ihre Punkte */
-  var ery = new THREE.InstancedMesh(scheibeGeo(), mat(0xffffff, { rough: 0.5 }), Z0.ERY);
-  ery.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  ery.setColorAt(0, new THREE.Color(1, 1, 1));
-  ery.instanceColor.setUsage(THREE.DynamicDrawUsage);
-  var dotGeo = new THREE.SphereGeometry(PT_R, 8, 6);
-  var dO = new THREE.InstancedMesh(dotGeo, mat(0xCE3A2F, { rough: 0.35 }), Z0.ERY * Z0.PLATZ_O2.length);
-  var dC = new THREE.InstancedMesh(dotGeo, mat(0x6B7F8C, { rough: 0.35 }), Z0.ERY * Z0.PLATZ_CO2.length);
+  KAP_BAHNEN.forEach(function (b) { if (b.pts.length > bahn.pts.length) bahn = b; });   /* die laengste zusammenhaengende Bahn = die Ringkapillare der Zellen */
+  var kurve = new THREE.CatmullRomCurve3(bahn.pts.map(function (q) { return V(q[0], q[1], q[2]); }), false, 'catmullrom', 0.5), NB = 240, bp = [];
+  for (i = 0; i <= NB; i++) bp.push(kurve.getPointAt(i / NB));
+  /* Bahnen fuer die fliessenden Punkte: Laeufe des Netzes (Normale nach aussen von der Wand, Punkte sitzen leicht vor der Roehre), Aeste und Staemme der Gefaesse (vor der Roehre, Stamm in drei Spuren) */
+  var pfade = [];
+  function nahAlv(p) {                           /* Richtung nach aussen vom naechsten Blaeschen */
+    var best = null, bd = 1e9, a, d, q;
+    for (var m = 0; m < ALV.length; m++) { a = ALV[m]; q = Math.sqrt((p.x - a.c[0]) * (p.x - a.c[0]) + (p.y - a.c[1]) * (p.y - a.c[1]) + (p.z - a.c[2]) * (p.z - a.c[2])); d = Math.abs(q - a.r); if (d < bd) { bd = d; best = V((p.x - a.c[0]) / q, (p.y - a.c[1]) / q, (p.z - a.c[2]) / q); } }
+    return best;
+  }
+  function pfad(pts, r0, r1, modus, sid, kappe) {
+    var kv = new THREE.CatmullRomCurve3(pts.map(function (q) { return V(q[0], q[1], q[2]); }), false, 'catmullrom', 0.5);
+    var L = kv.getLength(), n = Math.max(6, Math.ceil(L / 0.05)), sp = kv.getSpacedPoints(n), lanen = (modus === 'netz' || r0 < 0.2) ? [0] : [-1, 0, 1], t, lat, nm, o, r, j;
+    lanen.forEach(function (ln) {
+      var tab = new Float32Array((n + 1) * 3);
+      for (j = 0; j <= n; j++) {
+        r = r0 + (r1 - r0) * j / n;
+        if (modus === 'netz') { nm = nahAlv(sp[j]); o = nm.multiplyScalar(r * 0.9); }
+        else {
+          t = sp[Math.min(n, j + 1)].clone().sub(sp[Math.max(0, j - 1)]); lat = V(-t.y, t.x, 0);
+          if (lat.lengthSq() < 1e-8) lat.set(1, 0, 0);
+          o = lat.normalize().multiplyScalar(ln * r * 0.55); o.z += r * 0.8;
+        }
+        tab[j * 3] = sp[j].x + o.x; tab[j * 3 + 1] = sp[j].y + o.y; tab[j * 3 + 2] = sp[j].z + o.z;
+      }
+      pfade.push({ tab: tab, n: n, L: L, modus: modus, sid: sid, kappe: !!kappe, abst: modus === 'netz' ? NETZ_ABST : (lanen.length > 1 ? GEF_ABST * 1.6 : GEF_ABST) });
+    });
+  }
+  ['rest', 'kappe'].forEach(function (q) {
+    KAP[q].forEach(function (l) {
+      var pts = l.pts;
+      if (pts[0][0] > pts[pts.length - 1][0]) pts = pts.slice().reverse();   /* vom linken (Arterienseite) zum rechten Ende (Venenseite) */
+      pfad(pts, l.r, l.r, 'netz', 'kapillaren', q === 'kappe');
+    });
+  });
+  GEF.arteriole.linien.forEach(function (l) { pfad(l.pts, l.r0, l.r1, 'art', 'arteriole', false); });
+  GEF.venole.linien.forEach(function (l) { pfad(l.pts.slice().reverse(), l.r1, l.r0, 'vene', 'venole', false); });   /* Vene: von den Kapillaren zum Stamm, dort nach oben */
+  var nO = 0, nC = 0;
+  pfade.forEach(function (p, j) {
+    p.nO = Math.max(1, Math.round(p.L / p.abst)); p.nC = Math.max(1, Math.round(p.L / (p.abst * 1.25)));
+    p.o = nO; p.c = nC; nO += p.nO; nC += p.nC; p.ph = halton(j, 7);
+  });
+  var rangO = new Float32Array(nO), rangC = new Float32Array(nC);
+  pfade.forEach(function (p, j) {
+    for (k = 0; k < p.nO; k++) rangO[p.o + k] = halton(k + 11 * j, 2);
+    for (k = 0; k < p.nC; k++) rangC[p.c + k] = halton(k + 5 * j, 3);
+  });
+  var geoG = new THREE.SphereGeometry(GAS_R, 8, 5), matO = mat(0xCE3A2F, { rough: 0.35 }), matC = mat(0x6B7F8C, { rough: 0.35 });
+  var nzO = new THREE.InstancedMesh(geoG, matO, nO), nzC = new THREE.InstancedMesh(geoG, matC, nC);
+  var fO = new THREE.InstancedMesh(geoG, matO, Z0.FLUG.length), fC = new THREE.InstancedMesh(geoG, matC, Z0.FLUG.length);
   /* Gasteilchen in der aufgeschnittenen Alveole: feste Plaetze im Innenraum (Kugel um die Mitte, vor der Schnittebene) */
   var OFd = App.daten.offen, c = OFd.mitte, Rin = OFd.radius - T_WAND - GAS_R - 0.06, zmax = OFd.schnittZ - 0.14;
-  var geoG = new THREE.SphereGeometry(GAS_R, 10, 7);
-  var gO = new THREE.InstancedMesh(geoG, mat(0xCE3A2F, { rough: 0.35 }), Z0.O2MAX);
-  var gC = new THREE.InstancedMesh(geoG, mat(0x6B7F8C, { rough: 0.35 }), Z0.CO2MAX);
+  var gO = new THREE.InstancedMesh(geoG, matO, Z0.O2MAX);
+  var gC = new THREE.InstancedMesh(geoG, matC, Z0.CO2MAX);
   function plaetze(n, versatz) {
     var a = [];
     for (k = 0; k < n; k++) {
@@ -1992,61 +2029,94 @@ function gas3DBauen() {
     }
     return a;
   }
-  G3 = { bp: bp, bt: bt, NB: NB, ery: ery, dO: dO, dC: dC, gO: gO, gC: gC, pO: plaetze(Z0.O2MAX, 0), pC: plaetze(Z0.CO2MAX, 41), c: c, Rin: Rin, zmax: zmax, t: 0,
-         cA: '', cV: '', M: new THREE.Matrix4(), v: new THREE.Vector3(), X: new THREE.Vector3(), Y: new THREE.Vector3(), Zv: new THREE.Vector3(0, 0, 1), P: new THREE.Vector3(), nul: new THREE.Matrix4().makeScale(0, 0, 0) };
-  [[ery, 'Blutkörperchen'], [dO, 'Sauerstoff am Blutkörperchen'], [dC, 'Kohlendioxid am Blutkörperchen'], [gO, 'Sauerstoff in der Alveole'], [gC, 'Kohlendioxid in der Alveole']].forEach(function (q, j) {
+  G3 = { bp: bp, NB: NB, pfade: pfade, rangO: rangO, rangC: rangC, nzO: nzO, nzC: nzC, fO: fO, fC: fC, gO: gO, gC: gC, pO: plaetze(Z0.O2MAX, 0), pC: plaetze(Z0.CO2MAX, 41), c: c, Rin: Rin, zmax: zmax, t: 0, weg: 0,
+         Lb: kurve.getLength(), cA: '', cV: '', M: new THREE.Matrix4(), tO: new Float32Array(33), tC: new Float32Array(33), nul: new THREE.Matrix4().makeScale(0, 0, 0), P: new THREE.Vector3() };
+  [[nzO, 'Sauerstoff im Blut', 'netz'], [nzC, 'Kohlendioxid im Blut', 'netz'], [fO, 'Sauerstoff beim Austausch', 'gas'], [fC, 'Kohlendioxid beim Austausch', 'gas'], [gO, 'Sauerstoff in der Alveole', 'gas'], [gC, 'Kohlendioxid in der Alveole', 'gas']].forEach(function (q) {
     var m = q[0];
-    m.name = q[1]; m.userData.teilchen = j < 3 ? 'ery' : 'gas'; m.userData.noexport = true;
+    m.name = q[1]; m.userData.teilchen = q[2]; m.userData.noexport = true;
     m.frustumCulled = false; m.renderOrder = 4;
     m.raycast = function () {};                  /* Teilchen sind nicht anklickbar */
-    if (m !== ery) m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    for (i = 0; i < m.count; i++) m.setMatrixAt(i, G3.nul);
     dyn.add(m);
   });
 }
-/* Punkt (P) und Richtung (X, in der Bildebene) auf der Bahn bei u (0..1) */
-function bahnAn(u) {
-  var f = Math.max(0, Math.min(1, u)) * G3.NB, i = Math.min(G3.NB - 1, Math.floor(f)), t = f - i, a = G3.bp[i], b = G3.bp[i + 1], ta = G3.bt[i], tb = G3.bt[i + 1];
-  G3.P.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
-  G3.X.set(ta.x + (tb.x - ta.x) * t, ta.y + (tb.y - ta.y) * t, 0);
-  if (G3.X.lengthSq() < 1e-6) G3.X.set(1, 0, 0);
-  G3.X.normalize();
-  G3.Y.set(-G3.X.y, G3.X.x, 0);                  /* z x X: nach oben, wo die Bahn nach rechts laeuft */
+/* Lage auf der Ringbahn bei u (0..1), nach aussen versetzt wie die Punkte des Netzes: in g.P */
+function ringAn(u) {
+  var g = G3, f = Math.max(0, Math.min(1, u)) * g.NB, i = Math.min(g.NB - 1, Math.floor(f)), t = f - i, a = g.bp[i], b = g.bp[i + 1], c = g.c, dx, dy, dz, d;
+  g.P.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+  dx = g.P.x - c[0]; dy = g.P.y - c[1]; dz = g.P.z - c[2]; d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+  g.P.x += dx / d * KAP_R_OFFEN * 0.9; g.P.y += dy / d * KAP_R_OFFEN * 0.9; g.P.z += dz / d * KAP_R_OFFEN * 0.9;
+}
+/* Punkt der Bahn p bei u in den Matrixeintrag e (Position) */
+function setzeAn(im, idx, e, x, y, z, s) {
+  e[0] = e[5] = e[10] = s; e[12] = x; e[13] = y; e[14] = z;
+  im.setMatrixAt(idx, G3.M);
 }
 function gas3D(Z, dt) {
   if (!G3) return;
-  var i, j, e, g = G3, M = g.M, v = g.v;
+  var i, j, k, g = G3, M = g.M, me = M.elements, P = g.P;
   g.t += dt;
+  M.identity();
   /* Atmung */
   var sk = 1 + ATEM_DEHNUNG * Z.fLunge;
   root.scale.setScalar(sk); root.position.set(0, ATEM_MITTE_Y * (1 - sk), 0);
   /* Gefaesse: Arterienseite in der Farbe des ankommenden Blutes, Venenseite in der des abfliessenden */
-  var cA = Z.blutfarbe(Z.frei ? Z.freiBlut : Z.ANKUNFT.o2), cV = Z.blutfarbe(Z.abO2);
+  var o2In = Z.frei ? Z.freiBlut : Z.ANKUNFT.o2, cA = Z.blutfarbe(o2In), cV = Z.blutfarbe(Z.abO2);
   if (cA !== g.cA || cV !== g.cV) {
     g.cA = cA; g.cV = cV;
     var kA = rgbFarbe(cA), kV = rgbFarbe(cV);
     MAT.arteriole.color.copy(kA); MAT.venole.color.copy(kV);
     STRUCT.kapillaren.meshes.forEach(function (m) { farbeKap(m.geometry, kA, kV); });
   }
-  /* Blutkoerperchen und ihre Punkte */
-  var lift = KAP_R_OFFEN + ERY_Z * 0.31 + 0.01, vo = Z.PLATZ_O2.length, vc = Z.PLATZ_CO2.length;
-  for (i = 0; i < Z.ery.length; i++) {
-    e = Z.ery[i];
-    bahnAn(e.x);
-    g.P.z += lift;
-    M.makeBasis(v.copy(g.X).multiplyScalar(ERY_L / 2), g.Y.clone().multiplyScalar(ERY_B / 2), g.Zv.clone().multiplyScalar(ERY_Z)); M.setPosition(g.P);
-    g.ery.setMatrixAt(i, M);
-    g.ery.setColorAt(i, rgbFarbe(Z.blutfarbe(e.o2)).lerp(rgbFarbe(Z.blutfarbeBlass(e.o2)), 0.4));   /* Mischung: das blasse Original-Blau/Rot wirkt im beleuchteten 3D fast weiss */
-    var nO = Z.zeigO2 ? e.sO2 : 0, nC = Z.zeigCO2 ? e.sCO2 : 0;
-    for (j = 0; j < vo; j++) {
-      if (j < nO) { v.copy(g.P).addScaledVector(g.X, Z.PLATZ_O2[j][0] * ERY_PX).addScaledVector(g.Y, -Z.PLATZ_O2[j][1] * ERY_PX); v.z += ERY_Z * 0.36 + PT_R * 0.5; M.makeTranslation(v.x, v.y, v.z); g.dO.setMatrixAt(i * vo + j, M); }
-      else g.dO.setMatrixAt(i * vo + j, g.nul);
-    }
-    for (j = 0; j < vc; j++) {
-      if (j < nC) { v.copy(g.P).addScaledVector(g.X, Z.PLATZ_CO2[j][0] * ERY_PX).addScaledVector(g.Y, -Z.PLATZ_CO2[j][1] * ERY_PX); v.z += ERY_Z * 0.36 + PT_R * 0.5; M.makeTranslation(v.x, v.y, v.z); g.dC.setMatrixAt(i * vc + j, M); }
-      else g.dC.setMatrixAt(i * vc + j, g.nul);
-    }
+  /* Blutstrom: Weg je Bild (Stopp: fluss = 0, Pause: kein Aufruf) */
+  g.weg += Z.fluss * Z.BAHN * dt * g.Lb;
+  /* Mischung entlang des Laufs: Anteile der Plaetze, Tabelle ueber u = 0..1 aus Eingang, den Zellen nach Lage e.x und Ausgang */
+  var cz = Z.ery.slice().sort(function (a, b) { return a.x - b.x; }), px = [0], po = [anteilO2(Z, o2In)], pc = [anteilCO2(Z, Z.ANKUNFT.co2)];
+  cz.forEach(function (c) { px.push(c.x); po.push(c.sO2 / Z.PLATZ_O2.length); pc.push(c.sCO2 / Z.PLATZ_CO2.length); });
+  px.push(1); po.push(anteilO2(Z, Z.abO2)); pc.push(anteilCO2(Z, Z.abCO2));
+  var q = 0, u, tt;
+  for (j = 0; j <= 32; j++) {
+    u = j / 32;
+    while (q < px.length - 2 && px[q + 1] < u) q++;
+    tt = px[q + 1] > px[q] ? Math.max(0, Math.min(1, (u - px[q]) / (px[q + 1] - px[q]))) : 1;
+    g.tO[j] = po[q] + (po[q + 1] - po[q]) * tt; g.tC[j] = pc[q] + (pc[q + 1] - pc[q]) * tt;
   }
-  g.ery.instanceMatrix.needsUpdate = true; g.ery.instanceColor.needsUpdate = true; g.dO.instanceMatrix.needsUpdate = true; g.dC.instanceMatrix.needsUpdate = true;
+  var aO = po[0], aC = pc[0], vO = po[po.length - 1], vC = pc[pc.length - 1];
+  /* Punkte auf den Bahnen */
+  var KRAMP = 10;                                /* Anteil-Unterschied, ueber den ein Punkt ein- bzw. ausblendet (1/KRAMP) */
+  [[g.nzO, 'nO', 'o', g.rangO, g.tO, Z.zeigO2, aO, vO], [g.nzC, 'nC', 'c', g.rangC, g.tC, Z.zeigCO2, aC, vC]].forEach(function (w) {
+    var im = w[0], rang = w[3], tab = w[4], zeig = w[5];
+    g.pfade.forEach(function (p) {
+      var an = zeig && enabled[p.sid] && !(p.kappe && offenAn), N = p[w[1]], off = p[w[2]], u0 = g.weg / p.L + p.ph, f, s, ed, pos, a, b, tl, ix, fr;
+      for (k = 0; k < N; k++) {
+        ix = off + k;
+        if (!an) { im.setMatrixAt(ix, g.nul); continue; }
+        u = k / N + u0; u -= Math.floor(u);
+        f = p.modus === 'art' ? w[6] : p.modus === 'vene' ? w[7] : (fr = u * 32, a = Math.min(31, Math.floor(fr)), tl = fr - a, tab[a] + (tab[a + 1] - tab[a]) * tl);
+        s = Math.max(0, Math.min(1, (f - rang[ix]) * KRAMP));
+        ed = Math.min(u, 1 - u) / 0.04; if (ed < 1) s *= ed;   /* an den Enden ein- und ausblenden */
+        if (s < 0.02) { im.setMatrixAt(ix, g.nul); continue; }
+        fr = u * p.n; a = Math.min(p.n - 1, Math.floor(fr)); tl = fr - a; pos = p.tab; b = a * 3;
+        setzeAn(im, ix, me, pos[b] + (pos[b + 3] - pos[b]) * tl, pos[b + 1] + (pos[b + 4] - pos[b + 1]) * tl, pos[b + 2] + (pos[b + 5] - pos[b + 2]) * tl, s);
+      }
+    });
+    im.instanceMatrix.needsUpdate = true;
+  });
+  /* Austausch an der aufgeschnittenen Alveole: die aktiven Fluege der Simulation (Alveole <-> Kapillare an der Stelle der Zelle) */
+  var c0 = g.c, nf = [0, 0];
+  for (i = 0; i < Z.FLUG.length; i++) {
+    var f = Z.FLUG[i], zu = f.richtung === 'zuZelle', ab = f.richtung === 'zuAlveole', im = f.art === 'o2' ? g.fO : g.fC;
+    if (!f.aktiv || !(zu || ab) || !(f.art === 'o2' ? Z.zeigO2 : Z.zeigCO2)) continue;
+    ringAn(f.zelle.x);
+    var X, Y, Zz, cx = P.x, cy = P.y, cz2 = P.z, ix2 = c0[0] + (cx - c0[0]) * 0.55 + (halton(i, 2) - 0.5) * 0.5, iy = c0[1] + (cy - c0[1]) * 0.55 + (halton(i, 3) - 0.5) * 0.5, iz = c0[2] + (cz2 - c0[2]) * 0.55 + (halton(i, 5) - 0.5) * 0.5;
+    if (iz > g.zmax) iz = g.zmax;
+    var tf = Math.max(0, Math.min(1, f.t)); tf = tf * tf * (3 - 2 * tf);
+    if (zu) { X = ix2 + (cx - ix2) * tf; Y = iy + (cy - iy) * tf; Zz = iz + (cz2 - iz) * tf; }   /* zuZelle: Alveole -> Kapillare */
+    else { X = cx + (ix2 - cx) * tf; Y = cy + (iy - cy) * tf; Zz = cz2 + (iz - cz2) * tf; }   /* zuAlveole: Kapillare -> Alveole */
+    setzeAn(im, nf[f.art === 'o2' ? 0 : 1]++, me, X, Y, Zz, 1);
+  }
+  for (j = 0; j < 2; j++) { var imf = j ? g.fC : g.fO; for (i = nf[j]; i < imf.count; i++) imf.setMatrixAt(i, g.nul); imf.instanceMatrix.needsUpdate = true; }
   /* Gasteilchen: die ersten alvZiel sind sichtbar (wie im Original), ruhig schwebend */
   [[g.gO, g.pO, Z.zeigO2 ? Z.nO2 : 0], [g.gC, g.pC, Z.zeigCO2 ? Z.nCO2 : 0]].forEach(function (q) {
     var im = q[0], pl = q[1], n = q[2], a, x, y, z, dx, dy, dz, d;
@@ -2057,7 +2127,7 @@ function gas3D(Z, dt) {
       if (z > g.zmax) z = g.zmax;
       dx = x - g.c[0]; dy = y - g.c[1]; dz = z - g.c[2]; d = Math.sqrt(dx * dx + dy * dy + dz * dz);
       if (d > g.Rin) { d = g.Rin / d; x = g.c[0] + dx * d; y = g.c[1] + dy * d; z = g.c[2] + dz * d; }
-      M.makeTranslation(x, y, z); im.setMatrixAt(i, M);
+      setzeAn(im, i, me, x, y, z, 1);
     }
     im.instanceMatrix.needsUpdate = true;
   });
