@@ -91,6 +91,7 @@ var MARKUP = `<div id="title">
     <span class="sep"></span>
     <button id="bSee" class="gh" title="Lungenlappen durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
     <button id="bLab" class="gh on">Beschriftung</button>
+    <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Brustwand mit dem Pleuraspalt">Lupe</button>
   </div>
   <div class="trow">
     <span class="cap">Atmung</span>
@@ -203,6 +204,15 @@ var MARKUP = `<div id="title">
     </div>
   </div>
   </div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Querschnitt</div>
+  <h3 id="lpTitle">Pleuraspalt &ndash; warum die Lunge am Brustkorb haftet</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-pt="0" title="Normaler Pleuraspalt mit Unterdruck">normal</button><button class="gh" data-pt="1" title="Luft dringt in den Spalt, der Unterdruck geht verloren, die Lunge l&ouml;st sich und f&auml;llt zusammen.">Pneumothorax</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#1B7F9E"></i>Rippenfell</span><span><i style="background:#8FD3F0"></i>Pleuraspalt (Fl&uuml;ssigkeit)</span><span><i style="background:#D9959B"></i>Lungenfell</span><span id="lpLegLuft" style="display:none"><i style="background:#DEE5E7"></i>Luft</span></div>
 </div>
 
 <div class="panel" id="legend">
@@ -815,6 +825,7 @@ function setSelected(id, punkt) {
   });
   $('iOpen').style.display = alWahl !== null ? '' : 'none';   /* Knopf "Alveole hier ansehen" nur bei den Lungenlappen */
   box.classList.add('show');
+  lupeClose();   /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 
@@ -828,13 +839,14 @@ var SZ = Kern.Szenarien({
   beimWechsel: function (id) {
     if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
       if (quiz) quizEnd();
+      if (LUPE.open) lupeClose();
       setSelected(null); closeCard();
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Lunge, sie beginnt eingeklappt (Titelzeile) */
     }
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (LUPE.open) lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -847,7 +859,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 
@@ -927,6 +939,7 @@ function showCard(kick, title, html, istQuiz) {
   $('sAfter').innerHTML = '';
   $('sQa').style.display = istQuiz ? 'flex' : 'none';
   if (selected && !istQuiz) setSelected(null);
+  lupeClose();   /* die Erklaerkarte steht an der Stelle der Lupe */
   $('scard').classList.add('show');
   $('info').classList.remove('show');
   kartenLage();
@@ -1739,7 +1752,12 @@ function lesen(){
     pleura: el.pleuraZahl.textContent
   };
 }
-return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, anschliessen: function (f, w) { haken = f; hakenWahl = w; }, punkte: punkte };
+/* Einbindung fuer die Lupe (Abschnitt 6b, nur lesen): Muskeln des Schemas und Druck im Pleuraspalt (Formel wie in schritt) */
+function lupeWerte(){
+  var Vziel = VMAX_D*S.d + VMAX_I*S.i;
+  return { d: S.d, i: S.i, pPleura: -5 - 0.0055*Math.max(0,Vziel) };
+}
+return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, lupeWerte: lupeWerte, anschliessen: function (f, w) { haken = f; hakenWahl = w; }, punkte: punkte };
 })();
 
 /* =====================================================================
@@ -2119,6 +2137,7 @@ function schemaWzEnde() {
   schemaWzLoeschen();
 }
 function setSchema(on) {
+  if (on) lupeClose();   /* Schema und Lupe schliessen sich gegenseitig: die Lupe wuerde das Schema verdecken */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
   $('schema').classList.toggle('show', on);
@@ -2132,6 +2151,179 @@ function setSchema(on) {
 }
 $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
+   6b. Lupe: Querschnitt durch die Brustwand mit dem Pleuraspalt (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv)
+   Von aussen nach innen (links nach rechts): Haut und Unterhaut, Rippe (Querschnitt) mit Zwischenrippenmuskel, Rippenfell (Pleura parietalis),
+   Pleuraspalt mit Fluessigkeitsfilm, Lungenfell (Pleura visceralis), Lungengewebe mit angedeuteten Alveolen. Die Zeichnung ist rein berechnet, ohne Zufall:
+   Brustwand und Lunge verschieben sich gemeinsam mit den Muskeln des Schemas (atmen.lupeWerte: S.d, S.i; Einatmung = nach aussen), der Spalt bleibt gleich
+   schmal; die Zahl im Spalt ist m.pPleura der Thorax-Physik. Schalter "Pneumothorax": Luft fuellt den Spalt, die Lunge loest sich und zieht sich zusammen
+   (weich ueber ca. 1,5 s), die Lunge folgt der Brustwand nicht mehr, der Druck ist 0. Das gilt nur fuer die Lupe: 3D-Modell, Thorax-Simulation und Schema
+   bleiben unveraendert. Schema und Lupe schliessen sich gegenseitig (die Lupe wuerde das Schema verdecken).
+   ===================================================================== */
+var LUPE = { open: false, pt: 0, ptZiel: 0, ctx: null, dpr: 1, W: 340, H: 236, zeit: 0 };   /* pt: 0 = normal ... 1 = Pneumothorax (weich) */
+var LU_XW = 118, LU_GAP = 6;                      /* Lage des Rippenfells (Ruhe) und Breite des Spalts in Bildpunkten */
+var LU_TEXT = 'Zwischen Rippenfell und Lungenfell liegt nur ein hauchdünner Flüssigkeitsfilm. Darin herrscht ständig ein Unterdruck. Wie zwei nasse Glasplatten gleiten die Blätter aneinander, lassen sich aber nicht trennen: Hebt sich der Brustkorb, wird die Lunge mitgezogen.';
+var LU_PTX = 'Gelangt Luft in den Pleuraspalt – durch eine Verletzung oder eine geplatzte Blase an der Lunge –, ist der Unterdruck weg. Die Lunge folgt dem Brustkorb nicht mehr und fällt in sich zusammen. Typisch: plötzlicher Brustschmerz und Atemnot.';
+var LU_SCHALTER = '„Pneumothorax“ – Luft dringt in den Spalt, der Unterdruck geht verloren, die Lunge löst sich und fällt zusammen.';
+function luFmt(p) { return p.toFixed(1).replace('.', ',').replace('-', '−'); }
+function luMix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+function luRgb(c, al) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + al + ')'; }
+function luLabel(c, text, x, y, rechts, al) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.globalAlpha = al === undefined ? 1 : al;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+  c.globalAlpha = 1;
+}
+function luLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+/* Oberflaeche der Lunge bei Hoehe y: Basis xl, beim Pneumothorax woelbt sich der Rand (oben und unten weiter weg von der Wand) */
+function luOberflaeche(y, xl, pt) { var u = (y - 118) / 118; return xl + pt * 44 * u * u; }
+function luHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, w = atmen.lupeWerte(), p = LUPE.pt, y, i, j;
+  var e = Math.max(-1, Math.min(1, 0.5 * w.d + 0.5 * w.i)), sh = -9 * e;   /* Einatmung (e > 0): Brustwand und Lunge nach aussen = nach links */
+  var xW = LU_XW + sh, xV = xW + LU_GAP, xl = xV + (192 - xV) * p;        /* Lungenrand: folgt der Wand, beim Pneumothorax bleibt er zusammengezogen stehen */
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#0C1A20'; c.fillRect(0, 0, W, H);
+  /* feste Bezugslinie: daran sieht man die Verschiebung */
+  c.setLineDash([3, 4]); c.strokeStyle = 'rgba(231,239,240,0.28)'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(LU_XW + 0.5, 0); c.lineTo(LU_XW + 0.5, H); c.stroke(); c.setLineDash([]);
+  /* Brustwand (verschoben mit sh) */
+  c.save(); c.translate(sh, 0);
+  c.fillStyle = '#C99A7A'; c.fillRect(-40, 0, 54, H);                                   /* Haut */
+  c.fillStyle = '#E3C77A'; c.fillRect(14, 0, 20, H);                                    /* Unterhaut (Fett) */
+  c.fillStyle = '#8E4545'; c.fillRect(34, 0, LU_XW - 34, H);                            /* Zwischenrippenmuskel */
+  c.save(); c.beginPath(); c.rect(34, 0, LU_XW - 34, H); c.clip();
+  c.strokeStyle = 'rgba(255,200,200,0.20)'; c.lineWidth = 1;
+  for (i = -H; i < H; i += 7) { c.beginPath(); c.moveTo(34, i + 40); c.lineTo(LU_XW, i + 40 + 46); c.stroke(); }
+  c.restore();
+  [50, 186].forEach(function (ry) {                                                      /* Rippen im Querschnitt */
+    c.beginPath(); c.ellipse(72, ry, 22, 26, 0, 0, 6.2832); c.fillStyle = '#EFE7D2'; c.fill(); c.strokeStyle = '#9C8F73'; c.lineWidth = 1.2; c.stroke();
+    c.beginPath(); c.ellipse(72, ry, 12, 16, 0, 0, 6.2832); c.fillStyle = '#D8A58A'; c.fill();
+  });
+  c.strokeStyle = '#1B7F9E'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(LU_XW, 0); c.lineTo(LU_XW, H); c.stroke();   /* Rippenfell */
+  c.restore();
+  /* Spalt: Fluessigkeitsfilm (normal) bzw. Luft (Pneumothorax), bis zur Lungenoberflaeche */
+  var YS = [];                                                                          /* Stuetzstellen der Lungenoberflaeche, mit Ober- und Unterkante */
+  for (y = 0; y < H; y += 8) YS.push(y);
+  YS.push(H);
+  function flaeche(x0, spaltBis) {
+    c.beginPath(); c.moveTo(x0, 0); c.lineTo(x0, H);
+    for (i = YS.length - 1; i >= 0; i--) c.lineTo(spaltBis(YS[i]), YS[i]);
+    c.closePath();
+  }
+  var surf = function (yy) { return luOberflaeche(yy, xl, p); };
+  flaeche(xW + 1.2, function (yy) { return surf(yy) - 0.9; });
+  c.fillStyle = luRgb([143, 211, 240], 0.95 * (1 - p)); c.fill();
+  c.fillStyle = luRgb([222, 229, 231], 0.92 * p); c.fill();
+  if (p > 0.05) {                                                                        /* feine Luftblaeschen */
+    c.strokeStyle = 'rgba(255,255,255,' + (0.5 * p).toFixed(3) + ')'; c.lineWidth = 0.8;
+    for (i = 0; i < 16; i++) {
+      var by = 8 + 220 * luHash(i, 1), bx0 = xW + 5, bx1 = surf(by) - 5;
+      if (bx1 - bx0 < 6) continue;
+      c.beginPath(); c.arc(bx0 + (bx1 - bx0) * luHash(i, 2), by, 1.6 + 2.4 * luHash(i, 3), 0, 6.2832); c.stroke();
+    }
+  }
+  /* Lungengewebe: Rand folgt dem Lungenfell */
+  c.beginPath(); c.moveTo(W + 4, 0);
+  for (i = 0; i < YS.length; i++) c.lineTo(surf(YS[i]) + 0.9, YS[i]);
+  c.lineTo(W + 4, H); c.closePath();
+  var gewebe = luMix([201, 142, 148], [150, 96, 106], p);
+  c.fillStyle = luRgb(gewebe, 0.60); c.fill();
+  /* angedeutete Alveolen: waagerechtes Sechseckraster, am Lungenrand verankert; Einatmung weitet, Pneumothorax zieht sie zusammen */
+  c.save(); c.clip();
+  var r = 8.2 + 1.0 * e - 3.4 * p, dx = 2 * r + 1.6, dy = dx * 0.866;
+  c.fillStyle = 'rgba(30,14,20,' + (0.30 + 0.12 * p).toFixed(3) + ')'; c.strokeStyle = 'rgba(247,200,204,0.55)'; c.lineWidth = 1;
+  for (j = 0; j * dy < H + dy; j++) {
+    var yy = j * dy + 4;
+    for (i = 0; i < 40; i++) {
+      var xx = xl + 3 + r + i * dx + (j % 2 ? dx / 2 : 0);
+      if (xx > W + r) break;
+      if (xx - r < surf(yy) + 3) continue;
+      c.beginPath(); c.arc(xx, yy, r, 0, 6.2832); c.fill(); c.stroke();
+    }
+  }
+  c.restore();
+  /* Lungenfell */
+  c.beginPath();
+  for (i = 0; i < YS.length; i++) { if (i === 0) c.moveTo(surf(0), 0); else c.lineTo(surf(YS[i]), YS[i]); }
+  c.strokeStyle = '#D9959B'; c.lineWidth = 1.9; c.stroke();
+  /* Unterdruck: Pfeil von der Lunge zur Wand (nur solange der Spalt dicht ist) */
+  var ua = 1 - p;
+  if (ua > 0.02) {
+    var ax = xV + 52, ay = 118, lang = 20 + 2.5 * Math.max(0, -w.pPleura - 5);
+    c.globalAlpha = ua; c.strokeStyle = '#E0A94A'; c.fillStyle = '#E0A94A'; c.lineWidth = 2.4;
+    c.beginPath(); c.moveTo(ax, ay); c.lineTo(ax - lang, ay); c.stroke();
+    c.beginPath(); c.moveTo(ax - lang - 7, ay); c.lineTo(ax - lang + 1, ay - 5); c.lineTo(ax - lang + 1, ay + 5); c.closePath(); c.fill();
+    c.globalAlpha = 1;
+    luLabel(c, 'Unterdruck', ax - lang - 7, ay - 9, false, ua);
+  }
+  /* Beschriftungen (feste Plaetze, Fuehrungslinien zu den bewegten Teilen) */
+  luLabel(c, 'Haut', 5, 13, false);
+  luLabel(c, 'Rippe', 50, 12, false);
+  luLabel(c, 'Zwischenrippen-', 36, 114, false); luLabel(c, 'muskel', 36, 126, false);
+  luLeiter(c, 150, 24, xW, 24); luLabel(c, 'Rippenfell (Pleura parietalis)', 153, 28, false);
+  luLeiter(c, 150, 46, xW + LU_GAP / 2 + 0.5, 46); luLabel(c, 'Pleuraspalt mit Flüssigkeitsfilm', 153, 50, false);
+  luLeiter(c, 150, 68, surf(68), 68); luLabel(c, 'Lungenfell (Pleura visceralis)', 153, 72, false);
+  luLabel(c, 'Lungengewebe (Alveolen)', W - 4, 184, true);
+  if (p > 0.3) luLabel(c, 'Luft', xW + 8, 138, false, p);
+  /* Druck im Spalt (aus der Thorax-Physik); beim Pneumothorax wie ausserhalb */
+  var txt = p >= 0.99 ? '0 cmH₂O (wie außen)' : luFmt(w.pPleura * (1 - p)) + ' cmH₂O';
+  c.font = '9px ui-monospace, monospace'; c.textAlign = 'right'; c.textBaseline = 'alphabetic'; c.fillStyle = '#8DA7B1';
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(W - 6 - c.measureText('Druck im Spalt').width - 3, 197, c.measureText('Druck im Spalt').width + 6, 12); c.fillStyle = '#8DA7B1';
+  c.fillText('Druck im Spalt', W - 6, 206);
+  c.font = 'bold 13px ui-monospace, monospace';
+  var tw = c.measureText(txt).width;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(W - 6 - tw - 4, 211, tw + 8, 19);
+  c.fillStyle = p > 0.5 ? '#F08A7E' : '#7FD0EA'; c.fillText(txt, W - 6, 226);
+  luLabel(c, 'feste Linie', LU_XW + 7, 231, false);
+}
+function lupeText() {
+  $('lpText').innerHTML = '<p>' + LU_TEXT + '</p>' + (LUPE.ptZiel ? '<p class="lp-note">' + LU_PTX + '</p>' : '<p class="lp-hint">' + LU_SCHALTER + '</p>');
+  $('lpLegLuft').style.display = LUPE.ptZiel ? '' : 'none';
+}
+function lupePt(an) {
+  LUPE.ptZiel = an ? 1 : 0;
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', b.getAttribute('data-pt') === String(LUPE.ptZiel)); });
+  lupeText();
+}
+function lupeOeffnen() {
+  if (fz || abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  if (!LUPE.open) { LUPE.pt = 0; lupePt(false); }   /* die Lupe beginnt immer im Normalzustand */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { lupePt(b.getAttribute('data-pt') === '1'); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+  lupeText();
+})();
+function lupeTick(now) {   /* Pneumothorax weich ueberblenden (ca. 1,5 s) und neu zeichnen */
+  if (!LUPE.open) { LUPE.zeit = 0; return; }
+  var dt = LUPE.zeit ? Math.min(0.05, (now - LUPE.zeit) / 1000) : 0.016; LUPE.zeit = now;
+  var dz = LUPE.ptZiel - LUPE.pt;
+  if (dz) { LUPE.pt += dz * (1 - Math.exp(-dt * 3)); if (Math.abs(LUPE.ptZiel - LUPE.pt) < 0.003) LUPE.pt = LUPE.ptZiel; }
+  lupeDraw();
+}
 
 /* =====================================================================
    7c. Krankheitsbilder und Medikamente in 3D: Obstruktion o (Summe der Anteile * Wert des Eintrags, weich ueberblendet; asthma 0,85, copd 0,60, azidose 0,25, Salbutamol 0,25,
@@ -2296,6 +2488,7 @@ function alveoleOeffnen(idx) {
   if (fz || abgebaut || alWartet || !BAUM || !BAUM.endpunkte.length) return;
   if (sackP && !alFertig) { alWartet = true; sackP.then(function () { alWartet = false; if (!abgebaut) alveoleOeffnen(idx); }); return; }
   if (schemaOn) setSchema(false);
+  lupeClose();
   if (quiz) quizEnd();
   closeCard();
   SZ.el.classList.add('weg');   /* die Szenariokarte weicht der Fahrt (bei der Rueckkehr ist alles neu aufgebaut) */
@@ -2391,6 +2584,7 @@ function loop(now) {
   atmen.tick(now);
   if (SZ.schritt(szT ? Math.min(0.05, (now - szT) / 1000) : 0.016)) szenarioWirkung();   /* Anteile weich ueberblenden, auch in der Pause */
   szT = now;
+  lupeTick(now);
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);

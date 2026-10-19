@@ -66,6 +66,7 @@ var MARKUP = `<div id="title">
     <span class="cap">Gasaustausch</span>
     <button id="bPlay" class="gh on">Pause</button>
     <button id="bSchema" class="gh" title="Der Gasaustausch als flaches Schema: Alveole, Kapillare, Blutk&ouml;rperchen und Ergebnis">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Blut-Luft-Schranke">Lupe</button>
   </div>
 </div>
 
@@ -226,6 +227,15 @@ var MARKUP = `<div id="title">
     </div>
   </div>
   </div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Querschnitt</div>
+  <h3 id="lpTitle">Blut-Luft-Schranke &ndash; der k&uuml;rzeste Weg im K&ouml;rper</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-oe="0" title="Normale Blut-Luft-Schranke">normal</button><button class="gh" data-oe="1" title="Fl&uuml;ssigkeit sammelt sich zwischen den Schichten, der Weg wird l&auml;nger, weniger Gas kommt hindurch.">Lungen&ouml;dem</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#1F4656"></i>Luft (Alveole)</span><span><i style="background:#F3E3A0"></i>Surfactant</span><span><i style="background:#E8B9A6"></i>Pneumozyt Typ I</span><span><i style="background:#F2CBA6"></i>Pneumozyt Typ II</span><span><i style="background:#B7C0D6"></i>Basalmembran</span><span><i style="background:#D78A94"></i>Endothel</span><span><i style="background:#C8372D"></i>Blut</span><span><i style="background:#CE3A2F"></i>O&#8322;</span><span><i style="background:#6B7F8C"></i>CO&#8322;</span><span id="lpLegFl" style="display:none"><i style="background:#8FD3F0"></i>Fl&uuml;ssigkeit</span></div>
 </div>
 
 <div class="panel" id="legend">
@@ -957,6 +967,7 @@ function setSelected(id, punkt) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();   /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 
@@ -969,6 +980,7 @@ var SZ = Kern.Szenarien({
   beimWechsel: function (id) {
     if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
       if (quiz) quizEnd();
+      if (LUPE.open) lupeClose();
       setSelected(null); closeCard();
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt das Modell, sie beginnt eingeklappt (Titelzeile) */
     }
@@ -979,7 +991,7 @@ var SZ = Kern.Szenarien({
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (LUPE.open) lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -992,7 +1004,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 
@@ -1073,6 +1085,7 @@ function showCard(kick, title, html, istQuiz) {
   $('sAfter').innerHTML = '';
   $('sQa').style.display = istQuiz ? 'flex' : 'none';
   if (selected && !istQuiz) setSelected(null);
+  lupeClose();   /* die Erklaerkarte steht an der Stelle der Lupe */
   $('scard').classList.add('show');
   $('info').classList.remove('show');
   kartenLage();
@@ -2243,6 +2256,7 @@ function schemaWzEnde() {
   schemaWzLoeschen();
 }
 function setSchema(on) {
+  if (on) lupeClose();   /* Schema und Lupe schliessen sich gegenseitig: die Lupe wuerde das Schema verdecken */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
   $('schema').classList.toggle('show', on);
@@ -2258,6 +2272,195 @@ $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 
 /* =====================================================================
+   6b. Lupe: Querschnitt durch die Blut-Luft-Schranke (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv)
+   Von oben nach unten: Luft der Alveole, Surfactant-Film, Pneumozyt Typ I (flach, mit Kern) und ein Pneumozyt Typ II (rundlich, mit Surfactant-Koernchen),
+   gemeinsame Basalmembran, Kapillarendothel, Plasma und ein angeschnittenes rotes Blutkoerperchen. O2- (rot) und CO2-Punkte (grau) wandern durch die Schranke:
+   Richtung und Menge aus dem Unterschied der Simulation (gas.zustand: A.o2 bzw. A.co2 minus Mittel der Blutkoerperchen = uo2 bzw. uco2 des Originals; Vorzeichen
+   wechselt = Richtung kehrt um, kein Unterschied = keine Wanderung), der Gasfilter (zeigO2/zeigCO2) gilt, Pause haelt an. Positionen nur aus Index und Phase
+   (die Phase laeuft mit der Uhr der Renderschleife), kein Zufall. Schalter "Lungenoedem": Fluessigkeit zwischen den Schichten, die Schranke wird dicker,
+   weniger Teilchen kommen hindurch (Durchlass x 0,3) - nur in der Lupe: Simulation, Schema und 3D-Modell bleiben unveraendert. Schema und Lupe schliessen
+   sich gegenseitig (die Lupe wuerde das Schema verdecken).
+   ===================================================================== */
+var LUPE = { open: false, oe: 0, oeZiel: 0, ctx: null, dpr: 1, W: 340, H: 236, zeit: 0, ph: 0 };   /* oe: 0 = normal ... 1 = Lungenoedem (weich) */
+var LU_TEXT = 'Zwischen Luft und Blut liegen nur drei dünne Schichten: die Alveolenzelle, eine gemeinsame Basalmembran und die Kapillarwand – zusammen weniger als ein Tausendstelmillimeter. Pneumozyten Typ II bilden Surfactant, der die Oberflächenspannung senkt und verhindert, dass die Alveolen zusammenfallen.';
+var LU_OEDEM = 'Staut sich Blut vor dem linken Herzen, wird Flüssigkeit aus den Kapillaren gepresst. Sie verbreitert die Schranke und füllt im schweren Fall die Alveolen – der Gasaustausch bricht ein, es kommt zu Atemnot und brodelnden Atemgeräuschen.';
+var LU_SCHALTER = '„Lungenödem“ – Flüssigkeit sammelt sich zwischen den Schichten, der Weg wird länger, weniger Gas kommt hindurch.';
+var LU_YT = 66, LU_N = 16, LU_RBC = { x: 80, y: 214, rx: 48, ry: 30 }, LU_T2 = { x: 232, rx: 24, ry: 20 };
+function luMix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+function luRgb(c, al) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + al + ')'; }
+function luHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function luLabel(c, text, x, y, rechts, al) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.globalAlpha = al === undefined ? 1 : al;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+  c.globalAlpha = 1;
+}
+function luLeiter(c, x1, y1, x2, y2, al) {
+  c.globalAlpha = al === undefined ? 1 : al; c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.globalAlpha = 1;
+}
+/* Schichten bei x (f = Oedem 0..1): Unterkante des Epithels, Basalmembran, Endothel; unter dem Pneumozyten Typ II buchtet sich das Epithel aus */
+function luSchicht(x, f) {
+  var u = (x - LU_T2.x) / LU_T2.rx, g = 13 * f, eb = 77 + 10 * Math.exp(-u * u);
+  var bm0 = eb + g, bm1 = bm0 + 3.2, en0 = bm1 + g, en1 = en0 + 7;
+  return { eb: eb, g: g, bm0: bm0, bm1: bm1, en0: en0, en1: en1 };
+}
+function luBand(c, f0, f1, farbe) {   /* Fuellung zwischen zwei Kurven y0(x), y1(x) */
+  var x;
+  c.beginPath(); c.moveTo(0, f0(0));
+  for (x = 4; x <= LUPE.W; x += 4) c.lineTo(x, f0(x));
+  for (x = LUPE.W; x >= 0; x -= 4) c.lineTo(x, f1(x));
+  c.closePath(); c.fillStyle = farbe; c.fill();
+}
+function luKurve(c, fy, farbe, breite) {
+  var x;
+  c.beginPath(); c.moveTo(0, fy(0));
+  for (x = 4; x <= LUPE.W; x += 4) c.lineTo(x, fy(x));
+  c.strokeStyle = farbe; c.lineWidth = breite; c.stroke();
+}
+function luEndeY(x) {   /* Ziel der O2-Punkte bzw. Start der CO2-Punkte: oberhalb des Blutkoerperchens bzw. im Plasma */
+  var r = LU_RBC, u = (x - r.x) / r.rx;
+  return Math.abs(u) < 1 ? r.y - r.ry * Math.sqrt(1 - u * u) - 5 : 182;
+}
+/* Ort eines Teilchens: tau = Fortschritt entlang des Wegs (0 bis 1, in Laufrichtung), dir > 0 von oben nach unten */
+function luOrt(x, s, f, ph, i) {   /* s = Lage auf dem Weg von oben (0) nach unten (1); Zeitanteile: Luft, Schranke (bei Oedem laenger), Plasma */
+  var sa = 0.28 - 0.05 * f, sb = sa + 0.12 + 0.30 * f, L = luSchicht(x, f), yb = L.en1, ya = 10, ye = luEndeY(x), y;
+  if (s < sa) y = ya + (LU_YT - ya) * s / sa;
+  else if (s < sb) y = LU_YT + (yb - LU_YT) * (s - sa) / (sb - sa);
+  else y = yb + (ye - yb) * (s - sb) / (1 - sb);
+  return { x: x + 3 * Math.sin(ph * 6 + i * 2.1), y: y };
+}
+function luTeilchen(c, art, level, dir, f, ph) {
+  var N = Math.max(3, Math.round(LU_N * level)), i, tau, s, x, q = 1 - 0.7 * f, sa = 0.28 - 0.05 * f, tb = 0.12 + 0.30 * f, entry, al, h, o, e;
+  var fuell = art === 'o2' ? '#CE3A2F' : '#6B7F8C', rand = art === 'o2' ? 'rgba(60,10,8,0.85)' : 'rgba(231,239,240,0.75)';
+  for (i = 0; i < N; i++) {
+    h = luHash(i, art === 'o2' ? 1 : 11);
+    x = 14 + 256 * h; if (x > 206) x += 56;
+    tau = ph + luHash(i, art === 'o2' ? 5 : 15); tau -= Math.floor(tau);
+    s = dir > 0 ? tau : 1 - tau;
+    al = Math.min(1, tau / 0.06, (1 - tau) / 0.06);
+    if (luHash(i, art === 'o2' ? 7 : 17) >= q) {   /* kommt nicht hindurch: verschwindet in der Schranke (beim Oedem 70 % der Teilchen) */
+      entry = dir > 0 ? sa : 1 - (sa + tb);
+      if (tau > entry) al = Math.min(al, Math.max(0, 1 - (tau - entry) / (0.5 * tb)));
+    }
+    if (al <= 0.01) continue;
+    o = luOrt(x, s, f, ph, i + (art === 'o2' ? 0 : 40));
+    c.globalAlpha = al; c.fillStyle = fuell; c.strokeStyle = rand; c.lineWidth = 0.9;
+    c.beginPath(); c.arc(o.x, o.y, 3.4, 0, 6.2832); c.fill(); c.stroke();
+  }
+  c.globalAlpha = 1;
+}
+function luUnterschied(Z) {   /* uo2 und uco2 des Originals: Alveole minus Mittel der Blutkoerperchen */
+  var mo = 0, mc = 0, n = Z.ery.length, i;
+  for (i = 0; i < n; i++) { mo += Z.ery[i].o2; mc += Z.ery[i].co2; }
+  return { o: Z.A.o2 - mo / n, c: Z.A.co2 - mc / n };
+}
+function lupeDraw(Z) {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, f = LUPE.oe, x, i, o;
+  var L = function (xx) { return luSchicht(xx, f); };
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#0C1A20'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#1F4656'; c.fillRect(0, 0, W, LU_YT);                                              /* Luft der Alveole */
+  luBand(c, function (xx) { return L(xx).en1; }, function () { return H; }, 'rgba(214,120,110,0.34)');   /* Plasma */
+  /* Epithel: Pneumozyt Typ I (flach) */
+  luBand(c, function () { return LU_YT; }, function (xx) { return L(xx).eb; }, '#E8B9A6');
+  c.beginPath(); c.ellipse(48, 71.5, 21, 4.8, 0, 0, 6.2832); c.fillStyle = '#B0728F'; c.fill();
+  /* Fluessigkeit zwischen den Schichten (Oedem) */
+  if (f > 0.01) {
+    luBand(c, function (xx) { return L(xx).eb; }, function (xx) { return L(xx).bm0; }, luRgb([143, 211, 240], 0.80 * f));
+    luBand(c, function (xx) { return L(xx).bm1; }, function (xx) { return L(xx).en0; }, luRgb([143, 211, 240], 0.80 * f));
+  }
+  /* Basalmembran (gemeinsam) und Kapillarendothel */
+  luBand(c, function (xx) { return L(xx).bm0; }, function (xx) { return L(xx).bm1; }, '#B7C0D6');
+  luBand(c, function (xx) { return L(xx).en0; }, function (xx) { return L(xx).en1; }, '#D78A94');
+  c.beginPath(); c.ellipse(130, L(130).en0 + 3.5, 17, 5, 0, 0, 6.2832); c.fillStyle = '#8F5A78'; c.fill();
+  /* Pneumozyt Typ II: rundlich, buchtet sich in die Alveole, mit Kern und Surfactant-Koernchen */
+  var t2 = LU_T2;
+  c.beginPath(); c.ellipse(t2.x, LU_YT, t2.rx, t2.ry, 0, 0, 6.2832); c.fillStyle = '#F2CBA6'; c.fill(); c.strokeStyle = 'rgba(120,70,50,0.6)'; c.lineWidth = 1; c.stroke();
+  c.beginPath(); c.arc(t2.x, 70, 9, 0, 6.2832); c.fillStyle = '#9A6A8E'; c.fill();
+  [[-18, -4], [-10, -15], [12, -10], [18, 4], [-16, 10], [4, 14]].forEach(function (p, k) {
+    var gx = t2.x + p[0], gy = LU_YT + p[1];
+    c.beginPath(); c.arc(gx, gy, 3, 0, 6.2832); c.fillStyle = '#F3E3A0'; c.fill(); c.strokeStyle = '#C9B25E'; c.lineWidth = 0.9; c.stroke();
+  });
+  /* Surfactant-Film auf der Alveolenseite (folgt der Zelle) */
+  luKurve(c, function (xx) { var u = (xx - t2.x) / t2.rx; return LU_YT - 1.4 - (u * u < 1 ? t2.ry * Math.sqrt(1 - u * u) : 0); }, '#F3E3A0', 2.2);
+  /* rotes Blutkoerperchen, angeschnitten (unterer Rand) */
+  var r = LU_RBC;
+  c.beginPath(); c.ellipse(r.x, r.y, r.rx, r.ry, 0, 0, 6.2832); c.fillStyle = '#C8372D'; c.fill(); c.strokeStyle = '#7A1B16'; c.lineWidth = 1.2; c.stroke();
+  c.beginPath(); c.ellipse(r.x, r.y - 2, 22, 8, 0, 0, 6.2832); c.fillStyle = '#A52A22'; c.fill();
+  /* O2 von oben nach unten, CO2 von unten nach oben (Richtung und Menge aus dem Unterschied) */
+  if (Z) {
+    var U = luUnterschied(Z), uo = U.o, uc = U.c;
+    if (Z.zeigO2 && Math.abs(uo) >= 0.02) luTeilchen(c, 'o2', Math.min(1, Math.abs(uo) * 2.2), uo > 0 ? 1 : -1, f, LUPE.ph);
+    if (Z.zeigCO2 && Math.abs(uc) >= 0.02) luTeilchen(c, 'co2', Math.min(1, Math.abs(uc) * 2.2), uc > 0 ? 1 : -1, f, LUPE.ph);
+  }
+  /* Beschriftungen: oben im Luftraum, unten im Plasma, Fuehrungslinien zu den Schichten */
+  luLabel(c, 'Luft (Alveole)', 6, 16, false);
+  luLabel(c, 'Surfactant-Film', 6, 34, false); luLeiter(c, 14, 37, 14, LU_YT - 1.4);
+  luLabel(c, 'Pneumozyt Typ I', 60, 50, false); luLeiter(c, 66, 53, 66, 69);
+  luLabel(c, 'Pneumozyt Typ II', W - 4, 28, true); luLeiter(c, 262, 31, 244, 50);
+  luLabel(c, 'Endothel', 118, 140, false); luLeiter(c, 140, 131, 140, L(140).en0 + 3.5);
+  luLabel(c, 'Basalmembran', W - 4, 134, true); luLeiter(c, 296, 125, 296, L(296).bm0 + 1.6);
+  luLabel(c, 'Plasma', 190, 166, false);
+  luLabel(c, 'rotes Blutkörperchen', 6, 176, false); luLeiter(c, 40, 179, 80, r.y - r.ry + 2);
+  if (f > 0.05) { luLabel(c, 'Flüssigkeit', 6, 140, false, f); luLeiter(c, 24, 131, 24, L(24).eb + L(24).g / 2, f); }
+  /* Mass der Schranke: Klammer von der Alveolenseite bis zur Unterkante des Endothels */
+  var xk = W - 8, y0 = LU_YT, y1 = L(xk).en1, txt = f > 0.5 ? 'mehrere µm' : '< 1 µm';
+  c.strokeStyle = '#E0A94A'; c.lineWidth = 1.4;
+  c.beginPath(); c.moveTo(xk - 3, y0); c.lineTo(xk + 3, y0); c.moveTo(xk, y0); c.lineTo(xk, y1); c.moveTo(xk - 3, y1); c.lineTo(xk + 3, y1); c.stroke();
+  c.font = 'bold 10px ui-monospace, monospace'; c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+  var tw = c.measureText(txt).width, ty = (y0 + y1) / 2 + 4;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(xk - 6 - tw - 3, ty - 10, tw + 6, 14);
+  c.fillStyle = '#E0A94A'; c.fillText(txt, xk - 6, ty);
+}
+function lupeText() {
+  $('lpText').innerHTML = '<p>' + LU_TEXT + '</p>' + (LUPE.oeZiel ? '<p class="lp-note">' + LU_OEDEM + '</p>' : '<p class="lp-hint">' + LU_SCHALTER + '</p>');
+  $('lpLegFl').style.display = LUPE.oeZiel ? '' : 'none';
+}
+function lupeOe(an) {
+  LUPE.oeZiel = an ? 1 : 0;
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', b.getAttribute('data-oe') === String(LUPE.oeZiel)); });
+  lupeText();
+}
+function lupeOeffnen() {
+  if (abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  if (!LUPE.open) { LUPE.oe = 0; lupeOe(false); }   /* die Lupe beginnt immer im Normalzustand */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { lupeOe(b.getAttribute('data-oe') === '1'); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+  lupeText();
+})();
+function lupeTick(now) {   /* Oedem weich ueberblenden (ca. 1,5 s), Phase mit der Uhr (nicht in der Pause), neu zeichnen */
+  if (!LUPE.open) { LUPE.zeit = 0; return; }
+  var dt = LUPE.zeit ? Math.min(0.05, (now - LUPE.zeit) / 1000) : 0.016; LUPE.zeit = now;
+  var dz = LUPE.oeZiel - LUPE.oe;
+  if (dz) { LUPE.oe += dz * (1 - Math.exp(-dt * 3)); if (Math.abs(LUPE.oeZiel - LUPE.oe) < 0.003) LUPE.oe = LUPE.oeZiel; }
+  var Z = gas.zustand(), U = luUnterschied(Z);
+  var st = Math.max(Z.zeigO2 ? Math.abs(U.o) : 0, Z.zeigCO2 ? Math.abs(U.c) : 0);   /* Tempo der Wanderung nach dem staerksten Unterschied */
+  if (gasLaeuft) LUPE.ph += dt * (0.10 + 0.14 * Math.min(1, st * 2.2));
+  lupeDraw(Z);
+}
+
+/* =====================================================================
    7. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
@@ -2266,6 +2469,7 @@ var App = window.AlveoleApp = { ready: false, aufbauMs: 0, waehle: setSelected, 
   daten: { kapBahnen: KAP_BAHNEN, offen: { mitte: OF.c, radius: OF.r, richtung: OF.n, schnittZ: OF_ZC }, dyn: dyn } };
 function loop(now) {
   gas.tick(now);
+  lupeTick(now);
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (!schemaOn) renderer.render(scene, camera);   /* bei offenem Schema ist die 3D-Ansicht ausgeblendet */

@@ -43,14 +43,15 @@
    und werden von `vergleichen` verglichen); danach die 3D-Lunge, die mitatmet (Schema zu, Ruheatmung „3d-einatmen“, angestrengte Atmung „3d-stress“, Rippen
    durchsichtig), die Hilfekarte („hilfekarte“, „probier“ = „Probier das aus“) und das Üben („ueben“)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung
    mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR. Am Ende von desktop steht „auswahl-lappen“ (rechter Unterlappen
-   an einem festen Punkt angetippt, Infokarte mit „Alveole hier ansehen“).
+   an einem festen Punkt angetippt, Infokarte mit „Alveole hier ansehen“), danach die Lupe Pleuraspalt („lupe“ nach #bLupe, „lupe-pneumothorax“ nach dem Schalter, dann #bLupeX);
+   handy endet mit „lupe“.
    Der Vergleich des Atmungs-Schemas mit dem Original-Modell (Ebene 1) ist ein eigenes Werkzeug: tools/nachweis.js (Vorlage: tools/originale/).
 
    Modell alveole (index.html#lunge/alveole): Alveolarsäckchen stark vergrößert mit Bronchiolus, Alveolargang, einer aufgeschnittenen Alveole, Kapillarnetz und den
    Gefäßen. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Alveole, Kapillarnetz, Bronchiolus), geschlossen (#bZu), Durchsicht, aufgeschnitten
    ohne Beschriftung, Info; am Ende Gasaustausch: Reiter, 3D nach 3 s (Gasteilchen im Blut und in der Alveole), Schema (#bSchema), nur CO₂, Blutfluss Stopp, schnell mit Atempause,
    Freier Modus, Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von AlveoleApp.gas() stehen in erg.gas),
-   Hilfekarte, „Probier das aus“ und Üben), handy (Übersicht, Info; am Ende Schema und 3D), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus
+   Hilfekarte, „Probier das aus“ und Üben; danach die Lupe Blut-Luft-Schranke: „lupe“ nach #bLupe, „lupe-oedem“ nach dem Schalter Lungenödem, dann #bLupeX), handy (Übersicht, Info; am Ende Schema, 3D und „lupe“), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus
    enthalten zusätzlich alveoleApp. Das Schema gegen das Original prüft nicht vergleich.js, sondern nachweis.js (alveole).
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
@@ -597,6 +598,10 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
         /* Zoomstufe (neues Bild am Ende): rechten Unterlappen an einem festen Punkt antippen, die Infokarte zeigt „Alveole hier ansehen“ */
         await t.js(() => window.LungeApp.waehle('unterlappenR', [-5.5, -8.2, -4.0])); await t.weiter(300); await t.bild('auswahl-lappen');
+        /* Lupe Pleuraspalt (neue Bilder am Ende): Knopf #bLupe (die Infokarte weicht), Schalter Pneumothorax (Luft im Spalt, Lunge zieht sich zusammen), Schließen #bLupeX */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
+        await t.klick('#lpChips button[data-pt="1"]'); await t.weiter(2000); await t.bild('lupe-pneumothorax');
+        await t.klick('#bLupeX');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -606,6 +611,7 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.klick('#bSchema'); await t.klick('#loDemoRuhe'); await t.weiter(1000); await t.bild('schema');
         (t.erg.atmung || (t.erg.atmung = {}))[t.kname + '-schema'] = await t.js(() => window.LungeApp.atmung());
         await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.weiter(300); await t.bild('3d-atmung');   /* Schema zu, Infokarte zu: die 3D-Lunge atmet mit */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');   /* Lupe Pleuraspalt (neues Bild am Ende): oben, die Werkzeugleiste bleibt frei */
       } },
       szenarien: { opt: DESKTOP, timeout: 60000, async ablauf(t) {     /* Krankheitsbilder und Medikamente: 3D 1,5 s nach dem Einschalten (Bronchien enger, Lunge überbläht), Karte unten links */
         const zeile = (name) => '#rail .dis:not([data-card]):has(b:text-is("' + name + '"))';   /* ohne die Hilfekarten (gleiche Namen) */
@@ -663,6 +669,10 @@ const MODELLE = {
         await t.klick('#paneHelp .dis >> nth=10'); await t.weiter(300); await t.bild('probier');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(300); await t.bild('ueben'); await t.klick('#qStop');
         await t.klick('#cam1'); await t.weiter(3000); await t.bild('3d-austausch-nah');   /* Ausschnitt Alveole bei laufendem Gasaustausch: Punkte im Netz, Austausch an der aufgeschnittenen Alveole */
+        /* Lupe Blut-Luft-Schranke (neue Bilder am Ende): Knopf #bLupe, Schalter Lungenödem (Flüssigkeit, dickere Schranke, weniger Teilchen), Schließen #bLupeX */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');
+        await t.klick('#lpChips button[data-oe="1"]'); await t.weiter(2000); await t.bild('lupe-oedem');
+        await t.klick('#bLupeX');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -671,6 +681,7 @@ const MODELLE = {
         await t.klick('#bCls'); await t.klick('#rail .tabs .tab:text-is("Gasaustausch")'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
         (t.erg.gas || (t.erg.gas = {}))[t.kname + '-schema'] = await t.js(() => window.AlveoleApp.gas());
         await t.klick('#bSchemaX'); await t.weiter(300); await t.bild('3d-gasaustausch');
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');   /* Lupe Blut-Luft-Schranke (neues Bild am Ende): oben, die Werkzeugleiste bleibt frei */
       } },
       szenarien: { opt: DESKTOP, timeout: 90000, async ablauf(t) {     /* Krankheitsbilder und Medikamente: je Eintrag 3D und Schema (Werte in erg.gas) nach 4 s (Cheyne-Stokes 15 s, Naloxon 6 s, dann noch 8 s) */
         const zeile = (name) => '#rail .dis:not([data-card]):has(b:text-is("' + name + '"))';   /* ohne die Hilfekarten (gleiche Namen) */

@@ -22,6 +22,16 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
 #tools .cap{min-width:96px}   /* die Zeile "Gasaustausch" ist die laengste Beschriftung: alle Zeilen beginnen an derselben Stelle */
 
+/* Lupe (Blut-Luft-Schranke): Lage und Groesse wie bei der Niere; Schema und Lupe schliessen sich gegenseitig (alveole.js) */
+#lupe{left:286px;bottom:22px;width:620px;padding:12px 14px 10px;display:none}
+#lupe .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+.lp-chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 10px}
+.lp-main{display:flex;gap:14px;align-items:flex-start}
+#lpCv{width:340px;height:236px;flex:0 0 340px;border-radius:2px;border:1px solid var(--line);display:block}
+.lp-text{flex:1;min-width:0;font-size:12px;line-height:1.45;color:var(--ink-dim)}
+.lp-text .lp-hint{margin:8px 0 0;font-size:10.5px;color:var(--ink-faint)}
+.lp-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:10.5px;color:var(--ink-faint)}
+
 /* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte; der Inhalt der Hilfekarten ist HTML aus dem Alveolen-Modell (p, ul, ol, li, .merk) */
 #scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
   scrollbar-width:thin;scrollbar-color:var(--line) transparent}
@@ -73,6 +83,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   #legend{display:none}
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 106px)}
   #scard,#kcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  #lupe{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:calc(66vh - 225px);overflow-y:auto}   /* oben, ueber der Werkzeugleiste (die bleibt frei) */
+  .lp-main{flex-direction:column}
+  #lpCv{width:100%;height:auto;flex:none;aspect-ratio:340/236}
+  body:has(#lupe.show) #atlasZurueck{display:none}
   body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck,body:has(#kcard.show:not(.weg)) #atlasZurueck{display:none}   /* offene Infokarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   #rail .tab{flex:1 1 calc(33.3% - 3px)}   /* sechs Reiter: zwei Zeilen (3 + 3) */
 }
