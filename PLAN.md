@@ -13,12 +13,12 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ |
 | Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) |
 | Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik | Atemmechanik aus dem Thorax-Modell (Zwerchfell, Rippen, Pleuradruck, Luftstrom), 3D folgt derselben Simulation |
-| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | – (folgt: Pleuraspalt) |
+| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | ✓ (Pleuraspalt; Alveole: Blut-Luft-Schranke) |
 | Hilfekarten und Üben (Quiz) | ✓ | (✓) | ✓ | ✓ |
-| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | – (folgt) |
+| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | ✓ (Asthma, COPD, Hyper-/Hypoventilation, Azidose, Cheyne-Stokes; Salbutamol, Sauerstoff, Naloxon) |
 | Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – | ✓ (Thorax-Modell, unverändert übernommen) |
-| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | – (folgt) |
-| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | – (folgt) |
+| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | ✓ |
+| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ |
 | Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper | ✓ `lunge-form.js` (Brustkorb, Rippen, Zwerchfellkuppel, Lappen, Bronchien; Körper nutzt sie), `organ.start` für die Fahrt aus dem Körper |
 
@@ -175,7 +175,10 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] B: Alveole (`#lunge/alveole`, `organe/lunge/alveole.js`): Alveolarsäckchen (Bronchiolus respiratorius, Alveolargang, 22 Bläschen, eine aufgeschnitten), Kapillarnetz von blau nach rot, Äste von Lungenarterie und -vene; Strukturliste, Ausschnitte, aufgeschnitten/geschlossen, Durchsicht, Beschriftung
   - [x] B: Gasaustausch aus dem Alveolen-Modell unverändert übernommen (Reiter „Gasaustausch“, Schema-Panel mit Original-SVG und Kette, Pause, Hilfekarten mit „Probier das aus“, Üben); 3D folgt der Simulation (Blutkörperchen färben sich, O₂/CO₂-Teilchen in der aufgeschnittenen Alveole, Gefäßfarben, leichte Atembewegung); Nachweis `node tools/nachweis.js alveole` mit 11 Fällen gleich (beide Seiten mit demselben Zufallsstrom); die Liste der Krankheitsbilder folgt in C
   - [x] B: Zoomstufe Lunge → Alveole: Lappen antippen („Alveole hier ansehen“, nächster Endast des Bronchialbaums im Lappen) oder Knopf „Alveole“ (Endast im rechten Unterlappen); das Säckchen entsteht aus `organ.form` der Alveole am Endast, die Lunge dreht sich, bis der Endast senkrecht steht, die Fahrt endet in der Startansicht der Alveole; Rückfahrt dreht zurück; die zuletzt gewählte Stelle merkt sich die Seite nur im Speicher
-  - [ ] C: Krankheitsbilder aus dem Alveolen-Modell mit neuen Erklärkarten (auch in der Lunge, dort nur sichtbar in 3D), Medikamente (Vorschläge mit Text zur Freigabe), Lupe (Pleuraspalt, Blut-Luft-Schranke), Export, AR
+  - [x] B (Nachtrag, Wunsch von Jörn): 3D der Alveole ohne Blutkörperchen – O₂- und CO₂-Punkte in einer Größe fließen im ganzen Kapillarnetz und in den Gefäßen (Mischung aus der Simulation), an der aufgeschnittenen Alveole zeigen die Flüge der Simulation den Austausch
+  - [x] C: Krankheitsbilder (Hyperventilation, Hypoventilation, Asthmaanfall, COPD, respiratorische Azidose, Cheyne-Stokes) und Medikamente (Salbutamol beim Asthmaanfall, Sauerstoffgabe bei COPD, Naloxon bei Opiat-Hypoventilation) über `Kern.Szenarien` mit von Jörn freigegebenen Erklärkarten (`Kern.Szenarien.daten.atmung` in `core/szenarien.js`); Alveole: Werte über den unveränderten Original-Handler, Medikamente mit freigegebener Wirkung (Obstruktion 0,25; Frischluft-O₂ 1,00; Naloxon nach 4 s Ruhewerte), Statushinweise; Lunge: bei Obstruktion verengte Segmentbronchien und Überblähung nur in 3D; Nachweis jedes Krankheitsbilds gleich
+  - [x] C: Lupen mit freigegebenen Texten – Lunge „Pleuraspalt“ (Druck aus der Simulation, Schalter Pneumothorax), Alveole „Blut-Luft-Schranke“ (O₂/CO₂ nach dem Unterschied, Schalter Lungenödem); die Schalter wirken nur in der Lupe; Schema und Lupe schließen sich gegenseitig
+  - [x] C: Export (GLB statisch, GLB animiert, STL) und AR (WebXR mit Pause, AR Quick Look ohne Teilchen, ohne Beschriftung) für Lunge und Alveole (Alveole im Export 1 Einheit = 1 cm, USDZ ca. 23 MB)
   - Später: Lunge und Herz im Kreislauf verbinden (eigener Schritt), Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert
 - [ ] Leber mit Leberläppchen
 - [ ] Magen und Darm mit Dünndarmzotte

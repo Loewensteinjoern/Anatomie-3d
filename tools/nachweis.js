@@ -24,6 +24,8 @@
        vergleichbar sind, ersetzt das Werkzeug in BEIDEN Seiten (nur im Prüfbrowser) Math.random für die Aufrufer schwarm, zufallImBlaeschen und atemwegVerkehr durch einen
        eigenen, gleich initialisierten Zahlenstrom; alles andere behält den festen Zufall von vergleich.js. So wird das gesamte SVG (auch die Positionen) verglichen.
      - Die Simulation läuft ab dem ersten Bild: beide Seiten werden auf dieselbe Zahl Takte gebracht (Original: gezählte Bilder, App: AlveoleApp.gas().takte), bevor die Schritte beginnen.
+     - Die Fälle sz-… prüfen die Krankheitsbilder (Original: Knopf data-sz, App: Zeile im Reiter „Krankheitsbilder“, „normal“ = × der Karte; sz-eigene-einstellung: Regler bewegt).
+       Die drei Medikamente (neue Wirkung) gibt es im Original nicht und werden hier nicht verglichen.
    ===================================================================== */
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -207,8 +209,18 @@ const FAELLE_ALV = {
   'tief-schnell': [['regler', 'tiefe', 100], ['regler', 'freq', 100], ['weiter', 6000]],
   'frei': [['klick', 'freiAn'], ['regler', 'freiAlv', 40], ['regler', 'freiBlut', 70], ['weiter', 4000]],
   'tempo-normal': [['segment', 'tempo', '1'], ['weiter', 4000]],
-  'zeitlupe': [['segment', 'tempo', '0.25'], ['weiter', 4000]]
+  'zeitlupe': [['segment', 'tempo', '0.25'], ['weiter', 4000]],
+  /* Krankheitsbilder: im Original Klick auf den Knopf data-sz, in der App die Zeile in der Liste (Reiter „Krankheitsbilder“); „normal“ = im Original der Knopf, in der App das × der Karte */
+  'sz-hyper': [['szenario', 'hyper'], ['weiter', 6000]],
+  'sz-hypo': [['szenario', 'hypo'], ['weiter', 6000]],
+  'sz-asthma': [['szenario', 'asthma'], ['weiter', 6000]],
+  'sz-copd': [['szenario', 'copd'], ['weiter', 6000]],
+  'sz-azidose': [['szenario', 'azidose'], ['weiter', 6000]],
+  'sz-cheyne': [['szenario', 'cheyne'], ['weiter', 30000]],
+  'sz-zurueck-normal': [['szenario', 'asthma'], ['weiter', 2000], ['szenario', 'normal'], ['weiter', 4000]],
+  'sz-eigene-einstellung': [['szenario', 'copd'], ['weiter', 1000], ['regler', 'tiefe', 70], ['weiter', 3000]]
 };
+const SZ_NAMEN = { hyper: 'Hyperventilation', hypo: 'Hypoventilation', asthma: 'Asthmaanfall', copd: 'COPD', azidose: 'Respiratorische Azidose', cheyne: 'Cheyne-Stokes-Atmung' };
 
 /* Prüfbrowser: eigener, in beiden Seiten gleich initialisierter Zahlenstrom für die Aufrufer, die im Original Math.random nutzen (Gasteilchen, Atemwegflüge);
    zählt außerdem im Original die ausgeführten Bilder (die App zählt selbst: gas().takte). Läuft nach initZeit (dessen Math.random ist das „orig“ hier). */
@@ -294,6 +306,11 @@ async function schrittAlv(s, fall, app) {
     else if (st[0] === 'segment') await s.page.click('[data-' + st[1] + '="' + st[2] + '"]');
     else if (st[0] === 'regler') await s.page.evaluate(([q, v]) => { const e = document.querySelector(q); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }, [ID(st[1]), st[2]]);
     else if (st[0] === 'weiter') await s.weiter(st[1]);
+    else if (st[0] === 'szenario') {
+      if (!app) await s.page.click('[data-sz="' + st[1] + '"]');
+      else if (st[1] === 'normal') await s.page.click('#bCardOff');
+      else { await s.page.click('#rail .tabs .tab:text-is("Krankheitsbilder")'); await s.page.click('#paneDis .dis:has(b:text-is("' + SZ_NAMEN[st[1]] + '"))'); }
+    }
   }
 }
 

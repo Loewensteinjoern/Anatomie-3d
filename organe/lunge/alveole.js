@@ -8,6 +8,8 @@
    Grundgerüst: Strukturen, Ausschnitte, Durchsicht, aufgeschnitten/geschlossen, Beschriftung, Infokarte, Strukturliste. Andockpunkte für später:
    KAP_BAHNEN (Kapillarbahnen um die aufgeschnittene Alveole für die fließenden Gasteilchen) und OFFEN (Innenraum für die Gasteilchen), beide
    in AlveoleApp.daten; Teilchen kommen in eine eigene Gruppe `dyn` (noexport) und werden je Bild aus der Uhr gesetzt. organ.start für die Kamerafahrt.
+   Reiter Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.atmung): setzen die Werte des Gasaustauschs (gas.szenario, Abschnitt 5).
+   Export (GLB statisch, GLB animiert mit einer Atemperiode, STL) und AR (WebXR, AR Quick Look): Abschnitte 6c und 6d.
    ===================================================================== */
 (function () {
 'use strict';
@@ -65,6 +67,8 @@ var MARKUP = `<div id="title">
     <span class="cap">Gasaustausch</span>
     <button id="bPlay" class="gh on">Pause</button>
     <button id="bSchema" class="gh" title="Der Gasaustausch als flaches Schema: Alveole, Kapillare, Blutk&ouml;rperchen und Ergebnis">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Blut-Luft-Schranke">Lupe</button>
+    <button id="bAR" class="gh" title="Das Lungenbl&auml;schen mit der Kamera in den Raum stellen">AR</button>
   </div>
 </div>
 
@@ -227,12 +231,28 @@ var MARKUP = `<div id="title">
   </div>
 </div>
 
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Querschnitt</div>
+  <h3 id="lpTitle">Blut-Luft-Schranke &ndash; der k&uuml;rzeste Weg im K&ouml;rper</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-oe="0" title="Normale Blut-Luft-Schranke">normal</button><button class="gh" data-oe="1" title="Fl&uuml;ssigkeit sammelt sich zwischen den Schichten, der Weg wird l&auml;nger, weniger Gas kommt hindurch.">Lungen&ouml;dem</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#1F4656"></i>Luft (Alveole)</span><span><i style="background:#F3E3A0"></i>Surfactant</span><span><i style="background:#E8B9A6"></i>Pneumozyt Typ I</span><span><i style="background:#F2CBA6"></i>Pneumozyt Typ II</span><span><i style="background:#B7C0D6"></i>Basalmembran</span><span><i style="background:#D78A94"></i>Endothel</span><span><i style="background:#C8372D"></i>Blut</span><span><i style="background:#CE3A2F"></i>O&#8322;</span><span><i style="background:#6B7F8C"></i>CO&#8322;</span><span id="lpLegFl" style="display:none"><i style="background:#8FD3F0"></i>Fl&uuml;ssigkeit</span></div>
+</div>
+
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
   <p><b style="color:#6F93E0">Blau</b> sauerstoffarmes Blut aus der Lungenarterie.<br>
   <b style="color:#E0584C">Rot</b> sauerstoffreiches Blut zur Lungenvene.<br>
   <b style="color:#E8B4B8">Rosa</b> Alveolen, eine ist aufgeschnitten.</p>
   <p class="note">Stark vergr&ouml;&szlig;ert: Eine Alveole ist etwa 0,2&ndash;0,3&nbsp;mm gro&szlig;.</p>
+</div>
+
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
 </div>
 
 <div class="panel" id="info">
@@ -250,9 +270,27 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Lungenbl&auml;schen in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Ger&auml;t langsam &uuml;ber den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Lungenbl&auml;schen hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arOffen">Geschlossen</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Reiter "Gasaustausch" (Regler und Schalter aus dem Alveolen-Modell; die IDs tragen das Praefix la). Die Statushinweise des Originals (laStAtemwege usw.) stehen
-   unsichtbar darin: der Code schreibt hinein, die Liste "Situationen und Krankheitsbilder" folgt spaeter. */
+   im Reiter "Krankheitsbilder" (STATUS, unter der Liste). */
+var STATUS = `<div class="status" id="laStatus">
+  <span id="laStAtemwege">Atemwege frei</span>
+  <span id="laStFlaeche">Austauschfläche normal</span>
+  <span id="laStMuster">Atemmuster regelmäßig</span>
+</div>`;
 var GAS_PANE = `<div class="karte">
   <div class="titel"><span>Was soll sichtbar sein?</span></div>
   <div class="segment" id="laGasWahl">
@@ -301,12 +339,7 @@ var GAS_PANE = `<div class="karte">
     <button data-tempo="0.25">Zeitlupe</button>
   </div>
 </div>
-
-<div id="laStatus" hidden>
-  <span id="laStAtemwege">Atemwege frei</span>
-  <span id="laStFlaeche">Austauschfläche normal</span>
-  <span id="laStMuster">Atemmuster regelmäßig</span>
-</div>`;
+`;
 /* Hilfekarten und "Probier das aus" (aus dem Alveolen-Modell, Texte und HTML woertlich): t = Titel, u = Untertitel, h = Inhalt als HTML.
    Die Liste KARTEN_LISTE traegt die Knopftexte des Originals (data-karte) in dessen Reihenfolge. */
 var karten = {
@@ -943,7 +976,7 @@ function setSelected(id, punkt) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz) closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -956,17 +989,58 @@ function setSelected(id, punkt) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();   /* die Infokarte steht an der Stelle der Lupe */
+  kartenLage();
+}
+
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, gemeinsame Daten mit der Lunge: Kern.Szenarien.daten.atmung): Reiter und Erklaerkarte (id kcard) unten links wie die
+   Infokarte. Wirkung: beim Wechsel setzt gas.szenario die Werte des Original-Handlers (sofort, kein Ueberblenden); "Eigene Einstellung" (Regler bewegt) schliesst
+   Karte und Liste (gas.beiEigene, unten nach dem Gasaustausch). */
+var SZ_DATEN = Kern.Szenarien.daten.atmung, szEigen = false;
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', ausTitel: 'Krankheitsbild oder Medikament ausschalten',
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (LUPE.open) lupeClose();
+      setSelected(null); closeCard();
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt das Modell, sie beginnt eingeklappt (Titelzeile) */
+    }
+    if (!szEigen) {
+      var sc = id ? SZ_DATEN.filter(function (x) { return x.id === id; })[0] : null, m = sc && sc.modell;
+      gas.szenario(m ? m.sz : null, m && sc.kind === 'drug' ? { name: sc.name, o: m.o, frisch: m.frisch, spaeter: m.spaeter } : null);
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (LUPE.open) lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
+  lv++;
 }
 
 (function leiste() {
-  /* Reiter: Strukturen, Gasaustausch, Hilfekarten, Ueben (weitere kommen spaeter dazu, z. B. Krankheiten) */
+  /* Reiter: Strukturen, Gasaustausch, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneGas = document.createElement('div'); paneGas.id = 'paneGas'; paneGas.innerHTML = GAS_PANE;
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneGas, paneH, paneU];
-  ['Strukturen', 'Gasaustausch', 'Hilfekarten', '\u00dcben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneGas, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Gasaustausch', 'Hilfekarten', '\u00dcben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -976,6 +1050,10 @@ function setSelected(id, punkt) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Krankheitsbilder (mit den Statushinweisen des Originals darunter), Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'W\u00e4hle ein Krankheitsbild \u2013 die Simulation und das Schema zeigen die Wirkung.');
+  paneD.insertAdjacentHTML('beforeend', STATUS);
+  SZ.liste(paneM, 'drug', 'Medikamente', 'W\u00e4hle ein Medikament \u2013 es wirkt an dem genannten Krankheitsbild.');
   /* Hilfekarten: die zehn Karten des Alveolen-Modells und "Probier das aus" (Muster wie bei der Lunge) */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
   KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
@@ -1029,13 +1107,16 @@ function showCard(kick, title, html, istQuiz) {
   $('sAfter').innerHTML = '';
   $('sQa').style.display = istQuiz ? 'flex' : 'none';
   if (selected && !istQuiz) setSelected(null);
+  lupeClose();   /* die Erklaerkarte steht an der Stelle der Lupe */
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1357,8 +1438,9 @@ function layoutLabels(w, h) {
    Der Code steht unveraendert wie im Alveolen-Modell (eigener Gueltigkeitsbereich, weil S und $ hier anders belegt sind; Math.random wie im Original);
    angepasst sind nur die IDs (Praefix la), die Schleife (tick wird aus der Renderschleife gerufen, erstes Bild 0.016, Pause), die Klasse on statt an bei den
    Bedienelementen, die Suche der Bedienelemente nur im Reiter, der Wegfall der Hilfekarten-Modals (die Karten stehen oben, sie erscheinen in #scard) und der
-   Anschluss des 3D-Modells (haken: ein Aufruf am Ende von zeichne; Abschnitt 6). Die Liste "Situationen und Krankheitsbilder" fehlt noch (SZENARIEN und die
-   Zweige fuer Befund und Statushinweise stehen schon da, die Variablen behalten ihre Startwerte).
+   Anschluss des 3D-Modells (haken: ein Aufruf am Ende von zeichne; Abschnitt 6). Die Liste "Situationen und Krankheitsbilder" steht im Reiter
+   "Krankheitsbilder" (Kern.Szenarien, Abschnitt 2): ihr Einstieg in den Original-Code ist gas.szenario (unten, ruft den unveraenderten Handler von data-sz) und
+   gas.beiEigene (Rueckmeldung bei "Eigene Einstellung"); die drei Medikamente (Salbutamol, Sauerstoff, Naloxon) setzen dazu eine neue Wirkung (zusatz).
    ===================================================================== */
 var gas = (function(){
 function $(id){ return document.getElementById(id); }
@@ -1824,6 +1906,7 @@ function tick(t){
   tAlt = t;
   var dt = dtEcht*tempo;
   takte++;
+  zeitplan(dt);   // Einbindung: Naloxon stellt nach 4 s Simulationszeit Tiefe und Frequenz um (zaehlt mit Tempo, steht in der Pause)
   zeichne(schritt(dt), dt);
 }
 
@@ -1847,7 +1930,9 @@ function beschrifte(){
 function eigeneEinstellung(){
   PANE.querySelectorAll("[data-sz]").forEach(function(x){ x.classList.remove("on"); });
   szName = "Eigene Einstellung";
+  spaeter = null; FRISCH.o2 = 0.94;   // Einbindung: ein Medikament endet mit der eigenen Einstellung (kein Zeitplan, Frischluft wie im Original)
   beschrifte();
+  if (beiEigene) beiEigene();   // Einbindung: die Liste markiert dann keinen Eintrag, die Karte schliesst sich
 }
 
 $(ID("fluss")).addEventListener("input", function(){ fluss = +this.value/100; eigeneEinstellung(); });
@@ -1880,13 +1965,14 @@ function segment(attr, aktion){
     });
   });
 }
-segment("data-sz", function(w){
+function szenarioSetzen(w){   // Einbindung: der Handler als benannte Funktion (Inhalt unveraendert), damit gas.szenario ihn aufrufen kann
   var s = SZENARIEN[w];
   szName = s.n; tiefe = s.t; frequenz = s.f; obstruktion = s.o; flaeche = s.a;
   cheyne = !!s.cs; csP = 0;
   $(ID("tiefe")).value = Math.round(s.t*100); $(ID("freq")).value = Math.round(s.f*100);
   beschrifte();
-});
+}
+segment("data-sz", szenarioSetzen);
 segment("data-gas", function(w){
   gas = w; zeigO2 = (w!=="co2"); zeigCO2 = (w!=="o2");
   for (var q=0;q<ery.length;q++){ ery[q].rO = -1; ery[q].rC = -1; }
@@ -1913,6 +1999,31 @@ $(ID("freiAn")).addEventListener("change", function(){
 el.tempoBadge.classList.add("an"); el.tempoFaktor.textContent = "½×";
 beschrifte();
 
+/* Einbindung: Krankheitsbilder und Medikamente (Reiter, Kern.Szenarien). szenario(w, zusatz) tut genau das, was der Handler von data-sz tut (szenarioSetzen,
+   Werte aus SZENARIEN, Regler setzen, beschrifte); w = null: "normal" (Karte zu). Die Werte springen sofort. zusatz (nur Medikamente): name (statt des Namens aus
+   SZENARIEN), o (Obstruktion), frisch (Sauerstoff der Frischluft, sonst 0,94), spaeter { nach (s Simulationszeit), t, f } (danach Tiefe und Frequenz, Regler mit). */
+var spaeter = null, beiEigene = null;
+function szenario(w, zusatz){
+  spaeter = null; FRISCH.o2 = 0.94;
+  szenarioSetzen(w || "normal");
+  if (zusatz){
+    if (zusatz.o !== undefined) obstruktion = zusatz.o;
+    if (zusatz.frisch !== undefined) FRISCH.o2 = zusatz.frisch;
+    if (zusatz.spaeter) spaeter = { rest: zusatz.spaeter.nach, t: zusatz.spaeter.t, f: zusatz.spaeter.f };
+    if (zusatz.name) szName = zusatz.name;
+    beschrifte();
+  }
+}
+function zeitplan(dt){
+  if (!spaeter) return;
+  spaeter.rest -= dt;
+  if (spaeter.rest > 0) return;
+  tiefe = spaeter.t; frequenz = spaeter.f;
+  $(ID("tiefe")).value = Math.round(tiefe*100); $(ID("freq")).value = Math.round(frequenz*100);
+  spaeter = null;
+  beschrifte();
+}
+
 /* Einbindung: Zustand fuer das 3D-Modell (nur lesen) */
 function zustand(){
   return { A:A, ery:ery, ANKUNFT:ANKUNFT, frei:frei, freiBlut:freiBlut, abO2:abO2, abCO2:abCO2, fLunge:fLunge, zeigO2:zeigO2, zeigCO2:zeigCO2,
@@ -1933,8 +2044,10 @@ function lesen(){
     ery: ery.map(function(e){ return { x: r4(e.x), o2: r4(e.o2), co2: r4(e.co2), sO2: e.sO2, sCO2: e.sCO2 }; })
   };
 }
-return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zustand: zustand, anschliessen: function (f) { haken = f; } };
+return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, zustand: zustand, anschliessen: function (f) { haken = f; },
+         szenario: szenario, beiEigene: function (f) { beiEigene = f; } };
 })();
+gas.beiEigene(function () { szEigen = true; SZ.setzen(null); szEigen = false; });   /* eigene Reglerbewegung: kein Eintrag markiert, Karte zu */
 
 /* =====================================================================
    6. Gasaustausch in 3D: die Simulation (gas) steuert das Modell, an der Physik des Originals aendert sich nichts. Neu gegenueber dem Original (Darstellung),
@@ -2165,6 +2278,7 @@ function schemaWzEnde() {
   schemaWzLoeschen();
 }
 function setSchema(on) {
+  if (on) lupeClose();   /* Schema und Lupe schliessen sich gegenseitig: die Lupe wuerde das Schema verdecken */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
   $('schema').classList.toggle('show', on);
@@ -2180,14 +2294,340 @@ $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 
 /* =====================================================================
+   6b. Lupe: Querschnitt durch die Blut-Luft-Schranke (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv)
+   Von oben nach unten: Luft der Alveole, Surfactant-Film, Pneumozyt Typ I (flach, mit Kern) und ein Pneumozyt Typ II (rundlich, mit Surfactant-Koernchen),
+   gemeinsame Basalmembran, Kapillarendothel, Plasma und ein angeschnittenes rotes Blutkoerperchen. O2- (rot) und CO2-Punkte (grau) wandern durch die Schranke:
+   Richtung und Menge aus dem Unterschied der Simulation (gas.zustand: A.o2 bzw. A.co2 minus Mittel der Blutkoerperchen = uo2 bzw. uco2 des Originals; Vorzeichen
+   wechselt = Richtung kehrt um, kein Unterschied = keine Wanderung), der Gasfilter (zeigO2/zeigCO2) gilt, Pause haelt an. Positionen nur aus Index und Phase
+   (die Phase laeuft mit der Uhr der Renderschleife), kein Zufall. Schalter "Lungenoedem": Fluessigkeit zwischen den Schichten, die Schranke wird dicker,
+   weniger Teilchen kommen hindurch (Durchlass x 0,3) - nur in der Lupe: Simulation, Schema und 3D-Modell bleiben unveraendert. Schema und Lupe schliessen
+   sich gegenseitig (die Lupe wuerde das Schema verdecken).
+   ===================================================================== */
+var LUPE = { open: false, oe: 0, oeZiel: 0, ctx: null, dpr: 1, W: 340, H: 236, zeit: 0, ph: 0 };   /* oe: 0 = normal ... 1 = Lungenoedem (weich) */
+var LU_TEXT = 'Zwischen Luft und Blut liegen nur drei dünne Schichten: die Alveolenzelle, eine gemeinsame Basalmembran und die Kapillarwand – zusammen weniger als ein Tausendstelmillimeter. Pneumozyten Typ II bilden Surfactant, der die Oberflächenspannung senkt und verhindert, dass die Alveolen zusammenfallen.';
+var LU_OEDEM = 'Staut sich Blut vor dem linken Herzen, wird Flüssigkeit aus den Kapillaren gepresst. Sie verbreitert die Schranke und füllt im schweren Fall die Alveolen – der Gasaustausch bricht ein, es kommt zu Atemnot und brodelnden Atemgeräuschen.';
+var LU_SCHALTER = '„Lungenödem“ – Flüssigkeit sammelt sich zwischen den Schichten, der Weg wird länger, weniger Gas kommt hindurch.';
+var LU_YT = 66, LU_N = 16, LU_RBC = { x: 80, y: 214, rx: 48, ry: 30 }, LU_T2 = { x: 232, rx: 24, ry: 20 };
+function luMix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+function luRgb(c, al) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + al + ')'; }
+function luHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function luLabel(c, text, x, y, rechts, al) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.globalAlpha = al === undefined ? 1 : al;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+  c.globalAlpha = 1;
+}
+function luLeiter(c, x1, y1, x2, y2, al) {
+  c.globalAlpha = al === undefined ? 1 : al; c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); c.globalAlpha = 1;
+}
+/* Schichten bei x (f = Oedem 0..1): Unterkante des Epithels, Basalmembran, Endothel; unter dem Pneumozyten Typ II buchtet sich das Epithel aus */
+function luSchicht(x, f) {
+  var u = (x - LU_T2.x) / LU_T2.rx, g = 13 * f, eb = 77 + 10 * Math.exp(-u * u);
+  var bm0 = eb + g, bm1 = bm0 + 3.2, en0 = bm1 + g, en1 = en0 + 7;
+  return { eb: eb, g: g, bm0: bm0, bm1: bm1, en0: en0, en1: en1 };
+}
+function luBand(c, f0, f1, farbe) {   /* Fuellung zwischen zwei Kurven y0(x), y1(x) */
+  var x;
+  c.beginPath(); c.moveTo(0, f0(0));
+  for (x = 4; x <= LUPE.W; x += 4) c.lineTo(x, f0(x));
+  for (x = LUPE.W; x >= 0; x -= 4) c.lineTo(x, f1(x));
+  c.closePath(); c.fillStyle = farbe; c.fill();
+}
+function luKurve(c, fy, farbe, breite) {
+  var x;
+  c.beginPath(); c.moveTo(0, fy(0));
+  for (x = 4; x <= LUPE.W; x += 4) c.lineTo(x, fy(x));
+  c.strokeStyle = farbe; c.lineWidth = breite; c.stroke();
+}
+function luEndeY(x) {   /* Ziel der O2-Punkte bzw. Start der CO2-Punkte: oberhalb des Blutkoerperchens bzw. im Plasma */
+  var r = LU_RBC, u = (x - r.x) / r.rx;
+  return Math.abs(u) < 1 ? r.y - r.ry * Math.sqrt(1 - u * u) - 5 : 182;
+}
+/* Ort eines Teilchens: tau = Fortschritt entlang des Wegs (0 bis 1, in Laufrichtung), dir > 0 von oben nach unten */
+function luOrt(x, s, f, ph, i) {   /* s = Lage auf dem Weg von oben (0) nach unten (1); Zeitanteile: Luft, Schranke (bei Oedem laenger), Plasma */
+  var sa = 0.28 - 0.05 * f, sb = sa + 0.12 + 0.30 * f, L = luSchicht(x, f), yb = L.en1, ya = 10, ye = luEndeY(x), y;
+  if (s < sa) y = ya + (LU_YT - ya) * s / sa;
+  else if (s < sb) y = LU_YT + (yb - LU_YT) * (s - sa) / (sb - sa);
+  else y = yb + (ye - yb) * (s - sb) / (1 - sb);
+  return { x: x + 3 * Math.sin(ph * 6 + i * 2.1), y: y };
+}
+function luTeilchen(c, art, level, dir, f, ph) {
+  var N = Math.max(3, Math.round(LU_N * level)), i, tau, s, x, q = 1 - 0.7 * f, sa = 0.28 - 0.05 * f, tb = 0.12 + 0.30 * f, entry, al, h, o, e;
+  var fuell = art === 'o2' ? '#CE3A2F' : '#6B7F8C', rand = art === 'o2' ? 'rgba(60,10,8,0.85)' : 'rgba(231,239,240,0.75)';
+  for (i = 0; i < N; i++) {
+    h = luHash(i, art === 'o2' ? 1 : 11);
+    x = 14 + 256 * h; if (x > 206) x += 56;
+    tau = ph + luHash(i, art === 'o2' ? 5 : 15); tau -= Math.floor(tau);
+    s = dir > 0 ? tau : 1 - tau;
+    al = Math.min(1, tau / 0.06, (1 - tau) / 0.06);
+    if (luHash(i, art === 'o2' ? 7 : 17) >= q) {   /* kommt nicht hindurch: verschwindet in der Schranke (beim Oedem 70 % der Teilchen) */
+      entry = dir > 0 ? sa : 1 - (sa + tb);
+      if (tau > entry) al = Math.min(al, Math.max(0, 1 - (tau - entry) / (0.5 * tb)));
+    }
+    if (al <= 0.01) continue;
+    o = luOrt(x, s, f, ph, i + (art === 'o2' ? 0 : 40));
+    c.globalAlpha = al; c.fillStyle = fuell; c.strokeStyle = rand; c.lineWidth = 0.9;
+    c.beginPath(); c.arc(o.x, o.y, 3.4, 0, 6.2832); c.fill(); c.stroke();
+  }
+  c.globalAlpha = 1;
+}
+function luUnterschied(Z) {   /* uo2 und uco2 des Originals: Alveole minus Mittel der Blutkoerperchen */
+  var mo = 0, mc = 0, n = Z.ery.length, i;
+  for (i = 0; i < n; i++) { mo += Z.ery[i].o2; mc += Z.ery[i].co2; }
+  return { o: Z.A.o2 - mo / n, c: Z.A.co2 - mc / n };
+}
+function lupeDraw(Z) {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, f = LUPE.oe, x, i, o;
+  var L = function (xx) { return luSchicht(xx, f); };
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#0C1A20'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#1F4656'; c.fillRect(0, 0, W, LU_YT);                                              /* Luft der Alveole */
+  luBand(c, function (xx) { return L(xx).en1; }, function () { return H; }, 'rgba(214,120,110,0.34)');   /* Plasma */
+  /* Epithel: Pneumozyt Typ I (flach) */
+  luBand(c, function () { return LU_YT; }, function (xx) { return L(xx).eb; }, '#E8B9A6');
+  c.beginPath(); c.ellipse(48, 71.5, 21, 4.8, 0, 0, 6.2832); c.fillStyle = '#B0728F'; c.fill();
+  /* Fluessigkeit zwischen den Schichten (Oedem) */
+  if (f > 0.01) {
+    luBand(c, function (xx) { return L(xx).eb; }, function (xx) { return L(xx).bm0; }, luRgb([143, 211, 240], 0.80 * f));
+    luBand(c, function (xx) { return L(xx).bm1; }, function (xx) { return L(xx).en0; }, luRgb([143, 211, 240], 0.80 * f));
+  }
+  /* Basalmembran (gemeinsam) und Kapillarendothel */
+  luBand(c, function (xx) { return L(xx).bm0; }, function (xx) { return L(xx).bm1; }, '#B7C0D6');
+  luBand(c, function (xx) { return L(xx).en0; }, function (xx) { return L(xx).en1; }, '#D78A94');
+  c.beginPath(); c.ellipse(130, L(130).en0 + 3.5, 17, 5, 0, 0, 6.2832); c.fillStyle = '#8F5A78'; c.fill();
+  /* Pneumozyt Typ II: rundlich, buchtet sich in die Alveole, mit Kern und Surfactant-Koernchen */
+  var t2 = LU_T2;
+  c.beginPath(); c.ellipse(t2.x, LU_YT, t2.rx, t2.ry, 0, 0, 6.2832); c.fillStyle = '#F2CBA6'; c.fill(); c.strokeStyle = 'rgba(120,70,50,0.6)'; c.lineWidth = 1; c.stroke();
+  c.beginPath(); c.arc(t2.x, 70, 9, 0, 6.2832); c.fillStyle = '#9A6A8E'; c.fill();
+  [[-18, -4], [-10, -15], [12, -10], [18, 4], [-16, 10], [4, 14]].forEach(function (p, k) {
+    var gx = t2.x + p[0], gy = LU_YT + p[1];
+    c.beginPath(); c.arc(gx, gy, 3, 0, 6.2832); c.fillStyle = '#F3E3A0'; c.fill(); c.strokeStyle = '#C9B25E'; c.lineWidth = 0.9; c.stroke();
+  });
+  /* Surfactant-Film auf der Alveolenseite (folgt der Zelle) */
+  luKurve(c, function (xx) { var u = (xx - t2.x) / t2.rx; return LU_YT - 1.4 - (u * u < 1 ? t2.ry * Math.sqrt(1 - u * u) : 0); }, '#F3E3A0', 2.2);
+  /* rotes Blutkoerperchen, angeschnitten (unterer Rand) */
+  var r = LU_RBC;
+  c.beginPath(); c.ellipse(r.x, r.y, r.rx, r.ry, 0, 0, 6.2832); c.fillStyle = '#C8372D'; c.fill(); c.strokeStyle = '#7A1B16'; c.lineWidth = 1.2; c.stroke();
+  c.beginPath(); c.ellipse(r.x, r.y - 2, 22, 8, 0, 0, 6.2832); c.fillStyle = '#A52A22'; c.fill();
+  /* O2 von oben nach unten, CO2 von unten nach oben (Richtung und Menge aus dem Unterschied) */
+  if (Z) {
+    var U = luUnterschied(Z), uo = U.o, uc = U.c;
+    if (Z.zeigO2 && Math.abs(uo) >= 0.02) luTeilchen(c, 'o2', Math.min(1, Math.abs(uo) * 2.2), uo > 0 ? 1 : -1, f, LUPE.ph);
+    if (Z.zeigCO2 && Math.abs(uc) >= 0.02) luTeilchen(c, 'co2', Math.min(1, Math.abs(uc) * 2.2), uc > 0 ? 1 : -1, f, LUPE.ph);
+  }
+  /* Beschriftungen: oben im Luftraum, unten im Plasma, Fuehrungslinien zu den Schichten */
+  luLabel(c, 'Luft (Alveole)', 6, 16, false);
+  luLabel(c, 'Surfactant-Film', 6, 34, false); luLeiter(c, 14, 37, 14, LU_YT - 1.4);
+  luLabel(c, 'Pneumozyt Typ I', 60, 50, false); luLeiter(c, 66, 53, 66, 69);
+  luLabel(c, 'Pneumozyt Typ II', W - 4, 28, true); luLeiter(c, 262, 31, 244, 50);
+  luLabel(c, 'Endothel', 118, 140, false); luLeiter(c, 140, 131, 140, L(140).en0 + 3.5);
+  luLabel(c, 'Basalmembran', W - 4, 134, true); luLeiter(c, 296, 125, 296, L(296).bm0 + 1.6);
+  luLabel(c, 'Plasma', 190, 166, false);
+  luLabel(c, 'rotes Blutkörperchen', 6, 176, false); luLeiter(c, 40, 179, 80, r.y - r.ry + 2);
+  if (f > 0.05) { luLabel(c, 'Flüssigkeit', 6, 140, false, f); luLeiter(c, 24, 131, 24, L(24).eb + L(24).g / 2, f); }
+  /* Mass der Schranke: Klammer von der Alveolenseite bis zur Unterkante des Endothels */
+  var xk = W - 8, y0 = LU_YT, y1 = L(xk).en1, txt = f > 0.5 ? 'mehrere µm' : '< 1 µm';
+  c.strokeStyle = '#E0A94A'; c.lineWidth = 1.4;
+  c.beginPath(); c.moveTo(xk - 3, y0); c.lineTo(xk + 3, y0); c.moveTo(xk, y0); c.lineTo(xk, y1); c.moveTo(xk - 3, y1); c.lineTo(xk + 3, y1); c.stroke();
+  c.font = 'bold 10px ui-monospace, monospace'; c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+  var tw = c.measureText(txt).width, ty = (y0 + y1) / 2 + 4;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(xk - 6 - tw - 3, ty - 10, tw + 6, 14);
+  c.fillStyle = '#E0A94A'; c.fillText(txt, xk - 6, ty);
+}
+function lupeText() {
+  $('lpText').innerHTML = '<p>' + LU_TEXT + '</p>' + (LUPE.oeZiel ? '<p class="lp-note">' + LU_OEDEM + '</p>' : '<p class="lp-hint">' + LU_SCHALTER + '</p>');
+  $('lpLegFl').style.display = LUPE.oeZiel ? '' : 'none';
+}
+function lupeOe(an) {
+  LUPE.oeZiel = an ? 1 : 0;
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', b.getAttribute('data-oe') === String(LUPE.oeZiel)); });
+  lupeText();
+}
+function lupeOeffnen() {
+  if (abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  if (!LUPE.open) { LUPE.oe = 0; lupeOe(false); }   /* die Lupe beginnt immer im Normalzustand */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { lupeOe(b.getAttribute('data-oe') === '1'); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+  lupeText();
+})();
+function lupeTick(now) {   /* Oedem weich ueberblenden (ca. 1,5 s), Phase mit der Uhr (nicht in der Pause), neu zeichnen */
+  if (!LUPE.open) { LUPE.zeit = 0; return; }
+  var dt = LUPE.zeit ? Math.min(0.05, (now - LUPE.zeit) / 1000) : 0.016; LUPE.zeit = now;
+  var dz = LUPE.oeZiel - LUPE.oe;
+  if (dz) { LUPE.oe += dz * (1 - Math.exp(-dt * 3)); if (Math.abs(LUPE.oeZiel - LUPE.oe) < 0.003) LUPE.oe = LUPE.oeZiel; }
+  var Z = gas.zustand(), U = luUnterschied(Z);
+  var st = Math.max(Z.zeigO2 ? Math.abs(U.o) : 0, Z.zeigCO2 ? Math.abs(U.c) : 0);   /* Tempo der Wanderung nach dem staerksten Unterschied */
+  if (gasLaeuft) LUPE.ph += dt * (0.10 + 0.14 * Math.min(1, st * 2.2));
+  lupeDraw(Z);
+}
+
+/* =====================================================================
+   6c. Export (Kern.Export): GLB statisch und STL (Wand, Kapillaren, Gefaesse; der sichtbare Zustand, ohne Gasteilchen), GLB animiert: eine Atemperiode des Saeckchens
+   (die Skalierung 1 + ATEM_DEHNUNG * f aus gas3D, f wie in atemSchritt bei Tiefe und Frequenz der Regler, ohne Cheyne-Stokes und ohne Obstruktion), die Gefaessfarben bleiben
+   wie beim Export, Teilchen gibt es nicht. Alle Klone haengen dafuer in einer Gruppe "Atmung", die um die Mitte des Saeckchens skaliert. Massstab: 1 Modelleinheit = 1 cm
+   in der Datei (Wirklichkeit: 0,1 mm), also 100-fach vergroessert.
+   ===================================================================== */
+var exArt = '', exAlt = null;             /* Art des laufenden Exports ('anim' u. a.) und Lage der Wurzel vor dem Aufzeichnen */
+var LAENGE_TXT = 'Säckchen 100-fach vergrößert, ca. 17 cm hoch (in Wirklichkeit ca. 1,7 mm)';
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+var exCfg = {
+  titel: 'Alveole', praefix: 'alveole', wurzelName: 'Alveole',
+  schild: [0, -8.2, 3.2],                 /* Schild unter dem Modell (Unterkante bei -6,7 mit Atemdehnung), vorn (z bis 2,9) */
+  bereit: function () { return App.ready; },
+  gruppen: function () {
+    if (exArt === 'anim') { exAlt = { p: root.position.clone(), s: root.scale.clone() }; root.position.set(0, 0, 0); root.scale.set(1, 1, 1); root.updateMatrixWorld(true); }   /* Klone ohne Atemdehnung anlegen */
+    return [root];
+  },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.id : ''; },
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  animation: function (rootE, clones) {
+    var g = gas.lesen(), tiefe = g.tiefe, T = 8.0 - 6.0 * g.frequenz, N = 24, times = new Float32Array(N + 1), P = new Float32Array((N + 1) * 3), Sc = new Float32Array((N + 1) * 3), i;
+    var atem = new THREE.Group(); atem.name = 'Atmung';
+    clones.forEach(function (q) { atem.add(q.c); });
+    rootE.add(atem);
+    for (i = 0; i <= N; i++) {
+      var t = i * T / N, ph = t / T;
+      var f = ph < 0.42 ? tiefe * (1 - Math.cos(Math.PI * (ph / 0.42))) / 2 : tiefe * Math.pow(Math.max(0, 1 - (ph - 0.42) / 0.58), 2.2);   /* wie atemSchritt (obstruktion = 0) */
+      var sk = 1 + ATEM_DEHNUNG * f;
+      times[i] = t; Sc[i * 3] = Sc[i * 3 + 1] = Sc[i * 3 + 2] = sk; P[i * 3] = 0; P[i * 3 + 1] = ATEM_MITTE_Y * (1 - sk); P[i * 3 + 2] = 0;
+    }
+    atem.scale.set(Sc[0], Sc[1], Sc[2]); atem.position.set(P[0], P[1], P[2]);
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Alveole_Atmung', T, [new THREE.VectorKeyframeTrack('Atmung.position', times, P), new THREE.VectorKeyframeTrack('Atmung.scale', times, Sc)])],
+      zusatz: sz ? sz.id : 'normal', T: T, tiefe: tiefe };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Atmung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, ' + LAENGE_TXT + '):', '- alveole_ansicht.stl: alles, was beim Export sichtbar war: Wand des Säckchens, Kapillarnetz und Gefäße (ohne Gasteilchen)', 'Eine Modelleinheit des Programms (0,1 mm in Wirklichkeit) ist in der Datei 1 cm. STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>' + LAENGE_TXT + ' – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': eine Atemperiode (' + i.a.T.toFixed(1).replace('.', ',') + ' s) als Animation, läuft in Schleife: das Säckchen dehnt sich leicht mit der Atmung. Gasteilchen und Blutfluss gibt es nur im Programm.' : i.name + ': farbiges 3D-Modell des Lungenbläschens mit Kapillarnetz und Gefäßen in der Ansicht beim Export (aufgeschnitten oder geschlossen), ohne Bewegung.', 'Maßstab: Meter, aber 100-fach vergrößert (' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>' + LAENGE_TXT + ', mit Farben, ' + (i.anim ? 'mit Atembewegung: 25 Keyframes, ' + i.a.T.toFixed(1).replace('.', ',') + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+function exportRun(art, kind) {
+  exArt = art; exAlt = null;
+  var p = Kern.Export.run(kind, exCfg);
+  var danach = function () { if (exAlt) { root.position.copy(exAlt.p); root.scale.copy(exAlt.s); exAlt = null; } };
+  return p && p.then ? p.then(danach) : p;
+}
+$('bGlbA').onclick = function () { exportRun('anim', 'glb-anim'); };
+$('bGlbS').onclick = function () { exportRun('glb', 'glb'); };
+$('bStl').onclick = function () { exportRun('stl', 'stl'); };
+
+/* =====================================================================
+   6d. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Das Saeckchen steht stark vergroessert auf dem Tisch (AR_SKALA m je Modelleinheit, ca. 20 cm hoch); der Gasaustausch laeuft weiter (Knopf Pause), Teilchen und
+   Beschriftung gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG entsteht erst beim ersten Start: root atmet (Skalierung je Bild) und bleibt deshalb unveraendert, arG
+   wird hingestellt.
+   ===================================================================== */
+var AR_SKALA = 0.013;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false, kamAlt = { near: camera.near, far: camera.far };
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen && sichtbar(o)) b.expandByObject(o); });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() {
+  $('arPause').textContent = gasLaeuft ? 'Pause' : 'Weiter';
+}
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Alveole_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.008, 0.013, 0.02, 0.03, 0.045], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arOffen', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt Modelleinheiten */
+      labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+      arTexte();
+      $('arOffen').textContent = offenAn ? 'Geschlossen' : 'Aufgeschnitten';
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arOffen').onclick = function () { offen(!offenAn); $('arOffen').textContent = offenAn ? 'Geschlossen' : 'Aufgeschnitten'; };
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme in der aktuellen Ansicht (ohne Teilchen); die Atemdehnung der Wurzel ist mit drin ---- */
+function usdzBuild() {
+  return Kern.AR.usdz({ name: 'Alveole', creator: 'Alveole 3D - ' + Kern.WM, datei: 'alveole.usda', skala: AR_SKALA, gruppen: [root] });
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Das Lungenbläschen öffnet sich in AR Quick Look. Mit zwei Fingern lässt es sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    7. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
 /* daten: Andockpunkte fuer die Simulation (B2): Kapillarbahnen und Innenraum der aufgeschnittenen Alveole (Modelleinheiten), dyn = Gruppe der Teilchen */
 var App = window.AlveoleApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, offen: offen, ansicht: ansicht, dreiecke: tris, gas: gas.lesen,
   daten: { kapBahnen: KAP_BAHNEN, offen: { mitte: OF.c, radius: OF.r, richtung: OF.n, schnittZ: OF_ZC }, dyn: dyn } };
-function loop(now) {
+function loop(now, frame) {
   gas.tick(now);
+  lupeTick(now);
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (!schemaOn) renderer.render(scene, camera);   /* bei offenem Schema ist die 3D-Ansicht ausgeblendet */
@@ -2199,8 +2639,10 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  if (AR) AR.abbauen();
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
+  SZ.abbauen();
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
@@ -2223,6 +2665,7 @@ return bauen().then(function () {
   if (abgebaut) return;
   applyVisibility();
   setSelected(selected);
+  Kern.Export.pruefeZiel('exp');
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
