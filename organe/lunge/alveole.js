@@ -9,6 +9,7 @@
    KAP_BAHNEN (Kapillarbahnen um die aufgeschnittene Alveole für die fließenden Gasteilchen) und OFFEN (Innenraum für die Gasteilchen), beide
    in AlveoleApp.daten; Teilchen kommen in eine eigene Gruppe `dyn` (noexport) und werden je Bild aus der Uhr gesetzt. organ.start für die Kamerafahrt.
    Reiter Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.atmung): setzen die Werte des Gasaustauschs (gas.szenario, Abschnitt 5).
+   Export (GLB statisch, GLB animiert mit einer Atemperiode, STL) und AR (WebXR, AR Quick Look): Abschnitte 6c und 6d.
    ===================================================================== */
 (function () {
 'use strict';
@@ -67,6 +68,7 @@ var MARKUP = `<div id="title">
     <button id="bPlay" class="gh on">Pause</button>
     <button id="bSchema" class="gh" title="Der Gasaustausch als flaches Schema: Alveole, Kapillare, Blutk&ouml;rperchen und Ergebnis">Schema</button>
     <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Blut-Luft-Schranke">Lupe</button>
+    <button id="bAR" class="gh" title="Das Lungenbl&auml;schen mit der Kamera in den Raum stellen">AR</button>
   </div>
 </div>
 
@@ -246,6 +248,13 @@ var MARKUP = `<div id="title">
   <p class="note">Stark vergr&ouml;&szlig;ert: Eine Alveole ist etwa 0,2&ndash;0,3&nbsp;mm gro&szlig;.</p>
 </div>
 
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
 <div class="panel" id="info">
   <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
   <span class="lat" id="iLat"></span>
@@ -261,6 +270,19 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Lungenbl&auml;schen in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Ger&auml;t langsam &uuml;ber den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Lungenbl&auml;schen hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arOffen">Geschlossen</button>
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Reiter "Gasaustausch" (Regler und Schalter aus dem Alveolen-Modell; die IDs tragen das Praefix la). Die Statushinweise des Originals (laStAtemwege usw.) stehen
    im Reiter "Krankheitsbilder" (STATUS, unter der Liste). */
@@ -2461,15 +2483,151 @@ function lupeTick(now) {   /* Oedem weich ueberblenden (ca. 1,5 s), Phase mit de
 }
 
 /* =====================================================================
+   6c. Export (Kern.Export): GLB statisch und STL (Wand, Kapillaren, Gefaesse; der sichtbare Zustand, ohne Gasteilchen), GLB animiert: eine Atemperiode des Saeckchens
+   (die Skalierung 1 + ATEM_DEHNUNG * f aus gas3D, f wie in atemSchritt bei Tiefe und Frequenz der Regler, ohne Cheyne-Stokes und ohne Obstruktion), die Gefaessfarben bleiben
+   wie beim Export, Teilchen gibt es nicht. Alle Klone haengen dafuer in einer Gruppe "Atmung", die um die Mitte des Saeckchens skaliert. Massstab: 1 Modelleinheit = 1 cm
+   in der Datei (Wirklichkeit: 0,1 mm), also 100-fach vergroessert.
+   ===================================================================== */
+var exArt = '', exAlt = null;             /* Art des laufenden Exports ('anim' u. a.) und Lage der Wurzel vor dem Aufzeichnen */
+var LAENGE_TXT = 'Säckchen 100-fach vergrößert, ca. 17 cm hoch (in Wirklichkeit ca. 1,7 mm)';
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+var exCfg = {
+  titel: 'Alveole', praefix: 'alveole', wurzelName: 'Alveole',
+  schild: [0, -8.2, 3.2],                 /* Schild unter dem Modell (Unterkante bei -6,7 mit Atemdehnung), vorn (z bis 2,9) */
+  bereit: function () { return App.ready; },
+  gruppen: function () {
+    if (exArt === 'anim') { exAlt = { p: root.position.clone(), s: root.scale.clone() }; root.position.set(0, 0, 0); root.scale.set(1, 1, 1); root.updateMatrixWorld(true); }   /* Klone ohne Atemdehnung anlegen */
+    return [root];
+  },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.id : ''; },
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  animation: function (rootE, clones) {
+    var g = gas.lesen(), tiefe = g.tiefe, T = 8.0 - 6.0 * g.frequenz, N = 24, times = new Float32Array(N + 1), P = new Float32Array((N + 1) * 3), Sc = new Float32Array((N + 1) * 3), i;
+    var atem = new THREE.Group(); atem.name = 'Atmung';
+    clones.forEach(function (q) { atem.add(q.c); });
+    rootE.add(atem);
+    for (i = 0; i <= N; i++) {
+      var t = i * T / N, ph = t / T;
+      var f = ph < 0.42 ? tiefe * (1 - Math.cos(Math.PI * (ph / 0.42))) / 2 : tiefe * Math.pow(Math.max(0, 1 - (ph - 0.42) / 0.58), 2.2);   /* wie atemSchritt (obstruktion = 0) */
+      var sk = 1 + ATEM_DEHNUNG * f;
+      times[i] = t; Sc[i * 3] = Sc[i * 3 + 1] = Sc[i * 3 + 2] = sk; P[i * 3] = 0; P[i * 3 + 1] = ATEM_MITTE_Y * (1 - sk); P[i * 3 + 2] = 0;
+    }
+    atem.scale.set(Sc[0], Sc[1], Sc[2]); atem.position.set(P[0], P[1], P[2]);
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Alveole_Atmung', T, [new THREE.VectorKeyframeTrack('Atmung.position', times, P), new THREE.VectorKeyframeTrack('Atmung.scale', times, Sc)])],
+      zusatz: sz ? sz.id : 'normal', T: T, tiefe: tiefe };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Atmung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, ' + LAENGE_TXT + '):', '- alveole_ansicht.stl: alles, was beim Export sichtbar war: Wand des Säckchens, Kapillarnetz und Gefäße (ohne Gasteilchen)', 'Eine Modelleinheit des Programms (0,1 mm in Wirklichkeit) ist in der Datei 1 cm. STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>' + LAENGE_TXT + ' – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': eine Atemperiode (' + i.a.T.toFixed(1).replace('.', ',') + ' s) als Animation, läuft in Schleife: das Säckchen dehnt sich leicht mit der Atmung. Gasteilchen und Blutfluss gibt es nur im Programm.' : i.name + ': farbiges 3D-Modell des Lungenbläschens mit Kapillarnetz und Gefäßen in der Ansicht beim Export (aufgeschnitten oder geschlossen), ohne Bewegung.', 'Maßstab: Meter, aber 100-fach vergrößert (' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>' + LAENGE_TXT + ', mit Farben, ' + (i.anim ? 'mit Atembewegung: 25 Keyframes, ' + i.a.T.toFixed(1).replace('.', ',') + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+function exportRun(art, kind) {
+  exArt = art; exAlt = null;
+  var p = Kern.Export.run(kind, exCfg);
+  var danach = function () { if (exAlt) { root.position.copy(exAlt.p); root.scale.copy(exAlt.s); exAlt = null; } };
+  return p && p.then ? p.then(danach) : p;
+}
+$('bGlbA').onclick = function () { exportRun('anim', 'glb-anim'); };
+$('bGlbS').onclick = function () { exportRun('glb', 'glb'); };
+$('bStl').onclick = function () { exportRun('stl', 'stl'); };
+
+/* =====================================================================
+   6d. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Das Saeckchen steht stark vergroessert auf dem Tisch (AR_SKALA m je Modelleinheit, ca. 20 cm hoch); der Gasaustausch laeuft weiter (Knopf Pause), Teilchen und
+   Beschriftung gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG entsteht erst beim ersten Start: root atmet (Skalierung je Bild) und bleibt deshalb unveraendert, arG
+   wird hingestellt.
+   ===================================================================== */
+var AR_SKALA = 0.013;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false, kamAlt = { near: camera.near, far: camera.far };
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen && sichtbar(o)) b.expandByObject(o); });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() {
+  $('arPause').textContent = gasLaeuft ? 'Pause' : 'Weiter';
+}
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Alveole_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.008, 0.013, 0.02, 0.03, 0.045], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arOffen', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt Modelleinheiten */
+      labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+      arTexte();
+      $('arOffen').textContent = offenAn ? 'Geschlossen' : 'Aufgeschnitten';
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arOffen').onclick = function () { offen(!offenAn); $('arOffen').textContent = offenAn ? 'Geschlossen' : 'Aufgeschnitten'; };
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme in der aktuellen Ansicht (ohne Teilchen); die Atemdehnung der Wurzel ist mit drin ---- */
+function usdzBuild() {
+  return Kern.AR.usdz({ name: 'Alveole', creator: 'Alveole 3D - ' + Kern.WM, datei: 'alveole.usda', skala: AR_SKALA, gruppen: [root] });
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Das Lungenbläschen öffnet sich in AR Quick Look. Mit zwei Fingern lässt es sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    7. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
 /* daten: Andockpunkte fuer die Simulation (B2): Kapillarbahnen und Innenraum der aufgeschnittenen Alveole (Modelleinheiten), dyn = Gruppe der Teilchen */
 var App = window.AlveoleApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, offen: offen, ansicht: ansicht, dreiecke: tris, gas: gas.lesen,
   daten: { kapBahnen: KAP_BAHNEN, offen: { mitte: OF.c, radius: OF.r, richtung: OF.n, schnittZ: OF_ZC }, dyn: dyn } };
-function loop(now) {
+function loop(now, frame) {
   gas.tick(now);
   lupeTick(now);
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (!schemaOn) renderer.render(scene, camera);   /* bei offenem Schema ist die 3D-Ansicht ausgeblendet */
@@ -2481,6 +2639,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  if (AR) AR.abbauen();
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
   SZ.abbauen();
@@ -2506,6 +2665,7 @@ return bauen().then(function () {
   if (abgebaut) return;
   applyVisibility();
   setSelected(selected);
+  Kern.Export.pruefeZiel('exp');
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });

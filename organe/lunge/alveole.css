@@ -81,6 +81,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   #rail{top:auto;bottom:0;left:0;right:0;width:100%;max-height:34vh;
     border-radius:0;border-left:0;border-right:0;border-bottom:0}
   #legend{display:none}
+  #exp{top:62px}   /* unter Titel und Signatur (oben links bzw. mittig) */
+  #exp .tag{display:none}
+  #exp button{padding:7px 9px;font-size:11.5px}
+  body:has(#lupe.show) #exp,body:has(#scard.show) #exp,body:has(#kcard.show:not(.weg)) #exp{display:none}   /* die Karten und die Lupe liegen an der Stelle der Export-Leiste */
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + 106px)}
   #scard,#kcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
   #lupe{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:calc(66vh - 225px);overflow-y:auto}   /* oben, ueber der Werkzeugleiste (die bleibt frei) */
@@ -164,6 +168,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 @media (prefers-reduced-motion: reduce){#schema *{transition-duration:.01ms !important}}
 
 body.schema #labels,body.schema #leaders{display:none}
+body.schema #exp{display:none}   /* das Schema liegt an der Stelle der Export-Leiste */
 
 @media (max-width:1000px){
   /* offenes Schema: die Leiste bleibt (Reiter Gasaustausch), Werkzeugleiste darueber, das Schema oben darueber (--wz = gemessene Hoehe der Werkzeugleiste) */

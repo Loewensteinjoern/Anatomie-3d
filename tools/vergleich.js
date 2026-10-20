@@ -14,7 +14,7 @@
    ist fest initialisiert. Bei unverändertem Verhalten sind die Bilder
    deshalb bytegleich (auf demselben Rechner). Aufgenommen werden feste
    Ansichten (Desktop, Handy, lokal per file://), alle Exporte (GLB, STL)
-   und bei Körper, Herz, Niere und Nephron der AR-Ablauf: WebXR mit nachgebildetem Gerät und
+   und bei Körper, Herz, Niere, Nephron, Lunge und Alveole der AR-Ablauf: WebXR mit nachgebildetem Gerät und
    AR Quick Look (USDZ). Herz-Kontext szenarien: Krankheitsbilder (3D, Schema, GLB);
    Niere-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Harnstau, Stenose, Ramipril, Ibuprofen, GLB).
    Alveole-Kontexte szenarien und szenarien-handy: Krankheitsbilder und Medikamente (Reiter, Karte, je Eintrag 3D und Schema, Werte in erg.gas); Lunge-Kontext szenarien:
@@ -42,9 +42,11 @@
    Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von LungeApp.atmung() stehen in erg.atmung
    und werden von `vergleichen` verglichen); danach die 3D-Lunge, die mitatmet (Schema zu, Ruheatmung „3d-einatmen“, angestrengte Atmung „3d-stress“, Rippen
    durchsichtig), die Hilfekarte („hilfekarte“, „probier“ = „Probier das aus“) und das Üben („ueben“)), handy (Übersicht, Bronchialbaum, Info, am Ende Reiter Atmung
-   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau; noch ohne Exporte und AR. Am Ende von desktop steht „auswahl-lappen“ (rechter Unterlappen
+   mit offenem Schema, dann die atmende 3D-Lunge „3d-atmung“), datei (file://) und abbau. Am Ende von desktop steht „auswahl-lappen“ (rechter Unterlappen
    an einem festen Punkt angetippt, Infokarte mit „Alveole hier ansehen“), danach die Lupe Pleuraspalt („lupe“ nach #bLupe, „lupe-pneumothorax“ nach dem Schalter, dann #bLupeX);
-   handy endet mit „lupe“.
+   handy endet mit „lupe“. Danach die Exporte (desktop): GLB statisch, GLB animiert (eine Periode der Ruheatmung, 4,2 s: Morph-Ziele und Spuren) und STL (geschlossene Körper, ohne
+   Rippenfell, Gefäße und Zwischenrippenmuskeln), dann „nach-export“ (die Atmung läuft weiter). Kontext webxr (AR-Start schaltet die Ruheatmung ein, platziert, Atmen, Knopf #arPause mit
+   Beschriftungen in erg.ar.pause, ohne Beschriftung der Strukturen) und quicklook (USDZ ohne Rippenfell-Hülle und Teilchen).
    Der Vergleich des Atmungs-Schemas mit dem Original-Modell (Ebene 1) ist ein eigenes Werkzeug: tools/nachweis.js (Vorlage: tools/originale/).
 
    Modell alveole (index.html#lunge/alveole): Alveolarsäckchen stark vergrößert mit Bronchiolus, Alveolargang, einer aufgeschnittenen Alveole, Kapillarnetz und den
@@ -52,7 +54,8 @@
    ohne Beschriftung, Info; am Ende Gasaustausch: Reiter, 3D nach 3 s (Gasteilchen im Blut und in der Alveole), Schema (#bSchema), nur CO₂, Blutfluss Stopp, schnell mit Atempause,
    Freier Modus, Zeitlupe und Pause (#bPlay; die zwei Bilder „schema-pause“ im Abstand von 1000 ms müssen gleich aussehen; die Werte von AlveoleApp.gas() stehen in erg.gas),
    Hilfekarte, „Probier das aus“ und Üben; danach die Lupe Blut-Luft-Schranke: „lupe“ nach #bLupe, „lupe-oedem“ nach dem Schalter Lungenödem, dann #bLupeX), handy (Übersicht, Info; am Ende Schema, 3D und „lupe“), datei (file://) und abbau; noch ohne Exporte und AR; die Messwerte des Abbaus
-   enthalten zusätzlich alveoleApp. Das Schema gegen das Original prüft nicht vergleich.js, sondern nachweis.js (alveole).
+   enthalten zusätzlich alveoleApp. Das Schema gegen das Original prüft nicht vergleich.js, sondern nachweis.js (alveole). Am Ende von desktop die Exporte (GLB statisch, GLB animiert mit der
+   Atembewegung des Säckchens, STL) und „nach-export"; Kontexte webxr (Knopf #arOffen und #arPause, stark vergrößert) und quicklook (USDZ ohne Teilchen).
 
    Kontext abbau (Körper, Herz, Niere und Nephron): Organ aufbauen, abbauen, mitten im Aufbau
    abbrechen, neu aufbauen und bedienen, wieder abbauen (Kern.organStarten /
@@ -602,6 +605,10 @@ const MODELLE = {
         await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
         await t.klick('#lpChips button[data-pt="1"]'); await t.weiter(2000); await t.bild('lupe-pneumothorax');
         await t.klick('#bLupeX');
+        /* Exporte (neu, am Ende): Rippen wieder voll, Ruheatmung; GLB statisch (sichtbarer Zustand), GLB animiert (eine Periode der Ruheatmung, 4,2 s) und STL (geschlossene Körper) */
+        await t.klick('#rail .tabs .tab:text-is("Atmung")'); await t.klick('#loRippenWahl button[data-rippen="voll"]'); await t.klick('#loDemoRuhe'); await t.weiter(600);
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
+        await t.weiter(600); await t.bild('nach-export');   /* die Atmung läuft nach dem Aufzeichnen weiter */
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -629,6 +636,22 @@ const MODELLE = {
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {   /* AR: der Start schaltet die Ruheatmung ein; Pause/Weiter hält sie an */
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.weiter(1200); await t.bild('einatmen');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent)); await t.bild('pause');
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'lunge', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('bronchialbaum');
@@ -673,6 +696,10 @@ const MODELLE = {
         await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');
         await t.klick('#lpChips button[data-oe="1"]'); await t.weiter(2000); await t.bild('lupe-oedem');
         await t.klick('#bLupeX');
+        /* Exporte (neu, am Ende): GLB statisch, GLB animiert (eine Atemperiode des Säckchens) und STL */
+        await t.klick('#cam0'); await t.weiter(900);
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
+        await t.weiter(600); await t.bild('nach-export');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -712,6 +739,22 @@ const MODELLE = {
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {   /* AR: stark vergrößert; der Gasaustausch läuft weiter, Pause/Weiter hält ihn an */
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arOffen'); await t.weiter(1400); await t.bild('geschlossen');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'alveole', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('alveole');

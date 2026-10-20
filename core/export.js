@@ -229,6 +229,7 @@ Kern.Export = (function () {
     m.applyMatrix4(mesh.matrixWorld);
     if (keepMorph) m.updateMorphTargets();
     m.userData = { struktur: mesh.userData.sid || '' };
+    if (opt && opt.klon) opt.klon(m, mesh);   // optional: Klon vor dem Schreiben nachbessern (z. B. Normalen)
     return m;
   }
   function glb(scene, animations, titel) {

@@ -8,6 +8,7 @@
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste. Atmung: Reiter Atmung und Schema aus dem Thorax-Modell
    (Abschnitt 6), dazu atmet das 3D-Modell mit (Abschnitt 7: Zwerchfell, Lunge, Rippen, Luftteilchen). Hilfekarten und Ueben wie bei der Niere.
    Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.atmung): Reiter und Erklaerkarte; in 3D wirkt die Obstruktion (Abschnitt 7c).
+   Export (GLB statisch, GLB animiert mit einer Ruheatmung, STL) und AR (WebXR, AR Quick Look): Abschnitte 7d und 7e.
    Zoomstufe: Wer einen Lungenlappen antippt, bekommt in der Infokarte "Alveole hier ansehen" (der Punkt bestimmt den naechsten Endast des Bronchialbaums
    im selben Lappen); der Knopf "Alveole" faehrt an eine feste Stelle im rechten Unterlappen (Abschnitt 7b). Das Saeckchen entsteht aus der Form des
    Alveolen-Moduls (organe/lunge/alveole.js, organ.form), die Kamera landet in dessen Startansicht (Adresse lunge/alveole).
@@ -97,6 +98,7 @@ var MARKUP = `<div id="title">
     <span class="cap">Atmung</span>
     <button id="bPlay" class="gh on">Pause</button>
     <button id="bSchema" class="gh" title="Die Atemmechanik als flaches Schema: Muskeln, Brustkorb, Druck und Luftstrom">Schema</button>
+    <button id="bAR" class="gh" title="Die Lunge mit der Kamera in den Raum stellen">AR</button>
   </div>
 </div>
 
@@ -223,6 +225,13 @@ var MARKUP = `<div id="title">
   <p class="note">Von vorn gesehen; rechts im Bild liegt die linke Lunge.</p>
 </div>
 
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
 <div class="panel" id="info">
   <button class="cls" id="bCls" aria-label="Schlie&szlig;en">&times;</button>
   <span class="lat" id="iLat"></span>
@@ -239,6 +248,18 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Lunge in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um die Lunge hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Reiter "Atmung" (Regler und Schalter aus dem Thorax-Modell; die IDs tragen das Praefix lo) */
 var ATMUNG_PANE = `<div class="karte">
@@ -2574,17 +2595,219 @@ function fahrtBild(now) {
 }
 
 /* =====================================================================
+   7d. Export (Kern.Export): GLB statisch und STL (nur die geschlossenen Koerper: Lappen, Luftwege, Rippen, Brustbein, Zwerchfell, Herz; ohne Rippenfell,
+   Gefaesse, Zwischenrippenmuskeln und Teilchen), GLB animiert: eine Periode der Ruheatmung des Schemas (4,2 s, Formel wie in atmen.tick). Starre Teile (Rippen, Brustbein)
+   bekommen Spuren fuer Lage, Drehung und Groesse, verformte Teile (Lappen, Atemwege, Gefaesse, Zwerchfell, Knorpel, Zwischenrippenmuskeln) ein Morph-Ziel (Pose bei
+   voller Einatmung, Einfluss = w / wMax; die Verformung ist in w linear). Die Pose der Ausgangslage (w = 0) steht beim Anlegen der Klone, danach geht die Atmung weiter.
+   ===================================================================== */
+var STL_STRUKTUREN = LAPPEN.concat(['luftroehre', 'hauptbronchien', 'bronchien', 'rippen', 'brustbein', 'zwerchfell', 'herz']);
+var exArt = '';                           /* 'stl' | 'glb' | 'anim': Art des laufenden Exports (gruppen kennt sie sonst nicht) */
+var RUHE_Z = 4.2, RUHE_W = 0.52, RUHE_NKEY = 42;   /* Periode, Hoechstwert von w (Muskeln: d = w, i = 0,95 w) und Zahl der Zeitschritte */
+function ruheW(ph) {   /* wie in atmen.tick (Modus ruhe) */
+  return ph < 1.7 ? RUHE_W * (1 - Math.cos(Math.PI * (ph / 1.7))) / 2 : RUHE_W * Math.pow(Math.max(0, 1 - (ph - 1.7) / 2.5), 2.2);
+}
+function atmungPose(w) {   /* Zustand der Muskeln setzen und Lunge, Zwerchfell und Brustkorb neu rechnen */
+  A3.S0 = { d: w, i: w * 0.95 }; A3.neu = true; atmungForm();
+}
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+var LAENGE_TXT = 'Brustkorb ca. 30 cm breit';
+var exCfg = {
+  titel: 'Lunge', praefix: 'lunge', wurzelName: 'Lunge',
+  /* Schild unter dem Modell: Unterkante des Zwerchfells bei voller Einatmung ca. -21,5, Brustbein vorn bis z 11,3, x Mitte */
+  schild: [0, -23.5, 12],
+  bereit: function () { return App.ready; },
+  gruppen: function () {
+    if (exArt === 'stl') {
+      var l = [];
+      ORDER.forEach(function (d) { if (STL_STRUKTUREN.indexOf(d.id) >= 0) d.meshes.forEach(function (m) { l.push(m); }); });
+      return l;
+    }
+    if (exArt === 'anim' && A3.bereit) { exAlt = A3.S0; atmungPose(0); }   /* Klone in der Ausgangslage anlegen */
+    return [root];
+  },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.id : ''; },
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  /* Normalen des Klons auf Laenge 1 bringen (das Herz zur Orientierung hat einzelne Normalen mit Laenge ungleich 1 (Abweichung bis 1,0); der Exporter wuerde sie sonst mit einer Warnung selbst normalisieren (Laenge 0: (1, 0, 0))) */
+  klon: function (c) {
+    var n = c.geometry.attributes.normal, a = n && n.array, i, l;
+    if (!a) return;
+    for (i = 0; i < a.length; i += 3) {
+      l = Math.sqrt(a[i] * a[i] + a[i + 1] * a[i + 1] + a[i + 2] * a[i + 2]);
+      if (Math.abs(l - 1) <= 5e-4) continue;
+      if (l === 0) { a[i] = 1; a[i + 1] = 0; a[i + 2] = 0; } else { a[i] /= l; a[i + 1] /= l; a[i + 2] /= l; }
+    }
+  },
+  animation: function (rootE, clones) {
+    var N = RUHE_NKEY, times = new Float32Array(N + 1), tracks = [], i, q, nStarr = 0, nVerf = 0;
+    for (i = 0; i <= N; i++) times[i] = i * RUHE_Z / N;
+    var W = new Float32Array(N + 1);
+    for (i = 0; i <= N; i++) W[i] = ruheW(times[i]);
+    /* verformte Teile: Morph-Ziel = Pose bei w = RUHE_W minus Ausgangslage */
+    atmungPose(RUHE_W);
+    var traeger = [];
+    for (q = 0; q < clones.length; q++) {
+      var c = clones[q].c, m = clones[q].m, e = A3.rest.get(m);
+      if (!e) continue;
+      if (e.m0) { traeger.push({ c: c, m: m }); continue; }   /* starr: Rippen, Brustbein */
+      var P0 = c.geometry.attributes.position.array, P1 = m.geometry.attributes.position.array, d = new Float32Array(P0.length), mx = 0, k;
+      for (k = 0; k < d.length; k++) { d[k] = P1[k] - P0[k]; if (Math.abs(d[k]) > mx) mx = Math.abs(d[k]); }
+      if (mx < 1e-4) continue;
+      c.geometry.morphAttributes.position = [new THREE.BufferAttribute(d, 3)]; c.geometry.morphTargetsRelative = true;
+      c.updateMorphTargets(); c.morphTargetInfluences[0] = 0;
+      var inf = new Float32Array(N + 1);
+      for (i = 0; i <= N; i++) inf[i] = W[i] / RUHE_W;
+      tracks.push(new THREE.NumberKeyframeTrack(c.name + '.morphTargetInfluences', times, inf));
+      if (m.material === MAT.zwischenrippen) c.material.opacity = 0.3;   /* die Deckkraft folgt in 3D der Anspannung (0,16 bis 0,39): in der Datei ein fester Mittelwert */
+      nVerf++;
+    }
+    /* starre Teile: Lage, Drehung, Groesse je Zeitschritt aus der Brustkorb-Bewegung des Programms */
+    var pos = traeger.map(function () { return new Float32Array((N + 1) * 3); }), rot = traeger.map(function () { return new Float32Array((N + 1) * 4); }), skl = traeger.map(function () { return new Float32Array((N + 1) * 3); });
+    var vp = new THREE.Vector3(), vq = new THREE.Quaternion(), vs = new THREE.Vector3(), vor = traeger.map(function () { return new THREE.Quaternion(); });
+    for (i = 0; i <= N; i++) {
+      var S = A3.S = { d: W[i] + SZW.trap, i: 0.95 * W[i] + SZW.trap };
+      A3.dA = 62 * S.d / KUPPEL_PX; A3.dB = 13 * S.i * PX_CM; A3.sinW = Math.sin(RIPPE_WINKEL * S.i);
+      brustkorbAnwenden();
+      traeger.forEach(function (t, j) {
+        t.m.updateWorldMatrix(true, false); t.m.matrixWorld.decompose(vp, vq, vs);
+        var qa = vor[j];
+        if (i && (vq.x * qa.x + vq.y * qa.y + vq.z * qa.z + vq.w * qa.w) < 0) { vq.x = -vq.x; vq.y = -vq.y; vq.z = -vq.z; vq.w = -vq.w; }   /* kurzer Weg beim Mischen */
+        qa.copy(vq);
+        pos[j][i * 3] = vp.x; pos[j][i * 3 + 1] = vp.y; pos[j][i * 3 + 2] = vp.z;
+        rot[j][i * 4] = vq.x; rot[j][i * 4 + 1] = vq.y; rot[j][i * 4 + 2] = vq.z; rot[j][i * 4 + 3] = vq.w;
+        skl[j][i * 3] = vs.x; skl[j][i * 3 + 1] = vs.y; skl[j][i * 3 + 2] = vs.z;
+      });
+    }
+    traeger.forEach(function (t, j) {
+      tracks.push(new THREE.VectorKeyframeTrack(t.c.name + '.position', times, pos[j]));
+      tracks.push(new THREE.QuaternionKeyframeTrack(t.c.name + '.quaternion', times, rot[j]));
+      tracks.push(new THREE.VectorKeyframeTrack(t.c.name + '.scale', times, skl[j]));
+      nStarr++;
+    });
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Lunge_Ruheatmung', RUHE_Z, tracks)], zusatz: sz ? sz.id : 'normal', nStarr: nStarr, nVerf: nVerf };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Atmung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe: ' + LAENGE_TXT + '):', '- lunge_ansicht.stl: die geschlossenen Körper, die beim Export sichtbar waren: Lungenlappen, Luftröhre und Bronchien, Rippen, Brustbein, Zwerchfell und Herz (ohne Rippenfell, Gefäße, Zwischenrippenmuskeln)', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe (' + LAENGE_TXT + ') – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': eine Ruheatmung (' + RUHE_Z + ' s) als Animation, läuft in Schleife: Zwerchfell, Lungenlappen, Atemwege, Rippen, Brustbein und Zwischenrippenmuskeln bewegen sich wie im Programm.' : i.name + ': farbiges 3D-Modell der Lunge mit Atemwegen, Gefäßen, Zwerchfell und Brustkorb in der Stellung beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe (' + LAENGE_TXT + '), mit Farben, ' + (i.anim ? 'mit Ruheatmung: ' + (RUHE_NKEY + 1) + ' Keyframes, ' + RUHE_Z + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+var exAlt = null;   /* Zustand der Muskeln vor dem Aufzeichnen der Atmung */
+function exportNach() { if (exAlt) { A3.S0 = exAlt; exAlt = null; A3.neu = true; atmungForm(); } }
+function exportRun(art, kind) {
+  exArt = art; exAlt = null;
+  var p = Kern.Export.run(kind, exCfg);
+  return p && p.then ? p.then(exportNach, function (e) { exportNach(); throw e; }) : p;
+}
+$('bGlbA').onclick = function () { exportRun('anim', 'glb-anim'); };
+$('bGlbS').onclick = function () { exportRun('glb', 'glb'); };
+$('bStl').onclick = function () { exportRun('stl', 'stl'); };
+
+/* =====================================================================
+   7e. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Die Lunge wird in cm modelliert: 0,01 m je cm ist die reale Groesse (Brustkorb ca. 30 cm breit, ein Tischmodell). Die Atmung laeuft weiter (Knopf Pause), das Rippenfell
+   (Huelle), die Luftteilchen und die Beschriftung gibt es in AR nicht. Das Modell entsteht erst beim Start in einer eigenen Gruppe (arG, um die Mitte M des Modells): so
+   aendert AR nichts an der Szene, solange sie nicht gestartet wird.
+   ===================================================================== */
+var AR_SKALA = 0.01;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false, kamAlt = { near: camera.near, far: camera.far };
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber der Mitte M, die in AR auf der Flaeche steht */
+  var b = new THREE.Box3();
+  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen && sichtbar(o)) b.expandByObject(o); });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() {
+  $('arPause').textContent = atmenLaeuft ? 'Pause' : 'Weiter';
+}
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Lunge_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.004, 0.006, 0.01, 0.015, 0.02, 0.03], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt cm */
+      labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+      if (atmen.lesen().modus === null && atmenLaeuft) $('loDemoRuhe').click();   /* ohne laufende Atmung: Ruheatmung, sonst gaebe es nichts zu pausieren */
+      arTexte();
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (fz || abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme in der aktuellen Ansicht, ohne Teilchen und ohne Rippenfell-Huelle; Glas (Durchsicht, durchsichtige Rippen) mit fester Deckkraft ---- */
+function usdzBuild() {
+  var pl = STRUCT.pleura.meshes, vis = pl.map(function (m) { return m.visible; });
+  var glas = LAPPEN.map(function (sid) { return MAT[sid]; }).concat([MAT.rippen, MAT.knorpel, MAT.brustbein]).filter(function (m) { return m.transparent && m.opacity < 0.3; });
+  pl.forEach(function (m) { m.visible = false; });
+  glas.forEach(function (m) { m.userData.usdzOp = 0.35; });
+  try {
+    return Kern.AR.usdz({ name: 'Lunge', creator: 'Lunge 3D - ' + Kern.WM, datei: 'lunge.usda', skala: AR_SKALA, gruppen: [root] });
+  } finally {
+    pl.forEach(function (m, i) { m.visible = vis[i]; });
+    glas.forEach(function (m) { delete m.userData.usdzOp; });
+  }
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Die Lunge öffnet sich in AR Quick Look. Mit zwei Fingern lässt sie sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
 var App = window.LungeApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, brust: brust, ansicht: ansicht, dreiecke: tris, atmung: atmen.lesen,
   alveole: function (i) { alveoleOeffnen(i === undefined ? null : i); }, alveoleBereit: function () { return alFertig; }, endpunkte: function () { return BAUM ? BAUM.endpunkte.map(function (e) { return { p: e.p.slice(), lappen: e.lappen }; }) : []; } };
 var szT = 0;
-function loop(now) {
+function loop(now, frame) {
   atmen.tick(now);
   if (SZ.schritt(szT ? Math.min(0.05, (now - szT) / 1000) : 0.016)) szenarioWirkung();   /* Anteile weich ueberblenden, auch in der Pause */
   szT = now;
   lupeTick(now);
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -2602,6 +2825,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  if (AR) AR.abbauen();
   fz = null; canvas.style.pointerEvents = '';
   clearTimeout(Kern.toast._t);
   clearTimeout(quizT);
@@ -2629,6 +2853,7 @@ return bauen().then(function () {
   if (abgebaut) return;
   applyVisibility();
   setSelected(selected);
+  Kern.Export.pruefeZiel('exp');
   sackP = alveoleNetze();   /* das Saeckchen entsteht im Hintergrund; die Rueckkehr aus der Alveole wartet darauf */
   return umg.von === 'alveole' ? sackP : null;
 }).then(function () {
