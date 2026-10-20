@@ -67,7 +67,7 @@ var STRUKTUREN = [
     txt: 'Meist vier Lungenvenen führen das in den Alveolen mit Sauerstoff beladene Blut in den linken Vorhof. Im Lungenkreislauf führen also die Venen das sauerstoffreiche Blut.',
     facts: { 'Anzahl': 'meist 4', 'Münden in': 'linken Vorhof', 'Blut': 'sauerstoffreich' } },
   { id: 'herz', de: 'Herz (Lage)', lat: 'Cor', grp: 'Umgebung', col: 0x8C4747,
-    txt: 'Das Herz liegt zwischen den Lungenflügeln, mit der Spitze nach links. Deshalb ist der linke Lungenflügel kleiner und hat die Herzbucht. Im Lungenmodell ist es nur zur Orientierung angedeutet.',
+    txt: 'Das Herz liegt zwischen den Lungenflügeln, mit der Spitze nach links. Deshalb ist der linke Lungenflügel kleiner und hat die Herzbucht. Hier schlägt es: Die rechte Kammer pumpt das sauerstoffarme Blut in die Lungenarterien, über die Lungenvenen kommt es sauerstoffreich in den linken Vorhof zurück.',
     facts: { 'Lage': 'Mittelfellraum, Spitze links', 'Folge': 'linke Lunge nur 2 Lappen', 'Detailmodell': 'Herz öffnen im Körper' } }
 ];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
@@ -316,7 +316,7 @@ var ATMUNG_PANE = `<div class="karte">
     <span>Druckzahlen einblenden</span><input type="checkbox" id="loZahlen">
   </label>
 </div>`;
-/* Hilfekarten und "Probier das aus" (aus dem Thorax-Modell, Texte und HTML woertlich): t = Titel, u = Untertitel, h = Inhalt als HTML.
+/* Hilfekarten und "Probier das aus" (aus dem Thorax-Modell, Texte und HTML woertlich; dazu die eigene Karte "kreislauf"): t = Titel, u = Untertitel, h = Inhalt als HTML.
    Die Liste KARTEN_LISTE traegt die Knopftexte des Originals (data-karte) in dessen Reihenfolge. */
 var karten = {
   pleura: {
@@ -348,6 +348,10 @@ var karten = {
       "<li><b>Rechts: 3 Lappen</b> (Ober-, Mittel-, Unterlappen).</li>"+
       "<li><b>Links: 2 Lappen</b> (Ober- und Unterlappen).</li></ul>"+
       "<p>Der rechte Hauptbronchus verläuft außerdem steiler und weiter als der linke. Deshalb landen aspirierte Fremdkörper meist rechts.</p>"
+  },
+  kreislauf: {   /* eigene Karte fuer das schlagende Herz (Abschnitt 7f), nicht aus dem Thorax-Modell */
+    t:"Kleiner Kreislauf", u:"Das Blut zwischen Herz und Lunge",
+    h:"<p>Jeder Punkt in den Gefäßen ist eine Portion Blut. Die rechte Kammer pumpt sie blau in die Lungenarterien. In den Lungenbläschen nimmt das Blut Sauerstoff auf und gibt Kohlendioxid ab; deshalb kommt es rot über die Lungenvenen zurück in den linken Vorhof. In Wirklichkeit schlägt das Herz etwa 60- bis 80-mal pro Minute, du atmest etwa 12- bis 16-mal – im Modell sind beide verlangsamt.</p>"
   },
   ausatmen: {
     t:"Ausatmen geht von allein", u:"Passive Ausatmung",
@@ -383,7 +387,7 @@ var karten = {
   }
 };
 var KARTEN_LISTE = [["pleura", "Pleura und Pleuraspalt"], ["zwerchfell", "Das Zwerchfell"], ["rippen", "Zwischenrippenmuskulatur"],
-  ["fluegel", "Warum der linke Flügel kleiner ist"], ["ausatmen", "Ausatmen geht von allein"], ["angestrengt", "Angestrengte Atmung"], ["begriffe", "Fachbegriffe zum Schreiben"]];
+  ["fluegel", "Warum der linke Flügel kleiner ist"], ["kreislauf", "Kleiner Kreislauf"], ["ausatmen", "Ausatmen geht von allein"], ["angestrengt", "Angestrengte Atmung"], ["begriffe", "Fachbegriffe zum Schreiben"]];
 var PROBIER = `      <ol>
         <li>Zwerchfell voll anspannen – und den Regler dort <b>stehen lassen</b>. Was passiert mit dem Luftstrom, obwohl die Lunge maximal gedehnt bleibt?</li>
         <li>Rippen auf <b>sichtbar</b>, dann langsam einatmen. Wohin geht die Lunge, wenn sich die Rippen heben? Danach die Rippen <b>ausschalten</b> und dasselbe noch einmal ansehen.</li>
@@ -472,10 +476,10 @@ MAT.rippen = mat(0xD8CDB3, { rough: 0.8, env: 0.2 });
 MAT.knorpel = mat(0xF4F6F2, { rough: 0.7, env: 0.25 });                    /* Rippenknorpel, heller als der Knochen */
 MAT.brustbein = mat(0xD8CDB3, { rough: 0.8, env: 0.2 });   /* wie die Rippen */
 MAT.wirbel = mat(0x8C8676, { rough: 0.85, env: 0.2 });                     /* Andeutung der Wirbelsaeule (keine Struktur) */
-MAT.lungenarterien = mat(0x3F63B5, { rough: 0.4, coat: 0.3 });
-MAT.lungenvenen = mat(0xC8372D, { rough: 0.4, coat: 0.3 });
+MAT.lungenarterien = mat(0x3F63B5, { rough: 0.4, coat: 0.3, opacity: LUFT_GLAS });   /* Gefaesse wie Glas, damit man die Blutportionen darin sieht (Abschnitt 7f); beim Antippen zaehlen sie als undurchsichtig (userData.dicht) */
+MAT.lungenvenen = mat(0xC8372D, { rough: 0.4, coat: 0.3, opacity: LUFT_GLAS });
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
-['luftroehre', 'hauptbronchien', 'bronchien'].forEach(function (k) { MAT[k].userData.dicht = true; });
+['luftroehre', 'hauptbronchien', 'bronchien', 'lungenarterien', 'lungenvenen'].forEach(function (k) { MAT[k].userData.dicht = true; });
 
 var root = new THREE.Group(); root.name = 'Lunge'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
 var tris = { lappen: 0, pleura: 0, atemwege: 0, gefaesse: 0, brustkorb: 0, herz: 0 };
@@ -581,7 +585,15 @@ async function herzBauen(hform) {
   g.setAttribute('position', new THREE.BufferAttribute(P.positions, 3));
   g.setIndex(new THREE.BufferAttribute(P.index, 1));
   g.computeVertexNormals();
-  return { geo: g, smp: smp, pos: HV };
+  /* Herzschlag (Abschnitt 7f): je Eckpunkt die Bewegung des Herz-Modells (Herz-Koordinaten, vor der Verschiebung) als fuenf Morph-Ziele VR, VL, A, Ao, PT */
+  var pp = g.attributes.position, nv = pp.count, MZ = [0, 1, 2, 3, 4].map(function () { return new Float32Array(nv * 3); }), i, j, m;
+  for (i = 0; i < nv; i++) {
+    m = hform.assemble.motionSimple(pp.getX(i), pp.getY(i), pp.getZ(i));
+    for (j = 0; j < 5; j++) { MZ[j][i * 3] = m[j * 3]; MZ[j][i * 3 + 1] = m[j * 3 + 1]; MZ[j][i * 3 + 2] = m[j * 3 + 2]; }
+  }
+  g.morphAttributes.position = MZ.map(function (a) { return new THREE.BufferAttribute(a, 3); });
+  g.morphTargetsRelative = true;
+  return { geo: g, smp: smp, pos: HV, morph: true };
 }
 
 /* Zwerchfell: eine zusammenhaengende Kuppelflaeche aus form.kuppel (rechts hoeher), knapp unter der Lungenbasis. Der Rand liegt dort, wo die Flaeche auf Hoehe
@@ -706,34 +718,62 @@ function luftroehreBauen() {
   addMesh('hauptbronchien', hg, MAT.hauptbronchien, 'Hauptbronchien', 2); tris.atemwege += anz(hg);
 }
 
-/* Gefaesse: Lungenarterien (blau) und -venen (rot) bis in die Lappen, entlang der Lappenbronchien (aeste = Bronchialbaum der Form) */
-function gefaesseBauen(aeste) {
-  var art = [], ven = [];
+/* Anschluss der Lungengefaesse am Herz-Modell (Koerper-Koordinaten): die Lungenarterien beginnen am Ende des sichtbaren Lungenstamms (letzter sichtbarer Punkt der Wege
+   lungeLinks/lungeRechts vor dem unsichtbaren Teil), die Lungenvenen an den Muendungen der vier Venenstuempfe (Anfang des sichtbaren Rueckwegs: A.LSPV/A.LIPV/A.RSPV/A.RIPV).
+   p = Anschlusspunkt, ext = 0,5 cm weiter im Stumpf (die Rohre ueberlappen so den Stumpf, auch wenn sich das Herz bewegt). Ohne Herz-Modell null. */
+function herzAnschluss(hform) {
+  if (!hform || !hform.extras || !hform.extras.wkPaths || !hform.extras.venen) return null;
+  var HV = form.HERZ_V, wk = hform.extras.wkPaths(), ve = hform.extras.venen();
+  var wp = function (q) { return [q[0] + HV[0], q[1] + HV[1], q[2] + HV[2]]; };
+  var mit = function (q, a, r) {   /* Punkt q (Herz-Koordinaten) plus Rueckverlaengerung um r cm entgegen der Richtung a -> q */
+    var d = [q[0] - a[0], q[1] - a[1], q[2] - a[2]], l = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]) || 1;
+    return { p: wp(q), ext: wp([q[0] - d[0] / l * r, q[1] - d[1] / l * r, q[2] - d[2] / l * r]), h: q.slice(), h0: a.slice() };
+  };
+  var arterie = function (w) { var hi = w.seg.findIndex(function (sg) { return !sg.vis; }); return mit(w.pts[hi], w.pts[hi - 1], 0.5); };
+  var vene = function (T) { return mit(T[1], T[0], 0.5); };
+  return { wk: wk, paL: arterie(wk.lungeLinks), paR: arterie(wk.lungeRechts),
+    mund: { '1': [vene(ve.LSPV), vene(ve.LIPV)], '-1': [vene(ve.RSPV), vene(ve.RIPV)] } };
+}
+/* Gefaesse: Lungenarterien (blau) und -venen (rot) bis in die Lappen, entlang der Lappenbronchien (aeste = Bronchialbaum der Form). an = Anschluss am Herzen (herzAnschluss) oder null.
+   Rueckgabe auch die Wege der Blutportionen je Lappen (routen, Abschnitt 7f): Lungenarterie -> Lappen -> Lungenvene, aus denselben Linien wie die Rohre. */
+function gefaesseBauen(aeste, an) {
+  var art = [], ven = [], routen = {}, wurzelA = {}, wurzelV = {};
   var offA = [0, 0.85, 0.55], offV = [0, -0.9, 0.5];
   var versch = function (pts, o, f) { return pts.map(function (p) { return [p[0] + o[0] * f, p[1] + o[1] * f, p[2] + o[2] * f]; }); };
-  /* Truncus pulmonalis: vorderstes Gefaess (vorn ueber dem Herzen), teilt sich unter dem Aortenbogen; die Arterien laufen vor und ueber den
-     Hauptbronchien zum Hilus. Die Venen liegen hinten-unten und muenden hinten in den linken Vorhof (hinter dem Herzen). */
+  /* Mit Herz-Modell: die Arterien beginnen am Lungenstamm des Herzens, die Venen an seinen Venenmuendungen; die Rohre laufen vor und ueber (Arterien) bzw. hinter und unter (Venen)
+     den Hauptbronchien zum Hilus. Ohne Herz-Modell (Ersatzherz): Truncus pulmonalis vorn ueber dem Herzen, teilt sich unter dem Aortenbogen; die Venen muenden hinten in den linken Vorhof. */
   var rpaEnde = [-5.0, 126.8, -1.0], lpaEnde = [6.2, 127.6, -1.4];
-  art.push({ pts: [[1.8, 124.8, 3.4], [1.7, 127.8, 2.4], [1.0, 129.2, 0.4]], r0: 0.95, r1: 0.88, segmente: 16 });                // Truncus pulmonalis
-  art.push({ pts: [[1.0, 129.2, 0.4], [-2.4, 129.0, -0.6], rpaEnde], r0: 0.85, r1: 0.62 });                                   // rechte Lungenarterie
-  art.push({ pts: [[1.0, 129.2, 0.4], [3.6, 129.6, -0.8], lpaEnde], r0: 0.85, r1: 0.62 });                                    // linke Lungenarterie
   var venEnde = { oben: { '-1': [-5.8, 122.2, -1.8], '1': [6.8, 122.0, -1.8] }, unten: { '-1': [-5.6, 120.4, -2.2], '1': [6.6, 119.8, -2.4] } };
-  ven.push({ pts: [[1.0, 124.0, -2.2], [-2.2, 123.2, -2.3], venEnde.oben['-1']], r0: 0.62, r1: 0.55 });                        // rechte Lungenvenen
-  ven.push({ pts: [[1.0, 122.6, -2.2], [-2.2, 121.8, -2.4], venEnde.unten['-1']], r0: 0.62, r1: 0.55 });
-  ven.push({ pts: [[1.0, 124.0, -2.2], [3.6, 123.0, -2.3], venEnde.oben['1']], r0: 0.62, r1: 0.55 });                          // linke Lungenvenen
-  ven.push({ pts: [[1.0, 122.6, -2.2], [3.6, 121.2, -2.4], venEnde.unten['1']], r0: 0.62, r1: 0.55 });
+  if (an) {
+    wurzelA['-1'] = [an.paR.p, [-3.7, 127.1, -1.1], rpaEnde]; wurzelA['1'] = [an.paL.p, [7.0, 127.6, -0.5], lpaEnde];
+    art.push({ pts: [an.paR.ext].concat(wurzelA['-1']), r0: 0.82, r1: 0.62, segmente: 20 });                                    // rechte Lungenarterie
+    art.push({ pts: [an.paL.ext].concat(wurzelA['1']), r0: 0.85, r1: 0.62, segmente: 20 });                                     // linke Lungenarterie
+    wurzelV['-1'] = [[an.mund['-1'][0].p, [-2.0, 124.6, -2.2], venEnde.oben['-1']], [an.mund['-1'][1].p, [-2.0, 122.8, -2.3], venEnde.unten['-1']]];
+    wurzelV['1'] = [[an.mund['1'][0].p, [7.4, 124.2, -1.3], venEnde.oben['1']], [an.mund['1'][1].p, [7.4, 122.0, -1.9], venEnde.unten['1']]];
+    [-1, 1].forEach(function (sd) { [0, 1].forEach(function (k) { ven.push({ pts: [an.mund[sd][k].ext].concat(wurzelV[sd][k]), r0: 0.6, r1: 0.55, segmente: 20 }); }); });   // rechte, dann linke Lungenvenen (oben, unten)
+  } else {
+    art.push({ pts: [[1.8, 124.8, 3.4], [1.7, 127.8, 2.4], [1.0, 129.2, 0.4]], r0: 0.95, r1: 0.88, segmente: 16 });                // Truncus pulmonalis
+    art.push({ pts: [[1.0, 129.2, 0.4], [-2.4, 129.0, -0.6], rpaEnde], r0: 0.85, r1: 0.62 });                                   // rechte Lungenarterie
+    art.push({ pts: [[1.0, 129.2, 0.4], [3.6, 129.6, -0.8], lpaEnde], r0: 0.85, r1: 0.62 });                                    // linke Lungenarterie
+    ven.push({ pts: [[1.0, 124.0, -2.2], [-2.2, 123.2, -2.3], venEnde.oben['-1']], r0: 0.62, r1: 0.55 });                        // rechte Lungenvenen
+    ven.push({ pts: [[1.0, 122.6, -2.2], [-2.2, 121.8, -2.4], venEnde.unten['-1']], r0: 0.62, r1: 0.55 });
+    ven.push({ pts: [[1.0, 124.0, -2.2], [3.6, 123.0, -2.3], venEnde.oben['1']], r0: 0.62, r1: 0.55 });                          // linke Lungenvenen
+    ven.push({ pts: [[1.0, 122.6, -2.2], [3.6, 121.2, -2.4], venEnde.unten['1']], r0: 0.62, r1: 0.55 });
+  }
   LAPPEN.forEach(function (id) {
     var seite = id.slice(-1) === 'L' ? 1 : -1, a = aeste.filter(function (x) { return x.lappen === id && x.gen === 0; })[0];
     var g1 = aeste.filter(function (x) { return x.lappen === id && x.gen === 1; });
-    var ae = seite < 0 ? rpaEnde : lpaEnde, ve = (id === 'unterlappenR' || id === 'unterlappenL') ? venEnde.unten[seite] : venEnde.oben[seite];
+    var unten = id === 'unterlappenR' || id === 'unterlappenL', ae = seite < 0 ? rpaEnde : lpaEnde, ve = unten ? venEnde.unten[seite] : venEnde.oben[seite];
     var drin = function (pts, o, r) {   /* neben dem Bronchus, soweit der Lappen reicht: Versatz je Punkt verkleinern, bis das Gefaess im Lappen liegt */
       return pts.map(function (p) {
         for (var f = 1; f > 0.05; f -= 0.15) { var q = [p[0] + o[0] * f, p[1] + o[1] * f, p[2] + o[2] * f]; if (LAP[id](q[0], q[1], q[2]) < -(r + 0.1)) return q; }
         return p;
       });
     };
-    art.push({ pts: [ae].concat(drin(a.pts.slice(1), offA, 0.5)), r0: 0.5, r1: 0.3 });
-    ven.push({ pts: [ve].concat(drin(a.pts.slice(1), offV, 0.45)), r0: 0.45, r1: 0.28 });
+    var artL = [ae].concat(drin(a.pts.slice(1), offA, 0.5)), venL = [ve].concat(drin(a.pts.slice(1), offV, 0.45));
+    art.push({ pts: artL, r0: 0.5, r1: 0.3 });
+    ven.push({ pts: venL, r0: 0.45, r1: 0.28 });
+    if (an) routen[id] = { seite: seite, mund: unten ? 1 : 0, teile: [{ pts: wurzelA[seite] }, { pts: artL }, { pts: [artL[artL.length - 1], venL[venL.length - 1]], gerade: true }, { pts: venL, rev: true }, { pts: wurzelV[seite][unten ? 1 : 0], rev: true }] };
     var innen = function (pts, r) { return pts.every(function (p) { return LAP[id](p[0], p[1], p[2]) < -(r + 0.15); }); };   /* Aeste bleiben im Lappen */
     g1.slice(0, 3).filter(function (b) { return innen(versch(b.pts, offA, 0.8), 0.3); }).slice(0, 2).forEach(function (b) { art.push({ pts: versch(b.pts, offA, 0.8), r0: 0.3, r1: 0.16 }); });
     g1.slice(0, 3).filter(function (b) { return innen(versch(b.pts, offV, 0.8), 0.28); }).slice(0, 1).forEach(function (b) { ven.push({ pts: versch(b.pts, offV, 0.8), r0: 0.28, r1: 0.14 }); });
@@ -741,7 +781,7 @@ function gefaesseBauen(aeste) {
   var ga = rohre(art), gv = rohre(ven);
   addMesh('lungenarterien', ga, MAT.lungenarterien, 'Lungenarterien', 2); addMesh('lungenvenen', gv, MAT.lungenvenen, 'Lungenvenen', 2);
   tris.gefaesse += anz(ga) + anz(gv);
-  return { arterie: art, vene: ven };
+  return { arterie: art, vene: ven, routen: an ? routen : null };
 }
 
 /* Aufbau: Herz -> Lappen -> Rippenfell -> Atemwege -> Gefaesse -> Zwerchfell -> Brustkorb (asynchron mit Ladebalken; nach jedem await prueft abgebaut) */
@@ -752,6 +792,7 @@ async function bauen() {
   var hz = await herzBauen(hform); if (abgebaut || !hz) return;
   LH = hz.smp ? { smp: hz.smp, v: form.HERZ_V } : null;   /* Herzbucht nach dem Herzen; ohne Herz-Modell die Ersatz-Herzbucht der Form */
   var hm = addMesh('herz', hz.geo, MAT.herz, 'Herz (Lage)', 3); hm.position.set(hz.pos[0], hz.pos[1], hz.pos[2]); tris.herz = anz(hz.geo);
+  if (hz.morph) { MAT.herz.morphTargets = true; MAT.herz.needsUpdate = true; hm.updateMorphTargets(); HZ.mesh = hm; HZ.hform = hform; }   /* das Herz schlaegt (Abschnitt 7f); ohne Herz-Modell (Ersatzherz) gibt es keinen Schlag */
   await setLoad(0.2, 'Lungenlappen'); if (abgebaut) return;
   var alle = form.lappen(-1, LH, RUND).concat(form.lappen(1, LH, RUND)), n = 0;
   for (var i = 0; i < alle.length; i++) {
@@ -774,7 +815,8 @@ async function bauen() {
   var bg = rohre(BAUM.map(function (a) { return { pts: a.pts, r0: a.r0, r1: a.r1 }; }), true);
   addMesh('bronchien', bg, MAT.bronchien, 'Lappen- und Segmentbronchien', 2); tris.atemwege += anz(bg);
   await setLoad(0.82, 'Gefäße'); if (abgebaut) return;
-  GEF = gefaesseBauen(BAUM);
+  HZ.an = HZ.hform ? herzAnschluss(HZ.hform) : null;
+  GEF = gefaesseBauen(BAUM, HZ.an);
   await setLoad(0.86, 'Zwerchfell'); if (abgebaut) return;
   var zg = zwerchfellGeo();
   addMesh('zwerchfell', zg, MAT.zwerchfell, 'Zwerchfell', 2); tris.brustkorb += anz(zg);
@@ -783,6 +825,7 @@ async function bauen() {
   await setLoad(0.96, 'Beschriftung'); if (abgebaut) return;
   ankerBerechnen();
   atmungVorbereiten();
+  kreislaufVorbereiten();
 }
 
 /* =====================================================================
@@ -803,7 +846,7 @@ function applyVisibility() {
   root.traverse(function (o) {
     if (!o.isMesh) return;
     var sid = o.userData.sid;
-    o.visible = o.userData.teilchen ? luftSichtbar() : sid ? (enabled[sid] && sidAn(sid)) : brustAn;   /* ohne Struktur: Andeutung der Wirbelsaeule, gehoert zum Brustkorb */
+    o.visible = o.userData.teilchen === 'blut' ? (enabled.herz || enabled.lungenarterien || enabled.lungenvenen) : o.userData.teilchen ? luftSichtbar() : sid ? (enabled[sid] && sidAn(sid)) : brustAn;   /* ohne Struktur: Andeutung der Wirbelsaeule, gehoert zum Brustkorb */
   });
   lv++;
 }
@@ -907,7 +950,7 @@ function kartenLage() {
   /* Krankheitsbilder, Medikamente */
   SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'W\u00e4hle ein Krankheitsbild \u2013 bei Asthma und COPD verengen sich die Bronchien und die Lunge bl\u00e4ht sich auf.');
   SZ.liste(paneM, 'drug', 'Medikamente', 'W\u00e4hle ein Medikament \u2013 es wirkt an dem genannten Krankheitsbild.');
-  /* Hilfekarten: die sieben Karten des Thorax-Modells und "Probier das aus" (Muster wie bei der Niere) */
+  /* Hilfekarten: die sieben Karten des Thorax-Modells, die Karte "Kleiner Kreislauf" und "Probier das aus" (Muster wie bei der Niere) */
   var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
   KARTEN_LISTE.concat([['probier', 'Probier das aus']]).forEach(function (c) {
     var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
@@ -1778,7 +1821,7 @@ function lupeWerte(){
   var Vziel = VMAX_D*S.d + VMAX_I*S.i;
   return { d: S.d, i: S.i, pPleura: -5 - 0.0055*Math.max(0,Vziel) };
 }
-return { tick: tick, pause: function (an) { pausiert = an; }, lesen: lesen, lupeWerte: lupeWerte, anschliessen: function (f, w) { haken = f; hakenWahl = w; }, punkte: punkte };
+return { tick: tick, pause: function (an) { pausiert = an; }, faktor: function () { return pausiert ? 0 : tempo; }, lesen: lesen, lupeWerte: lupeWerte, anschliessen: function (f, w) { haken = f; hakenWahl = w; }, punkte: punkte };
 })();
 
 /* =====================================================================
@@ -1837,11 +1880,16 @@ function lungeFeld(x, y, z, o) {
   o.bz = -dA * (q.wz * t + (inn ? q.w * (Y_SPITZE - y) * q.hz / (nen * nen) : 0)) + sg * wy * (wz + zr * dwz);
 }
 function lungeAnwenden(e) {
-  var g = e.m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, p0 = e.pos0, n0 = e.nor0, o = FO, i, j, m1, m2, m3, l;
+  var g = e.m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, p0 = e.pos0, n0 = e.nor0, o = FO, wt = e.wt, i, j, m1, m2, m3, l, w;
   for (i = 0; i < p0.length; i += 3) {
     lungeFeld(p0[i], p0[i + 1], p0[i + 2], o);
-    P[i] = o.x; P[i + 1] = o.y; P[i + 2] = o.z;
     m2 = n0[i + 1] / o.by; m1 = (n0[i] - o.bx * m2) / o.a; m3 = n0[i + 2] - o.bz * m2;   /* Normale: Jacobi^-T * n */
+    if (wt) {   /* Lungengefaesse: am Herzen bleiben sie stehen (Gewicht 0), erst weiter weg folgen sie der Lunge (Gewicht 1), Normale entsprechend gemischt */
+      w = wt[i / 3];
+      P[i] = p0[i] + (o.x - p0[i]) * w; P[i + 1] = p0[i + 1] + (o.y - p0[i + 1]) * w; P[i + 2] = p0[i + 2] + (o.z - p0[i + 2]) * w;
+      l = Math.sqrt(m1 * m1 + m2 * m2 + m3 * m3) || 1;
+      m1 = n0[i] + (m1 / l - n0[i]) * w; m2 = n0[i + 1] + (m2 / l - n0[i + 1]) * w; m3 = n0[i + 2] + (m3 / l - n0[i + 2]) * w;
+    } else { P[i] = o.x; P[i + 1] = o.y; P[i + 2] = o.z; }
     l = Math.sqrt(m1 * m1 + m2 * m2 + m3 * m3) || 1;
     N[i] = m1 / l; N[i + 1] = m2 / l; N[i + 2] = m3 / l;
   }
@@ -2070,7 +2118,8 @@ function atmungVorbereiten() {
   LAPPEN.concat(['pleura', 'hauptbronchien', 'bronchien', 'lungenarterien', 'lungenvenen']).forEach(function (sid) {
     STRUCT[sid].meshes.forEach(function (m) {
       var e = festhalten(m, 'feld');
-      if (sid === 'pleura') e.rand = 0.01; else if (LAPPEN.indexOf(sid) >= 0) e.rand = 0.45;   /* Abstand zur Rippenmitte jenseits von RIP_R (Rippenfell liegt an, Lappen 0,45 cm dahinter) */
+      if (sid === 'pleura') e.rand = 0.01; else if (LAPPEN.indexOf(sid) >= 0) e.rand = 0.45;
+      else if (HZ.an && (sid === 'lungenarterien' || sid === 'lungenvenen')) { e.wt = new Float32Array(e.pos0.length / 3); for (var vi = 0; vi < e.wt.length; vi++) e.wt[vi] = gefGewicht(e.pos0[vi * 3], e.pos0[vi * 3 + 1], e.pos0[vi * 3 + 2]); }   /* Abstand zur Rippenmitte jenseits von RIP_R (Rippenfell liegt an, Lappen 0,45 cm dahinter) */
       A3.feld.push(e);
     });
   });
@@ -2621,6 +2670,7 @@ var exCfg = {
   schild: [0, -23.5, 12],
   bereit: function () { return App.ready; },
   gruppen: function () {
+    exportVorbereiten();
     if (exArt === 'stl') {
       var l = [];
       ORDER.forEach(function (d) { if (STL_STRUKTUREN.indexOf(d.id) >= 0) d.meshes.forEach(function (m) { l.push(m); }); });
@@ -2652,6 +2702,7 @@ var exCfg = {
     var traeger = [];
     for (q = 0; q < clones.length; q++) {
       var c = clones[q].c, m = clones[q].m, e = A3.rest.get(m);
+      if (m === HZ.mesh && HZ.eng) { herzSpur(c, tracks, times); continue; }   /* das Herz schlaegt */
       if (!e) continue;
       if (e.m0) { traeger.push({ c: c, m: m }); continue; }   /* starr: Rippen, Brustbein */
       var P0 = c.geometry.attributes.position.array, P1 = m.geometry.attributes.position.array, d = new Float32Array(P0.length), mx = 0, k;
@@ -2700,13 +2751,32 @@ var exCfg = {
       return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe (' + LAENGE_TXT + ') – STL kennt keine Farbe.';
     },
     glbLiesmich: function (i) {
-      return [i.anim ? i.name + ': eine Ruheatmung (' + RUHE_Z + ' s) als Animation, läuft in Schleife: Zwerchfell, Lungenlappen, Atemwege, Rippen, Brustbein und Zwischenrippenmuskeln bewegen sich wie im Programm.' : i.name + ': farbiges 3D-Modell der Lunge mit Atemwegen, Gefäßen, Zwerchfell und Brustkorb in der Stellung beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
+      return [i.anim ? i.name + ': eine Ruheatmung (' + RUHE_Z + ' s) als Animation, läuft in Schleife: Zwerchfell, Lungenlappen, Atemwege, Rippen, Brustbein und Zwischenrippenmuskeln bewegen sich wie im Programm, das Herz schlägt (ein Schlag je Atemzug).' : i.name + ': farbiges 3D-Modell der Lunge mit Atemwegen, Gefäßen, Zwerchfell und Brustkorb in der Stellung beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
     },
     glbFertig: function (i) {
       return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe (' + LAENGE_TXT + '), mit Farben, ' + (i.anim ? 'mit Ruheatmung: ' + (RUHE_NKEY + 1) + ' Keyframes, ' + RUHE_Z + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
     }
   }
 };
+/* Herz und Gefaesse sehen im Export aus wie vorher: das Herz in Ruhe (Morph-Einfluesse 0, die Schleife setzt sie im naechsten Bild wieder), die Gefaesse undurchsichtig (im
+   Programm sind sie Glas, damit man das Blut sieht); die Klone entstehen noch im selben Aufruf, danach (naechster Takt) steht alles wieder wie es war */
+function exportVorbereiten() {
+  var alt = [MAT.lungenarterien, MAT.lungenvenen].map(function (m) { var a = [m, m.transparent, m.opacity, m.depthWrite]; m.transparent = false; m.opacity = 1; m.depthWrite = true; m.needsUpdate = true; return a; });
+  if (HZ.mesh) HZ.mesh.morphTargetInfluences.fill(0);
+  setTimeout(function () { alt.forEach(function (a) { a[0].transparent = a[1]; a[0].opacity = a[2]; a[0].depthWrite = a[3]; a[0].needsUpdate = true; }); }, 0);
+}
+/* Herzschlag fuer die Animation: Morph-Spur des Herz-Klons (VR, VL, A, Ao, PT); die Periode der Atmung (RUHE_Z) enthaelt eine ganze Zahl Schlaege (n), jeder um den Faktor gestreckt;
+   gerechnet mit einer eigenen Engine (die laufende bleibt unberuehrt) */
+function herzSpur(c, tracks, times) {
+  var Z = HZ.hform.zyklus, N = times.length - 1, n = Math.max(1, Math.round(RUHE_Z / Z.ZYKLUS)), be = new Z.Engine(HZ.eng.wege), vals = new Float32Array((N + 1) * 5), i, k, bk, W;
+  be.S.tempo = n * Z.ZYKLUS / RUHE_Z;
+  bk = be.bake(RUHE_NKEY / RUHE_Z);
+  for (i = 0; i <= N; i++) {
+    W = bk.frames[Math.round(((i * n) / N) % 1 * (bk.frames.length - 1))];
+    for (k = 0; k < 5; k++) vals[i * 5 + k] = W[HZ_N[k]] || 0;
+  }
+  tracks.push(new THREE.NumberKeyframeTrack(c.name + '.morphTargetInfluences', times, vals));
+}
 var exAlt = null;   /* Zustand der Muskeln vor dem Aufzeichnen der Atmung */
 function exportNach() { if (exAlt) { A3.S0 = exAlt; exAlt = null; A3.neu = true; atmungForm(); } }
 function exportRun(art, kind) {
@@ -2784,15 +2854,207 @@ function usdzBuild() {
   var glas = LAPPEN.map(function (sid) { return MAT[sid]; }).concat([MAT.rippen, MAT.knorpel, MAT.brustbein]).filter(function (m) { return m.transparent && m.opacity < 0.3; });
   pl.forEach(function (m) { m.visible = false; });
   glas.forEach(function (m) { m.userData.usdzOp = 0.35; });
+  var gef = [MAT.lungenarterien, MAT.lungenvenen];   /* Gefaesse in der USDZ wie vorher undurchsichtig (im Programm Glas fuer das Blut), das Herz in Ruhe */
+  gef.forEach(function (m) { m.userData.usdzOp = 1; });
+  if (HZ.mesh) HZ.mesh.morphTargetInfluences.fill(0);
   try {
     return Kern.AR.usdz({ name: 'Lunge', creator: 'Lunge 3D - ' + Kern.WM, datei: 'lunge.usda', skala: AR_SKALA, gruppen: [root] });
   } finally {
     pl.forEach(function (m, i) { m.visible = vis[i]; });
     glas.forEach(function (m) { delete m.userData.usdzOp; });
+    gef.forEach(function (m) { delete m.userData.usdzOp; });
   }
 }
 function arQuickLook() {
   Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Die Lunge öffnet sich in AR Quick Look. Mit zwei Fingern lässt sie sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
+   7f. Herzschlag und kleiner Kreislauf: Das Herz zur Orientierung schlaegt, Blutportionen fliessen durch Herz, Lungenarterien, Lappen und Lungenvenen.
+   Physik und Wege kommen unveraendert aus dem Herz-Modell (organ.form: zyklus = HerzZyklus, extras.wkPaths/wkPoint): eine eigene Engine (Automatik, Tempo normal = 3,2 s je Schlag),
+   multipliziert mit dem Tempo der Atmung und angehalten bei Pause. Das Herz-Netz hat die Morph-Ziele VR, VL, A, Ao, PT aus motionSimple und folgt den Gewichten der Engine
+   wie im Herz-Modell. Gezeigt wird nur der kleine Kreislauf: Portionen auf den Wegen lungeLinks/lungeRechts, im sichtbaren Teil an der Stelle aus wkPoint (mit der Herzbewegung).
+   Der unsichtbare Teil (Lunge) ist hier sichtbar: je Seite eine Warteschlange (aelteste zuerst); jede Portion, die in die Lunge geht, folgt einer Lungenarterie in einen Lappen,
+   wechselt dort von blau zu rot und kehrt ueber die Lungenvene zurueck; ihre Zahl ist immer imLu der Engine, die Abgabe am Venenende folgt der Engine (es verlaesst die Lunge die
+   Portion, die einer Muendung am naechsten ist; im Herzen laeuft die Engine-Portion dann auf deren Seite und Vene weiter). Die Rangordnung in der Schlange bestimmt den Ort
+   (die aelteste steht an der Muendung); Punkte wie im Herz-Modell: Kugel 0,23 cm, blau/rot. Ohne Herz-Modul: kein Schlag, kein Blut.
+   ===================================================================== */
+var HZ_N = ['VR', 'VL', 'A', 'Ao', 'PT'];                 /* Reihenfolge der Morph-Ziele (wie MNAMES im Herz-Modell) */
+var HZ_MAX = 64, HZ_R = 0.23, HZ_V = 11, HZ_RAUM = 6;       /* Hoechstzahl Punkte, Kugelradius, Hoechsttempo in der Lunge (cm/s), Auslauf der Herzbewegung entlang der Gefaesse (cm) */
+var HZ_BLAU = srgb(0x2F6FB5), HZ_ROT = srgb(0xC8342F);     /* Farben wie im Herz-Modell */
+var HZ = { hform: null, mesh: null, an: null, eng: null, blut: null, wk: null, wkU: null, R: null, lappen: null, q: { '-1': [], '1': [] }, rr: { '-1': 0, '1': 0 }, ziel: {}, mot: null, t: 0 };
+var hzP = { p: [0, 0, 0], m: new Array(15).fill(0), tan: [0, 0, 0] }, hzV = new THREE.Vector3(), hzM = new THREE.Matrix4(), hzC = new THREE.Color();
+/* Gewicht, mit dem ein Punkt der Lungengefaesse der Lunge folgt: 0 an den Anschluessen am Herzen (Stumpf), 1 ab 8 cm Abstand */
+function gefGewicht(x, y, z) {
+  var a = HZ.an, d = 1e9, k, q, u;
+  [a.paL.p, a.paR.p, a.mund['1'][0].p, a.mund['1'][1].p, a.mund['-1'][0].p, a.mund['-1'][1].p].forEach(function (q) { d = Math.min(d, Math.sqrt(Math.pow(x - q[0], 2) + Math.pow(y - q[1], 2) + Math.pow(z - q[2], 2))); });
+  u = clamp01((d - 1.5) / 6.5);
+  return u * u * (3 - 2 * u);
+}
+/* Weg einer Portion durch die Lunge: Stuecke aus denselben Linien wie die Rohre (Catmull-Rom wie in rohre), Bogenlaenge; sA/sB: Anteil am Weg, an dem der Lappen beginnt/endet */
+function routeBauen(r) {
+  var tot = 0, teile = r.teile.map(function (t) {
+    var c = t.gerade ? new THREE.LineCurve3(V(t.pts[0][0], t.pts[0][1], t.pts[0][2]), V(t.pts[1][0], t.pts[1][1], t.pts[1][2]))
+      : new THREE.CatmullRomCurve3(t.pts.map(function (q) { return V(q[0], q[1], q[2]); }), false, 'catmullrom', 0.5);
+    var L = c.getLength(); tot += L;
+    return { c: c, L: L, rev: !!t.rev };
+  });
+  var a = teile[0].L + teile[1].L, b = a + teile[2].L;
+  return { teile: teile, L: tot, sA: a / tot, sB: b / tot, seite: r.seite, mund: r.mund };
+}
+function routePunkt(R, s, out) {   /* Punkt bei Anteil s (0 = Ende des Lungenstamms am Herzen, 1 = Venenmuendung) in Ruhelage -> out (Vector3) */
+  var d = s * R.L, i = 0, t, u;
+  while (i < R.teile.length - 1 && d > R.teile[i].L) { d -= R.teile[i].L; i++; }
+  t = R.teile[i]; u = t.L > 0 ? clamp01(d / t.L) : 0;
+  return t.c.getPointAt(t.rev ? 1 - u : u, out);
+}
+/* Verschiebung eines Punktes durch die Herzbewegung: Summe m * Gewicht (m = motionSimple, 15 Werte) -> o [x, y, z] */
+function herzVersatz(m, W, o) {
+  var j, w;
+  o[0] = o[1] = o[2] = 0;
+  for (j = 0; j < 5; j++) { w = W[HZ_N[j]] || 0; o[0] += m[j * 3] * w; o[1] += m[j * 3 + 1] * w; o[2] += m[j * 3 + 2] * w; }
+  return o;
+}
+/* Weg lungeLinks/lungeRechts mit der unteren Lungenvene (LIPV/RIPV) statt der oberen als Rueckweg im Herzen (gleiche Laengen, nur die beiden Punkte der Muendung getauscht) */
+function wkVariante(w, mund) {
+  var hi = w.seg.findIndex(function (sg) { return !sg.vis; }), v = Object.assign({}, w), M = HZ.hform.assemble.motionSimple;
+  v.pts = w.pts.slice(); v.mot = w.mot.slice();
+  v.pts[hi + 1] = mund.h.slice(); v.pts[hi + 2] = mund.h0.slice();
+  v.mot[hi + 1] = M(mund.h[0], mund.h[1], mund.h[2]); v.mot[hi + 2] = M(mund.h0[0], mund.h0[1], mund.h0[2]);
+  return v;
+}
+/* neue Portion in der Lunge (Seite sd: 1 = links, -1 = rechts; reihum in einen Lappen dieser Seite); s0 = Anteil am Weg */
+function portionNeu(sd, s0) {
+  var L = HZ.lappen[sd], id = L[HZ.rr[sd]++ % L.length], R = HZ.R[id];
+  HZ.q[sd].push({ R: R, s: s0 || 0, sd: sd, mund: R.mund });
+}
+/* Zielort nach der Rangordnung: die aelteste steht an der Muendung (1), jede weitere weiter hinten (exp(-0,22 * Rang)); nicht im Wechselbereich des Lappens */
+function portionZiel(p, r) {
+  var z = Math.exp(-0.22 * r), cA = p.R.sA - 0.012, cB = p.R.sB + 0.012;
+  if (z > cA && z < cB) z = z < (cA + cB) / 2 ? cA : cB;
+  return z;
+}
+function portionenFolgen(dt, sofort) {
+  [-1, 1].forEach(function (sd) {
+    HZ.q[sd].forEach(function (p, r) {
+      var z = portionZiel(p, r), diff = z - p.s, sp, ds;
+      if (sofort) { p.s = z; return; }
+      if (diff <= 0) return;
+      sp = Math.max(0.4, Math.min(HZ_V * (p.s > p.R.sA - 0.02 && p.s < p.R.sB + 0.02 ? 0.35 : 1), 3 * diff * p.R.L));
+      ds = Math.min(diff, sp * dt / p.R.L);
+      p.s += ds;
+    });
+  });
+}
+/* Ein Schritt (dt in Sekunden der Engine): Engine rechnen, Eintritte in die Lunge und Abgaben an die Venen erkennen, Zahl der Portionen mit imLu abgleichen */
+function kreislaufSchritt(dt) {
+  var eng = HZ.eng, W = eng.wege, snap = {};
+  eng.teilchen.forEach(function (t) { if (W[t.weg].luEin !== undefined) snap[t.id] = [t.weg, t.d]; });
+  eng.step(dt); eng.events.length = 0;
+  var jetzt = {};
+  eng.teilchen.forEach(function (t) { jetzt[t.id] = true; });
+  Object.keys(snap).forEach(function (id) {   /* weg und noch vor dem Lungenbett: in die Lunge eingetreten */
+    var sn = snap[id];
+    if (!jetzt[id] && sn[1] < W[sn[0]].luEin) portionNeu(sn[0] === 'lungeLinks' ? 1 : -1, 0);
+  });
+  eng.teilchen.forEach(function (t) {   /* neu und schon am Venenanfang: die Engine gibt eine Portion an die Lungenvene ab; es verlaesst die Lunge die Portion, die der Muendung am naechsten ist (die Engine selbst gibt oft nur an einer Seite ab) */
+    var w = W[t.weg];
+    if (w.luEin === undefined || snap[t.id] || t.d < w.luTor - 1e-6) return;
+    var qa = HZ.q['-1'][0], qb = HZ.q['1'][0], sd = qa && (!qb || qa.s >= qb.s) ? -1 : 1, p = HZ.q[sd].shift();
+    HZ.ziel[t.id] = p ? { sd: sd, mund: p.mund } : { sd: t.weg === 'lungeLinks' ? 1 : -1, mund: t.id & 1 };
+  });
+  Object.keys(HZ.ziel).forEach(function (id) { if (!jetzt[id]) delete HZ.ziel[id]; });
+  var n = HZ.q['-1'].length + HZ.q['1'].length;
+  while (n < eng.imLu) { portionNeu(HZ.q['-1'].length <= HZ.q['1'].length ? -1 : 1, 0); n++; }
+  while (n > eng.imLu && n > 0) { HZ.q[HZ.q['-1'].length > HZ.q['1'].length ? '-1' : '1'].shift(); n--; }
+  portionenFolgen(dt, false);
+}
+function blutSetzen(k, x, y, z, t) {   /* Punkt k an (x, y, z), Farbe t: 0 = blau, 1 = rot */
+  hzM.makeTranslation(x, y, z); HZ.blut.setMatrixAt(k, hzM);
+  HZ.blut.setColorAt(k, hzC.copy(HZ_BLAU).lerp(HZ_ROT, t));
+}
+function blutZeichnen(W) {
+  var k = 0, B = HZ.blut, eng = HZ.eng, HV = form.HERZ_V, ow = [0, 0, 0], oa = [0, 0, 0], om = [0, 0, 0], Z = enabled;
+  if (!B.visible) return;
+  if (Z.herz) {   /* im Herzen und im Lungenstamm: Weg aus dem Herz-Modell, mit der Herzbewegung */
+    eng.teilchen.forEach(function (t) {
+      var w0 = eng.wege[t.weg], w, z, nm, w1, d = t.d;
+      if (w0.luEin === undefined || k >= HZ_MAX) return;
+      if (d >= w0.luTor) {   /* Rueckweg im Herzen: auf der Seite und ueber die Muendung der Portion, die die Lunge verlassen hat (Laenge angepasst) */
+        z = HZ.ziel[t.id] || { sd: t.weg === 'lungeLinks' ? 1 : -1, mund: t.id & 1 };
+        nm = z.sd > 0 ? 'lungeLinks' : 'lungeRechts'; w1 = eng.wege[nm];
+        d = w1.luTor + (d - w0.luTor) / (w0.len - w0.luTor) * (w1.len - w1.luTor);
+        w = z.mund ? HZ.wkU[nm] : HZ.wk[nm];
+      } else w = HZ.wk[t.weg];
+      HZ.hform.extras.wkPoint(w, d, hzP);
+      if (!hzP.vis) return;
+      herzVersatz(hzP.m, W, ow);
+      blutSetzen(k++, hzP.p[0] + ow[0] + HV[0], hzP.p[1] + ow[1] + HV[1], hzP.p[2] + ow[2] + HV[2], hzP.col === 'r' ? 1 : 0);
+    });
+  }
+  [-1, 1].forEach(function (sd) {   /* in der Lunge: die Warteschlangen */
+    var ka = HZ.mot.pa[sd];
+    herzVersatz(ka, W, oa);
+    HZ.q[sd].forEach(function (p) {
+      var R = p.R, s = p.s, rot, x, y, z, w, fa, fm;
+      if (k >= HZ_MAX) return;
+      rot = clamp01((s - (R.sA - 0.012)) / (R.sB - R.sA + 0.024)); rot = rot * rot * (3 - 2 * rot);
+      if (rot < 0.5 ? !Z.lungenarterien : !Z.lungenvenen) return;
+      routePunkt(R, s, hzV);
+      x = hzV.x; y = hzV.y; z = hzV.z;
+      w = gefGewicht(x, y, z); lungeFeld(x, y, z, FO);
+      x += (FO.x - x) * w; y += (FO.y - y) * w; z += (FO.z - z) * w;
+      fa = Math.max(0, 1 - s * R.L / HZ_RAUM); fm = Math.max(0, 1 - (1 - s) * R.L / HZ_RAUM);   /* die Herzbewegung klingt entlang des Gefaesses ab */
+      herzVersatz(HZ.mot.mund[sd][p.mund], W, om);
+      blutSetzen(k++, x + oa[0] * fa + om[0] * fm, y + oa[1] * fa + om[1] * fm, z + oa[2] * fa + om[2] * fm, rot);
+    });
+  });
+  hzM.makeScale(0, 0, 0);
+  for (; k < HZ_MAX; k++) B.setMatrixAt(k, hzM);
+  B.instanceMatrix.needsUpdate = true; B.instanceColor.needsUpdate = true;
+}
+/* aus der Renderschleife: Engine weiterrechnen (mit Tempo der Atmung, bei Pause nicht), Herz verformen, Punkte setzen */
+function herzSchritt(now) {
+  var Z = HZ, dt, f, W, k;
+  if (!Z.blut) { Z.t = now; return; }
+  dt = Z.t ? Math.min(0.05, (now - Z.t) / 1000) : 0.016; Z.t = now;
+  f = atmen.faktor();
+  if (f > 0) kreislaufSchritt(dt * f);
+  W = Z.eng.weights();
+  for (k = 0; k < 5; k++) Z.mesh.morphTargetInfluences[k] = W[HZ_N[k]] || 0;
+  blutZeichnen(W);
+}
+/* Engine, Wege und Portionen (am Ende des Aufbaus, ohne three.js-Objekte); ohne Herz-Modell oder Anschluss nichts */
+function kreislaufVorbereiten() {
+  var an = HZ.an;
+  if (!HZ.hform || !HZ.mesh || !an || !GEF || !GEF.routen || !HZ.hform.zyklus) return;
+  var wk = an.wk, def = {}, M = HZ.hform.assemble.motionSimple, i;
+  Object.keys(wk).forEach(function (k) { var w = wk[k]; def[k] = { len: w.len, klappeBei: w.klappeBei, tempo: w.tempo, abstand: w.abstand, ziel: w.ziel, ein: w.ein, tor: w.tor, jet: w.jet, luEin: w.luEin, luTor: w.luTor }; });
+  HZ.eng = new HZ.hform.zyklus.Engine(def);
+  HZ.wk = { lungeLinks: wk.lungeLinks, lungeRechts: wk.lungeRechts };
+  HZ.wkU = { lungeLinks: wkVariante(wk.lungeLinks, an.mund['1'][1]), lungeRechts: wkVariante(wk.lungeRechts, an.mund['-1'][1]) };
+  HZ.R = {}; HZ.lappen = { '-1': [], '1': [] };
+  Object.keys(GEF.routen).forEach(function (id) { var r = GEF.routen[id]; HZ.R[id] = routeBauen(r); HZ.lappen[r.seite].push(id); });
+  HZ.mot = { pa: { '1': M(an.paL.h[0], an.paL.h[1], an.paL.h[2]), '-1': M(an.paR.h[0], an.paR.h[1], an.paR.h[2]) }, mund: { '1': [], '-1': [] } };
+  [-1, 1].forEach(function (sd) { an.mund[sd].forEach(function (q) { HZ.mot.mund[sd].push(M(q.h[0], q.h[1], q.h[2])); }); });
+  for (i = 0; i < HZ.eng.imLu; i++) portionNeu(i % 2 ? 1 : -1, 0);   /* die Portionen, die beim Start schon in der Lunge sind */
+  portionenFolgen(0, true);
+}
+/* Die Punkte (eine InstancedMesh, erst am Ende des Aufbaus angelegt: jedes three.js-Objekt verbraucht Zufallszahlen) */
+function blutErzeugen() {
+  if (!HZ.eng) return;
+  var m = mat(0xffffff, { rough: 0.3, coat: 0.5, coatRough: 0.3, env: 0.45 }), i;
+  m.emissive.setRGB(0.06, 0.06, 0.08);
+  var im = new THREE.InstancedMesh(new THREE.SphereGeometry(HZ_R, 14, 10), m, HZ_MAX);
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  for (i = 0; i < HZ_MAX; i++) im.setColorAt(i, HZ_ROT);
+  im.instanceColor.setUsage(THREE.DynamicDrawUsage);
+  im.frustumCulled = false; im.renderOrder = 3;
+  im.name = 'Blutportionen'; im.userData.teilchen = 'blut'; im.userData.noexport = true;
+  im.raycast = function () {};   /* Punkte sind nicht anklickbar */
+  root.add(im);
+  HZ.blut = im;
+  applyVisibility();
 }
 
 /* =====================================================================
@@ -2804,6 +3066,7 @@ var App = window.LungeApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
 var szT = 0;
 function loop(now, frame) {
   atmen.tick(now);
+  herzSchritt(now);   /* Herzschlag und Blut (Abschnitt 7f), auch in der Pause (dann nur neu gesetzt) und in AR */
   if (SZ.schritt(szT ? Math.min(0.05, (now - szT) / 1000) : 0.016)) szenarioWirkung();   /* Anteile weich ueberblenden, auch in der Pause */
   szT = now;
   lupeTick(now);
@@ -2859,6 +3122,7 @@ return bauen().then(function () {
 }).then(function () {
   if (abgebaut) return;
   if (umg.von === 'alveole') rueckkehr();   /* Rueckweg aus dem Alveolen-Modell */
+  blutErzeugen();   /* Herzschlag und Blut (Abschnitt 7f): zuletzt, damit es nichts verschiebt */
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
