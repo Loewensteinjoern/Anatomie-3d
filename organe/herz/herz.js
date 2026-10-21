@@ -1307,7 +1307,9 @@ const HeartExtras = (function () {
     }
     return out;
   }
-  return { coronaries, conduction, wkPaths, wkPoint, chamberSlots, projectTo, outerF };
+  // Enden der vier Lungenvenen-Stümpfe (Mündungen, außen zuerst) in Herz-Koordinaten – für das Lungenmodell (Anschluss der Lungengefäße)
+  function venen() { const k = (T) => T.pts.map((q) => q.slice()); return { LSPV: k(A.LSPV), LIPV: k(A.LIPV), RSPV: k(A.RSPV), RIPV: k(A.RIPV) }; }
+  return { coronaries, conduction, wkPaths, wkPoint, chamberSlots, projectTo, outerF, venen };
 })();
 //  = HeartExtras;
 
@@ -2393,7 +2395,7 @@ var MARKUP = `<div id="title">
 </div>`;
 var organ = { renderer: { alpha: true }, aufbauen: aufbauen };
 /* Formbausteine fuer andere Organe (Koerper-Modell): nur Verweise, nichts wird ausgefuehrt */
-organ.form = { sdf: HeartSDF, mesher: HeartMesher, assemble: HeartAssemble, extras: HeartExtras };
+organ.form = { sdf: HeartSDF, mesher: HeartMesher, assemble: HeartAssemble, extras: HeartExtras, zyklus: HerzZyklus };
 /* Startansicht (Kamera in Herz-Koordinaten, cm) und Bildbereich: gemeinsam fuer das Modell und den Andockpunkt organ.start (Kamerafahrt aus dem Koerper) */
 var START = { theta: 0.0, phi: 1.52, dist: 34.5, target: [0.4, 1.0, -1.2] };
 function fokusVersatz(w, h, karte) {
