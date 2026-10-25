@@ -52,7 +52,7 @@ core/                      kern.css, kern.js, rahmen.js, atlas.js, atlas.css, of
 organe/koerper/            koerper.css, koerper.js – Gestaltung und App-Code des Körpers (Startansicht)
 organe/herz/               herz.css, herz.js – Gestaltung und App-Code des Herzens
 organe/niere/              niere-form.js, niere.css, niere.js, nephron.css, nephron.js – Form der Niere (eigener Baustein, den der Körper mit dem Niere-Modul nachlädt), Gestaltung und App-Code der Niere, Gestaltung und App-Code des Nephrons
-vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert
+vendor/                    three.js r128 mit GLTFExporter (von beiden Modellen genutzt), unverändert (MIT-Lizenz, siehe LIZENZEN.md)
 tools/vergleich.js         Vergleichsbilder vorher/nachher (Prüfwerkzeug, braucht Playwright)
 tools/nachweis.js          Vergleich der Atemmechanik (Schema) mit dem Original-Modell (Prüfwerkzeug, braucht Playwright): `node tools/nachweis.js lunge <ziel>`
 tools/originale/           Original-Modelle der Lunge (unverändert, Vorlage für tools/nachweis.js; keine App-Dateien, nicht im Offline-Speicher)
@@ -62,3 +62,7 @@ tools/symbole.js           PNG-Symbole aus icons/symbol.svg erzeugen
 ```
 
 Den Plan für die Anatomie-App beschreibt `PLAN.md`.
+
+## Lizenzen
+
+Fremder Code steckt nur in `vendor/` (three.js r128, MIT-Lizenz). Lizenztext, selbst umgesetzte bekannte Verfahren und die Prüfwerkzeuge stehen in `LIZENZEN.md`.
