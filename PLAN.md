@@ -210,6 +210,7 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 - [x] Zusammenhängende App: eine Seite, Organe werden in dieselbe 3D-Szene nachgeladen (statt getrennter Seiten mit Seitenwechsel); jede Ansicht mit eigener Adresse
 - [x] Erste Weitergabe an Kollegen erst als Version 1.0 mit allen Organen; bis dahin testen nur Jörn und Claude
 - [x] Offline: installierbare Web-App (PWA) als Hauptweg; Ordner/ZIP ohne Server bleibt möglich; eine Einzeldatei nur bei Bedarf als zusätzliches Werkzeug
+- [x] Kein fremder Code ohne Freigabe von Jörn (Oktober 2026): fremde Bibliotheken nur unverändert in `vendor/` mit Lizenz und Prüfsumme, bekannte Verfahren werden selbst umgesetzt; Lizenzen in `LIZENZEN.md`
 - [x] Phase 2: Adressen gestuft (`#niere/nephron`, alte Links leiten weiter), Niere als Frontalschnitt mit Durchblutung und Harnabfluss, Lupe an der Papille, Nephron als Zoomstufe mit Kamerafahrt, Nephron-Schema in der Form des 3D-Modells (Einzelheiten unter Phase 2)
 
 ## Arbeitsweise

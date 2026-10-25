@@ -82,6 +82,7 @@ Die App-Dateien sind groß. **Nie ganz lesen**: Stellen mit `Grep` finden, dann 
 - `.claude/agents/executor.md` und `PLAN.md` nicht selbst ändern: nötige Doku-Änderungen im Abschlussbericht unter „Doku-Vorschläge“ nennen, der Aufrufer übernimmt sie.
 - Keine neuen Dateien, Abhängigkeiten oder Build-Schritte, außer die Aufgabe verlangt es ausdrücklich. Der Service Worker darf keine Nutzerdaten speichern und nichts zur Laufzeit cachen. Die App muss ohne Installation und ohne Build-Schritt lauffähig bleiben – auf GitHub Pages und lokal per `file://`.
 - `vendor/` nie ändern.
+- Kein fremder Code: keinen Code aus dem Internet, aus anderen Projekten oder Bibliotheken in die App kopieren und keine neuen Bibliotheken einbinden. Nur nach ausdrücklicher Freigabe durch Jörn, dann unverändert nach `vendor/` mit Lizenzkopf, Prüfsumme in `VENDOR_SHA256` und Eintrag in `LIZENZEN.md`. Erlaubt sind bekannte Verfahren selbst umgesetzt (z. B. Surface Nets, CRC32), mit kurzem Kommentar, welches Verfahren es ist, und Jörns Original-Modelle (`tools/originale/`), die wörtlich übernommen werden. Die Herkunft jedes nicht selbst geschriebenen Teils im Abschlussbericht nennen.
 - Wenn etwas nicht wie verlangt umsetzbar ist: nicht raten oder improvisieren, sondern abbrechen und genau beschreiben, woran es scheitert.
 
 ## Abschlussbericht (Format)
