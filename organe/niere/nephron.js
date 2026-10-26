@@ -1472,11 +1472,13 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   document.getElementById('hcard').classList.add('show');
   document.getElementById('info').classList.remove('show');
+  schemaWzStart();                                      /* Handy: die Karte endet ueber der Werkzeugleiste (--wz) */
   szWeichen();
   visVersion++;
 }
 function closeCard() {
   document.getElementById('hcard').classList.remove('show');
+  if (!schemaOn) schemaWzEnde();
   Array.prototype.forEach.call(document.querySelectorAll('.dis[data-card]'), function (d) { d.classList.remove('on'); });
   kartenLage();
 }
@@ -2639,6 +2641,10 @@ function schemaWzLoeschen() {
   document.body.style.removeProperty('--wz');
   if (!document.body.getAttribute('style')) document.body.removeAttribute('style');
 }
+function schemaWzStart() {   /* messen und beobachten (Schema oder Hilfekarte offen) */
+  schemaMessen();
+  if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe(document.getElementById('tools')); }
+}
 function schemaWzEnde() {
   if (schemaWz) { schemaWz.disconnect(); schemaWz = null; }
   schemaWzLoeschen();
@@ -2650,10 +2656,8 @@ function setSchema(on) {
   if (on) { SCH.build(document.getElementById('schemaBox'), schemaPick); SCH.update(selected, enabled, visVersion); }
   document.getElementById('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
-  if (on) {
-    schemaMessen();
-    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe(document.getElementById('tools')); }
-  } else schemaWzEnde();
+  if (on) schemaWzStart();
+  else if (!document.getElementById('hcard').classList.contains('show')) schemaWzEnde();   /* --wz bleibt, solange die Hilfekarte offen ist */
   canvas.style.visibility = on ? 'hidden' : '';
   if (!on) { schemaZu = null; if (schemaKarte) { schemaKarte = false; document.body.classList.remove('schkarte'); } }
   lastLabelKey = '';

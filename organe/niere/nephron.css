@@ -96,7 +96,8 @@ body.schema #labels,body.schema #leaders{display:none}
   .lp-main{flex-direction:column}
   #lpCv{width:100%;height:auto;flex:none;aspect-ratio:340/236}
   #scard{top:56px;left:12px;right:12px;width:auto;max-height:38vh}
-  #hcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  #hcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:calc(66vh - 70px - var(--wz,190px))}   /* endet ueber der Werkzeugleiste (bottom 34vh + 6px, --wz = ihre Hoehe) */
+  body:has(#hcard.show) #atlasZurueck{display:none}   /* offene Hilfekarte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   #rail .tabs{flex-wrap:nowrap}
   #rail .tab{flex:1 1 0}
   #schema{left:12px;right:12px;top:62px;bottom:calc(34vh + 8px);width:auto;max-width:none;padding:8px 8px 6px}
