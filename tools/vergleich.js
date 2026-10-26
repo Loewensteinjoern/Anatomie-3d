@@ -34,7 +34,9 @@
    aufgeschnitten, ohne Beschriftung, Info; am Ende die Bilder stroemung (3 s Strömung) und pause (Knopf #bPlay; die zwei Bilder
    „pause“ im Abstand von 1000 ms müssen gleich aussehen, nur ansehen; danach die Lupe an der Papille „lupe“ und „lupe-ohne-adh“ (Chip #lpChips, Knopf #bLupe),
    die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel und
-   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau.
+   Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau;
+   dazu schema (Desktop: Knopf #bSchema, Bilder schema, schema-harnstau, schema-stenose, dann Antippen der Rinde im Schema → schema-info, Schließen #bSchemaX)
+   und schema-handy (Schema, Schließen, Harnstau einschalten, Schema wieder öffnen → schema-harnstau).
 
    Modell nephron (index.html#niere/nephron): Kontext desktop endet mit dem Schema (schema, schema-hyperglykaemie, schema-torasemid), dann die Hilfekarte
    „hilfekarte“ (Reiter „Hilfekarten“, erste Karte in #paneHelp; Karte #hcard) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop); handy endet nach dem Schema
@@ -541,6 +543,36 @@ const MODELLE = {
         await t.weiter(1500); await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
         await t.klick('#rail .dis:has(b:text-is("Harnstau durch Nierenstein"))'); await t.weiter(4000); await t.bild('harnstau-eingeklappt');   /* Handy: die Karte beginnt eingeklappt */
         await t.klick('#bCardMin'); await t.weiter(900); await t.bild('harnstau');
+      } },
+      schema: { opt: DESKTOP, async ablauf(t) {        /* Schema der Niere: normal, Harnstau, Nierenarterienstenose, Antippen der Rinde (Infokarte) */
+        const zeile = (name) => '#rail .dis:has(b:text-is("' + name + '"))';
+        await t.weiter(1500); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(4000); await t.bild('schema-harnstau');
+        await t.klick(zeile('Harnstau durch Nierenstein')); await t.weiter(3500);
+        await t.klick(zeile('Nierenarterienstenose')); await t.weiter(4000); await t.bild('schema-stenose');
+        /* Antippen: auf der Linie 45 % der Höhe von rechts nach innen die erste Stelle suchen, an der die Rinde liegt (feste Lage im Bild) */
+        const klickRinde = await t.js(() => {
+          const el = document.querySelector('#schemaBox [data-info="rinde"]'), b = el.getBoundingClientRect(), y = b.top + b.height * 0.45;
+          const info = (x) => { const e = document.elementFromPoint(x, y), s = e && e.closest ? e.closest('.sz') : null; return s ? s.getAttribute('data-info') : null; };
+          for (let x = Math.floor(b.right) - 2; x > b.left; x--) {
+            if (info(x) === 'rinde' && info(x - 4) === 'rinde' && info(x + 4) === 'rinde') {
+              document.elementFromPoint(x - 2, y).dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x - 2, clientY: y }));
+              return true;
+            }
+          }
+          return false;
+        });
+        if (!klickRinde) throw new Error('Rinde im Schema nicht gefunden');
+        await t.weiter(600); await t.bild('schema-info');
+        await t.klick('#bSchemaX');
+      } },
+      'schema-handy': { opt: HANDY, async ablauf(t) {  /* Schema auf dem Handy, dann mit Harnstau (Karte eingeklappt) */
+        await t.weiter(1500); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');
+        await t.klick('#bSchemaX');
+        await t.klick('#rail .tabs .tab:text-is("Krankheiten")');
+        await t.klick('#rail .dis:has(b:text-is("Harnstau durch Nierenstein"))'); await t.weiter(4000);
+        await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema-harnstau');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

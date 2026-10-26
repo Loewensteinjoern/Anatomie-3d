@@ -16,7 +16,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 | Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | ✓ (Pleuraspalt; Alveole: Blut-Luft-Schranke) |
 | Hilfekarten und Üben (Quiz) | ✓ | ✓ | ✓ | ✓ |
 | Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | ✓ (Asthma, COPD, Hyper-/Hypoventilation, Azidose, Cheyne-Stokes; Salbutamol, Sauerstoff, Naloxon) |
-| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | – | ✓ (Thorax-Modell, unverändert übernommen) |
+| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | ✓ (Frontalschnitt, live mit denselben Teilchen, Kennzahlen) | ✓ (Thorax-Modell, unverändert übernommen) |
 | Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | ✓ |
 | AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | ✓ |
 | Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ |
@@ -167,8 +167,14 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - Üben „Strukturen finden“ mit den 14 Bauteilen (ohne Teilchen, gelöste Teilchen und die Tafel „Rinde und Mark“), durchscheinende Treffer zählen mit; nur die gesuchte Tubulus-Struktur leuchtet (Klon-Material, solange sie leuchtet)
   - Eigene Karte `#hcard` unten links (die Szenario-Karte rechts ist `#scard` und klappt solange ein); auf dem Handy endet die Karte über der Werkzeugleiste (`--wz`), der Zurück-Knopf des Atlas ist solange ausgeblendet
   - Aufteilung mit Jörn: zwei Pull Requests, zuerst das Nephron, dann das Schema der Niere
+- [x] Niere: Schema (2D-Bild) – Bauplan-Lücke, mit Jörn abgestimmt (Oktober 2026)
+  - Frontalschnitt in der Form des 3D-Modells (immer aufgeschnitten, Blick wie die Übersicht): Umrisse per Marching Squares aus den Feldern der Form, Gefäße aus denselben Gefäßlinien, Harnleiter mit der Welle (gemeinsame Formel `welleLage`/`welleFaktor`), Teilchen aus den Instanzmatrizen der 3D-Teilchen (Tempo, Pause, Wirkgrößen gelten mit)
+  - Krankheitsbilder und Medikamente weich überblendet wie in 3D (Stau, Stein, Engstelle, Renin-Markierungen, weniger Teilchen), Marken „Stein“, „Engstelle“, „Renin“
+  - Legende der Wege (1–7) mit Abzeichen, Kasten mit den Kennzahlen (Normwerte, immer gleich) und Hinweiszeile bei aktivem Zustand; Texte von Jörn freigegeben
+  - Antippen öffnet die Infokarte, „Nephron hier ansehen“ funktioniert aus dem Schema; Schema schließt bei Lupe, Hilfekarte/Üben, AR, Nephron-Fahrt
+  - Knopf „Schema“ in der ersten Zeile der Werkzeugleiste; Handy wie beim Nephron; auf 390 px keine zusätzliche Zeile, zwischen 479 und 539 px bricht Reihe 1 jetzt um (Schätzer `werkzeugRand` angepasst)
 - Umsetzung: Schritte 1–4 als #23–#26, Schritt 5 als #27, Schritte 6–10 zusammen in einem Pull Request (Wunsch von Jörn); nach einem Container-Neustart zeichnete Chromium minimal anders (ca. 110 Pixel), ab Schritt 9 wurde daher gegen eine neu aufgenommene Referenz verglichen
-- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema: Leiste ausgeblendet, Werkzeugleiste unten, Schema darüber; Kennzahlen der Niere stehen nur in der Lesehilfe am Desktop)
+- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema von Nephron und Niere: Leiste ausgeblendet, Werkzeugleiste unten, Schema darüber; die Kennzahlen der Niere stehen im Schema auch auf dem Handy)
 
 ### Phase 3 und weiter – Organ für Organ
 
