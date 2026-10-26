@@ -71,6 +71,15 @@ var MARKUP = `<div id="title">
   <dl id="iDl"></dl>
 </div>
 
+<div class="panel" id="hcard">
+  <button class="gh hbtn" id="hClose" aria-label="Schlie&szlig;en">&times;</button>
+  <div class="kick" id="hKick"></div>
+  <h3 id="hTitle"></h3>
+  <div class="lead" id="hLead"></div>
+  <div class="after" id="hAfter"></div>
+  <div class="qa" id="hQa" style="display:none"><span class="score" id="hScore"></span><button class="gh" id="qNext">N&auml;chste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
 <div id="arUI" aria-live="polite">
   <div class="ar-top"><span class="ar-title">Nephron in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Nephron hinzustellen.</div>
@@ -1322,6 +1331,7 @@ function setSelected(id) {
   visVersion++;
   var box = document.getElementById('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (!quiz) closeCard();                                /* Hilfekarte weicht der Infokarte (nicht beim Ueben) */
   var s = STRUCT[id];
   document.getElementById('iLat').textContent = s.lat;
   document.getElementById('iDe').textContent = s.de;
@@ -1381,14 +1391,18 @@ var SCENARIOS = [{
 }];
 var SZ = Kern.Szenarien({
   daten: SCENARIOS, karte: 'scard', dauer: 1.2, anteil: SW,
-  beimWechsel: function () {
+  beimWechsel: function (id) {
     SCENARIOS.forEach(function (s) {
       var leg = document.getElementById(s.leg);
       if (leg) leg.style.display = SZ.aktiv === s.id ? '' : 'none';
     });
+    if (id) { if (quiz) quizEnd(); closeCard(); }       /* Hilfekarte und Ueben weichen der Szenariokarte */
     visVersion++;
   },
-  beimEinklappen: function () { visVersion++; }
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); closeCard(); }  /* wieder aufgeklappt: die Hilfekarte weicht */
+    visVersion++;
+  }
 });
 /* fuer die Pruefung ohne Bildschirm: Zustand sofort setzen */
 function setScenarioDirect(id) {
@@ -1404,14 +1418,144 @@ function applyScenarioVisuals() {
   MAT.waterArrow.opacity = 1 - 0.65 * SW.lt;             /* kaum noch Sog aus dem Mark */
 }
 
+/* =====================================================================
+   6b. Hilfekarten und Ueben (wie in der Niere): Erklaerkarte #hcard unten links, Ueben "Strukturen finden"
+   (Texte freigegeben, Aufbau wie niere.js; die Szenariokarte rechts hat die ID scard und bleibt unberuehrt)
+   ===================================================================== */
+var HILFE = [
+['filtration', 'Filtration im Nierenkörperchen',
+ 'Im Glomerulus fließt das Blut durch ein Knäuel feiner Kapillaren. Weil die abführende Arteriole enger ist als die zuführende, staut sich das Blut, und der Druck presst Wasser mit kleinen gelösten Teilchen wie Salz, Zucker und Harnstoff durch den Filter in die Bowman-Kapsel. Blutzellen und große Eiweiße bleiben im Gefäß. Diese Flüssigkeit heißt Primärharn – beide Nieren bilden davon rund 180 Liter am Tag.',
+ 'Blut oder viel Eiweiß im Urin sind ein Hinweis auf einen geschädigten Filter – oder auf eine Blutung in den Harnwegen.'],
+['rueckresorption', 'Zurückholen und Ausscheiden',
+ 'Vom Primärharn holen die Tubuli rund 99 Prozent ins Blut zurück. Die Hauptarbeit leistet der proximale Tubulus: Er holt Zucker und Aminosäuren vollständig und etwa zwei Drittel von Salz und Wasser zurück, das Wasser folgt dabei dem Salz. Umgekehrt gibt der Tubulus manche Stoffe aus dem Blut aktiv in den Harn ab, zum Beispiel viele Medikamente und Säure. Das nennt man Sekretion.',
+ 'Zucker im Urin (Glukosurie) tritt auf, wenn der Blutzucker über etwa 180 mg/dl steigt. Dann sind die Transporter im proximalen Tubulus ausgelastet.'],
+['gegenstrom', 'Gegenstromprinzip der Henle-Schleife',
+ 'Die Henle-Schleife reicht tief ins Mark. Der dicke aufsteigende Schenkel pumpt Salz ins Gewebe, lässt aber kein Wasser hinaus. So wird das Mark nach unten immer salziger, bis etwa 1200 mosmol/l. Der absteigende Schenkel ist für Wasser durchlässig: Das salzige Gewebe zieht Wasser aus ihm heraus, und die Vasa recta tragen es fort, ohne das Salz auszuwaschen. Aus der Schleife kommt der Harn verdünnt heraus, mit etwa 100 mosmol/l.',
+ 'Schleifendiuretika wie Torasemid blockieren die Salzpumpe im aufsteigenden Schenkel. Das Mark wird weniger salzig, und viel mehr Wasser bleibt im Harn.'],
+['hormone', 'Feinabstimmung: Aldosteron und ADH',
+ 'Im distalen Tubulus und im Sammelrohr wird entschieden, wie viel Salz und Wasser der Körper behält. Aldosteron aus der Nebenniere lässt Natrium zurückholen und Kalium ausscheiden. ADH (antidiuretisches Hormon) aus der Hirnanhangsdrüse macht das Sammelrohr wasserdurchlässig: Auf dem Weg durch das salzige Mark gibt der Harn Wasser ab und wird konzentriert, bis etwa 1200 mosmol/l. Fehlt ADH, bleibt der Harn verdünnt und reichlich.',
+ 'Bei Flüssigkeitsmangel steigt ADH: Der Urin ist wenig und dunkel. Alkohol hemmt ADH, deshalb muss man danach oft zur Toilette.'],
+['pflege', 'Pflege: Nierenwerte verstehen',
+ 'Wie gut die Nephrone filtern, zeigt die glomeruläre Filtrationsrate (GFR), normal etwa 120 ml/min. Sie wird meist aus dem Kreatinin im Blut geschätzt (eGFR): Steigt das Kreatinin, filtern die Nieren schlechter. Im Urin-Teststreifen weist Eiweiß auf einen geschädigten Filter hin, Zucker auf einen erhöhten Blutzucker. Viele Medikamente werden über die Niere ausgeschieden, ihre Dosis richtet sich deshalb nach der GFR.',
+ 'Das Kreatinin steigt erst deutlich, wenn etwa die Hälfte der Nierenfunktion verloren ist. Auffällige Nierenwerte weitergeben, damit die Dosis der Medikamente geprüft wird.'],
+['modell', 'So liest du das Modell',
+ 'Das Nephron ist stark vergrößert und vereinfacht gezeigt, Rohr und Gefäße sind durchscheinend. Rote Teilchen sind Blutzellen, blaue Tropfen Wasser, violette Teilchen Salz. Die Farbe des Rohrs zeigt, wie konzentriert sein Inhalt ist: etwa 300 mosmol/l im proximalen Tubulus, bis 1200 im Scheitel der Schleife, etwa 100 am Ende des aufsteigenden Schenkels und bis 1200 im Sammelrohr. Gelbe Sechsringe (Zucker) und grüne Achtflächner (Torasemid) erscheinen nur, wenn unter „Krankheiten“ oder „Medikamente“ etwas eingeschaltet ist. Im Modell bleibt etwa jeder sechzehnte Wassertropfen im Rohr, in Wirklichkeit nur rund jeder hundertste.',
+ 'Die Osmolarität gibt an, wie viele Teilchen in einer Flüssigkeit gelöst sind. Wasser wandert immer dorthin, wo mehr Teilchen gelöst sind.']
+];
+var QUIZ_IDS = ['bowman', 'visceral', 'glomerulus', 'afferens', 'efferens', 'macula', 'prox', 'desc', 'loop', 'asc', 'dist', 'coll', 'peritub', 'vasa'];   /* Strukturen fuer das Ueben (ohne Teilchen, Gradient und Stroemung) */
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
+var leuchtListe = [];            /* Meshes, die beim Leuchten ein eigenes Material bekommen haben: { m, orig } (geteilte Materialien) */
+
+/* Szenariokarte klappt ein, solange die Hilfekarte offen ist; das Szenario bleibt aktiv */
+function szWeichen() {
+  if (SZ && SZ.el && SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+  kartenLage();
+}
+/* Szenariokarte "weg", solange die Hilfekarte offen ist und sie eingeklappt ist */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', document.getElementById('hcard').classList.contains('show') && !SZ.offen);
+  visVersion++;
+}
+/* Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte */
+function showCard(kick, title, lead, after, istQuiz) {
+  if (LUPE.open || LUPE.mode) lupeClose();
+  if (schemaOn) setSchema(false);
+  document.getElementById('hKick').textContent = kick; document.getElementById('hTitle').textContent = title;
+  document.getElementById('hLead').textContent = lead;
+  var A = document.getElementById('hAfter'); A.innerHTML = '';
+  if (after) { var h5 = document.createElement('h5'); h5.textContent = after.h; var p = document.createElement('p'); p.textContent = after.t; A.appendChild(h5); A.appendChild(p); }
+  document.getElementById('hQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  document.getElementById('hcard').classList.add('show');
+  document.getElementById('info').classList.remove('show');
+  schemaWzStart();                                      /* Handy: die Karte endet ueber der Werkzeugleiste (--wz) */
+  szWeichen();
+  visVersion++;
+}
+function closeCard() {
+  document.getElementById('hcard').classList.remove('show');
+  if (!schemaOn) schemaWzEnde();
+  Array.prototype.forEach.call(document.querySelectorAll('.dis[data-card]'), function (d) { d.classList.remove('on'); });
+  kartenLage();
+}
+function openHelp(key) {
+  var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
+  Array.prototype.forEach.call(document.querySelectorAll('.dis[data-card]'), function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
+}
+/* Ueben: "Tippe auf: ..." - nur Strukturen aus QUIZ_IDS, die ein Mesh haben und eingeblendet sind */
+function quizPool() {
+  return ORDER.filter(function (s) { return QUIZ_IDS.indexOf(s.id) >= 0 && s.meshes.length && enabled[s.id]; }).map(function (s) { return s.id; });
+}
+function quizNext() {
+  var pool = quizPool(); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  showCard('Üben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe das Nephron, wenn du die Struktur nicht gleich siehst.', null, true);
+  document.getElementById('hScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizStart() {
+  setSelected(null); quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
+  document.getElementById('bQuiz').classList.add('on'); document.getElementById('bQuiz').textContent = 'Üben beenden';
+  visVersion++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  quiz = null; closeCard(); document.getElementById('bQuiz').classList.remove('on'); document.getElementById('bQuiz').textContent = 'Strukturen finden';
+  visVersion++;
+}
+/* Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte. Der Tubulus teilt sich ein Material (MAT.tubule): damit nur die
+   gesuchte Struktur leuchtet, bekommt sie dafuer waehrend des Leuchtens ein eigenes Klon-Material (Aufbau und Export bleiben unberuehrt) */
+function leuchte(id, an) {
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (an) {
+      var geteilt = ORDER.some(function (s) { return s.id !== id && s.meshes.some(function (x) { return x.material === mt; }); });
+      if (geteilt) {
+        leuchtListe.push({ m: m, orig: mt });
+        m.material = mt = mt.clone(); mt.userData.baseEmissive = leuchtListe[leuchtListe.length - 1].orig.userData.baseEmissive;
+      }
+    } else {
+      var k = -1; leuchtListe.forEach(function (e, i) { if (e.m === m) k = i; });
+      if (k >= 0) { mt.dispose(); m.material = leuchtListe[k].orig; leuchtListe.splice(k, 1); return; }
+    }
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = document.getElementById('hLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben – die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  document.getElementById('hScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+document.getElementById('hClose').onclick = function () { if (quiz) quizEnd(); else closeCard(); };
+document.getElementById('qNext').onclick = function () { if (quiz) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); } };
+document.getElementById('qStop').onclick = quizEnd;
+
 (function buildRail() {
   var railRoot = document.getElementById('rail'), groups = [];
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneD = document.createElement('div'); paneD.id = 'paneDis'; paneD.style.display = 'none';
   var paneM = document.createElement('div'); paneM.id = 'paneMed'; paneM.style.display = 'none';
-  var panes = [rail, paneD, paneM];
-  [['Strukturen', rail], ['Krankheiten', paneD], ['Medikamente', paneM]].forEach(function (t, k) {
+  var paneH = document.createElement('div'); paneH.id = 'paneHelp'; paneH.style.display = 'none';
+  var paneU = document.createElement('div'); paneU.id = 'paneUeben'; paneU.style.display = 'none';
+  var panes = [rail, paneD, paneM, paneH, paneU];
+  [['Strukturen', rail], ['Krankheiten', paneD], ['Medikamente', paneM], ['Hilfekarten', paneH], ['Üben', paneU]].forEach(function (t, k) {
     var b = document.createElement('button');
     b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = t[0];
     b.addEventListener('click', function () {
@@ -1421,9 +1565,24 @@ function applyScenarioVisuals() {
     });
     tabs.appendChild(b);
   });
-  railRoot.appendChild(tabs); railRoot.appendChild(rail); railRoot.appendChild(paneD); railRoot.appendChild(paneM);
+  railRoot.appendChild(tabs); railRoot.appendChild(rail); railRoot.appendChild(paneD); railRoot.appendChild(paneM); railRoot.appendChild(paneH); railRoot.appendChild(paneU);
   SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Schalte ein Krankheitsbild ein: Das Modell ver\u00e4ndert sich, und rechts erscheint eine Erkl\u00e4rkarte.');
   SZ.liste(paneM, 'drug', 'Diuretika', 'Schalte ein Medikament ein: Das Modell zeigt seine Wirkung, und rechts erscheint eine Erkl\u00e4rkarte.');
+  /* Hilfekarten */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erkl\u00e4rt \u2013 tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  HILFE.forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Nephron und tippe sie an. Die Beschriftung verschwindet solange.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  pb.appendChild(bq); paneU.appendChild(pb);
   ORDER.forEach(function (s) { if (groups.indexOf(s.grp) < 0) groups.push(s.grp); });
   groups.forEach(function (g) {
     var wrap = document.createElement('div'); wrap.className = 'grp';
@@ -1443,9 +1602,9 @@ function applyScenarioVisuals() {
         applyVisibility();
       }
       sw.addEventListener('click', function (e) { e.stopPropagation(); flip(); });
-      row.addEventListener('click', function () { setSelected(s.id); });
+      row.addEventListener('click', function () { if (!quiz) setSelected(s.id); });
       row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); setSelected(s.id); }
+        if (e.key === 'Enter') { e.preventDefault(); if (!quiz) setSelected(s.id); }
         if (e.key === ' ') { e.preventDefault(); flip(); }
       });
       wrap.appendChild(row);
@@ -1511,6 +1670,16 @@ function canvasKlick(e) {
   var hits = ray.intersectObjects(root.children, false).filter(function (h) {
     return h.object.visible && h.object.userData.sid !== 'grad';
   });
+  if (quiz) {                                            /* Ueben: erster Treffer aus QUIZ_IDS; durchscheinende Treffer davor zaehlen mit (durch) */
+    var tq = null, durch = [], dicht = false;
+    for (var i = 0; i < hits.length && !dicht; i++) {
+      var o = hits[i].object, sq = o.userData.sid;
+      if (QUIZ_IDS.indexOf(sq) < 0) continue;            /* Teilchen, geloeste Teilchen und Pfeile werden uebergangen */
+      tq = tq || sq;
+      durch.push(sq); dicht = !o.material.transparent;
+    }
+    quizAntwort(tq, durch); return;
+  }
   setSelected(hits.length ? hits[0].object.userData.sid : null);
 }
 canvas.addEventListener('click', canvasKlick);
@@ -1562,7 +1731,7 @@ function layoutLabels(w, h) {
   var items = [];
   function hide(a) { a.el.style.display = 'none'; a.ln.style.display = 'none'; a.dot.style.display = 'none'; }
   ANCHORS.forEach(function (a) {
-    if (!showLabels || !enabled[a.sid]) { hide(a); return; }
+    if (!showLabels || quiz || !enabled[a.sid]) { hide(a); return; }   /* beim Ueben keine Beschriftung */
     pv.copy(a.p).project(camera);
     if (pv.z > 1 || Math.abs(pv.x) > 1.35 || Math.abs(pv.y) > 1.35) { hide(a); return; }
     items.push({ a: a, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
@@ -1587,7 +1756,7 @@ function layoutLabels(w, h) {
     a.dot.setAttribute('cx', it.sx); a.dot.setAttribute('cy', it.sy);
   });
   TICKS.forEach(function (t) {
-    if (!showLabels || !enabled.grad) { t.el.style.display = 'none'; return; }
+    if (!showLabels || quiz || !enabled.grad) { t.el.style.display = 'none'; return; }
     pv.copy(t.p).project(camera);
     if (pv.z > 1) { t.el.style.display = 'none'; return; }
     var sx = (pv.x * 0.5 + 0.5) * w, sy = (-pv.y * 0.5 + 0.5) * h;
@@ -1982,6 +2151,8 @@ function lupeClose() {
   leaderSvg.appendChild(LUPE.line);
   document.getElementById('bLupe').addEventListener('click', function () {
     if (LUPE.mode || LUPE.open) { lupeClose(); return; }
+    if (quiz) quizEnd();
+    closeCard();
     LUPE.mode = true; this.classList.add('on'); canvas.style.cursor = 'zoom-in';
     toast('Lupe: Tippe auf eine Stelle des Nephrons \u2013 oder w\u00e4hle unten einen Abschnitt.');
     var p = lupeRepPoint('desc'); lupeSetSection('desc', lupeSectionAt(p).depth, p);
@@ -2099,6 +2270,8 @@ var AR = Kern.AR.xr({
   quickLook: function () { arQuickLook(); },
   beimStart: function () {
     inAR = true;
+    if (quiz) quizEnd();
+    closeCard();
     applyVisibility();
     document.getElementById('arSee').textContent = seeThrough ? 'Undurchsichtig' : 'Durchsichtig';
     document.getElementById('arPause').textContent = playing ? 'Pause' : 'Weiter';
@@ -2468,20 +2641,23 @@ function schemaWzLoeschen() {
   document.body.style.removeProperty('--wz');
   if (!document.body.getAttribute('style')) document.body.removeAttribute('style');
 }
+function schemaWzStart() {   /* messen und beobachten (Schema oder Hilfekarte offen) */
+  schemaMessen();
+  if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe(document.getElementById('tools')); }
+}
 function schemaWzEnde() {
   if (schemaWz) { schemaWz.disconnect(); schemaWz = null; }
   schemaWzLoeschen();
 }
 function setSchema(on) {
   schemaOn = on;
+  if (on) { if (quiz) quizEnd(); closeCard(); }            /* Hilfekarte und Ueben weichen dem Schema */
   document.getElementById('bSchema').classList.toggle('on', on);
   if (on) { SCH.build(document.getElementById('schemaBox'), schemaPick); SCH.update(selected, enabled, visVersion); }
   document.getElementById('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
-  if (on) {
-    schemaMessen();
-    if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe(document.getElementById('tools')); }
-  } else schemaWzEnde();
+  if (on) schemaWzStart();
+  else if (!document.getElementById('hcard').classList.contains('show')) schemaWzEnde();   /* --wz bleibt, solange die Hilfekarte offen ist */
   canvas.style.visibility = on ? 'hidden' : '';
   if (!on) { schemaZu = null; if (schemaKarte) { schemaKarte = false; document.body.classList.remove('schkarte'); } }
   lastLabelKey = '';
@@ -2535,7 +2711,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   if (bereitT !== null) { clearTimeout(bereitT); bereitT = null; bereitOk(); }
-  clearTimeout(Kern.toast._t);
+  clearTimeout(Kern.toast._t); clearTimeout(quizT);
   AR.abbauen();
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
