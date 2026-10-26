@@ -154,6 +154,12 @@ var MARKUP = `<div id="title">
 
 <div class="panel" id="rail"></div>
 
+<div class="panel" id="schema" aria-label="Schema der Niere">
+  <div class="sch-head"><span class="kick">Schema &middot; Niere</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, Schnitt von vorn.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
+  <div id="schemaBox"></div>
+</div>
+
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
   <p><b style="color:#E0584C">Rot</b> Arterien &ndash; bringen das Blut zur Niere.<br>
@@ -201,12 +207,6 @@ var MARKUP = `<div id="title">
   <div class="lp-leg"><span><i style="background:#3AA0FF"></i>Wasser</span><span><i style="background:#B98BD9"></i>gel&ouml;ste Teilchen (Salz)</span><span><i style="background:#E8B923"></i>Harn</span><span><i style="background:#C8372D"></i>Blut im Vas rectum</span></div>
 </div>
 
-<div class="panel" id="schema" aria-label="Schema der Niere">
-  <div class="sch-head"><span class="kick">Schema &middot; Niere</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, Schnitt von vorn.</span>
-  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
-  <div id="schemaBox"></div>
-</div>
-
 <div id="arUI" aria-live="polite">
   <div class="ar-top"><span class="ar-title">Niere in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
   <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um die Niere hinzustellen.</div>
@@ -236,12 +236,12 @@ function abstandFuer(ext, r, fov, h) {
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je
-   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 unter Breite 479 (zweite Zeile) und unter 294 (dritte), Reihe 2 unter 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
+   32 mehr, wenn eine der ersten beiden Reihen umbricht: Reihe 1 unter Breite 540 (zweite Zeile) und unter 294 (dritte), Reihe 2 unter 379; die Reihe Stroemung bricht nicht um); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (100 + (w < 479 ? 32 : 0) + (w < 294 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 540 ? 32 : 0) + (w < 294 ? 32 : 0) + (w < 379 ? 32 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + 115 };
 }
@@ -2126,7 +2126,7 @@ var SCH = (function () {
       return [form.KM[0] + dx * s, form.KM[1] + dy * s];
     }
     var LBL = { 'letter-spacing': 1.2, 'font-weight': 600 };
-    var pR = tiefe(38, 0.4), dR = lokalP(pR[0], pR[1]), pM = [(PY[3].apex[0] + PY[3].basis[0]) / 2, (PY[3].apex[1] + PY[3].basis[1]) / 2], dM = lokalP(pM[0], pM[1]);
+    var pR = tiefe(38, 0.4), dR = lokalP(pR[0], pR[1]), pM = [(PY[4].apex[0] + PY[4].basis[0]) / 2, (PY[4].apex[1] + PY[4].basis[1]) / 2], dM = lokalP(pM[0], pM[1]);
     leiter(ga, dR[0], dR[1], 318, dR[1]); text(ga, 322, dR[1] + 3.3, 'RINDE', 9.5, DIM, LBL);
     leiter(ga, dM[0], dM[1], 318, dM[1]); text(ga, 322, dM[1] + 3.3, 'MARK', 9.5, DIM, LBL);
     var pB = lokalP(-1.6, -0.5);
