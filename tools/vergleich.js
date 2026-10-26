@@ -36,6 +36,10 @@
    die Hilfekarte „hilfekarte“ (Reiter, erste Karte) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop)), handy (am Ende die Lupe „lupe“), datei (file://), webxr (Deckel und
    Knopf #arPause: Beschriftung „Weiter“/„Pause“ steht in erg.ar.pause), quicklook (AR wie beim Nephron; Deckel) und abbau.
 
+   Modell nephron (index.html#niere/nephron): Kontext desktop endet mit dem Schema (schema, schema-hyperglykaemie, schema-torasemid), dann die Hilfekarte
+   „hilfekarte“ (Reiter „Hilfekarten“, erste Karte in #paneHelp; Karte #hcard) und das Üben „ueben“ (Reiter, Knopf #bQuiz, Beenden #qStop); handy endet nach dem Schema
+   mit „hilfekarte“ (Schema vorher mit #bSchemaX zu).
+
    Modell lunge (index.html#lunge): beide Lungenflügel mit Lappen, Atemwegen, Gefäßen, Rippenfell, Zwerchfell und Brustkorb. Kontexte desktop
    (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 (Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura), Durchsicht, ohne Brustkorb,
    ohne Beschriftung, Info; am Ende Atmung: Reiter, Zwerchfell voll, Schema (#bSchema), Ruheatmung, angestrengte Atmung, durchsichtige Rippen mit Druckzahlen,
@@ -787,12 +791,17 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab >> nth=1'); await t.klick('#paneDis .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-hyperglykaemie');
         await t.klick('#rail .tabs .tab >> nth=2'); await t.klick('#paneMed .dis >> nth=0'); await t.weiter(1500); await t.bild('schema-torasemid');
         await t.klick('#bSchemaX');
+        /* Hilfekarten und Üben (neue Bilder am Ende) */
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("\u00dcben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben');
+        await t.klick('#qStop'); await t.weiter(300);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam1'); await t.weiter(900); await t.bild('nierenkoerperchen');
         await t.klick('#cam0'); await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
         await t.klick('#bLupeX'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema');   /* Lupe-Fenster deckt die Werkzeugleiste: mit × schließen; Schema zu: Seite wird danach verworfen */
+        await t.klick('#bSchemaX'); await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');   /* Schema zu: die Leiste ist wieder da */
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
