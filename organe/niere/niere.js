@@ -131,6 +131,7 @@ var MARKUP = `<div id="title">
     <button id="cam3" class="gh">Hilus</button>
     <button id="bNephron" class="gh" title="In ein Nephron hineinzoomen">Nephron</button>
     <span class="sep"></span>
+    <button id="bSchema" class="gh" title="Die Niere als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
     <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Nierenpapille">Lupe</button>
     <button id="bAR" class="gh" title="Die Niere mit der Kamera in den Raum stellen">AR</button>
   </div>
@@ -198,6 +199,12 @@ var MARKUP = `<div id="title">
   <div class="lp-chips" id="lpChips"><button class="gh on" data-adh="1">mit ADH</button><button class="gh" data-adh="0">ohne ADH</button></div>
   <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
   <div class="lp-leg"><span><i style="background:#3AA0FF"></i>Wasser</span><span><i style="background:#B98BD9"></i>gel&ouml;ste Teilchen (Salz)</span><span><i style="background:#E8B923"></i>Harn</span><span><i style="background:#C8372D"></i>Blut im Vas rectum</span></div>
+</div>
+
+<div class="panel" id="schema" aria-label="Schema der Niere">
+  <div class="sch-head"><span class="kick">Schema &middot; Niere</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, Schnitt von vorn.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schlie&szlig;en">&times;</button></div>
+  <div id="schemaBox"></div>
 </div>
 
 <div id="arUI" aria-live="polite">
@@ -813,6 +820,7 @@ function kartenLage() {
 /* Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text (oder Liste), Abschnitt "Merke"; unten links wie die Infokarte */
 function showCard(kick, title, lead, after, istQuiz) {
   if (LUPE.open) lupeClose();
+  if (schemaOn) setSchema(false);                        /* das Schema weicht der Hilfekarte und dem Ueben */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -1362,17 +1370,25 @@ function welleVorbereiten(hp) {
   m.frustumCulled = false;
   return { mesh: m, attr: pos, ruhe: ruhe, idx: Int32Array.from(idx), s: Float32Array.from(sv), rad: Float32Array.from(rv) };
 }
+/* Welle zur Zeit c: Staerke a und Lage der Verdickung (mitte) und der Einschnuerung dahinter (hinten), cm auf der Bahn; auch fuer das Schema */
+function welleLage(c) {
+  var z = welleZustand(c), a = z.a, mitte = z.s + 0.15;
+  if (FAKT.stein > 0) { mitte = steinSperre(mitte, ST.steinS - 0.55); a *= 1 + 0.4 * FAKT.stein; }   /* Stein: die Welle drueckt vor dem Stein, kraeftiger (Kolik) */
+  return { a: a, mitte: mitte, hinten: mitte - 0.85 };
+}
+/* Radiusaenderung (Faktor - 1) der Welle an der Stelle s der Bahn: Verdickung vorn, Einschnuerung dahinter */
+function welleFaktor(wl, s) {
+  var hp = ST.hp, e = sstep(hp.S0, hp.S0 + 0.5, s) * (1 - sstep(hp.L - 0.5, hp.L, s)), d1 = (s - wl.mitte) / 0.4, d2 = (s - wl.hinten) / 0.45;
+  return wl.a * e * (0.6 * Math.exp(-d1 * d1) - 0.55 * Math.exp(-d2 * d2));
+}
 function welleSetzen(c) {
   var W = ST.welle;
   if (!W) return;
-  var hp = ST.hp, z = welleZustand(c), arr = W.attr.array, a = z.a, mitte = z.s + 0.15, hinten, i, j;
-  if (FAKT.stein > 0) { mitte = steinSperre(mitte, ST.steinS - 0.55); a *= 1 + 0.4 * FAKT.stein; }   /* Stein: die Welle drueckt vor dem Stein, kraeftiger (Kolik) */
-  hinten = mitte - 0.85;
+  var wl = welleLage(c), arr = W.attr.array, i, j;
   arr.set(W.ruhe);
-  if (a > 0.001) {
+  if (wl.a > 0.001) {
     for (i = 0; i < W.idx.length; i++) {
-      var s = W.s[i], e = sstep(hp.S0, hp.S0 + 0.5, s) * (1 - sstep(hp.L - 0.5, hp.L, s)), d1 = (s - mitte) / 0.4, d2 = (s - hinten) / 0.45;
-      var f = a * e * (0.6 * Math.exp(-d1 * d1) - 0.55 * Math.exp(-d2 * d2));   /* Verdickung vorn, Einschnuerung dahinter */
+      var f = welleFaktor(wl, W.s[i]);
       if (Math.abs(f) < 1e-4) continue;
       j = W.idx[i] * 3;
       arr[j] += W.rad[i * 3] * f; arr[j + 1] += W.rad[i * 3 + 1] * f; arr[j + 2] += W.rad[i * 3 + 2] * f;
@@ -1508,7 +1524,7 @@ function szenarioBauen(L) {
       if (gs < 0.01 || Math.sqrt(bd) > haupt.r * 1.35) continue;
       idx.push(i); dv.push((x - cs[bj].x) * -0.7 * gs, (y - cs[bj].y) * -0.7 * gs, (z - cs[bj].z) * -0.7 * gs);
     }
-    SZG.sten = { m: mA, pos: pa, ruhe: new Float32Array(pa.array), idx: Int32Array.from(idx), delta: Float32Array.from(dv) };
+    SZG.sten = { m: mA, pos: pa, ruhe: new Float32Array(pa.array), idx: Int32Array.from(idx), delta: Float32Array.from(dv), s0: s0 };   /* s0: Mitte der Taille (cm auf der Nierenarterie, auch fuers Schema) */
   }
   /* Stein */
   var sg = new THREE.IcosahedronGeometry(1, 1), sp = sg.attributes.position;
@@ -1761,6 +1777,7 @@ function lupeKamera(i) {
   orbit.anim = Kern.fahrt(view, { theta: view.theta, phi: view.phi, dist: dist, target: ziel }, 700);
 }
 function lupeOeffnen(i) {
+  if (schemaOn) setSchema(false);                        /* das Schema weicht der Lupe */
   if (quiz) quizEnd();
   closeCard();
   if (!LUPE.open) {   /* Ansicht merken, beim Schliessen geht es dorthin zurueck */
@@ -1837,6 +1854,503 @@ function lupeTick(dt) {
     LUPE.line.setAttribute('x2', bx); LUPE.line.setAttribute('y2', by);
     LUPE.line.style.display = '';
   } else LUPE.line.style.display = 'none';
+}
+
+/* =====================================================================
+   5e. Schema - die Niere als flaches Bild (Knopf "Schema", wie beim Nephron)
+   Frontalschnitt der Niere (aufgeschnitten) in der Blickrichtung der Uebersicht, auf die Bildebene projiziert: Umrisse von Rinde, Saeulen,
+   Pyramiden, Papillen, Kelchen und Becken kommen aus denselben Abstandsfeldern wie das 3D-Modell (form.parenchym, form.pyramide,
+   form.kelchKlein, ... in der Schnittebene z = 0, Umrisslinien per Marching Squares), die Gefaesse aus denselben Linien wie die 3D-Rohre
+   (linienProben), der Harnleiter entlang der Bahn ST.hp. Die Teilchen sind die Instanzen der 3D-Teilchen (Matrizen der InstancedMeshes
+   aus stroemungBild), Stau, Stein, Taille und Renin folgen FAKT und SZG. Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall;
+   gebaut wird es erst beim ersten Oeffnen.
+   Bildkoordinaten: 1 cm = K Bildpunkte, Bild = Schnittebene um die Kippung der Niere gedreht (so steht sie in der Uebersicht).
+   ===================================================================== */
+var SCH = (function () {
+  var NS = 'http://www.w3.org/2000/svg', K = 32, W = 432, H = 656, X0 = -5.84, Y1 = 6.3;
+  var BRASS = '#E0A94A', DIM = '#8DA7B1', INK = '#E7EFF0', FAINT = '#5E7883', DARK = '#0B171C';
+  var ROT_L = '#E0584C', BLAU_L = '#6F93E0';   /* Farben der Lesehilfe: Arterien rot, Venen blau */
+  var cK = Math.cos(form.LAGE.kipp * DEG), sK = Math.sin(form.LAGE.kipp * DEG);
+  var svg = null, built = false, onPick = null, SG = {}, POOL = [], DYN = {}, seen = {}, HOHL = null, UR = null, HA = null, STE = null, RE = [];
+  function f1(v) { return Math.round(v * 10) / 10; }
+  function E(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  /* Abbildung: Schnittebene (lokal x, y) und Raumpunkt (anatomisch) -> Bildkoordinate in cm; dann Bildpunkte */
+  function sxL(x, y) { return x * cK - y * sK; }
+  function syL(x, y) { return x * sK + y * cK; }
+  function sxA(p) { return p.x * cDr - p.z * sDr; }   /* Blickrichtung = Normale der Schnittebene: nach rechts zeigt (cos, 0, -sin) der Drehung */
+  function BX(sx) { return f1((sx - X0) * K); }
+  function BY(sy) { return f1((Y1 - sy) * K); }
+  function grp(parent, sid) {   /* Gruppe je Struktur: wird bei Auswahl und beim Ein-/Ausblenden der Ebenen gedimmt bzw. versteckt */
+    var g = E('g', null, parent);
+    (SG[sid] = SG[sid] || []).push(g);
+    return g;
+  }
+  function text(g, x, y, s, size, fill, o) {
+    var a = { x: f1(x), y: f1(y), fill: fill, 'font-size': size, 'font-weight': 500, stroke: '#122229', 'stroke-width': 2.6, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+    if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+    return E('text', a, g, s);
+  }
+  function abzeichen(g, x, y, n) {
+    E('circle', { cx: f1(x), cy: f1(y), r: 6.6, fill: DARK, stroke: BRASS, 'stroke-width': 1.3 }, g);
+    E('text', { x: f1(x), y: f1(y + 3.3), 'text-anchor': 'middle', fill: BRASS, 'font-size': 9.5, 'font-weight': 700 }, g, String(n));
+  }
+
+  /* ---- Marching Squares: Umrisslinien (Feld = 0) eines Gitters als geschlossene Linienzuege (bekanntes Verfahren, selbst umgesetzt) ----
+     Innen: Wert < 0. Je Zelle ein oder zwei Strecken zwischen den Kantenpunkten (Kanten-ID: Gitterpunkt * 2 + 0 waagerecht, + 1 senkrecht),
+     die Strecken werden ueber gemeinsame Kanten zu Linienzuegen verkettet; der Rand des Gitters muss ausserhalb liegen. */
+  function gitter(x0, y0, x1, y1, h) { return { x0: x0, y0: y0, h: h, nx: Math.ceil((x1 - x0) / h) + 1, ny: Math.ceil((y1 - y0) / h) + 1 }; }
+  function feldWerte(G, fn) {
+    var f = new Float32Array(G.nx * G.ny);
+    for (var j = 0; j < G.ny; j++) for (var i = 0; i < G.nx; i++) f[i + G.nx * j] = fn(G.x0 + i * G.h, G.y0 + j * G.h);
+    return f;
+  }
+  var CASE = [[], [[0, 3]], [[0, 1]], [[3, 1]], [[1, 2]], null, [[0, 2]], [[3, 2]], [[3, 2]], [[0, 2]], null, [[1, 2]], [[3, 1]], [[0, 1]], [[0, 3]], []];   /* Kanten je Zelle: 0 unten, 1 rechts, 2 oben, 3 links */
+  function linien(G, v) {
+    var nx = G.nx, ny = G.ny, nb = {}, ids = [], i, j, c;
+    function kante(i, j, k) { return k === 0 ? (i + nx * j) * 2 : (k === 1 ? (i + 1 + nx * j) * 2 + 1 : (k === 2 ? (i + nx * (j + 1)) * 2 : (i + nx * j) * 2 + 1)); }
+    function verbinde(a, b) { if (nb[a] === undefined) { nb[a] = [b, -1]; ids.push(a); } else nb[a][1] = b; }
+    for (j = 0; j < ny - 1; j++) for (i = 0; i < nx - 1; i++) {
+      var p = i + nx * j, a = v[p], b = v[p + 1], d = v[p + nx + 1], e = v[p + nx];
+      c = (a < 0 ? 1 : 0) | (b < 0 ? 2 : 0) | (d < 0 ? 4 : 0) | (e < 0 ? 8 : 0);
+      var s = CASE[c];
+      if (c === 5) s = (a + b + d + e) < 0 ? [[0, 1], [3, 2]] : [[0, 3], [1, 2]];
+      else if (c === 10) s = (a + b + d + e) < 0 ? [[0, 3], [1, 2]] : [[0, 1], [3, 2]];
+      for (var q = 0; q < s.length; q++) { var k0 = kante(i, j, s[q][0]), k1 = kante(i, j, s[q][1]); verbinde(k0, k1); verbinde(k1, k0); }
+    }
+    function punkt(id) {
+      var idx = id >> 1, i0 = idx % nx, j0 = (idx - i0) / nx, va = v[idx], vb = (id & 1) ? v[idx + nx] : v[idx + 1], t = va / (va - vb);
+      return (id & 1) ? [G.x0 + i0 * G.h, G.y0 + (j0 + t) * G.h] : [G.x0 + (i0 + t) * G.h, G.y0 + j0 * G.h];
+    }
+    var besucht = {}, out = [];
+    ids.forEach(function (start) {
+      if (besucht[start]) return;
+      var zug = [], prev = -1, cur = start;
+      while (cur >= 0 && !besucht[cur]) {
+        besucht[cur] = 1; zug.push(punkt(cur));
+        var n = nb[cur], nxt = n[0] !== prev && !besucht[n[0]] ? n[0] : (n[1] !== prev && n[1] >= 0 && !besucht[n[1]] ? n[1] : -1);
+        prev = cur; cur = nxt;
+      }
+      if (zug.length > 2) out.push(zug);
+    });
+    return out;
+  }
+  /* Linienzuege (lokal) -> Pfad in Bildpunkten, Punkte dichter als 0,6 Bildpunkte entfallen */
+  function pfad(zuege) {
+    var d = '';
+    zuege.forEach(function (z) {
+      var lx = 1e9, ly = 1e9, n = 0;
+      z.forEach(function (p) {
+        var x = BX(sxL(p[0], p[1])), y = BY(syL(p[0], p[1]));
+        if (n && Math.abs(x - lx) + Math.abs(y - ly) < 0.6) return;
+        d += (n ? 'L' : 'M') + x + ' ' + y; lx = x; ly = y; n++;
+      });
+      d += 'Z';
+    });
+    return d;
+  }
+  /* Rohr als Band um eine Mittellinie (Bildpunkte, halbe Breiten hw) */
+  function band(px, py, hw) {
+    var n = px.length, A = '', B = '', i;
+    for (i = 0; i < n; i++) {
+      var i0 = Math.max(0, i - 1), i1 = Math.min(n - 1, i + 1), dx = px[i1] - px[i0], dy = py[i1] - py[i0], l = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / l * hw[i], ny = dx / l * hw[i];
+      A += (i ? 'L' : 'M') + f1(px[i] + nx) + ' ' + f1(py[i] + ny);
+      B = 'L' + f1(px[i] - nx) + ' ' + f1(py[i] - ny) + B;
+    }
+    return A + B + 'Z';
+  }
+  function linienPfad(px, py) { var d = ''; for (var i = 0; i < px.length; i++) d += (i ? 'L' : 'M') + px[i] + ' ' + py[i]; return d; }
+
+  /* ---- Harnleiter: Radius (cm) an der Stelle s der Bahn: Ruhe + Welle (wie welleSetzen) + Stau (wie szenarioBauen) ---- */
+  function ureterRadius(k, wl) {
+    var s = UR.s[k], r = UR.rb[k];
+    if (wl.a > 0.001) r *= 1 + welleFaktor(wl, s);
+    if (FAKT.stau > 0) r += UR.d[k] * FAKT.stau * (1 - sstep(ST.steinS - 0.5, ST.steinS + 0.2, s));
+    return r;
+  }
+  /* Umrisse von Becken und Kelchen mit dem aktuellen Stau (Aufweitung = Stau * Weite am Ort); jeder Teil gilt dort, wo er (wie in hohlKlasse)
+     den kleinsten Abstand hat, die Vereinigung liegt darunter */
+  var HK = ['becken', 'kelcheGross', 'kelcheKlein'];
+  function hohlNeu() {
+    var st = FAKT.stau, F = HOHL.f, M = HOHL.m, D = HOHL.D, u = HOHL.u, n = u.length, i, c;
+    for (i = 0; i < n; i++) u[i] = Math.min(F.kelcheGross[i], F.becken[i], F.kelcheKlein[i]) - D[i] * st;
+    var d0 = pfad(linien(HOHL.G, u));
+    HOHL.el.union.setAttribute('d', d0);
+    HK.forEach(function (sid) {
+      var f = F[sid], m = M[sid], v = HOHL.v;
+      for (i = 0; i < n; i++) v[i] = Math.max(u[i], f[i] - m[i]);
+      var d = pfad(linien(HOHL.G, v));
+      HOHL.el[sid].forEach(function (e) { e.setAttribute('d', d); });
+    });
+  }
+
+  function build(box, pick) {
+    if (built) return;
+    onPick = pick;
+    box.innerHTML = '';
+    svg = E('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'font-family': 'Inter, "Segoe UI", system-ui, sans-serif',
+      'aria-label': 'Schema: Frontalschnitt der Niere, die Teilchen fließen wie im 3D-Modell' }, box);
+    var i, j, k, x, y, a, par;
+
+    /* ---- Felder des Gewebes in der Schnittebene (lokal, z = 0) ---- */
+    var G = gitter(-2.9, -6.0, 3.9, 6.7, 0.06), n = G.nx * G.ny;
+    var fAll = new Float32Array(n), fRi = new Float32Array(n), fSa = new Float32Array(n), fPy = new Float32Array(n), fPa = new Float32Array(n), fNe = new Float32Array(n);
+    for (j = 0; j < G.ny; j++) for (i = 0; i < G.nx; i++) {
+      x = G.x0 + i * G.h; y = G.y0 + j * G.h; k = i + G.nx * j;
+      fNe[k] = form.nebenniere(x, y, 0);
+      a = form.aussenLokal(x, y, 0);
+      if (a > 0.3) { fAll[k] = fRi[k] = fSa[k] = fPy[k] = fPa[k] = a; continue; }   /* weit ausserhalb: nichts zu zeichnen */
+      par = form.parenchym(x, y, 0);
+      fAll[k] = par;                                         /* Gewebe ohne Sinus (Kapsel bis Mark) */
+      fRi[k] = Math.max(par, a + 0.06);                      /* ohne die aeusserste Schicht (Kapsel 0,06 cm, wie form.region) */
+      fSa[k] = Math.max(fRi[k], a + form.RINDE + 0.15);      /* Rindengewebe tiefer als RINDE + 0,15 cm = Saeulen */
+      var dp = 1e9, dq = 1e9;
+      for (var p = 0; p < PY.length; p++) {
+        var pv = Math.max(form.pyramide(p, x, y, 0, a), par), lg = (x - PY[p].apex[0]) * PY[p].u[0] + (y - PY[p].apex[1]) * PY[p].u[1];
+        if (pv < dp) dp = pv;
+        pv = Math.max(pv, lg - 0.45);                        /* die letzten 0,45 cm vor der Spitze = Papille */
+        if (pv < dq) dq = pv;
+      }
+      fPy[k] = dp; fPa[k] = dq;
+    }
+
+    /* ---- Nebenniere, Gewebe ---- */
+    E('path', { d: pfad(linien(G, fNe)), fill: '#D8A13E', stroke: '#6B4A12', 'stroke-width': 0.9, 'fill-rule': 'evenodd', 'class': 'sz', 'data-info': 'nebenniere' }, grp(svg, 'nebenniere'));
+    [['kapsel', fAll, '#9C4A3A', '#9C4A3A', 1.6], ['rinde', fRi, '#C27A62', '#4A2418', 0.8], ['saeulen', fSa, '#B47058', 'none', 0], ['pyramiden', fPy, '#8E3B33', '#3E1612', 0.7],
+      ['papillen', fPa, '#B0584A', 'none', 0]].forEach(function (t) {
+      E('path', { d: pfad(linien(G, t[1])), fill: t[2], stroke: t[3], 'stroke-width': t[4], 'stroke-linejoin': 'round', 'fill-rule': 'evenodd', 'class': 'sz', 'data-info': t[0] }, grp(svg, t[0]));
+    });
+
+    /* ---- Hohlsystem: Felder einmal berechnen, die Umrisse folgen dem Stau (hohlNeu) ---- */
+    var G2 = gitter(-4.2, -3.4, 2.2, 4.1, 0.06), n2 = G2.nx * G2.ny, Bq = form.BECKEN;
+    HOHL = { G: G2, u: new Float32Array(n2), v: new Float32Array(n2), f: { kelcheGross: new Float32Array(n2), becken: new Float32Array(n2), kelcheKlein: new Float32Array(n2) },
+      m: { kelcheGross: new Float32Array(n2), becken: new Float32Array(n2), kelcheKlein: new Float32Array(n2) }, D: new Float32Array(n2), el: {} };
+    for (j = 0; j < G2.ny; j++) for (i = 0; i < G2.nx; i++) {
+      x = G2.x0 + i * G2.h; y = G2.y0 + j * G2.h; k = i + G2.nx * j;
+      HOHL.f.kelcheGross[k] = form.kelchGross(x, y, 0);
+      HOHL.f.becken[k] = form.becken(x, y, 0);
+      var kk = 1e9;
+      for (var p2 = 0; p2 < PY.length; p2++) { var kv = form.kelchKlein(p2, x, y, 0); if (kv < kk) kk = kv; }
+      HOHL.f.kelcheKlein[k] = kk;
+      HOHL.D[k] = 0.2 + 0.25 * (1 - sstep(1.0, 4.0, Math.hypot(x - Bq[0], y - Bq[1], Bq[2])));   /* Weite des Staus wie in szenarioBauen */
+      var fg = HOHL.f.kelcheGross[k], fb = HOHL.f.becken[k];
+      HOHL.m.kelcheGross[k] = Math.min(fb, kk); HOHL.m.becken[k] = Math.min(fg, kk); HOHL.m.kelcheKlein[k] = Math.min(fg, fb);
+    }
+    var HF = { kelcheGross: '#DCC060', becken: '#D9B44A', kelcheKlein: '#EAD27A' };
+    var gUm = E('g', { fill: 'none', stroke: DARK, 'stroke-width': 2.4, 'stroke-linejoin': 'round', 'fill-rule': 'evenodd' }, svg), gFu = E('g', { 'stroke-width': 0 }, svg);
+    HK.forEach(function (sid) {
+      var u = E('path', null, grp(gUm, sid)), gf = grp(gFu, sid);
+      if (sid === 'becken') HOHL.el.union = E('path', { fill: HF.becken, 'fill-rule': 'evenodd' }, gf);   /* Vereinigung als Untergrund (keine Fugen zwischen den Teilen) */
+      HOHL.el[sid] = [u, E('path', { fill: HF[sid], 'fill-rule': 'evenodd', 'class': 'sz', 'data-info': sid }, gf)];
+    });
+
+    /* ---- Harnleiter: Band entlang der Bahn ST.hp (Breite = Radius mit Welle und Stau) ---- */
+    var hp = ST.hp, Bc = form.anatomisch(form.BECKEN), q0 = { x: 0, y: 0, z: 0 };
+    UR = { px: [], py: [], s: [], rb: [], d: [], hw: [] };
+    var kS = 0, ks = [];
+    while (kS < hp.n - 1 && hp.S[kS] < hp.S0 - 0.1) kS++;
+    for (k = kS; k < hp.n - 1; k += 3) ks.push(k);
+    ks.push(hp.n - 1);
+    ks.forEach(function (k) {
+      q0.x = hp.P[k * 3]; q0.y = hp.P[k * 3 + 1]; q0.z = hp.P[k * 3 + 2];
+      var fr = Math.max(0, (hp.S[k] - hp.S0) / (hp.L - hp.S0)), seg = Math.min(9, Math.floor(fr * 10));
+      UR.px.push(BX(sxA(q0))); UR.py.push(BY(q0.y)); UR.s.push(hp.S[k]);
+      UR.rb.push(seg < 3 ? 0.3 - 0.01 * seg : 0.28);   /* Radius der Kapseln in form.harnleiter */
+      UR.d.push(0.2 + 0.25 * (1 - sstep(1.0, 4.0, Math.hypot(q0.x - Bc[0], q0.y - Bc[1], q0.z - Bc[2]))));
+      UR.hw.push(0);
+    });
+    UR.u = E('path', null, grp(gUm, 'harnleiter'));
+    UR.f = E('path', { fill: '#C9A43A', 'class': 'sz', 'data-info': 'harnleiter' }, grp(gFu, 'harnleiter'));
+
+    /* ---- Gefaesse: Rohre aus den Linien der Form (wie in bauen), Arterien rot, Venen blau ---- */
+    var Ln = form.gefaesseAnatomisch(), hits = [];
+    ['arterie', 'vene', 'interlobaer', 'bogen', 'interlobular'].forEach(function (sid) {
+      var g = grp(svg, sid);
+      g.setAttribute('pointer-events', 'none');   /* Gefaesse fangen keine Klicks: das tun die Antippflaechen */
+      ['arterie', 'vene'].forEach(function (art) {
+        Ln.filter(function (l) { return l.stufe === sid && l.art === art; }).forEach(function (l) {
+          var pr = linienProben(l, 0, 1), px = [], py = [], hw = [], r0 = [], sl = [], t, m = pr.length, lenL = linienKurve(l).getLength(), idx = [];
+          for (t = 0; t < m - 1; t += 3) idx.push(t);   /* alle 3 Proben (ca. 0,15 cm), dazu das Ende */
+          idx.push(m - 1);
+          idx.forEach(function (t) {
+            px.push(BX(sxA(pr[t]))); py.push(BY(pr[t].y)); r0.push(pr[t].r); hw.push(Math.max(1.1, K * pr[t].r)); sl.push(t / (m - 1) * lenL);
+          });
+          var breit = Math.max.apply(null, hw) > 2.6;
+          var e = E('path', { d: band(px, py, hw), fill: art === 'arterie' ? ROT_L : BLAU_L, stroke: breit ? DARK : 'none', 'stroke-width': 1.1, 'stroke-linejoin': 'round' }, g);
+          if (sid === 'arterie' && art === 'arterie' && !l.rt) HA = { px: px, py: py, r0: r0, hw: hw, sl: sl, el: e };   /* Nierenarterie: hier entsteht die Taille (Stenose) */
+          hits.push({ sid: sid, px: px, py: py, w: Math.max(9, 2 * K * Math.max.apply(null, r0) + 5), l: l, art: art, pr: pr });
+        });
+      });
+    });
+
+    /* ---- Krankheitsbilder: Renin-Markierungen, Stein (Gestalt und Lage wie das 3D-Netz) ---- */
+    var gR = E('g', { 'pointer-events': 'none' }, svg), gS = E('g', { 'pointer-events': 'none' }, svg);
+    RE = SZG.renin.map(function (m) {
+      var c = E('circle', { cx: BX(sxA(m.position)), cy: BY(m.position.y), r: 3, fill: '#FF9A2E', stroke: '#8A3A00', 'stroke-width': 0.8, display: 'none' }, gR);
+      return { el: c, m: m, an: false, r: -1 };
+    });
+    var sp = [];
+    for (k = 0; k < 12; k++) {
+      var ph = k / 12 * 2 * PI, ff = 1 + 0.2 * (rausch(Math.cos(ph) * 3, Math.sin(ph) * 3, 0.7) - 0.5) * 2;
+      sp.push((0.62 * Math.cos(ph) * ff).toFixed(3) + ',' + (0.46 * Math.sin(ph) * ff).toFixed(3));
+    }
+    var sq1 = {}, sq2 = {};
+    bahnPunkt(ST.hp, ST.hp.S, ST.steinS - 0.1, sq1); bahnPunkt(ST.hp, ST.hp.S, ST.steinS + 0.1, sq2);
+    STE = { el: E('polygon', { points: sp.join(' '), fill: '#F6F1E0', stroke: '#6E6450', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke', display: 'none' }, gS), tf: '',
+      ang: Math.atan2(-(sq2.y - sq1.y), sxA(sq2) - sxA(sq1)) * 180 / PI };
+
+    /* ---- Teilchen: je Gruppe der 3D-Teilchen ein Pool; Lage und Groesse aus den Instanzmatrizen ---- */
+    var gt = E('g', { 'pointer-events': 'none' }, svg);
+    var FM = { blutRot: ['#FF5A4A', '#4A0A12'], blutBlau: ['#6E9BFF', '#0E2058'], harn: ['#FFF03A', '#6B5A00'] };
+    POOL = ST.gruppen.map(function (g) {
+      var gg = E('g', null, gt), c = FM[g.mat], arr = [];
+      for (var q = 0; q < g.list.length; q++) arr.push({ el: E('circle', { r: 1, fill: c[0], stroke: c[1], 'stroke-width': 0.8, 'vector-effect': 'non-scaling-stroke', display: 'none' }, gg), on: false, tf: '' });
+      return arr;
+    });
+
+    /* ---- Beschriftung: Bereiche, Abzeichen, Marken, Legende, Kennzahlen, Hinweis ---- */
+    var ga = E('g', { 'pointer-events': 'none' }, svg);
+    function leiter(g, x0, y0, x1, y1) {
+      E('line', { x1: f1(x0), y1: f1(y0), x2: f1(x1), y2: f1(y1), stroke: BRASS, 'stroke-width': 0.8, 'stroke-dasharray': '2 2' }, g);
+      E('circle', { cx: f1(x0), cy: f1(y0), r: 1.8, fill: BRASS }, g);
+    }
+    function lokalP(x, y) { return [BX(sxL(x, y)), BY(syL(x, y))]; }
+    function tiefe(grad, t) {   /* Punkt auf dem Strahl aus KM, t cm unter der Aussenflaeche (lokal) */
+      var w = grad * DEG, dx = Math.cos(w), dy = Math.sin(w), s = 0;
+      while (form.aussenLokal(form.KM[0] + dx * s, form.KM[1] + dy * s, 0) < -t) s += 0.01;
+      return [form.KM[0] + dx * s, form.KM[1] + dy * s];
+    }
+    var LBL = { 'letter-spacing': 1.2, 'font-weight': 600 };
+    var pR = tiefe(38, 0.4), dR = lokalP(pR[0], pR[1]), pM = [(PY[3].apex[0] + PY[3].basis[0]) / 2, (PY[3].apex[1] + PY[3].basis[1]) / 2], dM = lokalP(pM[0], pM[1]);
+    leiter(ga, dR[0], dR[1], 318, dR[1]); text(ga, 322, dR[1] + 3.3, 'RINDE', 9.5, DIM, LBL);
+    leiter(ga, dM[0], dM[1], 318, dM[1]); text(ga, 322, dM[1] + 3.3, 'MARK', 9.5, DIM, LBL);
+    var pB = lokalP(-1.6, -0.5);
+    text(ga, 6, BY(-1.6) + 3.3, 'NIERENBECKEN', 9.5, DIM, LBL);
+    leiter(ga, pB[0], pB[1], 100, BY(-1.6));
+    var uK = 0, uy = BY(-6.3);
+    for (k = 0; k < UR.py.length; k++) if (Math.abs(UR.py[k] - uy) < Math.abs(UR.py[uK] - uy)) uK = k;
+    text(ga, UR.px[uK] + 18, UR.py[uK] + 3.3, 'HARNLEITER', 9.5, DIM, LBL);
+    leiter(ga, UR.px[uK], UR.py[uK], UR.px[uK] + 14, UR.py[uK]);
+
+    /* Abzeichen an den Wegen */
+    function aufLinie(h, f) { var m = h.px.length - 1, q = Math.round(f * m); return [h.px[q], h.py[q]]; }
+    function suche(sid, art, nr, f) {
+      var l = hits.filter(function (h) { return h.sid === sid && h.art === art; }), h = l[Math.min(nr, l.length - 1)];
+      return aufLinie(h, f);
+    }
+    var hauptV = hits.filter(function (h) { return h.sid === 'vene' && !h.l.rt; })[0];
+    var BA = [
+      HA ? aufLinie({ px: HA.px, py: HA.py }, 0.28) : [60, 160],
+      suche('interlobaer', 'arterie', 2, 0.5),
+      suche('interlobular', 'arterie', 4, 0.6),
+      aufLinie(hauptV, 0.3),
+      lokalP(PY[2].apex[0] + PY[2].u[0] * 0.3, PY[2].apex[1] + PY[2].u[1] * 0.3),
+      lokalP(-2.1, -1.1),
+      [UR.px[Math.round(UR.px.length * 0.45)], UR.py[Math.round(UR.px.length * 0.45)]]
+    ];
+    BA.forEach(function (p, q) { abzeichen(ga, p[0], p[1], q + 1); });
+
+    /* Marken bei Krankheitsbild/Medikament: Stein, Engstelle (Taille der Nierenarterie), Renin */
+    DYN.mStein = text(ga, 0, 0, 'Stein', 9.5, BRASS, { 'font-weight': 700, 'text-anchor': 'end', opacity: 0 });
+    DYN.mEng = text(ga, 0, 0, 'Engstelle', 9.5, BRASS, { 'font-weight': 700, 'text-anchor': 'middle', opacity: 0 });
+    DYN.mRenin = text(ga, 0, 0, 'Renin', 9.5, BRASS, { 'font-weight': 700, opacity: 0 });
+    var rm = SZG.renin.length ? SZG.renin.reduce(function (b, m) { return sxA(m.position) > sxA(b.position) ? m : b; }) : null;
+    DYN.mReninL = E('line', { stroke: BRASS, 'stroke-width': 0.8, 'stroke-dasharray': '2 2', opacity: 0 }, ga);
+    if (rm) {
+      var rx = BX(sxA(rm.position)), ry = BY(rm.position.y);
+      DYN.mRenin.setAttribute('x', f1(Math.max(rx + 16, 322))); DYN.mRenin.setAttribute('y', f1(ry + 3.3));
+      DYN.mReninL.setAttribute('x1', f1(rx + 4)); DYN.mReninL.setAttribute('y1', f1(ry)); DYN.mReninL.setAttribute('x2', f1(Math.max(rx + 16, 322) - 3)); DYN.mReninL.setAttribute('y2', f1(ry));
+    }
+    var sPos = SZG.stein.position;
+    DYN.sx = BX(sxA(sPos)); DYN.sy = BY(sPos.y);
+    DYN.mStein.setAttribute('x', f1(DYN.sx - 20)); DYN.mStein.setAttribute('y', f1(DYN.sy + 3.3));
+    if (SZG.sten && HA) {
+      var iE = 0, dE = 1e9;
+      for (k = 0; k < HA.sl.length; k++) { var dd = Math.abs(HA.sl[k] - SZG.sten.s0); if (dd < dE) { dE = dd; iE = k; } }
+      DYN.ex = HA.px[iE]; DYN.ey = HA.py[iE];
+      DYN.mEng.setAttribute('x', f1(DYN.ex)); DYN.mEng.setAttribute('y', f1(DYN.ey - 17));
+    }
+
+    /* Legende der Wege unter dem Bild, zwei Spalten */
+    var LG = [
+      ['Blut strömt ein', 'Nierenarterie: Blut aus der Aorta', 'verzweigt sich bis in die Rinde'],
+      ['Zwischen den Pyramiden', 'Zwischenlappen- und Bogengefäße', 'ziehen zur Grenze Rinde / Mark'],
+      ['Filtration in der Rinde', 'Rindengefäße versorgen die Glomeruli,', 'dort entsteht der Primärharn'],
+      ['Blut fließt zurück', 'Venen sammeln das Blut (blau)', 'und führen es zur Nierenvene'],
+      ['Harn tropft ab', 'Papille: Sammelrohre münden,', 'der Harn tropft in den kleinen Kelch'],
+      ['Kelche und Becken', 'Kleine und große Kelche leiten', 'den Harn ins Nierenbecken'],
+      ['Harnleiter', 'Peristaltische Wellen bringen', 'den Harn zur Blase']
+    ];
+    var COL = [12, 218], ly0 = 450;
+    LG.forEach(function (t, q) {
+      var cx = COL[q < 4 ? 0 : 1], cy = ly0 + (q % 4) * 40.5;
+      abzeichen(ga, cx + 7, cy - 3, q + 1);
+      text(ga, cx + 20, cy, t[0], 10.5, BRASS, { 'font-weight': 700 });
+      text(ga, cx + 20, cy + 11.5, t[1], 8.6, DIM, { 'stroke-width': 2.2 });
+      text(ga, cx + 20, cy + 22, t[2], 8.6, DIM, { 'stroke-width': 2.2 });
+    });
+    /* Kennzahlen: immer die Normwerte */
+    var kx = COL[1], ky = ly0 + 3 * 40.5 - 13;
+    E('rect', { x: kx, y: f1(ky), width: 202, height: 56, rx: 4, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+    text(ga, kx + 8, ky + 14, 'KENNZAHLEN · BEIDE NIEREN', 8.5, BRASS, { 'font-weight': 700, 'letter-spacing': 0.8, 'stroke-width': 0 });
+    ['Durchblutung: ca. 1,2 l Blut pro Minute', 'Primärharn: ca. 180 l pro Tag', 'Endharn: ca. 1,5 l pro Tag'].forEach(function (s, q) {
+      text(ga, kx + 8, ky + 27 + q * 11, s, 8.6, DIM, { 'stroke-width': 0 });
+    });
+    /* Hinweiszeile (nur bei aktivem Zustand), zwei Zeilen */
+    DYN.hint = [text(ga, 12, ly0 + 3 * 40.5 + 58, '', 8.8, INK, { 'stroke-width': 2.2, opacity: 0 }), text(ga, 12, ly0 + 3 * 40.5 + 70, '', 8.8, INK, { 'stroke-width': 2.2, opacity: 0 })];
+
+    /* ---- Antippflaechen der Gefaesse (unsichtbar, ueber allem) ---- */
+    var gh = E('g', { fill: 'none', stroke: '#000', 'stroke-opacity': 0, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'pointer-events': 'stroke' }, svg);
+    var hg = {};
+    hits.forEach(function (h) {
+      var g = hg[h.sid] || (hg[h.sid] = grp(gh, h.sid));
+      E('path', { d: linienPfad(h.px, h.py), 'stroke-width': h.w, 'class': 'sz', 'data-info': h.sid }, g);
+    });
+    svg.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('.sz') : null;
+      if (onPick) onPick(t ? t.getAttribute('data-info') : null, e);
+    });
+    seen = { vis: -1, stau: -1, sten: -1, az: undefined };
+    built = true;
+  }
+
+  /* Klickstelle im Bild -> Punkt der Schnittebene im Raum der Niere (anatomisch, Feld [x, y, z]; fuer "Nephron hier ansehen") */
+  function punkt(e) {
+    var q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clientY;
+    var m = svg.getScreenCTM();
+    if (!m) return null;
+    q = q.matrixTransform(m.inverse());
+    var sx = X0 + q.x / K, sy = Y1 - q.y / K;
+    return form.anatomisch([sx * cK + sy * sK, -sx * sK + sy * cK, 0]);
+  }
+
+  var HINT = {
+    stein: ['Harnstau: Der Stein hält den Harn zurück – Becken und Kelche', 'weiten sich, die Filtration wird gebremst.'],
+    stenose: ['Nierenarterienstenose: Hinter der Engstelle kommt weniger Blut an', '– die Niere schüttet Renin aus.'],
+    ramipril: ['Ramipril: Weniger Angiotensin II – etwas weniger Druck im Knäuel,', 'etwas weniger Primärharn.'],
+    ibuprofen: ['Ibuprofen: Die zuführenden Arteriolen werden enger –', 'weniger Blut, weniger Harn.']
+  };
+  function update(sel, enabledMap, visV) {
+    if (!built) return;
+    var i, k;
+    if (visV !== seen.vis || sel !== seen.sel) {
+      seen.vis = visV; seen.sel = sel;
+      Object.keys(SG).forEach(function (sid) {
+        var on = enabledMap[sid] !== false, op = !on ? 0 : ((sel && sel !== sid) ? 0.3 : 1);
+        SG[sid].forEach(function (g) { g.setAttribute('opacity', op); g.setAttribute('display', on ? 'inline' : 'none'); });
+      });
+    }
+    if (FAKT.stau !== seen.stau) { seen.stau = FAKT.stau; hohlNeu(); }
+    /* Harnleiter: Breite aus Welle (Uhr) und Stau */
+    var wl = welleLage(clock), hw = UR.hw;
+    for (k = 0; k < UR.px.length; k++) hw[k] = Math.max(1.2, K * ureterRadius(k, wl));
+    var d = band(UR.px, UR.py, hw);
+    if (d !== seen.ur) { seen.ur = d; UR.u.setAttribute('d', d); UR.f.setAttribute('d', d); }
+    /* Taille der Nierenarterie */
+    if (HA && FAKT.stenose !== seen.sten) {
+      seen.sten = FAKT.stenose;
+      for (k = 0; k < HA.px.length; k++) {
+        var gs = SZG.sten ? Math.exp(-Math.pow((HA.sl[k] - SZG.sten.s0) / 0.55, 2)) : 0;
+        HA.hw[k] = Math.max(1.1, K * HA.r0[k] * (1 - 0.7 * gs * FAKT.stenose));
+      }
+      HA.el.setAttribute('d', band(HA.px, HA.py, HA.hw));
+    }
+    /* Teilchen */
+    ST.gruppen.forEach(function (g, gi) {
+      var pool = POOL[gi], A = g.im.instanceMatrix.array, show = g.im.visible;
+      for (i = 0; i < pool.length; i++) {
+        var q = pool[i], s = A[i * 16], v = show && s > 0.02;
+        if (v) {
+          var tf = 'translate(' + BX(A[i * 16 + 12] * cDr - A[i * 16 + 14] * sDr) + ' ' + BY(A[i * 16 + 13]) + ') scale(' + (Math.round(Math.max(1.4, s * K * 1.1) * 10) / 10) + ')';
+          if (tf !== q.tf) { q.el.setAttribute('transform', tf); q.tf = tf; }
+          if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+        } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+      }
+    });
+    /* Stein und Renin */
+    var st = SZG.stein.visible;
+    if (st) {
+      var tf2 = 'translate(' + DYN.sx + ' ' + DYN.sy + ') rotate(' + f1(STE.ang) + ') scale(' + (Math.round(K * SZG.stein.scale.x * 100) / 100) + ')';
+      if (tf2 !== STE.tf) { STE.el.setAttribute('transform', tf2); STE.tf = tf2; }
+    }
+    if (st !== STE.an) { STE.an = st; STE.el.setAttribute('display', st ? 'inline' : 'none'); }
+    RE.forEach(function (r) {
+      var v = r.m.visible;
+      if (v) { var rr = f1(Math.max(1.6, r.m.scale.x * K)); if (rr !== r.r) { r.r = rr; r.el.setAttribute('r', rr); } }
+      if (v !== r.an) { r.an = v; r.el.setAttribute('display', v ? 'inline' : 'none'); }
+    });
+    /* Marken (weich mit dem Zustand) und Hinweiszeile */
+    var o1 = enabledMap.harnleiter === false ? 0 : Math.min(1, FAKT.stein), o2 = enabledMap.arterie === false ? 0 : Math.min(1, FAKT.stenose), o3 = enabledMap.interlobular === false ? 0 : Math.min(1, FAKT.renin);
+    function opa(el, o) { o = Math.round(o * 100) / 100; if (el.getAttribute('opacity') !== String(o)) el.setAttribute('opacity', o); }
+    opa(DYN.mStein, o1); opa(DYN.mEng, o2); opa(DYN.mRenin, o3); opa(DYN.mReninL, o3);
+    if (SZ.aktiv !== seen.az) {
+      seen.az = SZ.aktiv;
+      var h = HINT[SZ.aktiv] || ['', ''];
+      DYN.hint[0].textContent = h[0]; DYN.hint[1].textContent = h[1];
+    }
+    var oa = SZ.aktiv && HINT[SZ.aktiv] ? Math.min(1, SZ.anteil[SZ.aktiv]) : 0;
+    opa(DYN.hint[0], oa); opa(DYN.hint[1], oa);
+  }
+  function abbauen() {
+    svg = null; built = false; onPick = null; SG = {}; POOL = []; DYN = {}; seen = {}; HOHL = null; UR = null; HA = null; STE = null; RE = [];
+  }
+  return { build: build, update: update, abbauen: abbauen, punkt: punkt, get svg() { return svg; } };
+})();
+
+/* Schema: Knopf, Schliessen, Antippen (Struktur waehlt die Infokarte; Rinde, Saeulen, Pyramiden und Papillen mit dem Punkt fuer "Nephron hier ansehen") */
+var schemaOn = false, schemaKarte = false, schemaZu = null;
+function schemaPick(info, e) {
+  if (!info) { setSelected(null); return; }
+  if (STRUCT[info]) setSelected(info, SCH.punkt(e) || undefined);
+}
+/* Handy: Hoehe der Werkzeugleiste als --wz (das Schema und die Infokarte enden darueber); aendert sich die Leiste (Umbruch), misst der Beobachter neu */
+var schemaWz = null;
+function schemaMessen() {
+  if (!window.matchMedia('(max-width:1000px)').matches) { schemaWzLoeschen(); return; }   /* Desktop: nichts setzen */
+  document.body.style.setProperty('--wz', Math.ceil($('tools').getBoundingClientRect().height) + 'px');
+}
+function schemaWzLoeschen() {
+  document.body.style.removeProperty('--wz');
+  if (!document.body.getAttribute('style')) document.body.removeAttribute('style');
+}
+function schemaWzStart() {
+  schemaMessen();
+  if (window.ResizeObserver && !schemaWz) { schemaWz = new ResizeObserver(schemaMessen); schemaWz.observe($('tools')); }
+}
+function schemaWzEnde() {
+  if (schemaWz) { schemaWz.disconnect(); schemaWz = null; }
+  schemaWzLoeschen();
+}
+function setSchema(on) {
+  if (on && !(ST && SZG)) return;                          /* Strömung und Krankheitsbilder entstehen erst am Ende des Aufbaus */
+  schemaOn = on;
+  if (on) {                                                /* Lupe, Hilfekarte und Ueben weichen dem Schema */
+    if (LUPE.open) lupeClose();
+    if (quiz) quizEnd();
+    closeCard();
+  }
+  $('bSchema').classList.toggle('on', on);
+  if (on) { SCH.build($('schemaBox'), schemaPick); SCH.update(selected, enabled, lv); }
+  $('schema').classList.toggle('show', on);
+  document.body.classList.toggle('schema', on);
+  if (on) schemaWzStart(); else schemaWzEnde();
+  canvas.style.visibility = on ? 'hidden' : '';
+  if (!on) { schemaZu = null; if (schemaKarte) { schemaKarte = false; document.body.classList.remove('schkarte'); } }
+  lv++;
+}
+$('bSchema').onclick = function () { if (fz || inAR) return; setSchema(!schemaOn); };
+$('bSchemaX').onclick = function () { setSchema(false); };
+function schemaTick() {
+  SCH.update(selected, enabled, lv);
+  var k = !!SZ.aktiv;                                       /* Erklaerkarte offen: das Schema rueckt nach links */
+  if (k !== schemaKarte) { schemaKarte = k; document.body.classList.toggle('schkarte', k); }
+  /* schmaler Bildschirm: die Karte deckt das Bild, darum einmal je Krankheitsbild/Medikament einklappen */
+  if (window.innerWidth < 1000 && SZ.aktiv !== schemaZu) { schemaZu = SZ.aktiv; if (SZ.aktiv && SZ.offen) szWeichen(); }
 }
 
 /* =====================================================================
@@ -1937,7 +2451,7 @@ function arTexte() {
 }
 $('arOffen').onclick = function () { offen(!openZiel); arTexte(); };
 $('arPause').onclick = function () { $('bPlay').click(); this.textContent = playing ? 'Pause' : 'Weiter'; };
-$('bAR').onclick = function () { if (fz) return; AR.start(); };
+$('bAR').onclick = function () { if (fz) return; if (schemaOn) setSchema(false); AR.start(); };
 AR.check();
 /* ---- USDZ fuer AR Quick Look: Momentaufnahme der Niere in der aktuellen Ansicht ---- */
 function usdzBuild() {
@@ -2045,6 +2559,7 @@ function neAbbau() {   /* Nephron entsorgen, Niere in die Ausgangslage (genau wi
 /* Fahrt zum Nephron an der Stelle wahl ({ py, q }; ohne Angabe die Standardstelle) */
 function nephronOeffnen(wahl) {
   if (fz || abgebaut || inAR) return;
+  if (schemaOn) setSchema(false);                        /* das Schema schliesst vor der Kamerafahrt */
   neLetzte = wahl = wahl || NE_STANDARD;
   if (LUPE.open) lupeClose('nichts');
   if (quiz) quizEnd();
@@ -2136,12 +2651,13 @@ function loop(now, frame) {
   if (playing) { clock += dt * speed; clockB += dt * speed * FAKT.tempo; }
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Anteile weich ueberblenden, auch in der Pause */
   stroemungBild();
+  if (schemaOn) schemaTick();
   lupeTick(dt);
   if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   Kern.kamera(camera, view);
-  renderer.render(scene, camera);
+  if (!schemaOn) renderer.render(scene, camera);          /* Schema offen: das Bild der Niere ist ausgeblendet */
   if (fz) {
     if (weiter && fz.hin && !fz.gesetzt) { fz.gesetzt = true; location.hash = fz.adresse; }   /* Endbild ist gezeichnet */
     return;
@@ -2161,6 +2677,9 @@ organ.abbauen = function () {
   orbit.loesen();
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });   /* auch die Instanzen und Materialien der Teilchen */
+  SCH.abbauen(); schemaWzEnde(); schemaOn = false;
+  canvas.style.visibility = '';
+  document.body.classList.remove('schema', 'schkarte');
   ST = null; SZG = null;
   camera.clearViewOffset();
   camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
