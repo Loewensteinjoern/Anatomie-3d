@@ -73,7 +73,8 @@ var Kern = window.Kern = window.Kern || {};
      laedt Kern.organLaden zuerst die Form und dann das Organ-Skript. */
   K.FORMEN = {
     niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' },
-    lunge: { titel: 'Lunge', form: 'organe/lunge/lunge-form.js' }
+    lunge: { titel: 'Lunge', form: 'organe/lunge/lunge-form.js' },
+    leber: { titel: 'Leber', form: 'organe/leber/leber-form.js' }
   };
 
   /* Formbaustein anmelden (die Form-Datei ruft das beim Laden auf; def: Funktionen und Daten der Form, je Organ eigen) */
