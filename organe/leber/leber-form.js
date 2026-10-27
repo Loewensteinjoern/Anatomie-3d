@@ -20,10 +20,10 @@
    Aorta, Wirbelsaeule, Rinne der unteren Hohlvene) und die H-foermigen Furchen
    der Unterseite. Die Nachbarn sind einfache Nachbildungen der Formen aus
    organe/koerper/koerper.js (Tabellen AXT/AZT und RWT, Bahnen und Radien der
-   Rohre, sdfMagen, Lage der rechten Niere), mit 0,2 bis 0,35 cm Abstand.
+   Rohre, sdfMagen, Lage der rechten Niere), mit 0,15 bis 0,3 cm Abstand.
 
    Enthalten:
-     leber(x,y,z)           die ganze Leber (fuer den Koerper, ohne Lappenspalten); grenzen = Gitterbox
+     leber(x,y,z)           die ganze Leber (fuer den Koerper, ohne Lappenspalten); grenzen = Gitterbox; ebeneY(x,z) = Hoehe der Eingeweideflaeche
      lappen()               Liste { id, sdf, grenzen } der Lappen lappenR, lappenL, quadrat, schwanz, durch Spalte SPALT getrennt
      gallenblase(x,y,z)     Gallenblase; GALLENBLASE { fundus, koerper, hals } (je { p, r }), grenzen;
                             gallenblaseMit(f) = Gallenblase mit Fuellung f (zusammengezogen: f < 1)
@@ -198,12 +198,12 @@ function ebeneY(x, z) { return 109.0 + 0.36 * x - 0.51 * z - 2 * glatt(-6, -12, 
 function unten(x, y, z) { return (ebeneY(x, z) - y) * 0.867; }
 
 /* Ausguss des Raums unter der rechten Zwerchfellkuppel: oben die Kuppel (0,5 cm darunter), seitlich/vorn/hinten die Haut minus
-   Wand, unten die Eingeweideflaeche; die Kante unten (Unterrand) ist schmal und nur wenig verrundet (kein Messerrand: er braeche im
-   Gitter auf) */
+   Wand, unten die Eingeweideflaeche; die Kante unten (Unterrand) ist schmal, aber verrundet (Radius ca. 0,5 cm): ein Messerrand braeche im
+   Gitter des Koerpers (h = 0,6) zu Zacken und Loechern auf */
 var OB = 0.5;
 function ausguss(x, y, z) {
   var d = smax(0.4 * (y - (kuppel(x, z) - OB)), wand(x, y, z), 1.6);
-  return smax(d, unten(x, y, z), 1.5);
+  return smax(d, unten(x, y, z), 3.0);
 }
 
 /* Gallenblase: birnenfoermig, Grund (vorn unten) - Koerper - Hals (an der Leberpforte); Kenngroessen fuer das Zusammenziehen */
@@ -268,7 +268,7 @@ function leber(x, y, z) {
   d = smax(d, 0.15 - F.grube(x, y, z), 0.25);   /* Gallenblasengrube */
   return d;
 }
-var GRENZEN = [[-14.1, 102.2, -5.6], [7.6, 117.5, 6.9]];   /* Gitterbox der Leber (mit 0,3 cm Rand) */
+var GRENZEN = [[-13.8, 103.2, -5.2], [7.6, 117.5, 6.6]];   /* Gitterbox der Leber (mit 0,3 cm Rand) */
 
 /* ---- Lappen (fuer das Detailmodell): je ein eigenes Abstandsfeld, durch Spalte (SPALT cm) getrennt ----
    Rechter Lappen = der Rest; linker Lappen links der Ebene des Sichelbands; Quadratlappen nur an der Unterseite: zwischen Gallenblasengrube
@@ -302,10 +302,10 @@ function lappen() {
       var l = leber(x, y, z);
       if (l > 0.2) return l;
       return Math.max(l, SPALT - Math.min(fLinks(l, x), fQuadrat(l, x, y, z), fSchwanz(l, x, y, z)));
-    }, [[-14.1, 102.2, -5.6], [1.2, 117.5, 6.9]]),
-    lap('lappenL', function (x, y, z) { return fLinks(leber(x, y, z), x); }, [[0.6, 106.3, -3.8], [7.6, 117.3, 6.6]]),
-    lap('quadrat', function (x, y, z) { return fQuadrat(leber(x, y, z), x, y, z); }, [[-4.7, 104.5, 1.5], [1.2, 110.4, 5.7]]),
-    lap('schwanz', function (x, y, z) { return fSchwanz(leber(x, y, z), x, y, z); }, [[-1.5, 108.3, -4.0], [1.2, 114.4, 0.3]])
+    }, [[-13.8, 103.2, -5.2], [1.2, 117.5, 6.6]]),
+    lap('lappenL', function (x, y, z) { return fLinks(leber(x, y, z), x); }, [[0.6, 106.7, -3.6], [7.6, 117.3, 6.3]]),
+    lap('quadrat', function (x, y, z) { return fQuadrat(leber(x, y, z), x, y, z); }, [[-4.7, 104.6, 1.5], [1.2, 110.4, 5.7]]),
+    lap('schwanz', function (x, y, z) { return fSchwanz(leber(x, y, z), x, y, z); }, [[-1.5, 108.3, -3.9], [1.2, 114.4, 0.3]])
   ];
   return LAPPEN;
 }
@@ -505,7 +505,8 @@ function baeume() {
   zweig(R1, R1.pts[2], [-9.0, 109.5, -3.0], [0.34, 0.26]);     /* rechts hinten */
   zweig(L1, L1.pts[3], [5.5, 111.0, 2.0], [0.3, 0.24], 5.5);   /* linker Lappen */
   zweig(L1, L1.pts[5], [4.5, 110.0, 4.2], [0.3, 0.24], 4.5);   /* linker Lappen, vorn */
-  /* Quadrat- und Schwanzlappen sind duenn: der Ast sucht sich ueber einen Zwischenpunkt einen Weg im Gewebe zur tiefsten Stelle des Lappens */
+  /* Quadrat- und Schwanzlappen sind duenn: der Ast sucht sich ueber einen Zwischenpunkt einen Weg im Gewebe zur tiefsten Stelle des Lappens
+     (Ziel statt der Richtungen der Beschreibung: dort liegt die Leber nur 0,7 cm tief) */
   var weg = function (eltern, start, ziel, rr, gen) {
     var m0 = [(start[0] + ziel[0]) / 2, (start[1] + ziel[1]) / 2, (start[2] + ziel[2]) / 2], best = null, bl = 1e9, i, j, k;
     for (i = -4; i <= 4; i++) for (j = -4; j <= 4; j++) for (k = -4; k <= 4; k++) {
@@ -520,11 +521,23 @@ function baeume() {
     baum.pfortader.push(a); eintragen('pfortader', a); gen2.push(a);
     return a;
   };
-  weg(L1, L1.pts[5], [-0.8, 108.2, 2.7], [0.17, 0.14], 2);           /* Quadratlappen: tiefste Stelle */
-  weg(L1, L1.pts[2], [0.1, 110.6, -1.2], [0.17, 0.14], 2);     /* Schwanzlappen: tiefste Stelle */
+  var tiefster = function (id) {   /* tiefste Stelle (groesster Abstand zur Oberflaeche) des Lappens id, Raster 0,25 cm */
+    var l = lap.filter(function (q) { return q.id === id; })[0], g = l.grenzen, best = null, bd = -1e9, x, y, z;
+    for (x = g[0][0]; x <= g[1][0]; x += 0.25) for (y = g[0][1]; y <= g[1][1]; y += 0.25) for (z = g[0][2]; z <= g[1][2]; z += 0.25) {
+      var d = -l.sdf(x, y, z);
+      if (d > bd) { bd = d; best = [x, y, z]; }
+    }
+    return best;
+  };
+  var zumLappen = function (id, starts) {   /* erster Steuerpunkt des linken Pfortaderasts in starts, von dem aus ein Weg gelingt */
+    var ziel = tiefster(id);
+    for (var i = 0; i < starts.length; i++) if (weg(L1, L1.pts[starts[i]], ziel, [0.17, 0.14], 2)) return;
+  };
+  zumLappen('quadrat', [5, 3, 2, 1]);   /* Quadratlappen */
+  zumLappen('schwanz', [2, 3, 1, 5]);   /* Schwanzlappen */
   var LAENGE = [0, 0, 0, 2.4, 1.7, 1.2], RADIUS = [0, 0, 0, [0.22, 0.18], [0.18, 0.14], [0.14, 0.1]];
   var gelaende = function (eltern, gen) {
-    if (gen > 5) return;
+    if (gen > 5 || eltern.lappen === 'quadrat') return;   /* im Quadratlappen (nur 0,7 cm tief) endet der Ast: seine Kinder liefen in den rechten Lappen */
     var duenn = eltern.lappen === 'quadrat' || eltern.lappen === 'schwanz', f = duenn ? 0.5 : 1;
     kinder('pfortader', eltern, gen, LAENGE[gen] * f, [Math.min(RADIUS[gen][0], eltern.r1), RADIUS[gen][1] * (duenn ? 0.8 : 1)], ANF_PF, 0.6).forEach(function (a) {
       baum.pfortader.push(a); eintragen('pfortader', a);
