@@ -56,11 +56,11 @@ var STRUKTUREN = [
     text: 'Die Hauptschlagader entspringt der linken Herzkammer, bildet den Aortenbogen mit den Abgängen zu Kopf und Armen und zieht vor der Wirbelsäule durch Brust und Bauch, bis sie sich in die Beckenarterien teilt. Sie verteilt sauerstoffreiches Blut an alle Organe.' },
   { id: 'hohlvenen', de: 'Hohlvenen', lat: 'Venae cavae', system: 'kreislauf', detail: false,
     text: 'Die obere Hohlvene sammelt das Blut aus Kopf, Hals und Armen, die untere aus Bauch, Becken und Beinen. Beide münden in den rechten Vorhof und bringen sauerstoffarmes Blut zum Herzen zurück.' },
-  { id: 'pfortader', de: 'Pfortader', lat: 'Vena portae hepatis', system: 'kreislauf', detail: false,
+  { id: 'pfortader', de: 'Pfortader', lat: 'Vena portae hepatis', system: 'kreislauf', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die Pfortader entsteht hinter der Bauchspeicheldrüse aus Milzvene und oberer Mesenterialvene. Sie bringt das Blut aus Magen, Darm, Bauchspeicheldrüse und Milz zuerst zur Leber, bevor es in den Körperkreislauf gelangt. So kann die Leber Nährstoffe verwerten und Giftstoffe sowie Medikamente aus dem Darm abbauen.' },
-  { id: 'leberarterie', de: 'Leberarterie', lat: 'Arteria hepatica', system: 'kreislauf', detail: false,
+  { id: 'leberarterie', de: 'Leberarterie', lat: 'Arteria hepatica', system: 'kreislauf', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die Leberarterie entspringt über den Truncus coeliacus aus der Bauchaorta und zieht zur Leberpforte. Sie bringt sauerstoffreiches Blut zur Leber: etwa ein Viertel des Leberbluts, aber rund die Hälfte des Sauerstoffs.' },
-  { id: 'lebervenen', de: 'Lebervenen', lat: 'Venae hepaticae', system: 'kreislauf', detail: false,
+  { id: 'lebervenen', de: 'Lebervenen', lat: 'Venae hepaticae', system: 'kreislauf', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Meist drei Lebervenen sammeln das Blut, das durch die Leber geflossen ist. Sie münden an der Rückseite der Leber knapp unter dem Zwerchfell in die untere Hohlvene; von dort fließt das Blut direkt zum rechten Herzen.' },
   { id: 'milz', de: 'Milz', lat: 'Splen', system: 'kreislauf', detail: false,
     text: 'Die Milz liegt im linken Oberbauch unter dem Zwerchfell, hinter dem Magen. Als größtes lymphatisches Organ filtert sie das Blut, baut alte rote Blutkörperchen ab und bildet Abwehrzellen; zudem dient sie als Blutspeicher.' },
@@ -74,11 +74,11 @@ var STRUKTUREN = [
     text: 'Der etwa 25 cm lange Muskelschlauch verläuft hinter der Luftröhre durch den Brustraum und das Zwerchfell zum Magen. Durch wellenförmige Bewegungen (Peristaltik) transportiert er den Speisebrei; ein Schließmuskel am Mageneingang verhindert Rückfluss.' },
   { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', detail: false,
     text: 'Der Magen liegt im linken Oberbauch unter dem Zwerchfell. Er speichert die Nahrung, durchmischt sie mit Magensaft (Salzsäure, Pepsin) und gibt sie portionsweise an den Zwölffingerdarm weiter; seine Schleimhaut schützt sich durch eine Schleimschicht selbst.' },
-  { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', detail: false,
+  { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her.' },
-  { id: 'gallenblase', de: 'Gallenblase', lat: 'Vesica biliaris', system: 'verdauung', detail: false,
+  { id: 'gallenblase', de: 'Gallenblase', lat: 'Vesica biliaris', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die birnenförmige Gallenblase haftet an der Unterseite der Leber. Sie speichert und konzentriert die Galle und gibt sie bei fetthaltiger Nahrung über den Gallengang in den Zwölffingerdarm ab, wo sie die Fettverdauung unterstützt.' },
-  { id: 'gallengang', de: 'Gallengang', lat: 'Ductus choledochus', system: 'verdauung', detail: false,
+  { id: 'gallengang', de: 'Gallengang', lat: 'Ductus choledochus', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Der Gallengang leitet die Galle aus Leber und Gallenblase hinter dem Zwölffingerdarm und durch den Kopf der Bauchspeicheldrüse zur Papille im Zwölffingerdarm; dort mündet er meist gemeinsam mit dem Gang der Bauchspeicheldrüse. Verschließt ihn ein Stein, staut sich die Galle zurück, und es kommt zur Gelbsucht.' },
   { id: 'pankreas', de: 'Bauchspeicheldrüse', lat: 'Pancreas', system: 'verdauung', detail: false,
     text: 'Die Bauchspeicheldrüse liegt quer im Oberbauch hinter dem Magen, ihr Kopf in der Schlinge des Zwölffingerdarms. Sie gibt Verdauungsenzyme in den Darm ab und bildet in den Langerhans-Inseln Insulin und Glukagon, die den Blutzucker regeln.' },
@@ -642,17 +642,29 @@ async function organe() {
   als('gallenblase');
   await sdfMesh('verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), lform ? lform.gallenblase : sdfGalle, lform ? lform.GALLENBLASE.grenzen : b(-10, 92, 0, -1, 106, 9), 0.4);
   if (abgebaut) return; await weiter('Gallenblase');
-  /* Gefaesse und Gaenge der Leber aus der Form (Rohre wie die uebrigen Gefaesse; Radius = Mittel aus Anfang und Ende), je Struktur ein eigenes Material */
+  /* Gefaesse und Gaenge der Leber aus der Form (Rohre wie die uebrigen Gefaesse; Radius = Mittel aus Anfang und Ende), je Struktur ein eigenes Material (mk legt es an).
+     Milz- und Mesenterialvene zeigt das Detailmodell der Leber nur als Stumpf (lform.STUMPF cm ab dem Zusammenfluss): hier ist der Stumpf ein Rohr fuer sich, der Rest
+     ein zweites Rohr mit eigenem Material, userData.anschluss und blendet bei der Kamerafahrt mit aus */
   if (lform) {
     var lg = lform.GEFAESSE;
-    var lrohre = function (id, sys, m, liste) {
+    var lrohre = function (id, sys, mk, liste) {
       als(id);
-      liste.forEach(function (g) { rohr(sys, m, g.pts, (g.r0 + g.r1) / 2); });
+      var m = mk(), mAn = null;   /* mAn: Material der Reste von Milz- und Mesenterialvene (beide teilen es) */
+      liste.forEach(function (g) {
+        var r = (g.r0 + g.r1) / 2;
+        if (id !== 'pfortader' || (g.id !== 'milzvene' && g.id !== 'mesenterialvene')) { rohr(sys, m, g.pts, r); return; }
+        var st = lform.stumpf(g.pts, lform.STUMPF), c = lform.kurve(g.pts, 12), rest = [st[st.length - 1]].concat(c.slice(st.length - 1));
+        rohr(sys, m, st, r, 24);
+        if (rest.length < 2) return;
+        var ab = STR[id].meshes.length;
+        rohr(sys, mAn = mAn || mk(), rest, r, 40);
+        STR[id].meshes.slice(ab).forEach(function (o) { o.userData.anschluss = true; });
+      });
     };
-    lrohre('pfortader', 'kreislauf', mat('kreislauf', 0x7A5CB0, { rough: 0.45, coat: 0.4 }), lg.pfortader);
-    lrohre('leberarterie', 'kreislauf', mat('kreislauf', 0xC9483A, { rough: 0.45, coat: 0.5 }), lg.leberarterie);
-    lrohre('lebervenen', 'kreislauf', mat('kreislauf', 0x4F70B8, { rough: 0.45, coat: 0.4 }), lg.lebervenen);
-    lrohre('gallengang', 'verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), lg.gallengang);
+    lrohre('pfortader', 'kreislauf', function () { return mat('kreislauf', 0x7A5CB0, { rough: 0.45, coat: 0.4 }); }, lg.pfortader);
+    lrohre('leberarterie', 'kreislauf', function () { return mat('kreislauf', 0xC9483A, { rough: 0.45, coat: 0.5 }); }, lg.leberarterie);
+    lrohre('lebervenen', 'kreislauf', function () { return mat('kreislauf', 0x4F70B8, { rough: 0.45, coat: 0.4 }); }, lg.lebervenen);
+    lrohre('gallengang', 'verdauung', function () { return mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }); }, lg.gallengang);
   }
   if (abgebaut) return; await weiter('Gefäße der Leber');
   als('pankreas');
@@ -723,6 +735,8 @@ async function bauen() {
   leberP = lungenP.then(function () { return Kern.formLaden('leber'); }).then(null, function (e) { console.warn(e && e.message || e); return null; });
   /* Lungen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start); ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
   lungenP.then(function () { return Kern.organLaden('lunge', { ohneCss: true }); }).catch(function (e) { console.warn(e && e.message || e); });
+  /* Leber-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); nur wenn die Form der Leber da ist; ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
+  leberP.then(function (lf) { return lf ? Kern.organLaden('leber', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1061,10 +1075,14 @@ var ZIELE = {
   nieren: { phi: PI / 2, ext: [16, 24], target: [7.5, 104.5, -6] }   /* linke Niere (x > 0) von vorn, senkrecht auf die Schnittflaeche (Ersatz, wenn das Niere-Modul fehlt); theta s. zielFuer */
 };
 ZIELE.luftroehre = ZIELE.lunge;   /* gleiches Ziel: das Lungen-Modell */
+/* Strukturen, die das Leber-Modell zeigt (Leber, Gallenblase, Pfortader, Leberarterie, Lebervenen, Gallengang): sie bleiben bei der Fahrt sichtbar; Teile davon, die das Modell nicht zeigt (Milz- und Mesenterialvene jenseits der Stuempfe), tragen userData.anschluss */
+var LEBER_MIT = ['leber', 'gallenblase', 'pfortader', 'leberarterie', 'lebervenen', 'gallengang'];
+ZIELE.leber = { theta: 0, phi: PI / 2, ext: [28, 26], target: [-2.9, 107.6, 0.5], mit: LEBER_MIT };   /* Ersatz, wenn das Leber-Modul fehlt (Ganzansicht der Leber von vorn) */
+ZIELE.gallenblase = ZIELE.pfortader = ZIELE.leberarterie = ZIELE.lebervenen = ZIELE.gallengang = ZIELE.leber;   /* gleiches Ziel: das Leber-Modell */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1077,17 +1095,21 @@ function zielFuer(id, w, h) {
     var sl = lu.start(w, h), lm = lu.mitte;
     return { theta: sl.theta, phi: sl.phi, dist: sl.dist, target: V(sl.target[0] + lm[0], sl.target[1] + lm[1], sl.target[2] + lm[2]), versatz: sl.versatz };
   }
+  if (z === ZIELE.leber && le && le.start) {   /* Startansicht der Leber (Leber-Koordinaten, um die Mitte le.mitte im Koerper verschoben) */
+    var se = le.start(w, h), em = le.mitte;
+    return { theta: se.theta, phi: se.phi, dist: se.dist, target: V(se.target[0] + em[0], se.target[1] + em[1], se.target[2] + em[2]), versatz: se.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
   var zielObj = new Set(), keep = new Set(), ausMat = new Map(), altT = new Map(), ausObj = [], sofort = [];
-  /* userData.anschluss: gehoert zur Struktur, aber nicht zum Detailmodell (Lungengefaessstummel, rechte Niere) - blendet mit aus */
+  /* userData.anschluss: gehoert zur Struktur, aber nicht zum Detailmodell (Lungengefaessstummel, rechte Niere, Milz- und Mesenterialvene jenseits der Stuempfe) - blendet mit aus */
   (ZIELE[id] && ZIELE[id].mit || [id]).forEach(function (sid) {   /* mit: weitere Strukturen, die das Detailmodell mitzeigt */
     STR[sid].meshes.forEach(function (m) { if (m.userData.anschluss) return; m.traverse(function (o) { zielObj.add(o); if (o.material) [].concat(o.material).forEach(function (x) { keep.add(x); }); }); });
   });
