@@ -186,7 +186,8 @@ var ZIEL_K = [-2.9, 107.6, 0.5];
 var UEBERSICHT = { ext: [28, 26], halb: 14, ziel: [ZIEL_K[0] - M[0], ZIEL_K[1] - M[1], ZIEL_K[2] - M[2]] };
 var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
 /* Freier Bereich fuer Leber und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
-function bereichFuer(w, h, toolsOben, toolsUnten) {
+function bereichFuer(w, h, toolsOben, toolsUnten, ueben) {
+  if (w < 1000 && ueben) return { x0: 0, x1: w, y0: 60, y1: Math.max(150, toolsOben - 14 - 0.26 * h), labW: 104, fit: 70 };   /* Handy beim Ueben: die Karte (26 % der Hoehe) liegt direkt ueber der Werkzeugleiste, die Leber steht darueber */
   if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 70 };   /* Handy: links und rechts bleibt je eine Namensspalte (labW) frei, die Leber steht dazwischen */
   return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil(toolsUnten) + 6), y1: h - 30, labW: 142, fit: 100 };
 }
@@ -620,7 +621,7 @@ var aktiv = 0, fitDist = 0;
 /* Freier Bereich fuer Leber und Beschriftung (Pixel): Desktop rechts der Leiste, Handy zwischen Titel und Werkzeugleiste */
 function bereich(w, h) {
   var tr = $('tools').getBoundingClientRect();
-  return bereichFuer(w, h, tr.top, tr.bottom);
+  return bereichFuer(w, h, tr.top, tr.bottom, document.body.classList.contains('ueben'));
 }
 function distFuer(a, w, h) {
   return abstandFuer(a.ext, bereich(w, h), camera.fov, h);
@@ -715,17 +716,19 @@ function quizNext() {
   $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
 }
 function quizNeu() { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); }
+function uebenKlasse() { document.body.classList.toggle('ueben', !!(quiz || wege)); groesse(window.innerWidth, window.innerHeight); }   /* Handy: Karte unten, Bildbereich der Leber darueber */
 function quizStart() {
   if (wege) wegeEnd();
   setSelected(null); quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
   $('bQuiz').classList.add('on'); $('bQuiz').textContent = 'Üben beenden';
   $('qNext').textContent = 'Nächste'; $('qNext').style.display = '';
-  lv++; quizNext();
+  uebenKlasse(); lv++; quizNext();
 }
 function quizEnd() {
   clearTimeout(quizT);
   if (quiz && quiz.target) leuchte(quiz.target, false);
   quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+  uebenKlasse();
 }
 function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
   var Q = quiz; if (!Q || !Q.target || Q.wait) return;
@@ -759,14 +762,17 @@ function wegeZeigen() {
   var w = WEGE[wege.nr], last = wege.nr === WEGE.length - 1;
   showCard('Üben · Wege verfolgen', 'Weg ' + (wege.nr + 1) + ' von ' + WEGE.length + ': ' + w.titel, '', null, true);
   var L = $('sLead');
-  var zeile = function (kl, t) { var d = document.createElement('div'); d.className = kl; d.textContent = t; L.appendChild(d); return d; };
-  zeile('wg-auf', w.aufgabe);
-  if (w.hinweis) zeile('wg-hint', w.hinweis);
+  var kasten = function (kl) { var d = document.createElement('div'); d.className = kl; L.appendChild(d); return d; };
+  var zeile = function (kl, t, in_) { var d = document.createElement('div'); d.className = kl; d.textContent = t; (in_ || L).appendChild(d); return d; };
+  var txt = kasten('wg-text' + (wege.fertig ? ' fertig' : ''));   /* Aufgabe und Hinweis: scrollen auf dem Handy */
+  zeile('wg-auf', w.aufgabe, txt);
+  if (w.hinweis) zeile('wg-hint', w.hinweis, txt);
   zeile('wg-liste', wege.liste.length || wege.fertig ? wege.liste.join(' → ') + (wege.fertig ? '' : ' → …') : '…');
   if (wege.text) zeile('wg-rueck ' + (wege.text.ok ? 'ok' : 'no'), wege.text.t);
   if (wege.fertig) {
-    zeile('wg-ab', w.abschluss);
-    if (last) zeile('wg-ab', 'Alle vier Wege geschafft.');
+    var ab = kasten('wg-abw');
+    zeile('wg-ab', w.abschluss, ab);
+    if (last) zeile('wg-ab', 'Alle vier Wege geschafft.', ab);
   }
   $('sScore').textContent = wege.ok + ' von ' + wege.n + ' Stationen auf Anhieb richtig';
   $('qNext').style.display = last ? 'none' : '';
@@ -785,12 +791,13 @@ function wegeStart() {
   durchsicht(true);                                      /* die Lebervenen liegen im Lebergewebe: nur bei Durchsicht antippbar */
   $('bWege').classList.add('on'); $('bWege').textContent = 'Wege beenden';
   $('qNext').textContent = 'Nächster Weg';
+  uebenKlasse();
   wegeSetzen(0);
 }
 function wegeEnd() {
   var v = wege && wege.vorher;
   wegeLeuchtAus();
-  wege = null; closeCard();
+  wege = null; closeCard(); uebenKlasse();
   $('bWege').classList.remove('on'); $('bWege').textContent = 'Wege verfolgen';
   if (v) { setMahlzeit(v.mahlzeit, true); durchsicht(v.durch); }   /* Mahlzeit und Durchsicht wie vorher */
 }
@@ -1655,6 +1662,7 @@ organ.abbauen = function () {
   abgebaut = true;
   schemaWeicht(); SCH.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
+  document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();

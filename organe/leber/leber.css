@@ -72,6 +72,18 @@ body.schema #labels,body.schema #leaders{display:none}
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + var(--wz,132px) + 14px);max-height:calc(66vh - var(--wz,132px) - 70px);overflow-y:auto}
   #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
   body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
+  /* Ueben (Strukturen finden, Wege verfolgen): kompakte Karte unten direkt ueber der Werkzeugleiste (26 % der Hoehe, leber.js bereichFuer richtet den Bildbereich danach aus);
+     Aufgabe und Abschluss scrollen, Stationsliste, Rueckmeldung, Zaehlung und Knoepfe bleiben sichtbar */
+  body.ueben #scard.show{display:flex;flex-direction:column;top:auto;bottom:calc(34vh + var(--wz,132px) + 14px);height:26vh;max-height:26vh;overflow:hidden;padding:10px 14px}
+  body.ueben #scard h3{margin:2px 0 4px;font-size:14px}
+  body.ueben #scard #sLead{flex:1 1 auto;min-height:0;margin:0 0 4px;display:flex;flex-direction:column;font-size:12px;line-height:1.4}
+  body.ueben #scard .wg-text{flex:1 1 0;min-height:2.6em;overflow-y:auto}
+  body.ueben #scard .wg-text.fertig{display:none}
+  body.ueben #scard .wg-abw{flex:1 1 0;min-height:0;overflow-y:auto}
+  body.ueben #scard .wg-liste{margin-top:4px;flex:none}
+  body.ueben #scard .wg-rueck{margin-top:4px;flex:none}
+  body.ueben #scard .qa{margin-top:4px;flex:none}
+  body.ueben #scard #sAfter{display:none}
   /* Schema: oben, ueber der Werkzeugleiste; bei offenem Schema Leiste weg, Werkzeugleiste ganz unten, Schema/Infokarte/Hinweis darueber */
   #schema{left:12px;right:12px;top:62px;bottom:calc(34vh + var(--wz,132px) + 14px);width:auto;max-width:none;padding:8px 8px 6px;background:rgba(18,34,41,.98)}
   #schema .sch-hint{display:none}
