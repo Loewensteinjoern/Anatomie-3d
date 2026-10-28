@@ -38,8 +38,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #scard .ok{color:#7CD69B}
 #scard .no{color:#F08A7E}
 
-/* Schema (vorbereitet, bleibt ausgeblendet, bis es in einem spaeteren Schritt gezeichnet wird): rechts am Rand unter der Werkzeugleiste */
-#schema{top:142px;right:22px;bottom:76px;width:calc((100vh - 254px) * 1.2 + 26px);max-width:calc(100vw - 308px);
+/* Schema (leber.js, Abschnitt 7): rechts am Rand unter der Werkzeugleiste; Bild 460 x 722 */
+#schema{top:142px;right:22px;bottom:76px;width:calc((100vh - 254px) * .637 + 26px);max-width:calc(100vw - 308px);
   padding:10px 12px 8px;display:none;flex-direction:column}
 #schema.show{display:flex}
 #schema .sch-head{display:flex;align-items:baseline;gap:12px;padding-right:36px;min-height:15px}
@@ -48,6 +48,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #schema .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
 #schemaBox{flex:1;min-height:0;display:flex}
 #schemaBox svg{flex:1;width:100%;height:100%;display:block}
+#schemaBox .sz{cursor:pointer}
 body.schema #labels,body.schema #leaders{display:none}
 
 @media (max-width:1000px){
