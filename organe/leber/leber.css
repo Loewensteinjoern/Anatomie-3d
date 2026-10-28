@@ -26,7 +26,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #rail .tab{flex:1 1 calc(33.3% - 3px);font-size:10px;padding:6px 0}
 .pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
 
-/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte (die Karte ist vorbereitet, sie wird in einem spaeteren Schritt gefuellt) */
+/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte */
 #scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
   scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 #scard .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
@@ -37,6 +37,11 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #scard .score{font-family:var(--mono);font-size:11px;color:var(--brass);margin-right:auto}
 #scard .ok{color:#7CD69B}
 #scard .no{color:#F08A7E}
+/* Ueben "Wege verfolgen": Hinweis zur Mahlzeit, gefundene Stationen, Rueckmeldung, Abschluss */
+#scard .wg-hint{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--ink-faint)}
+#scard .wg-liste{margin-top:9px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--brass)}
+#scard .wg-rueck{margin-top:8px}
+#scard .wg-ab{margin-top:8px;color:var(--ink)}
 
 /* Schema (leber.js, Abschnitt 7): rechts am Rand unter der Werkzeugleiste; Bild 460 x 722 */
 #schema{top:142px;right:22px;bottom:76px;width:calc((100vh - 254px) * .637 + 26px);max-width:calc(100vw - 308px);

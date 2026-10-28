@@ -70,6 +70,38 @@ var STRUKTUREN = [
     txt: 'Die Muskelkuppel trennt Brust- und Bauchraum; die Leber liegt direkt darunter. Bei jedem Atemzug bewegt sie sich mit: Beim Einatmen schiebt das Zwerchfell sie nach unten. Deshalb tastet man den Leberrand am besten, wenn der Mensch tief einatmet.',
     facts: { 'Liegt': 'direkt über der Leber', 'Rechts': 'höher als links – wegen der Leber', 'Beim Einatmen': 'schiebt die Leber nach unten' } }
 ];
+/* Hilfekarten: [Schluessel, Titel, Text, Merke] (Texte von Joern freigegeben) */
+var HILFE = [
+  ['aufgaben', 'Aufgaben der Leber', 'Die Leber ist das wichtigste Stoffwechselorgan. Sie speichert Zucker als Glykogen und gibt ihn bei Bedarf wieder ins Blut ab, baut Fette und Eiweiße um und speichert Vitamine und Eisen. Sie stellt wichtige Eiweiße her, zum Beispiel Albumin und die meisten Gerinnungsfaktoren. Giftstoffe, Alkohol und viele Medikamente baut sie ab, das giftige Ammoniak wandelt sie in Harnstoff um. Außerdem bildet sie die Galle.',
+    'Arbeitet die Leber nicht mehr, zeigt sich das an vielen Stellen: Blutungsneigung, Wasser im Bauch, Gelbsucht und Verwirrtheit durch Ammoniak.'],
+  ['blut', 'Pfortader und Leberarterie', 'Die Leber bekommt Blut aus zwei Quellen: Etwa drei Viertel kommen über die Pfortader aus Magen, Darm und Milz, ein Viertel über die Leberarterie aus der Aorta. Zusammen fließen rund 1,5 Liter Blut pro Minute durch die Leber. In den Leberläppchen mischen sich beide Ströme; danach verlässt das Blut die Leber über die Lebervenen und die untere Hohlvene zum Herzen.',
+    'Was der Darm aufnimmt, kommt zuerst zur Leber. Geschluckte Medikamente werden dabei teilweise schon abgebaut, bevor sie wirken (First-Pass-Effekt) – deshalb ist die Dosis als Tablette oft höher als in die Vene.'],
+  ['galle', 'Galle und Gallenwege', 'Die Leberzellen bilden täglich etwa 0,5 bis 1 Liter Galle. Ihre Gallensäuren zerlegen Fette im Darm in feine Tröpfchen, damit sie verdaut werden können. Außerdem scheidet die Leber mit der Galle Abbaustoffe aus, etwa den gelben Farbstoff Bilirubin aus dem roten Blutfarbstoff. Zwischen den Mahlzeiten ist der Schließmuskel an der Papille geschlossen: Die Galle fließt in die Gallenblase und wird eingedickt. Nach dem Essen zieht sich die Gallenblase zusammen, und die Galle fließt in den Zwölffingerdarm.',
+    'Ist der Abfluss der Galle versperrt, gelangt Bilirubin ins Blut: Haut und Augen werden gelb, der Urin dunkel und der Stuhl hell.'],
+  ['pflege', 'Pflege: Leberwerte und Gelbsucht', 'Sind Leberzellen geschädigt, steigen die Enzyme GPT (ALT) und GOT (AST) im Blut, bei einem Gallenstau vor allem Gamma-GT und alkalische Phosphatase. Wie gut die Leber arbeitet, zeigen Albumin und Gerinnung: Stellt die Leber zu wenig her, sinken Albumin und Quick-Wert, die INR steigt. Bilirubin steigt bei Gelbsucht. Pflegende achten auf gelbe Augen und Haut, Juckreiz, die Farbe von Urin und Stuhl, Blutungszeichen und Veränderungen des Bewusstseins.',
+    'Gelbsucht sieht man zuerst im Weiß der Augen, etwa ab 2 mg/dl Bilirubin – am besten bei Tageslicht ansehen.'],
+  ['modell', 'So liest du das Modell', 'Die Leber ist von vorn dargestellt, so wie sie im Körper liegt. Violett ist die Pfortader, rot die Leberarterie, blau sind Lebervenen und Hohlvene, grün die Gallenwege. Mit „Durchsicht“ wird das Lebergewebe gläsern: Dann sieht man, dass Pfortader, Leberarterie und Gallengang gemeinsam verzweigen und die Lebervenen getrennt davon laufen. Der Schalter „nüchtern / nach dem Essen“ zeigt, wohin die Galle fließt. Die Teilchen zeigen die Richtung der Strömung – symbolisch, nicht maßstäblich.',
+    'In der Leber laufen Pfortader, Leberarterie und Gallengang immer zu dritt (Glisson-Trias) – bis in die Ecken der Leberläppchen.']
+];
+/* Ueben "Wege verfolgen": feste Reihenfolge der vier Wege. Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name der ersten Struktur); mahlzeit = false (nuechtern) oder true (nach dem Essen)
+   schaltet das Modell, fehlt sie, bleibt es wie es ist. Nur Daten: die Abfolge im Code (wegeStart bis wegeAntwort) kennt keine Leber-Besonderheiten. */
+var LEBER_LAPPEN = ['lappenR', 'lappenL', 'quadrat', 'schwanz'];
+var WEGE = [
+  { titel: 'Blut aus dem Darm', aufgabe: 'Das Blut kommt aus Magen und Darm. Tippe seine Stationen der Reihe nach an, bis es die Leber wieder verlässt.',
+    stationen: [{ ids: ['pfortader'] }, { ids: LEBER_LAPPEN, de: 'Leber' }, { ids: ['lebervenen'] }, { ids: ['hohlvene'] }],
+    abschluss: 'Geschafft: Was der Darm aufnimmt, fließt über die Pfortader zuerst durch die Leber und erst dann über die Lebervenen zum Herzen.' },
+  { titel: 'Blut aus der Aorta', aufgabe: 'Das Blut kommt aus der Aorta. Tippe seine Stationen der Reihe nach an, bis es die Leber wieder verlässt.',
+    stationen: [{ ids: ['arterie'] }, { ids: LEBER_LAPPEN, de: 'Leber' }, { ids: ['lebervenen'] }, { ids: ['hohlvene'] }],
+    abschluss: 'Geschafft: Die Leberarterie bringt sauerstoffreiches Blut; in der Leber mischt es sich mit dem Blut der Pfortader.' },
+  { titel: 'Galle zwischen den Mahlzeiten', aufgabe: 'Die Galle kommt aus der Leber, der Mensch ist nüchtern. Tippe ihre Stationen der Reihe nach an.',
+    hinweis: 'Das Modell zeigt jetzt „nüchtern“.', mahlzeit: false,
+    stationen: [{ ids: ['lebergang'] }, { ids: ['blasengang'] }, { ids: ['gallenblase'] }],
+    abschluss: 'Geschafft: Nüchtern ist der Schließmuskel an der Papille zu – die Galle weicht in die Gallenblase aus und wird dort eingedickt.' },
+  { titel: 'Galle nach dem Essen', aufgabe: 'Der Mensch hat gegessen. Tippe die Stationen der Galle aus der Gallenblase der Reihe nach an.',
+    hinweis: 'Das Modell zeigt jetzt „nach dem Essen“.', mahlzeit: true,
+    stationen: [{ ids: ['gallenblase'] }, { ids: ['blasengang'] }, { ids: ['hauptgang'] }, { ids: ['papille'] }],
+    abschluss: 'Geschafft: Nach dem Essen zieht sich die Gallenblase zusammen, der Schließmuskel öffnet sich, und die Galle fließt in den Zwölffingerdarm.' }
+];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
 var MARKUP = `<div id="title">
   <div class="kicker">Leber &middot; Hepar</div>
@@ -416,6 +448,8 @@ ORDER.forEach(function (s) { enabled[s.id] = true; });
 /* Die Ausschnitte 'Unterseite' und 'Leberpforte' blicken von unten auf die Eingeweideflaeche: Zwoelffingerdarm, Papille und Zwerchfell verdecken dann den Blick und sind
    ausgeblendet, solange man die Ebene nicht selbst bedient hat (wie der Brustkorb bei der Lunge) */
 var AUSBLEND = ['zwoelffinger', 'papille', 'zwerchfell'], hand = {};
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait } */
+var wege = null, wegeT = null;   /* Ueben "Wege verfolgen" (siehe Abschnitt vor dem Antippen) */
 
 function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (Gefaesse, Gaenge, Gallenblase) */
@@ -434,6 +468,7 @@ function applyLook() {
   LAPPEN.forEach(function (sid) { stelleMat(MAT[sid], seeThrough, seeThrough ? GLAS : 1); });
 }
 function setSelected(id) {
+  if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
   selected = id;
   var brass = srgb(0xE0A94A);
   ORDER.forEach(function (s) {
@@ -448,6 +483,7 @@ function setSelected(id) {
   lv++;
   var box = $('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
   $('iDe').textContent = s.de;
@@ -468,7 +504,7 @@ function ebene(sid, an) {
   applyVisibility();
 }
 (function leiste() {
-  /* Reiter: Strukturen, Hilfekarten, Ueben (die beiden letzten Reiter sind vorbereitet und noch leer) */
+  /* Reiter: Strukturen, Hilfekarten, Ueben */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
@@ -484,6 +520,23 @@ function ebene(sid, an) {
   });
   $('rail').appendChild(tabs);
   panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Hilfekarten */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erklärt – tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  HILFE.forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur an der Leber und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge den Weg von Blut und Galle: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  var bw = document.createElement('button'); bw.className = 'gh'; bw.id = 'bWege'; bw.textContent = 'Wege verfolgen';
+  bw.addEventListener('click', function () { wege ? wegeEnd() : wegeStart(); });
+  pb.appendChild(bq); pb.appendChild(bw); paneU.appendChild(pb);
   /* Strukturen: nach Gruppen, Farbpunkt blendet die Struktur ein und aus */
   var gruppen = [];
   ORDER.forEach(function (s) { if (gruppen.indexOf(s.grp) < 0) gruppen.push(s.grp); });
@@ -504,9 +557,9 @@ function ebene(sid, an) {
         ebene(s.id, !enabled[s.id]);
       }
       sw.addEventListener('click', function (e) { e.stopPropagation(); flip(); });
-      row.addEventListener('click', function () { setSelected(s.id); });
+      row.addEventListener('click', function () { if (!quiz && !wege) setSelected(s.id); });
       row.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); setSelected(s.id); }
+        if (e.key === 'Enter') { e.preventDefault(); if (!quiz && !wege) setSelected(s.id); }
         if (e.key === ' ') { e.preventDefault(); flip(); }
       });
       wrap.appendChild(row);
@@ -521,6 +574,7 @@ function durchsicht(an) {
   $('legNote').textContent = LEGNOTE[an ? 1 : 0];
   applyLook();
   lv++;
+  if (quiz) quizNeu();                                   /* andere Ansicht: neue Aufgabe aus den jetzt sichtbaren Strukturen */
 }
 $('bSee').onclick = function () { durchsicht(!seeThrough); };
 $('bCls').onclick = function () { setSelected(null); };
@@ -583,6 +637,7 @@ function gehe(i) {
   orbit.anim = Kern.fahrt(view, { theta: view.theta + dth, phi: a.phi, dist: d, target: a.target }, 700);
   fitDist = d;
   lv++;
+  if (quiz) quizNeu();
 }
 for (var ci = 0; ci < AUSSCHNITTE.length; ci++) (function (i) { $('cam' + i).onclick = function () { gehe(i); }; })(ci);
 
@@ -611,6 +666,163 @@ function ansicht(theta, phi, dist, target) {
   orbit.anim = null;
 }
 
+/* =====================================================================
+   Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (Handy: oben, endet ueber der Werkzeugleiste)
+   ===================================================================== */
+function showCard(kick, title, lead, after, istQuiz) {
+  schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  $('sKick').textContent = kick; $('sTitle').textContent = title;
+  $('sLead').textContent = lead;
+  var A = $('sAfter'); A.innerHTML = '';
+  if (after) { var h5 = document.createElement('h5'); h5.textContent = after.h; var p = document.createElement('p'); p.textContent = after.t; A.appendChild(h5); A.appendChild(p); }
+  $('sQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  $('scard').classList.add('show');
+  $('info').classList.remove('show');
+  lv++;
+}
+function closeCard() {
+  $('scard').classList.remove('show');
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  lv++;
+}
+function openHelp(key) {
+  var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
+}
+/* Eine Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte; jede Struktur hat ihr eigenes Material, es leuchtet nur sie */
+function leuchte(id, an) {
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+/* Ueben "Strukturen finden": "Tippe auf: ..." - alle eingeblendeten Strukturen ausser dem Zwerchfell, die Lebervenen nur bei Durchsicht
+   (sonst verdeckt sie das Lebergewebe). Math.random nur hier, bei der Auswahl der gesuchten Struktur (wie bei der Niere). */
+function quizPool() {
+  return ORDER.filter(function (s) { return s.meshes.length && enabled[s.id] && s.id !== 'zwerchfell' && (s.id !== 'lebervenen' || seeThrough); }).map(function (s) { return s.id; });
+}
+function quizNext() {
+  var pool = quizPool(); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  showCard('Üben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe die Leber, wenn du die Struktur nicht gleich siehst.', null, true);
+  $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizNeu() { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(); }
+function quizStart() {
+  if (wege) wegeEnd();
+  setSelected(null); quiz = { n: 0, ok: 0, target: null, last: null, wait: false };
+  $('bQuiz').classList.add('on'); $('bQuiz').textContent = 'Üben beenden';
+  $('qNext').textContent = 'Nächste'; $('qNext').style.display = '';
+  lv++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = $('sLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben – die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+/* Ueben "Wege verfolgen": die Stationen eines Weges (WEGE, Daten oben) der Reihe nach antippen. Die Abfolge kennt nur Stationen (Listen von Struktur-ids),
+   Karte und Leuchten; das Leberlaeppchen kann dieselbe Abfolge mit eigenen Wegen nutzen. Zustand wege: nr = Weg, st = naechste Station, n = erledigte Stationen,
+   ok = davon auf Anhieb richtig, fehl = Fehler in Folge bei der gesuchten Station, liste = Namen der erledigten Stationen, fertig = Weg abgeschlossen. */
+function wegeName(s) { return s.de || STRUCT[s.ids[0]].de; }
+function wegeLeuchtAus() {
+  clearTimeout(wegeT);
+  if (wege && wege.leucht) wege.leucht.forEach(function (id) { leuchte(id, false); });
+  if (wege) wege.leucht = [];
+}
+function wegeLeuchte(ids, ms) {
+  wegeLeuchtAus();
+  ids.forEach(function (id) { leuchte(id, true); });
+  wege.leucht = ids.slice();
+  wegeT = setTimeout(wegeLeuchtAus, ms);
+}
+function wegeZeigen() {
+  var w = WEGE[wege.nr], last = wege.nr === WEGE.length - 1;
+  showCard('Üben · Wege verfolgen', 'Weg ' + (wege.nr + 1) + ' von ' + WEGE.length + ': ' + w.titel, '', null, true);
+  var L = $('sLead');
+  var zeile = function (kl, t) { var d = document.createElement('div'); d.className = kl; d.textContent = t; L.appendChild(d); return d; };
+  zeile('wg-auf', w.aufgabe);
+  if (w.hinweis) zeile('wg-hint', w.hinweis);
+  zeile('wg-liste', wege.liste.length || wege.fertig ? wege.liste.join(' → ') + (wege.fertig ? '' : ' → …') : '…');
+  if (wege.text) zeile('wg-rueck ' + (wege.text.ok ? 'ok' : 'no'), wege.text.t);
+  if (wege.fertig) {
+    zeile('wg-ab', w.abschluss);
+    if (last) zeile('wg-ab', 'Alle vier Wege geschafft.');
+  }
+  $('sScore').textContent = wege.ok + ' von ' + wege.n + ' Stationen auf Anhieb richtig';
+  $('qNext').style.display = last ? 'none' : '';
+}
+function wegeSetzen(nr) {
+  wegeLeuchtAus();
+  wege.nr = nr; wege.st = 0; wege.fehl = 0; wege.liste = []; wege.fertig = false; wege.text = null;
+  var w = WEGE[nr];
+  if (w.mahlzeit !== undefined) setMahlzeit(w.mahlzeit, true);   /* dieselbe Funktion wie die Knoepfe, ohne die Einblendung */
+  wegeZeigen();
+}
+function wegeStart() {
+  if (quiz) quizEnd();
+  setSelected(null);
+  wege = { nr: 0, st: 0, n: 0, ok: 0, fehl: 0, liste: [], fertig: false, text: null, leucht: [], vorher: { mahlzeit: mahlzeit, durch: seeThrough } };
+  durchsicht(true);                                      /* die Lebervenen liegen im Lebergewebe: nur bei Durchsicht antippbar */
+  $('bWege').classList.add('on'); $('bWege').textContent = 'Wege beenden';
+  $('qNext').textContent = 'Nächster Weg';
+  wegeSetzen(0);
+}
+function wegeEnd() {
+  var v = wege && wege.vorher;
+  wegeLeuchtAus();
+  wege = null; closeCard();
+  $('bWege').classList.remove('on'); $('bWege').textContent = 'Wege verfolgen';
+  if (v) { setMahlzeit(v.mahlzeit, true); durchsicht(v.durch); }   /* Mahlzeit und Durchsicht wie vorher */
+}
+function wegeAntwort(sid, durch) {
+  var W = wege; if (!W || W.fertig || !sid) return;    /* ins Leere getippt: keine Wertung */
+  var w = WEGE[W.nr], s = w.stationen[W.st], name = wegeName(s);
+  var ok = s.ids.some(function (id) { return id === sid || durch.indexOf(id) >= 0; });
+  if (ok) {
+    if (!W.fehl) W.ok++;
+    W.n++; W.liste.push(name); W.st++; W.fehl = 0;
+    W.text = { ok: true, t: 'Richtig: ' + name + '.' };
+    wegeLeuchte(s.ids, 1200);
+  } else {
+    W.fehl++;
+    var das = 'Das war: ' + (STRUCT[sid] ? STRUCT[sid].de : '?') + '. ';
+    if (W.fehl < 2) W.text = { ok: false, t: das + 'Gesucht ist die ' + (W.st === 0 ? 'erste' : 'nächste') + ' Station.' };
+    else {                                               /* zweiter Fehler in Folge: die Station leuchtet, gilt als erledigt, zaehlt nicht als "auf Anhieb" */
+      W.text = { ok: false, t: das + 'Die gesuchte Station leuchtet jetzt.' };
+      W.n++; W.liste.push(name); W.st++; W.fehl = 0;
+      wegeLeuchte(s.ids, 2400);
+    }
+  }
+  if (W.st >= w.stationen.length) W.fertig = true;
+  wegeZeigen();
+}
+$('sClose').onclick = function () { if (quiz) quizEnd(); else if (wege) wegeEnd(); else closeCard(); };
+$('qNext').onclick = function () {
+  if (quiz) quizNeu();
+  else if (wege && wege.nr < WEGE.length - 1) wegeSetzen(wege.nr + 1);
+};
+$('qStop').onclick = function () { if (quiz) quizEnd(); else if (wege) wegeEnd(); };
+
 /* Antippen: sichtbare Strukturen; durchscheinende Huellen (Zwerchfell, Zwoelffingerdarm, Lappen bei Durchsicht) zaehlen nur,
    wenn dahinter nichts Dichteres getroffen wird */
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -620,13 +832,16 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null;
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [];
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
+    durch.push(sid);                                     /* Strukturen bis zum ersten undurchsichtigen Treffer (fuer das Ueben) */
     if (weichMat(o)) { if (!weich) weich = sid; }
     else treffer = sid;
   }
+  if (wege) { wegeAntwort(treffer || weich || null, durch); return; }
+  if (quiz) { quizAntwort(treffer || weich || null, durch); return; }
   setSelected(treffer || weich || null);
 }
 canvas.addEventListener('click', canvasKlick);
@@ -1396,6 +1611,7 @@ function schemaPick(info) {
 function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); }   /* Hilfekarte und Ueben weichen dem Schema */
   $('bSchema').classList.toggle('on', on);
   if (on) { SCH.build($('schemaBox'), schemaPick); SCH.update(selected, enabled, lv); }
   $('schema').classList.toggle('show', on);
@@ -1404,7 +1620,7 @@ function setSchema(on) {
   lv++;
 }
 /* Das Schema weicht anderen Ansichten: hier ergaenzen spaetere Schritte ihre Gruende (Hilfekarte und Ueben, Lupe, AR, Fahrt in die Leberlaeppchen) */
-function schemaWeicht() { if (schemaOn) setSchema(false); }
+function schemaWeicht() { if (schemaOn) setSchema(false); }   /* wird von showCard (Hilfekarte, Ueben, Wege) aufgerufen */
 $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 function schemaTick() { SCH.update(selected, enabled, lv); }
@@ -1415,6 +1631,10 @@ function schemaTick() { SCH.update(selected, enabled, lv); }
 var t0 = performance.now(), last = t0;
 var App = window.LeberApp = { ready: false, aufbauMs: 0, schema: function (an) { setSchema(!!an); }, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris,
   mahlzeit: function (an) { setMahlzeit(!!an); },
+  /* fuer die Pruefung: Antippen einer Struktur wie mit dem Finger (nur beim Ueben), Zustaende von "Wege verfolgen" und "Strukturen finden" */
+  tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
+  wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice() }; },
+  quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
   stroemung: function () { return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, anteil: anteil, gallenblase: 1 - (1 - STR.REST) * sstep6(kontr) }; } };
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -1434,6 +1654,7 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   abgebaut = true;
   schemaWeicht(); SCH.abbauen();
+  clearTimeout(quizT); clearTimeout(wegeT);
   clearTimeout(Kern.toast._t);
   canvas.removeEventListener('click', canvasKlick);
   orbit.loesen();
