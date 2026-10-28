@@ -205,11 +205,17 @@ function wulst(x, z) {
   return r2 >= 1 ? 0 : (1 - r2) * (1 - r2);
 }
 function ebeneY(x, z) { return 109.0 + 0.36 * x - 0.51 * z - 2 * glatt(-6, -12, x) - WULST.h * wulst(x, z); }
-/* Unterrand rechts: Die rechte Seite der Leber haengt vor der rechten Dickdarmbiegung (Lippe, Dickdarm hinten ausgespart) bis auf diese Hoehe
-   herunter (Tabelle [x, y], aufsteigend); wo der Dickdarm vor der Lippe wenig Platz laesst (x > -11), steigt der Rand weich an und folgt dann
-   der Oberseite des querlaufenden Dickdarms. Der Boden wirkt nur rechts von x = -7 (dort liegt die Ebene tiefer), weiter links liegt er unter der Ebene. */
-var UNTERRAND = [[-14, 101.7], [-12.6, 101.8], [-12, 101.95], [-11.6, 102.4], [-11.2, 103.1], [-10.8, 103.8], [-10.4, 104.4], [-10, 104.8], [-9, 104.7], [-8, 104.5], [-7.5, 104.5], [-6.5, 98]];
-function unten(x, y, z) { return (smax(ebeneY(x, z), interp(UNTERRAND, x), 1.2) - y) * 0.867; }
+/* Unterrand rechts: Der Boden (untere Grenze) der Leber steigt rechts von aussen (x = x0, y0) nach links gleichmaessig schraeg mit der Steigung
+   `steigung` an (Gerade, wie der Unterrand einer Leber von vorn), bis zur Gallenblase (x1); weiter links gilt wieder die Eingeweideflaeche. Der
+   rechte Lappen haengt so mit einer Lippe vor der rechten Dickdarmbiegung herunter (Dickdarm hinten ausgespart); der querlaufende Dickdarm bleibt
+   frei (Abstand DICKE), die Lippe vor ihm ist nur 1 bis 2 cm dick, deshalb folgt der Rand bei x = -11 bis -8 der Oberseite des Dickdarms nicht
+   tiefer, als dort Platz ist. */
+var UNTERRAND = { x0: -13.4, y0: 102.4, steigung: 0.46, x1: -6.9 };
+function unterrand(x) {
+  var u = UNTERRAND, t = x - u.x0, tm = u.x1 - u.x0;
+  return u.y0 + u.steigung * (t < 0 ? 0 : t > tm ? tm : t) - 8 * glatt(u.x1, u.x1 + 0.8, x);
+}
+function unten(x, y, z) { return (smax(ebeneY(x, z), unterrand(x), 1.2) - y) * 0.867; }
 
 /* Ausguss des Raums unter der rechten Zwerchfellkuppel: oben die Kuppel (0,5 cm darunter), seitlich/vorn/hinten die Haut minus
    Wand, unten die Eingeweideflaeche; die Kante unten (Unterrand) ist schmal, aber verrundet: ein Messerrand braeche im Gitter des
@@ -284,7 +290,7 @@ function leber(x, y, z) {
   d = smax(d, 0.15 - F.grube(x, y, z), 0.5);   /* Gallenblasengrube */
   return d;
 }
-var GRENZEN = [[-14.3, 101.6, -5.1], [7.5, 117.3, 6.5]];   /* Gitterbox der Leber (mit 0,3 cm Rand) */
+var GRENZEN = [[-14.2, 102.2, -5.1], [7.5, 117.3, 6.5]];   /* Gitterbox der Leber (mit 0,3 cm Rand) */
 
 /* ---- Lappen (fuer das Detailmodell): je ein eigenes Abstandsfeld, durch Spalte (SPALT cm) getrennt ----
    Rechter Lappen = der Rest; linker Lappen links der Ebene des Sichelbands; Quadratlappen nur an der Unterseite: zwischen Gallenblasengrube
@@ -328,7 +334,7 @@ function lappen() {
       var l = leber(x, y, z);
       if (l > 0.2) return l;
       return Math.max(l, SPALT - Math.min(fLinks(l, x), fQuadrat(l, x, y, z), fSchwanz(l, x, y, z)));
-    }, [[-14.3, 101.6, -5.1], [1.1, 117.3, 6.5]]),
+    }, [[-14.2, 102.2, -5.1], [1.1, 117.3, 6.5]]),
     lap('lappenL', function (x, y, z) { return fLinks(leber(x, y, z), x); }, [[0.7, 106.9, -2.6], [7.5, 117.2, 6.2]]),
     lap('quadrat', function (x, y, z) { return fQuadrat(leber(x, y, z), x, y, z); }, [[-4.8, 104.7, 1.6], [1.1, 111.5, 6.0]]),
     lap('schwanz', function (x, y, z) { return fSchwanz(leber(x, y, z), x, y, z); }, [[-2.8, 107.7, -3.6], [1.1, 115.6, 1.9]])
@@ -402,8 +408,8 @@ var PAPILLE = { p: [-5.95, 99.4, -0.8], richtung: [-0.997, 0.08, -0.03], r: 0.45
    (y <= Kuppel - 0,05, nur dort, wo das Zwerchfell die Kuppel bildet, also nicht vor dem Rippenbogen); am Einschnitt des Unterrands laeuft
    sie duenn aus (Hoehe 0 an der Eingeweideflaeche + 0,5 cm, volle Hoehe 1,5 cm weiter oben), wird zwischen y = 112,3 und y = 114,3 weich auf 30 % flacher
    (unter der Kuppel ist nur Platz fuer ca. 0,2 cm) und reicht nach hinten bis z = 0,8, nahe an die
-   Hohlvene; rundes Leberband = Strang (r 0,3) in der Furche an der Eingeweideflaeche und ab dem Einschnitt noch ca. 3 cm frei nach unten
-   (Steuerpunkte [x, y, z], Catmull-Rom) */
+   Hohlvene; rundes Leberband = duenner Strang (r 0,2) in der Furche an der Eingeweideflaeche und ab dem Einschnitt noch ca. 2,5 cm frei
+   nach unten, im Bogen aus der Furche heraus und zum Ende hin duenner (Steuerpunkte [x, y, z], Catmull-Rom, Radius je Punkt in radien) */
 var SICHELBAND_H = 0.8;
 function abstandLeber(x, y, z) {   /* Abstand zur Leberoberflaeche in cm (Naeherung erster Ordnung: Wert / Steigung des Felds); innen < 0 */
   var e = 0.05, l = leber(x, y, z);
@@ -419,7 +425,8 @@ function sichelband(x, y, z) {
 }
 var SICHELBAND = { grenzen: [[0.6, 106.8, 0.5], [1.3, 117.7, 7.3]] };
 var RUNDES_BAND = {
-  pts: [[0.6, ebeneY(0.6, 1.0) - 0.1, 1.0], [0.9, ebeneY(0.9, 3.5) - 0.1, 3.5], [0.9, ebeneY(0.9, 6.0) - 0.1, 6.0], [0.95, 104.7, 6.9], [1.0, 103.8, 7.3]], r: 0.3
+  pts: [[0.6, ebeneY(0.6, 1.0) - 0.1, 1.0], [0.9, ebeneY(0.9, 3.5) - 0.1, 3.5], [0.9, ebeneY(0.9, 5.2) - 0.1, 5.2], [0.93, 106.0, 6.1], [0.97, 104.95, 6.8]],
+  r: 0.2, radien: [0.2, 0.2, 0.23, 0.18, 0.12]   /* r = Radius in der Furche; radien = Radius je Steuerpunkt: am Einschnitt etwas kraeftiger (geht in den Rand ueber), das freie Ende (ca. 2,3 cm) wird duenner */
 };
 
 /* ---- Baeume in der Leber (Pfortader, Leberarterie, Gallengang, Lebervenen) ----
