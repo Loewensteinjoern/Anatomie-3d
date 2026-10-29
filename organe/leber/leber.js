@@ -9,6 +9,8 @@
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Dazu Stroemung mit Mahlzeit-Schalter
    (Abschnitt 6: Blut und Galle als Teilchen auf den Mittellinien der Form, nuechtern oder nach dem Essen) und das Schema (Abschnitt 7, 2D mit
    denselben Teilchen). Die Karte fuer Hilfekarten und Ueben ist im Markup nur vorbereitet und wird in einem spaeteren Schritt gefuellt.
+   Zoomstufe Leber -> Leberlaeppchen (Abschnitt 7b): Lebergewebe antippen -> "Leberlaeppchen hier ansehen" (naechster Endast des Pfortaderbaums im Lappen), Knopf
+   "Laeppchen" (feste Stelle im rechten Lappen); das Laeppchen entsteht aus organe/leber/laeppchen.js (organ.form), die Kamera landet in dessen Startansicht (Adresse leber/laeppchen).
    ===================================================================== */
 (function () {
 'use strict';
@@ -116,6 +118,7 @@ var MARKUP = `<div id="title">
     <button id="cam1" class="gh">Unterseite</button>
     <button id="cam2" class="gh">Leberpforte</button>
     <button id="cam3" class="gh">Gallenwege</button>
+    <button id="bLaeppchen" class="gh" title="In ein Leberläppchen hineinzoomen">Läppchen</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Die Leber als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
   </div>
@@ -149,7 +152,8 @@ var MARKUP = `<div id="title">
   <p><b style="color:#A98BDC">Violett</b> Pfortader – Blut aus Darm und Milz.<br>
   <b style="color:#E0584C">Rot</b> Leberarterie – Blut aus der Aorta.<br>
   <b style="color:#6F93E0">Blau</b> Lebervenen und Hohlvene – Blut zum Herzen.<br>
-  <b style="color:#7CC66E">Grün</b> Gallenwege – Galle zum Darm.</p>
+  <b style="color:#7CC66E">Grün</b> Gallenwege – Galle zum Darm.<br>
+  <b style="color:#E0A94A">Leberläppchen:</b> Lebergewebe antippen → „Leberläppchen hier ansehen“.</p>
   <p class="note" id="legNote">Die Leber von vorn, wie sie im Körper liegt. „Durchsicht“ zeigt die Gefäße im Inneren.</p>
   <p class="note">Die Teilchen zeigen die Strömung – symbolisch, nicht maßstäblich: violett und rot Blut zur Leber, blau Blut zum Herzen, grün Galle.</p>
   <p class="note kz">Durchblutung ca. 1,5 l Blut pro Minute (ein Viertel des Herzzeitvolumens)<br>
@@ -178,6 +182,7 @@ var MARKUP = `<div id="title">
 var LEGNOTE = ['Die Leber von vorn, wie sie im Körper liegt. „Durchsicht“ zeigt die Gefäße im Inneren.',
   'In der Leber verzweigen sich Pfortader, Leberarterie und Gallengang gemeinsam, die Lebervenen laufen getrennt davon.'];
 var organ = { renderer: {}, aufbauen: aufbauen };
+var lpLetzte = null;   /* zuletzt gewaehlte Stelle fuer das Leberlaeppchen (Index in baeume().endpunkte, fuer die Rueckfahrt; nur im Speicher der Seite, ueberdauert den Abbau der Leber) */
 /* Mitte der Leber im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, die Leber steht im Modell mittig (Ziel der Kamerafahrt aus dem Koerper) */
 var M = [-2, 107, 0];
 /* Ausschnitt 'Uebersicht' (Breite und Hoehe im freien Bereich, cm) und Kamera: gemeinsam fuer das Modell und fuer die Fahrt aus dem Koerper;
@@ -198,13 +203,13 @@ function abstandFuer(ext, r, fov, h) {
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (Desktop 115, Handy 100 bei drei Zeilen, je 32 mehr, wenn eine der
-   Reihen umbricht: Reihe 1 (Ausschnitt mit Schema) unter Breite 395 (zweite Zeile) und unter 253 (dritte), Reihe 2 (mit nuechtern und nach dem Essen) unter 364,
+   Reihen umbricht: Reihe 1 (Ausschnitt mit Laeppchen und Schema) unter Breite 465 (zweite Zeile) und unter 255 (dritte), Reihe 2 (mit nuechtern und nach dem Essen) unter 364,
    Reihe 3 (Stroemung) unter 256); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (100 + (w < 395 ? 32 : 0) + (w < 364 ? 32 : 0) + (w < 256 ? 32 : 0) + (w < 253 ? 32 : 0)), unten: u };
+    return { oben: u - (100 + (w < 465 ? 32 : 0) + (w < 364 ? 32 : 0) + (w < 256 ? 32 : 0) + (w < 255 ? 32 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + 115 };
 }
@@ -468,9 +473,12 @@ function stelleMat(m, transparent, opacity) {
 function applyLook() {
   LAPPEN.forEach(function (sid) { stelleMat(MAT[sid], seeThrough, seeThrough ? GLAS : 1); });
 }
-function setSelected(id) {
+/* punkt (optional, Vector3 im Raum der Szene wie ein Treffer beim Antippen): wo die Struktur angetippt wurde; bestimmt bei den Lappen die Stelle fuer "Leberlaeppchen hier ansehen" */
+function setSelected(id, punkt) {
   if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
   selected = id;
+  lpWahl = id && LAPPEN.indexOf(id) >= 0 ? laeppchenWahl(id, punkt) : null;
+  $('iOpen').style.display = lpWahl !== null ? '' : 'none';   /* Knopf "Leberlaeppchen hier ansehen" nur bei den Lappen */
   var brass = srgb(0xE0A94A);
   ORDER.forEach(function (s) {
     var em = (s.id === id) ? 0.28 : 0;
@@ -839,17 +847,17 @@ function canvasKlick(e) {
   ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [];
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [], punkt = null, weichPunkt = null;
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
     durch.push(sid);                                     /* Strukturen bis zum ersten undurchsichtigen Treffer (fuer das Ueben) */
-    if (weichMat(o)) { if (!weich) weich = sid; }
-    else treffer = sid;
+    if (weichMat(o)) { if (!weich) { weich = sid; weichPunkt = hits[i].point; } }
+    else { treffer = sid; punkt = hits[i].point; }
   }
   if (wege) { wegeAntwort(treffer || weich || null, durch); return; }
   if (quiz) { quizAntwort(treffer || weich || null, durch); return; }
-  setSelected(treffer || weich || null);
+  setSelected(treffer || weich || null, treffer ? punkt : weichPunkt);
 }
 canvas.addEventListener('click', canvasKlick);
 
@@ -1633,6 +1641,204 @@ $('bSchemaX').onclick = function () { setSchema(false); };
 function schemaTick() { SCH.update(selected, enabled, lv); }
 
 /* =====================================================================
+   7b. Kamerafahrt zum Leberlaeppchen (Infokarte "Leberlaeppchen hier ansehen" bei den vier Lappen, Knopf "Laeppchen"): Alles Uebrige blendet aus, die Lappen werden in der
+   ersten Haelfte zu Glas (danach noch blasser), der Pfortaderbaum bleibt und fuehrt zur Stelle. Dort waechst in der zweiten Haelfte das Laeppchen aus der Form des
+   Laeppchen-Moduls (organ.form) an den Endast des Pfortaderbaums; es erscheint vergroessert (Massstab: der Pfortaderast des Laeppchens hat den Radius des Endasts).
+   Die Leber dreht sich dabei (alle Achsen, um den Ursprung des Laeppchens), bis die Achse des Laeppchens senkrecht steht: dann gilt in Weltachsen dieselbe Lage wie im
+   Laeppchen-Modell, und die Kamera landet in dessen Startansicht (umgerechnet in Welt-Koordinaten); dann wird die Adresse gesetzt. Beim Zurueckkommen
+   (umg.von === 'laeppchen') steht die Leber gedreht im Nahbild und faehrt nach 450 ms zur Uebersicht zurueck (Drehung zurueck, Laeppchen blendet aus, Lappen werden wieder
+   deckend). Die Stroemung steht waehrend der Fahrt. Neue three.js-Objekte (das Laeppchen) entstehen erst bei der Fahrt.
+   ===================================================================== */
+var LP_STANDARD = [-11.4, 107.1, 1.5];     /* Standardstelle (Knopf "Laeppchen"): der naechste Endast im rechten Lappen (Koerper-Koordinaten, cm) */
+var LP_START = { theta: 0, phi: 1.0, dist: 40, target: [0, 3.2, 0] };   /* Ersatz fuer die Startansicht des Laeppchen-Moduls, falls dessen Skript fehlt */
+var LP_LOBE_ENDE = 0.08;                   /* Deckkraft der Lappen am Ende der Fahrt (Glas: GLAS) */
+var lpWahl = null;                         /* Endast (Index in baeume().endpunkte) zum angetippten Punkt */
+var lpGruppe = null, lpM = [];             /* Gruppe des Laeppchens (Kind von root) und seine Materialien [{ m, op }] */
+var LP = null;                             /* Lage der aktuellen Fahrt: { idx, s (Massstab), pc (Ursprung des Laeppchens, Raum der Leber), qa (Laeppchen -> Leber), qEnd (Leber -> Welt am Ende) } */
+var lpP = null, lpWartet = false;          /* Laden des Laeppchen-Moduls im Hintergrund, Wartezeit nach dem Klick */
+var fz = null;                             /* laufende Fahrt */
+var lpStep = function (a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+var ROOT0 = V(-M[0], -M[1], -M[2]), Q_ID = new THREE.Quaternion();
+/* naechster Endast im Lappen id zum Punkt punkt (Vector3, Raum der Szene); ohne Punkt der am weitesten vorn gelegene. null, wenn es keinen gibt */
+function laeppchenWahl(id, punkt) {
+  var B = form.baeume(), q = punkt ? root.worldToLocal(punkt.clone()) : null, best = null, bd = 1e9;
+  B.endpunkte.forEach(function (e, i) {
+    if (e.lappen !== id) return;
+    var d = q ? Math.pow(e.p[0] - q.x, 2) + Math.pow(e.p[1] - q.y, 2) + Math.pow(e.p[2] - q.z, 2) : -e.p[2];
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function laeppchenStandard() {   /* Index des Endasts im rechten Lappen, der LP_STANDARD am naechsten liegt */
+  var best = null, bd = 1e9;
+  form.baeume().endpunkte.forEach(function (e, i) {
+    if (e.lappen !== 'lappenR') return;
+    var d = Math.pow(e.p[0] - LP_STANDARD[0], 2) + Math.pow(e.p[1] - LP_STANDARD[1], 2) + Math.pow(e.p[2] - LP_STANDARD[2], 2);
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function lpModul() { return Kern.Organe && Kern.Organe.laeppchen; }
+/* Lage des Laeppchens am Endast idx: das untere Ende seines Pfortaderasts (form.anschluss) liegt auf dem Ende des Endasts, die Achse des Laeppchens (Modell +y) zeigt in
+   Richtung des Endasts, die Vorderseite (Modell +z) moeglichst nach vorn (+z der Leber); LP.qEnd dreht das zurueck */
+function laeppchenLage(idx) {
+  var B = form.baeume(), ep = B.endpunkte[idx], ast = B.pfortader.filter(function (a) { return a.pts[a.pts.length - 1] === ep.p; })[0];
+  var e = V(ep.p[0], ep.p[1], ep.p[2]), m = V(ast.pts[1][0], ast.pts[1][1], ast.pts[1][2]);
+  var d = e.clone().sub(m).normalize(), vorn = V(0, 0, 1);
+  if (Math.abs(d.z) > 0.95) vorn = V(1, 0, 0);
+  var az = vorn.sub(d.clone().multiplyScalar(vorn.dot(d))).normalize(), ay = d.clone(), ax = new THREE.Vector3().crossVectors(ay, az);
+  var qa = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(ax, ay, az));
+  var lm = lpModul(), an = lm && lm.form ? lm.form.anschluss() : { p: [0, -1, 0], r: 0.5 }, s = ep.r / an.r;
+  var pc = e.clone().sub(V(an.p[0], an.p[1], an.p[2]).multiplyScalar(s).applyQuaternion(qa));
+  return { idx: idx, s: s, pc: pc, qa: qa, qEnd: qa.clone().invert() };
+}
+/* Startansicht des Laeppchen-Moduls in Welt-Koordinaten: gleiche Blickrichtung, Abstand und Ziel mit dem Massstab und der Lage des Laeppchens umgerechnet, Versatz des Bildbereichs wie im Modell */
+function laeppchenZiel(w, h) {
+  var lm = lpModul(), st = lm && lm.start ? lm.start(w, h) : null, r = bereich(w, h);
+  if (!st) st = Object.assign({ versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] }, LP_START);
+  return { theta: st.theta, phi: st.phi, dist: LP.s * st.dist, target: ROOT0.clone().add(LP.pc).addScaledVector(V(st.target[0], st.target[1], st.target[2]), LP.s), versatz: st.versatz };
+}
+/* Die ganze Leber um den Ursprung des Laeppchens drehen: f = 0 ohne Drehung, 1 mit der Achse senkrecht (der Ursprung bleibt an seinem Platz) */
+function lpDrehung(f) {
+  root.quaternion.copy(Q_ID).slerp(LP.qEnd, f);
+  root.position.copy(ROOT0).add(LP.pc).sub(V(LP.pc.x, LP.pc.y, LP.pc.z).applyQuaternion(root.quaternion));
+}
+/* Das Laeppchen in der Leber (unsichtbar bis zum Einblenden): Teile und Materialien aus organ.form; ohne Modul bleibt die Gruppe leer */
+function lpBauen() {
+  lpGruppe = new THREE.Group(); lpGruppe.name = 'Leberläppchen'; lpGruppe.visible = false;
+  lpGruppe.position.copy(LP.pc); lpGruppe.quaternion.copy(LP.qa); lpGruppe.scale.setScalar(LP.s); root.add(lpGruppe);
+  lpM = [];
+  var lm = lpModul(); if (!lm || !lm.form) return;
+  var def = lm.form.matDef();
+  lm.form.teile().forEach(function (t) {
+    var d = def[t.sid], o = {}, k, mt;
+    for (k in d[1]) o[k] = d[1][k];
+    mt = mat(d[0], o); mt.transparent = true; mt.opacity = 0; lpM.push({ m: mt, op: o.opacity === undefined ? 1 : o.opacity });
+    lpGruppe.add(lm.form.teilMesh(t, mt, d[2] + 3));
+  });
+}
+function lpDeckkraft(f) {   /* Deckkraft des Laeppchens 0..1 */
+  lpM.forEach(function (e) { e.m.opacity = e.op * f; });
+  lpGruppe.visible = f > 0.002;
+}
+function lpAbbau() {   /* Laeppchen entsorgen, Leber in die Ausgangslage */
+  if (lpGruppe) Kern.entsorgen(lpGruppe, envTex);
+  lpGruppe = null; lpM = [];
+  root.quaternion.copy(Q_ID); root.position.copy(ROOT0);
+}
+/* Alles ausser Pfortaderbaum und Lappen zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte. Die Lappen werden Glas (transparent, ohne Tiefenschreiben). */
+function ausblendVorbereiten() {
+  var keep = new Set(), ausMat = new Map(), glas = new Map(), altT = new Map(), altD = new Map(), ausObj = [];
+  STRUCT.pfortader.meshes.forEach(function (m) { keep.add(m.material); });
+  LAPPEN.forEach(function (sid) {
+    STRUCT[sid].meshes.forEach(function (m) {
+      var x = m.material; keep.add(x);
+      if (glas.has(x)) return;
+      glas.set(x, x.opacity); altT.set(x, x.transparent); altD.set(x, x.depthWrite);
+      x.transparent = true; x.depthWrite = false; x.needsUpdate = true;
+    });
+  });
+  root.traverse(function (o) {
+    if (!o.material || !o.visible || o === lpGruppe || o.parent === lpGruppe || keep.has(o.material)) return;
+    var ms = [].concat(o.material);
+    ausObj.push(o);
+    ms.forEach(function (x) { if (!ausMat.has(x)) { ausMat.set(x, x.opacity); altT.set(x, x.transparent); altD.set(x, x.depthWrite); x.transparent = true; x.needsUpdate = true; } });
+  });
+  var ui = Array.prototype.slice.call(umg.bereich.children);
+  var altUi = ui.map(function (e) { return { op: e.style.opacity, pe: e.style.pointerEvents }; });
+  ui.forEach(function (e) { e.style.pointerEvents = 'none'; });
+  canvas.style.pointerEvents = 'none';
+  labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+  return { mats: ausMat, glas: glas, altT: altT, altD: altD, obj: ausObj, ui: ui, altUi: altUi, fertig: false };
+}
+/* Fahrt zum Laeppchen am Endast idx (null: die Standardstelle); wartet, falls das Modul noch im Hintergrund geladen wird */
+function laeppchenOeffnen(idx) {
+  if (fz || abgebaut || lpWartet || !ST) return;
+  if (lpP && !lpModul() && !lpFehl) { lpWartet = true; lpP.then(function () { lpWartet = false; if (!abgebaut) laeppchenOeffnen(idx); }); return; }
+  schemaWeicht();
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard();
+  lpLetzte = idx = (idx === null || idx === undefined) ? laeppchenStandard() : idx;
+  LP = laeppchenLage(idx);
+  var w = window.innerWidth, h = window.innerHeight, ziel = laeppchenZiel(w, h), r = bereich(w, h);
+  var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
+  ORDER.forEach(function (d) { d.meshes.forEach(function (m) { var mt = m.material; if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)); }); });   /* Hervorhebung weg */
+  lpBauen();
+  var f = ausblendVorbereiten();
+  orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);
+  f.hin = true; f.adresse = Kern.organAdresse('laeppchen'); f.a = orbit.anim;
+  f.von = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2]; f.nach = ziel.versatz;
+  fz = f;
+}
+var lpFehl = false;
+$('iOpen').onclick = function () { laeppchenOeffnen(lpWahl); };
+$('bLaeppchen').onclick = function () { laeppchenOeffnen(null); };
+/* Rueckkehr aus dem Laeppchen-Modell: die Leber steht gedreht im Nahbild (am zuletzt gewaehlten Endast), das Laeppchen ist sichtbar, alles andere ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
+function rueckkehr() {
+  var B = form.baeume(); if (!B.endpunkte.length) return;
+  LP = laeppchenLage(lpLetzte !== null ? lpLetzte : laeppchenStandard());
+  var w = window.innerWidth, h = window.innerHeight, ziel = laeppchenZiel(w, h), r = bereich(w, h);
+  lpBauen();
+  var f = ausblendVorbereiten();
+  f.mats.forEach(function (op, m) { m.opacity = 0; });
+  f.glas.forEach(function (op, m) { m.opacity = LP_LOBE_ENDE; });
+  f.ui.forEach(function (e) { e.style.opacity = '0'; });
+  f.obj.forEach(function (o) { o.visible = false; });
+  lpDrehung(1); lpDeckkraft(1);
+  view.theta = ziel.theta; view.phi = ziel.phi; view.dist = ziel.dist; view.target.copy(ziel.target);
+  orbit.anim = null;
+  f.hin = false; f.a = null; f.warte = performance.now() + 450;
+  f.von = ziel.versatz; f.nach = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
+  camera.setViewOffset(w, h, f.von[0], f.von[1], w, h);
+  camera.updateProjectionMatrix();
+  fz = f;
+}
+function rueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
+  var w = window.innerWidth, h = window.innerHeight, r = bereich(w, h), a0 = AUSSCHNITTE[0], d = distFuer(a0, w, h);
+  var zurueck = function (op, m) {
+    m.opacity = op;
+    if (m.transparent !== fz.altT.get(m) || m.depthWrite !== fz.altD.get(m)) { m.transparent = fz.altT.get(m); m.depthWrite = fz.altD.get(m); m.needsUpdate = true; }
+  };
+  fz.mats.forEach(zurueck); fz.glas.forEach(zurueck);
+  fz.obj.forEach(function (o) { o.visible = true; });
+  fz.ui.forEach(function (e, i) { e.style.opacity = fz.altUi[i].op; e.style.pointerEvents = fz.altUi[i].pe; });
+  canvas.style.pointerEvents = '';
+  labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+  lpAbbau();
+  view.theta = a0.theta; view.phi = a0.phi; view.dist = d; view.target.copy(a0.target);
+  orbit.anim = null;
+  camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
+  camera.updateProjectionMatrix();
+  aktiv = 0; fitDist = d; VIS = {};
+  for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === 0);
+  lv++;
+  fz = null;
+}
+/* je Bild waehrend der Fahrt: Bildbereich, Deckkraft und Drehung mit derselben Glaettung wie die Kamera; u: 0 = Ausgangslage (Uebersicht), 1 = Nahbild */
+function fahrtBild(now) {
+  if (!fz.a && now >= fz.warte) {   /* Rueckfahrt beginnt: zur Uebersicht, kuerzester Weg beim Drehen */
+    var w0 = window.innerWidth, h0 = window.innerHeight, a0 = AUSSCHNITTE[0];
+    var dth = a0.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI;
+    orbit.anim = fz.a = Kern.fahrt(view, { theta: view.theta + dth, phi: a0.phi, dist: distFuer(a0, w0, h0), target: a0.target.clone() }, 1200);
+    fz.obj.forEach(function (o) { o.visible = true; });
+  }
+  var t = fz.a ? Math.min(1, Math.max(0, (now - fz.a.t0) / fz.a.d)) : 0, s = t * t * (3 - 2 * t), u = fz.hin ? s : 1 - s;
+  var w = window.innerWidth, h = window.innerHeight;
+  camera.setViewOffset(w, h, fz.von[0] + (fz.nach[0] - fz.von[0]) * s, fz.von[1] + (fz.nach[1] - fz.von[1]) * s, w, h);
+  camera.updateProjectionMatrix();
+  fz.mats.forEach(function (op, m) { m.opacity = op * (1 - u); });
+  fz.glas.forEach(function (op, m) { m.opacity = u < 0.5 ? op + (GLAS - op) * lpStep(0, 0.5, u) : GLAS + (LP_LOBE_ENDE - GLAS) * lpStep(0.5, 1, u); });   /* erst Glas, dann noch blasser */
+  fz.ui.forEach(function (e) { e.style.opacity = String(1 - u); });
+  if (!fz.hin && t >= 1) { rueckEnde(); return false; }
+  lpDrehung(u);
+  lpDeckkraft(lpStep(0.5, 1, u));                                     /* erscheint in der zweiten Haelfte der Hinfahrt, geht in der ersten der Rueckfahrt */
+  if (!fz.hin) return false;
+  if (t >= 1 && !fz.fertig) { fz.fertig = true; fz.obj.forEach(function (o) { o.visible = false; }); return false; }
+  return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
@@ -1642,16 +1848,21 @@ var App = window.LeberApp = { ready: false, aufbauMs: 0, schema: function (an) {
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
   wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice() }; },
   quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
+  laeppchen: function (i) { laeppchenOeffnen(i === undefined ? null : i); }, endpunkte: function () { return form.baeume().endpunkte.map(function (e) { return { p: e.p.slice(), lappen: e.lappen, r: e.r }; }); },
   stroemung: function () { return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, anteil: anteil, gallenblase: 1 - (1 - STR.REST) * sstep6(kontr) }; } };
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  stroemungSchritt(dt);
-  stroemungBild();
+  if (!fz) { stroemungSchritt(dt); stroemungBild(); }     /* waehrend der Fahrt zum Laeppchen steht die Stroemung */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
+  var weiter = fz ? fahrtBild(now) : false;
   if (schemaOn) schemaTick();
   Kern.kamera(camera, view);
   if (schemaOn) return;                                   /* Schema offen: das Bild der Leber ist ausgeblendet und wird nicht gezeichnet */
   renderer.render(scene, camera);
+  if (fz) {
+    if (weiter && fz.hin && !fz.gesetzt) { fz.gesetzt = true; location.hash = fz.adresse; }   /* Endbild ist gezeichnet */
+    return;
+  }
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
 }
@@ -1660,6 +1871,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  fz = null; canvas.style.pointerEvents = '';
   schemaWeicht(); SCH.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
@@ -1687,8 +1899,14 @@ return bauen().then(function () {
   applyVisibility();
   setSelected(selected);
   stroemungBauen();
-  App.aufbauMs = Math.round(performance.now() - t0);
-  App.ready = true;
+  lpP = Kern.organLaden('laeppchen', { ohneCss: true }).then(function (o) { return o; }, function (e) { lpFehl = true; console.warn(e && e.message || e); return null; });   /* nur das Skript, im Hintergrund: liefert organ.form und organ.start fuer die Fahrt */
+  if (umg.von === 'laeppchen') return lpP.then(function () { if (!abgebaut) rueckkehr(); }).then(fertig);   /* Rueckweg aus dem Laeppchen-Modell */
+  fertig();
+  function fertig() {
+    if (abgebaut) return;
+    App.aufbauMs = Math.round(performance.now() - t0);
+    App.ready = true;
+  }
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
 Kern.organ('leber', organ);

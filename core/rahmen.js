@@ -28,6 +28,7 @@ var Kern = window.Kern = window.Kern || {};
     lunge: { titel: 'Lunge', seitentitel: 'Lunge \u2013 Lappen, Atemwege und Atemmechanik', skript: 'organe/lunge/lunge.js', css: 'organe/lunge/lunge.css' },
     alveole: { titel: 'Alveole', seitentitel: 'Alveole \u2013 Lungenbl\u00e4schen und Gasaustausch', skript: 'organe/lunge/alveole.js', css: 'organe/lunge/alveole.css', adresse: 'lunge/alveole' },
     leber: { titel: 'Leber', seitentitel: 'Leber \u2013 Lappen, Pfortader und Gallenwege', skript: 'organe/leber/leber.js', css: 'organe/leber/leber.css' },
+    laeppchen: { titel: 'Leberl\u00e4ppchen', seitentitel: 'Leberl\u00e4ppchen \u2013 Sinusoide, Leberzellen und Galle', skript: 'organe/leber/laeppchen.js', css: 'organe/leber/laeppchen.css', adresse: 'leber/laeppchen' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
 

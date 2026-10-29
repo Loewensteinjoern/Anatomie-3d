@@ -75,7 +75,7 @@ var STRUKTUREN = [
   { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', detail: false,
     text: 'Der Magen liegt im linken Oberbauch unter dem Zwerchfell. Er speichert die Nahrung, durchmischt sie mit Magensaft (Salzsäure, Pepsin) und gibt sie portionsweise an den Zwölffingerdarm weiter; seine Schleimhaut schützt sich durch eine Schleimschicht selbst.' },
   { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
-    text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her.' },
+    text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her. Funktionseinheit ist das Leberläppchen.' },
   { id: 'gallenblase', de: 'Gallenblase', lat: 'Vesica biliaris', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die birnenförmige Gallenblase haftet an der Unterseite der Leber. Sie speichert und konzentriert die Galle und gibt sie bei fetthaltiger Nahrung über den Gallengang in den Zwölffingerdarm ab, wo sie die Fettverdauung unterstützt.' },
   { id: 'gallengang', de: 'Gallengang', lat: 'Ductus choledochus', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
@@ -1104,7 +1104,7 @@ function zielFuer(id, w, h) {
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
