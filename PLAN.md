@@ -8,7 +8,7 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 
 | Baustein | Herz | Nephron | Niere | Lunge (mit Alveole) | Leber (mit Leberläppchen) |
 |---|---|---|---|---|---|
-| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ | ✓ (17 Strukturen; Läppchen folgt in B) |
+| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ | ✓ (17 Strukturen; Läppchen 10) |
 | Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ | ✓ (Übersicht, Unterseite, Leberpforte, Gallenwege) |
 | Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) | ✓ |
@@ -33,7 +33,7 @@ Körper  →  Organsystem  →  Organ  →  Funktionseinheit  →  Lupe
 Mensch     Harnsystem      Niere     Nephron              Wand des Tubulus
 Mensch     Kreislauf       Herz      (Herzklappe)         Klappe/Erregung
 Mensch     Atmung          Lunge     Alveole              Gasaustausch
-Mensch     Verdauung       Leber     Leberläppchen        Sinusoid
+Mensch     Verdauung       Leber     Leberläppchen        Sinusoid (Lupe in C)
 ```
 
 ## Architektur
@@ -199,7 +199,7 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] A: Form-Baustein `organe/leber/leber-form.js` (Leber als Ausguss unter der rechten Zwerchfellkuppel mit Mulden der Nachbarorgane und H-Furchen der Unterseite; vier Lappen, Gallenblase, Gefäße und Gänge, Bäume von Pfortader, Leberarterie, Gallengängen und Lebervenen, Bänder, Zwölffingerdarm-Abschnitt); der Körper zeigt Leber und Gallenblase daraus (Platzhalter bleiben als Ersatz) und bekommt die neuen Strukturen Pfortader, Leberarterie, Lebervenen und Gallengang (Wunsch von Jörn: auch im Körper verbunden)
   - [x] A: Detailmodell `#leber` mit 17 Strukturen (Lappen, Bänder, Gefäße, Gallenwege, Umgebung: Zwölffingerdarm, Papille, Pankreasgang, Zwerchfell), Ausschnitte Übersicht, Unterseite, Leberpforte, Gallenwege, Durchsicht, Beschriftung, Lesehilfe; Kamerafahrt Körper → Leber und zurück („Leber öffnen“ bei Leber, Gallenblase und den vier neuen Strukturen)
   - [x] A: Strömung (Pfortader violett, Leberarterie rot, Lebervenen und Hohlvene blau, Galle grün; Teilchen ohne Zufall) mit Schalter „nüchtern / nach dem Essen“ in der Zeile „Ansicht“ (Gallenblase füllt sich bzw. zieht sich zusammen); Schema als Pfortaderkreislauf von vorn mit denselben Teilchen, Legende, Kennzahlen; Hilfekarten (Aufgaben, Pfortader und Leberarterie, Galle, Pflege: Leberwerte, So liest du das Modell) und Üben: „Strukturen finden“ und neu „Wege verfolgen“ (vier Wege von Blut und Galle, Hilfe nach zwei Fehlern; schaltet Durchsicht und bei den Gallenwegen die Mahlzeit, beim Beenden zurück)
-  - [ ] B: Leberläppchen (`#leber/laeppchen`): Sechseck aufgeschnitten, Nachbarläppchen angedeutet; Zoomstufe wie Lunge → Alveole (Lebergewebe antippen „Leberläppchen hier ansehen“ oder Knopf „Läppchen“, an den Endpunkten des Pfortaderbaums); Blut von den Ecken zur Zentralvene, Galle entgegen, dazu Zucker (Glykogen), Ammoniak → Harnstoff, Bilirubin → Galle, Mahlzeit-Schalter; Schema (Querschnitt von oben, Zonen 1–3); Hilfekarten (Aufbau, Blut innen/Galle außen, Leberzelle als Fabrik, Zonen, So liest du das Modell) und Üben (Strukturen finden, Wege verfolgen)
+  - [x] B: Leberläppchen (`#leber/laeppchen`, `organe/leber/laeppchen.js`): sechseckige Säule mit aufgeschnittenem Keil, Zellbalken als Reihen einzelner Zellen, Sinusoide, Gallenkanälchen, Kupffer-Zellen, Glisson-Trias an allen Ecken, Zentralvene, Sammelvene, Nachbarläppchen angedeutet (10 Strukturen); Zoomstufe wie Lunge → Alveole (Lappen antippen „Leberläppchen hier ansehen“ oder Knopf „Läppchen“, am Endast des Pfortaderbaums, Leber dreht sich, Rückfahrt); Blut von den Ecken zur Zentralvene, Galle entgegen; Stoffe Zucker (Glykogen in den Zellen nach dem Essen), Ammoniak → Harnstoff, Bilirubin → Galle mit eigener Schalterzeile „Stoffe“ (Wunsch von Jörn; auf dem Handy eine Zeile mehr); Mahlzeit-Schalter; Schema als Querschnitt von oben mit Zonen 1–3; Hilfekarten (Aufbau, Blut innen/Galle außen, Leberzelle als Fabrik, Zonen, So liest du das Modell), Üben (Strukturen finden, drei Wege); Körpertext der Leber endet mit „Funktionseinheit ist das Leberläppchen.“
   - [ ] C: Krankheitsbilder (Leberzirrhose mit Pfortaderhochdruck, Fettleber, Virushepatitis, Gallenstein mit Gelbsucht), Medikamente (Paracetamol, Lactulose, Spironolacton), Lupen (Leber: Papille; Läppchen: Sinusoid mit Disse-Raum), Export und AR
   - Offen (eigener Pull Request): Nephron – bei Auswahl eines Tubulusabschnitts (Strukturliste oder Antippen) leuchten die Abschnitte vom proximalen bis zum distalen Tubulus gar nicht und beim Sammelrohr das ganze Rohr: die sechs Abschnitte teilen sich `MAT.tubule`, `setSelected` setzt `emissive` nacheinander, der letzte gewinnt. Beim Üben ist es über ein Klon-Material schon gelöst (`leuchte` in nephron.js).
 - [ ] Magen und Darm mit Dünndarmzotte
