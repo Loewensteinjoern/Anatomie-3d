@@ -6,7 +6,7 @@
    funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz, Niere und
    Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere, #niere/nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -95,6 +95,15 @@
    handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte und kein AR. Atlas-Kontexte uebergaenge-leber (Körper,
    Leber über die Infokarte mit Kamerafahrt „fahrt-leber“, Leber, Browser-Zurück mit Rückfahrt „rueckfahrt-leber“; dann die Adresse #leber direkt, Zurück-Knopf „← Körper“; Endzustand in
    erg.uebergaengeLeber) und uebergaenge-leber-handy („fahrt-leber“, „leber“).
+
+   Modell laeppchen (index.html#leber/laeppchen): ein Leberläppchen mit Zentralvene, Zellbalken, Sinusoiden, Gallenkanälchen, Kupffer-Zellen, Ästen an den Ecken, Sammelvene und den Nachbarläppchen als
+   Glas. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 „periportalfeld“, „zentralvene“, „sinusoid“, Durchsicht, ohne Beschriftung, Info; dann die Strömung: „stroemung“ nach
+   1,5 s, Pause (#bPlay; die zwei Bilder „pause“ im Abstand von 1500 ms müssen gleich aussehen), „nach-dem-essen“ (#bEssen, nach 3 s: Zellen heller, Zucker biegt in die Zellen ab) und „stoffe-aus“ (die
+   drei Schalter unter „Stoffe“ aus); die Werte von LaeppchenApp.stroemung() stehen in erg.stroemung; Schema (#bSchema, erst nüchtern, dann nach dem Essen, Antippen der Zentralvene → „schema-info“);
+   Hilfekarten („hilfekarte“), Üben „ueben“ (Strukturen finden, hängt vom festen Zufallsstrom ab) und Wege verfolgen („wege-start“, nach zwei richtigen Stationen über LaeppchenApp.tippe „wege-zwei“, nach
+   zwei Fehlern „wege-leuchtet“)), handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start), datei (file://) und abbau; keine Exporte und kein AR. Atlas-Kontexte uebergaenge-laeppchen (Leber, Knopf „Läppchen“
+   mit Kamerafahrt „fahrt-laeppchen“, Läppchen, Zurück-Knopf „← Leber“, Browser-Zurück mit Rückfahrt „rueckfahrt-leber“; dann einen Lappen an einem festen Punkt antippen, „Leberläppchen hier ansehen“
+   („fahrt-laeppchen-punkt“, „laeppchen-von-leber“), Zurück-Knopf des Atlas zurück zur Leber „leber-von-laeppchen“; Endzustand in erg.uebergaengeLaeppchen) und uebergaenge-laeppchen-handy („fahrt-laeppchen“, „laeppchen“).
 
    Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
    offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
@@ -328,6 +337,7 @@ async function abbauAblauf(t, name, bedienung) {
     if (n === 'lunge') m.lungeApp = typeof window.LungeApp !== 'undefined';   /* nur beim Modell lunge (die Messwerte der übrigen bleiben gleich) */
     if (n === 'alveole') m.alveoleApp = typeof window.AlveoleApp !== 'undefined';   /* nur beim Modell alveole */
     if (n === 'leber') m.leberApp = typeof window.LeberApp !== 'undefined';   /* nur beim Modell leber */
+    if (n === 'laeppchen') m.laeppchenApp = typeof window.LaeppchenApp !== 'undefined';   /* nur beim Modell laeppchen */
     return m;
   }, name);
   const beenden = () => t.js(() => Kern.organBeenden());
@@ -914,11 +924,60 @@ const MODELLE = {
         await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
       }) }
     }
+  },
+  laeppchen: {
+    datei: 'index.html',
+    bereit: () => !!(window.LaeppchenApp && window.LaeppchenApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, async ablauf(t) {
+        const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.LaeppchenApp.stroemung()); };
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('periportalfeld');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('zentralvene');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('sinusoid');
+        await t.klick('#cam0'); await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
+        await t.klick('#bSee'); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
+        await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Strömung: Info zu, 1,5 s; Pause (die zwei Bilder müssen gleich aussehen), nach dem Essen, Stoffe aus */
+        await t.klick('#bCls'); await t.weiter(1500); await t.bild('stroemung'); await werte('stroemung');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await werte('pause'); await t.weiter(1500); await t.bild('pause');
+        await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(3000); await t.bild('nach-dem-essen'); await werte('nach-dem-essen');
+        for (const id of ['#bZucker', '#bAmmoniak', '#bBilirubin']) await t.klick(id);
+        await t.weiter(600); await t.bild('stoffe-aus'); await werte('stoffe-aus');
+        for (const id of ['#bZucker', '#bAmmoniak', '#bBilirubin']) await t.klick(id);
+        /* Schema: erst nüchtern, dann nach dem Essen, Antippen der Zentralvene (Infokarte); Schema zu, wieder nüchtern */
+        await t.klick('#bNuechtern'); await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema');
+        await t.klick('#bEssen'); await t.weiter(3000); await t.bild('schema-nach-dem-essen');
+        await t.js(() => document.querySelector('#schemaBox .sz[data-info="zentralvene"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await t.weiter(600); await t.bild('schema-info');
+        await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.klick('#bNuechtern'); await t.weiter(3000);   /* die Einblendung der Mahlzeit verschwindet, bevor die Karten aufgehen */
+        /* Hilfekarten und Üben (Strukturen finden, Wege verfolgen; Antworten über LaeppchenApp.tippe) */
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(300);
+        await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+        await t.js(() => { window.LaeppchenApp.tippe('pfortaderast'); window.LaeppchenApp.tippe('sinusoide'); }); await t.weiter(300); await t.bild('wege-zwei');
+        await t.js(() => { window.LaeppchenApp.tippe('gallengang'); window.LaeppchenApp.tippe('gallengang'); }); await t.weiter(300); await t.bild('wege-leuchtet');
+        await t.klick('#bWege'); await t.weiter(300);
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.klick('#bCls'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'laeppchen', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('periportalfeld');
+        await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
+      }) }
+    }
   }
 };
 
 /* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
-const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole', leber: '#leber' };
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole', leber: '#leber', laeppchen: '#leber/laeppchen' };
 /* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz, niere und nephron auf #herz / #niere / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
@@ -927,11 +986,12 @@ const ATLAS_BEREIT = (organ) => ({
   lunge: () => !!(window.LungeApp && window.LungeApp.ready) && document.getElementById('boot').classList.contains('gone'),
   alveole: () => !!(window.AlveoleApp && window.AlveoleApp.ready) && document.getElementById('boot').classList.contains('gone'),
   leber: () => !!(window.LeberApp && window.LeberApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  laeppchen: () => !!(window.LaeppchenApp && window.LaeppchenApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber']) {
+for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber', 'laeppchen']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
@@ -1077,6 +1137,36 @@ MODELLE.atlas.kontexte['uebergaenge-leber-handy'] = { opt: HANDY, init: [initLis
   await t.weiter(500);
   await t.js(() => window.KoerperApp.waehle('leber')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-leber'); await t.bisAdresse('#leber');
   await organ('leber'); await t.weiter(1500); await t.bild('leber');
+} };
+/* Kontext uebergaenge-laeppchen: die Leber (Adresse #leber, das Läppchen-Modul ist im Hintergrund geladen), Knopf „Läppchen“ (Kamerafahrt, Bild mitten in der Fahrt), Läppchen (Adresse
+   #leber/laeppchen, Zurück-Knopf „← Leber“), Browser-Zurück (Rückfahrt zur Leber); dann einen Lappen an einem festen Punkt antippen (der erste Endast des rechten Lappens), „Leberläppchen hier
+   ansehen“ (Fahrt zu dem Endast), Läppchen, Zurück-Knopf des Atlas zurück zur Leber; Endzustand prüfen. uebergaenge-laeppchen-handy: Knopf „Läppchen“ auf dem Handy (Bilder fahrt-laeppchen und laeppchen) */
+const ATLAS_LEBER_LAEPPCHEN_BEREIT = () => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-leber' && !!(window.LeberApp && window.LeberApp.ready) && !!Kern.Organe.laeppchen;
+MODELLE.atlas.kontexte['uebergaenge-laeppchen'] = { opt: DESKTOP, adresse: '#leber', init: [initListener], bereit: ATLAS_LEBER_LAEPPCHEN_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500); await t.bild('leber');
+  await t.klick('#bLaeppchen'); await t.weiter(600); await t.bild('fahrt-laeppchen'); await t.bisAdresse('#leber/laeppchen');
+  await organ('laeppchen'); await t.bild('standbild');
+  await t.weiter(1500); await t.bild('laeppchen');
+  const knopf = await t.js(() => document.getElementById('atlasZurueck').textContent.trim());   /* „← Leber“ */
+  await t.zurueck(); await organ('leber'); await t.weiter(1000); await t.bild('rueckfahrt-leber'); await t.weiter(1200); await t.bild('leber-zurueck');
+  const z1 = await t.js(ATLAS_ENDZUSTAND);
+  await t.warteAuf(ATLAS_LEBER_LAEPPCHEN_BEREIT);
+  /* Zoomstufe: rechten Lappen an einem festen Punkt antippen (Punkt im Raum der Szene = Körper-Koordinaten minus Mitte der Leber), „Leberläppchen hier ansehen“, Läppchen, Zurück-Knopf des Atlas */
+  await t.js(() => { const e = window.LeberApp.endpunkte().filter((q) => q.lappen === 'lappenR')[0]; window.LeberApp.waehle('lappenR', new THREE.Vector3(e.p[0] + 2, e.p[1] - 107, e.p[2])); });
+  await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-laeppchen-punkt'); await t.bisAdresse('#leber/laeppchen');
+  await organ('laeppchen'); await t.weiter(1500); await t.bild('laeppchen-von-leber');
+  await t.klick('#atlasZurueck'); await organ('leber'); await t.weiter(1000); await t.bild('rueckfahrt-leber-punkt'); await t.weiter(1200); await t.bild('leber-von-laeppchen');
+  const z2 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Leber/.test(knopf);
+  t.erg.uebergaengeLaeppchen = { endzustand: [z1, z2], knopf, ok };
+  process.stdout.write('  uebergaenge-laeppchen: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+MODELLE.atlas.kontexte['uebergaenge-laeppchen-handy'] = { opt: HANDY, adresse: '#leber', init: [initListener], bereit: ATLAS_LEBER_LAEPPCHEN_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.klick('#bLaeppchen'); await t.weiter(600); await t.bild('fahrt-laeppchen'); await t.bisAdresse('#leber/laeppchen');
+  await organ('laeppchen'); await t.weiter(1500); await t.bild('laeppchen');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
@@ -1488,7 +1578,7 @@ async function vergleichen(va, vb) {
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
       if (b.uebergaenge.endzustandOk === false) probleme.push(m + ' Übergänge: Endzustand falsch (Standbild sichtbar oder inline-Styles)\n    ' + JSON.stringify([b.uebergaenge.m1.endzustand, b.uebergaenge.m2.endzustand]));
     }
-    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['uebergaengeLeber', 'Übergänge Leber'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
+    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['uebergaengeLeber', 'Übergänge Leber'], ['uebergaengeLaeppchen', 'Übergänge Läppchen'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
       if (!b[k]) continue;
       if (!b[k].ok) probleme.push(m + ' ' + tx + ': Endzustand falsch\n    ' + JSON.stringify(b[k].endzustand));
       else ok.push(m + ' ' + tx + ': Endzustand stimmt');
@@ -1575,7 +1665,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }
