@@ -1,0 +1,98 @@
+canvas{display:block;width:100%;height:100%;touch-action:none}
+
+.lbl{position:absolute;transform:translateY(-50%);white-space:nowrap;line-height:1.15;transition:opacity .18s}
+.lbl.sel b{color:var(--brass)}
+
+#title .sub{margin-top:3px;font-size:12px;color:var(--ink-dim);max-width:32ch}
+
+#rail{top:124px;left:22px;width:244px;max-height:calc(100vh - 470px);overflow-y:auto;
+  padding:14px 4px 12px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+
+.cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-faint);padding:0 6px 0 7px;min-width:72px}
+
+/* lange Lesehilfe: auf niedrigen Fenstern scrollt sie, statt die Leiste zu verdecken (die Leiste behaelt mindestens 160 px; leber.js, railHoehe) */
+#legend{max-height:calc(100vh - 340px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#legend p{margin:0;font-size:11px;line-height:1.55;color:var(--ink-dim)}
+#legend .note{margin-top:6px;font-size:10px;line-height:1.45;color:var(--ink-faint)}
+#legend .kz{color:var(--ink-dim)}
+
+#info{bottom:22px;left:286px;width:326px;padding:16px 18px 17px;display:none}
+#info #iOpen{margin-top:12px;border-color:var(--brass-dim);color:var(--ink)}
+#info #iOpen:hover{background:var(--panel-hi);border-color:var(--brass)}
+
+/* Reiter in der Leiste (Aussehen: core/kern.css): drei Reiter in einer Zeile */
+#rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
+#rail .tab{flex:1 1 calc(33.3% - 3px);font-size:10px;padding:6px 0}
+.pane-btn{margin:2px 12px 12px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte */
+#scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#scard .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+#scard .kick{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);padding-right:40px}
+#scard h3{margin:3px 0 8px;font-size:16px;font-weight:600;padding-right:40px}
+#scard .after:empty{display:none}
+#scard .qa{display:flex;gap:6px;margin-top:10px;align-items:center}
+#scard .score{font-family:var(--mono);font-size:11px;color:var(--brass);margin-right:auto}
+#scard .ok{color:#7CD69B}
+#scard .no{color:#F08A7E}
+/* Ueben "Wege verfolgen": Hinweis zur Mahlzeit, gefundene Stationen, Rueckmeldung, Abschluss */
+#scard .wg-hint{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--ink-faint)}
+#scard .wg-liste{margin-top:9px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--brass)}
+#scard .wg-rueck{margin-top:8px}
+#scard .wg-ab{margin-top:8px;color:var(--ink)}
+
+/* Schema (leber.js, Abschnitt 7): rechts am Rand unter der Werkzeugleiste; Bild 460 x 722 */
+#schema{top:142px;right:22px;bottom:76px;width:calc((100vh - 254px) * .637 + 26px);max-width:calc(100vw - 308px);
+  padding:10px 12px 8px;display:none;flex-direction:column}
+#schema.show{display:flex}
+#schema .sch-head{display:flex;align-items:baseline;gap:12px;padding-right:36px;min-height:15px}
+#schema .kick{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);white-space:nowrap}
+#schema .sch-hint{font-size:11.5px;line-height:1.3;color:var(--ink-faint);min-width:0}   /* umbrechen statt kuerzen: der Text bleibt vollstaendig */
+#schema .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+#schemaBox{flex:1;min-height:0;display:flex}
+#schemaBox svg{flex:1;width:100%;height:100%;display:block}
+#schemaBox .sz{cursor:pointer}
+body.schema #labels,body.schema #leaders{display:none}
+
+@media (max-width:1000px){
+  #tools .cap{display:none}
+  #tools .gh{padding:6px 6px;font-size:11px}
+  #tools .sep{display:none}
+  #title .kicker{display:none}
+  .lbl b{font-size:11px}
+  .lbl i{display:none}
+  #wm{bottom:auto;top:44px;white-space:normal;text-align:center;width:92vw;font-size:9.5px}   /* oben unter dem Titel: unten schiene sie durch die Werkzeugleiste */
+  #title .sub{display:none}
+  #rail{top:auto;bottom:0;left:0;right:0;width:100%;max-height:34vh;
+    border-radius:0;border-left:0;border-right:0;border-bottom:0}
+  #legend{display:none}
+  /* Infokarte und Erklaerkarte: die Infokarte endet ueber der Werkzeugleiste (--wz = gemessene Hoehe der Werkzeugleiste, von leber.js gesetzt; Werkzeugleiste unten bei 34vh + 6px) */
+  #info{left:12px;right:12px;width:auto;bottom:calc(34vh + var(--wz,132px) + 14px);max-height:calc(66vh - var(--wz,132px) - 70px);overflow-y:auto}
+  #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
+  /* Ueben (Strukturen finden, Wege verfolgen): kompakte Karte unten direkt ueber der Werkzeugleiste (26 % der Hoehe, leber.js bereichFuer richtet den Bildbereich danach aus);
+     Aufgabe und Abschluss scrollen, Stationsliste, Rueckmeldung, Zaehlung und Knoepfe bleiben sichtbar */
+  body.ueben #scard.show{display:flex;flex-direction:column;top:auto;bottom:calc(34vh + var(--wz,132px) + 14px);height:26vh;max-height:26vh;overflow:hidden;padding:10px 14px}
+  body.ueben #scard h3{margin:2px 0 4px;font-size:14px}
+  body.ueben #scard #sLead{flex:1 1 auto;min-height:0;margin:0 0 4px;display:flex;flex-direction:column;font-size:12px;line-height:1.4}
+  body.ueben #scard .wg-text{flex:1 1 0;min-height:2.6em;overflow-y:auto}
+  body.ueben #scard .wg-text.fertig{display:none}
+  body.ueben #scard .wg-abw{flex:1 1 0;min-height:0;overflow-y:auto}
+  body.ueben #scard .wg-liste{margin-top:4px;flex:none}
+  body.ueben #scard .wg-rueck{margin-top:4px;flex:none}
+  body.ueben #scard .qa{margin-top:4px;flex:none}
+  body.ueben #scard #sAfter{display:none}
+  /* Schema: oben, ueber der Werkzeugleiste; bei offenem Schema Leiste weg, Werkzeugleiste ganz unten, Schema/Infokarte/Hinweis darueber */
+  #schema{left:12px;right:12px;top:62px;bottom:calc(34vh + var(--wz,132px) + 14px);width:auto;max-width:none;padding:8px 8px 6px;background:rgba(18,34,41,.98)}
+  #schema .sch-hint{display:none}
+  body.schema #atlasZurueck{display:none}
+  body.schema #rail{display:none}
+  body.schema #tools{bottom:6px}
+  body.schema #schema{bottom:calc(var(--wz,132px) + 12px)}
+  body.schema #info{bottom:calc(var(--wz,132px) + 12px)}
+  body.schema #toast{bottom:calc(var(--wz,132px) + 14px)}
+  #rail .tabs{flex-wrap:nowrap}
+  #rail .tab{flex:1 1 0}
+}

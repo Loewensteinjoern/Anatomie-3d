@@ -6,7 +6,7 @@
    funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz, Niere und
    Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere, #niere/nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -86,6 +86,15 @@
    Unterschiede: das umschließende Rechteck aller geänderten Pixel in Bildpixeln (x und y einschließlich,
    z. B. „Bereich x 519–1182, y 18–98“). So lässt sich einordnen, ob die Abweichung im erwarteten Bereich
    liegt (z. B. nur in der Werkzeugleiste). Bei anderer Bildgröße gibt es keinen Bereich.
+
+   Modell leber (index.html#leber): Leber von vorn mit vier Lappen, Gallenblase, Pfortader, Leberarterie, Lebervenen, Gallenwegen, Zwölffingerdarm und Zwerchfell. Kontexte desktop (Übersicht,
+   Seitentext, die Ausschnitte #cam1 bis #cam3 „unterseite“, „leberpforte“, „gallenwege“, Durchsicht, ohne Beschriftung, Info; dann die Strömung: „stroemung“ nach 1,5 s, Pause (#bPlay; die zwei Bilder
+   „pause“ im Abstand von 1500 ms müssen gleich aussehen), „nach-dem-essen“ (#bEssen, nach 3 s) und „durchsicht-stroemung“; die Werte von LeberApp.stroemung() stehen in erg.stroemung und werden von
+   `vergleichen` verglichen; Schema (#bSchema, erst nüchtern, dann nach dem Essen, Antippen des rechten Lappens → „schema-info“); Hilfekarten („hilfekarte“, erste Karte); Üben „ueben“ (Strukturen
+   finden, #bQuiz, die Aufgabe hängt vom festen Zufallsstrom ab) und Wege verfolgen (#bWege: „wege-start“, nach zwei richtigen Stationen über LeberApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“)),
+   handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte und kein AR. Atlas-Kontexte uebergaenge-leber (Körper,
+   Leber über die Infokarte mit Kamerafahrt „fahrt-leber“, Leber, Browser-Zurück mit Rückfahrt „rueckfahrt-leber“; dann die Adresse #leber direkt, Zurück-Knopf „← Körper“; Endzustand in
+   erg.uebergaengeLeber) und uebergaenge-leber-handy („fahrt-leber“, „leber“).
 
    Web-App (Service Worker sw.js, core/offline.js; alle ohne Referenz, nur über http, Kontexte in Atlas):
    offline (Speicher des Service Workers = DATEIEN der sw.js, Name anatomie-<VERSION>; dann ohne Netz
@@ -318,6 +327,7 @@ async function abbauAblauf(t, name, bedienung) {
     };
     if (n === 'lunge') m.lungeApp = typeof window.LungeApp !== 'undefined';   /* nur beim Modell lunge (die Messwerte der übrigen bleiben gleich) */
     if (n === 'alveole') m.alveoleApp = typeof window.AlveoleApp !== 'undefined';   /* nur beim Modell alveole */
+    if (n === 'leber') m.leberApp = typeof window.LeberApp !== 'undefined';   /* nur beim Modell leber */
     return m;
   }, name);
   const beenden = () => t.js(() => Kern.organBeenden());
@@ -857,11 +867,58 @@ const MODELLE = {
         await t.klick('#bLupeX'); await t.weiter(300);
       }) }
     }
+  },
+  leber: {
+    datei: 'index.html',
+    bereit: () => !!(window.LeberApp && window.LeberApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, async ablauf(t) {
+        const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.LeberApp.stroemung()); };
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('unterseite');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('leberpforte');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('gallenwege');
+        await t.klick('#cam0'); await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
+        await t.klick('#bSee'); await t.klick('#bLab'); await t.weiter(600); await t.bild('ohne-beschriftung');
+        await t.klick('#bLab'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        /* Strömung: Info zu, 1,5 s; Pause (die zwei Bilder müssen gleich aussehen), nach dem Essen, Durchsicht */
+        await t.klick('#bCls'); await t.weiter(1500); await t.bild('stroemung'); await werte('stroemung');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await werte('pause'); await t.weiter(1500); await t.bild('pause');
+        await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(3000); await t.bild('nach-dem-essen'); await werte('nach-dem-essen');
+        await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht-stroemung'); await werte('durchsicht-stroemung');
+        /* Schema: erst nüchtern, dann nach dem Essen, Antippen des rechten Lappens (Infokarte); Schema zu, wieder nüchtern, Durchsicht aus */
+        await t.klick('#bNuechtern'); await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema');
+        await t.klick('#bEssen'); await t.weiter(3000); await t.bild('schema-nach-dem-essen');
+        await t.js(() => document.querySelector('#schemaBox .sz[data-info="lappenR"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await t.weiter(600);   /* mehrere Treffer-Pfade je Struktur: Klick auf den ersten */ await t.bild('schema-info');
+        await t.klick('#bSchemaX'); await t.klick('#bCls'); await t.klick('#bNuechtern'); await t.klick('#bSee'); await t.weiter(3000);   /* die Einblendung der Mahlzeit verschwindet, bevor die Karten aufgehen */
+        /* Hilfekarten und Üben (Strukturen finden, Wege verfolgen; Antworten über LeberApp.tippe) */
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(600); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(300);
+        await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+        await t.js(() => { window.LeberApp.tippe('pfortader'); window.LeberApp.tippe('lappenR'); }); await t.weiter(300); await t.bild('wege-zwei');
+        await t.js(() => { window.LeberApp.tippe('arterie'); window.LeberApp.tippe('arterie'); }); await t.weiter(300); await t.bild('wege-leuchtet');
+        await t.klick('#bWege'); await t.weiter(300);
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');
+        await t.klick('#bCls'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'leber', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('unterseite');
+        await t.klick('#cam0'); await t.klick('#paneStruct .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
+      }) }
+    }
   }
 };
 
 /* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
-const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole' };
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole', leber: '#leber' };
 /* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz, niere und nephron auf #herz / #niere / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
@@ -869,11 +926,12 @@ const ATLAS_BEREIT = (organ) => ({
   niere: () => !!(window.NiereApp && window.NiereApp.ready) && document.getElementById('boot').classList.contains('gone'),
   lunge: () => !!(window.LungeApp && window.LungeApp.ready) && document.getElementById('boot').classList.contains('gone'),
   alveole: () => !!(window.AlveoleApp && window.AlveoleApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  leber: () => !!(window.LeberApp && window.LeberApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole']) {
+for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
@@ -995,6 +1053,30 @@ MODELLE.atlas.kontexte['uebergaenge-lunge-handy'] = { opt: HANDY, init: [initLis
   await t.weiter(500);
   await t.js(() => window.KoerperApp.waehle('lunge')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-lunge'); await t.bisAdresse('#lunge');
   await organ('lunge'); await t.weiter(1500); await t.bild('lunge');
+} };
+/* Kontext uebergaenge-leber: Körper, Leber wählen, Kamerafahrt (Bild mitten in der Fahrt), Leber, Browser-Zurück mit Rückfahrt; dann die Adresse #leber direkt und der Zurück-Knopf des Atlas
+   („← Körper“); Endzustand prüfen. uebergaenge-leber-handy: dieselbe Fahrt auf dem Handy (Bilder fahrt-leber und leber) */
+MODELLE.atlas.kontexte['uebergaenge-leber'] = { opt: DESKTOP, init: [initListener], bereit: ATLAS_LUNGE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.js(() => window.KoerperApp.waehle('leber')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-leber'); await t.bisAdresse('#leber');
+  await organ('leber'); await t.weiter(1500); await t.bild('leber');
+  await t.zurueck(); await organ('koerper'); await t.weiter(1000); await t.bild('rueckfahrt-leber'); await t.weiter(1200); await t.bild('koerper-zurueck');
+  const z1 = await t.js(ATLAS_ENDZUSTAND);
+  await t.js(() => { location.hash = 'leber'; }); await organ('leber'); await t.weiter(1500); await t.bild('leber-adresse');   /* Zurück-Knopf zeigt „← Körper“ */
+  const knopf = await t.js(() => document.getElementById('atlasZurueck').textContent.trim());
+  await t.klick('#atlasZurueck'); await organ('koerper'); await t.weiter(1500); await t.bild('koerper-von-leber');
+  await t.weiter(1500);   /* Rückfahrt zu Ende */
+  const z2 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Körper/.test(knopf);
+  t.erg.uebergaengeLeber = { endzustand: [z1, z2], knopf, ok };
+  process.stdout.write('  uebergaenge-leber: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+MODELLE.atlas.kontexte['uebergaenge-leber-handy'] = { opt: HANDY, init: [initListener], bereit: ATLAS_LUNGE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.js(() => window.KoerperApp.waehle('leber')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-leber'); await t.bisAdresse('#leber');
+  await organ('leber'); await t.weiter(1500); await t.bild('leber');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
@@ -1406,7 +1488,7 @@ async function vergleichen(va, vb) {
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
       if (b.uebergaenge.endzustandOk === false) probleme.push(m + ' Übergänge: Endzustand falsch (Standbild sichtbar oder inline-Styles)\n    ' + JSON.stringify([b.uebergaenge.m1.endzustand, b.uebergaenge.m2.endzustand]));
     }
-    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
+    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['uebergaengeLeber', 'Übergänge Leber'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
       if (!b[k]) continue;
       if (!b[k].ok) probleme.push(m + ' ' + tx + ': Endzustand falsch\n    ' + JSON.stringify(b[k].endzustand));
       else ok.push(m + ' ' + tx + ': Endzustand stimmt');
@@ -1438,6 +1520,10 @@ async function vergleichen(va, vb) {
     for (const k of Object.keys(b.atmung || {})) {   /* Werte von LungeApp.atmung(): nur gegen vorhandene Referenz */
       if (!a.atmung || !(k in a.atmung)) ok.push(m + ' Atmung ' + k + ': neu (keine Referenz)');
       else vgl('Atmung ' + k, a.atmung[k], b.atmung[k]);
+    }
+    for (const k of Object.keys(b.stroemung || {})) {   /* Werte von LeberApp.stroemung(): nur gegen vorhandene Referenz */
+      if (!a.stroemung || !(k in a.stroemung)) ok.push(m + ' Strömung ' + k + ': neu (keine Referenz)');
+      else vgl('Strömung ' + k, a.stroemung[k], b.stroemung[k]);
     }
     const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
     for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
@@ -1489,7 +1575,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }

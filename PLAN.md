@@ -6,21 +6,21 @@ Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe m
 
 ✓ = vorhanden, – = fehlt, (✓) = teilweise
 
-| Baustein | Herz | Nephron | Niere | Lunge (mit Alveole) |
-|---|---|---|---|---|
-| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ |
-| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ |
-| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ |
-| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) |
-| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik | Atemmechanik aus dem Thorax-Modell (Zwerchfell, Rippen, Pleuradruck, Luftstrom), 3D folgt derselben Simulation |
-| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | ✓ (Pleuraspalt; Alveole: Blut-Luft-Schranke) |
-| Hilfekarten und Üben (Quiz) | ✓ | ✓ | ✓ | ✓ |
-| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | ✓ (Asthma, COPD, Hyper-/Hypoventilation, Azidose, Cheyne-Stokes; Salbutamol, Sauerstoff, Naloxon) |
-| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | ✓ (Frontalschnitt, live mit denselben Teilchen, Kennzahlen) | ✓ (Thorax-Modell, unverändert übernommen) |
-| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | ✓ |
-| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | ✓ |
-| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ |
-| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper | ✓ `lunge-form.js` (Brustkorb, Rippen, Zwerchfellkuppel, Lappen, Bronchien; Körper nutzt sie), `organ.start` für die Fahrt aus dem Körper |
+| Baustein | Herz | Nephron | Niere | Lunge (mit Alveole) | Leber (mit Leberläppchen) |
+|---|---|---|---|---|---|
+| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ | ✓ (17 Strukturen; Läppchen folgt in B) |
+| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ | ✓ (Übersicht, Unterseite, Leberpforte, Gallenwege) |
+| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) | ✓ |
+| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik | Atemmechanik aus dem Thorax-Modell (Zwerchfell, Rippen, Pleuradruck, Luftstrom), 3D folgt derselben Simulation | Blut aus Pfortader und Leberarterie zu den Lebervenen, Galle zur Gallenblase bzw. in den Zwölffingerdarm (Schalter nüchtern / nach dem Essen) |
+| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | ✓ (Pleuraspalt; Alveole: Blut-Luft-Schranke) | – (C: Papille; Läppchen: Sinusoid) |
+| Hilfekarten und Üben (Quiz) | ✓ | ✓ | ✓ | ✓ | ✓ (dazu „Wege verfolgen“) |
+| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | ✓ (Asthma, COPD, Hyper-/Hypoventilation, Azidose, Cheyne-Stokes; Salbutamol, Sauerstoff, Naloxon) | – (C) |
+| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | ✓ (Frontalschnitt, live mit denselben Teilchen, Kennzahlen) | ✓ (Thorax-Modell, unverändert übernommen) | ✓ (Pfortaderkreislauf von vorn, live mit denselben Teilchen, Kennzahlen) |
+| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | ✓ | – (C) |
+| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | ✓ | – (C) |
+| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper | ✓ `lunge-form.js` (Brustkorb, Rippen, Zwerchfellkuppel, Lappen, Bronchien; Körper nutzt sie), `organ.start` für die Fahrt aus dem Körper | ✓ `leber-form.js` (Körper nutzt sie, dazu Pfortader, Leberarterie, Lebervenen und Gallengang im Körper), `organ.start`/`organ.mitte` für die Fahrt aus dem Körper |
 
 Alle Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
 
@@ -33,6 +33,7 @@ Körper  →  Organsystem  →  Organ  →  Funktionseinheit  →  Lupe
 Mensch     Harnsystem      Niere     Nephron              Wand des Tubulus
 Mensch     Kreislauf       Herz      (Herzklappe)         Klappe/Erregung
 Mensch     Atmung          Lunge     Alveole              Gasaustausch
+Mensch     Verdauung       Leber     Leberläppchen        Sinusoid
 ```
 
 ## Architektur
@@ -62,6 +63,8 @@ core/                     gemeinsamer Kern (JS, CSS)
 vendor/three.min.js       three.js, unverändert
 organe/herz/              Herz-Modul + Inhalte
 organe/niere/             Niere + Nephron
+organe/lunge/             Lunge + Alveole
+organe/leber/             Leber (+ Leberläppchen)
 ```
 
 ## Phasen
@@ -178,7 +181,7 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
 
 ### Phase 3 und weiter – Organ für Organ
 
-- [ ] Lunge mit Alveole – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Lunge, B Alveole, C Krankheitsbilder, Medikamente, Lupe, Export/AR
+- [x] Lunge mit Alveole – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Lunge, B Alveole, C Krankheitsbilder, Medikamente, Lupe, Export/AR
   - Vorlage sind zwei fertige Modelle von Jörn (`tools/originale/lunge-ebene1-thorax.html`, `lunge-ebene3-alveole.html`): Krankheitsbilder, Einstellfunktionen und Schemata werden mit Texten, Werten, Formeln und Abläufen unverändert übernommen; jede Anpassung für die Einbindung wird einzeln genannt; `tools/nachweis.js` vergleicht Original und App (Bilder nebeneinander, Werte und SVG)
   - [x] A: Form-Baustein `organe/lunge/lunge-form.js` (Rippenparameter, Brustkorb-Innenraum, Zwerchfellkuppel, Lungenflügel aus dem Körper, bytegleich umgezogen; dazu Lappen, Bronchialbaum, `rippeStuetz`); Detailmodell `#lunge` mit fünf Lappen, Atemwegen, Rippenfell/Pleuraspalt, Zwerchfell, Rippen, Brustbein, Zwischenrippenmuskeln, Lungengefäßen und Herz zur Orientierung; Ausschnitte Übersicht, Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura
   - [x] A: Atemmechanik aus dem Thorax-Modell (Reiter „Atmung“ im App-Stil, Schema-Panel mit Original-SVG und Kette im hellen Originalaussehen, Pause); abgestimmte Abweichung: doppelte ID `rippen` im Original aufgelöst, die weißen Rippen sind sichtbar; 3D-Lunge atmet mit (Zwerchfell flacht im selben Anteil ab wie im Schema, seitliche Weitung, Rippen drehen, Pleura-Deckkraft gedämpft, 14 Luftteilchen); Hilfekarten und „Probier das aus“ wörtlich, Üben; Kopfzeile „Ebene 1 von 4“ entfällt
@@ -192,7 +195,13 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] C: Export (GLB statisch, GLB animiert, STL) und AR (WebXR mit Pause, AR Quick Look ohne Teilchen, ohne Beschriftung) für Lunge und Alveole (Alveole im Export 1 Einheit = 1 cm, USDZ ca. 23 MB)
   - [x] Herz und Lunge verbunden (mit Jörn abgestimmt, Oktober 2026): Im Lungenmodell schlägt das Herz mit der Herzzyklus-Physik des Herz-Modells (`organ.form.zyklus`, eigene Engine, 3,2 s je Schlag, folgt Tempo und Pause der Atmung); Lungenarterien und -venen sind an Lungenstamm und Venenmündungen des Herz-Modells angeschlossen und durchscheinend; Blutportionen (immer an) fließen blau aus der rechten Kammer in die Lappen, werden dort rot und kehren über die Lungenvenen zurück (Zahl wie `imLu` der Physik); WebXR mit Herzschlag, GLB animiert mit Herzschlag (ein Schlag je Atemzug), STL, GLB statisch und USDZ unverändert; Strukturtext „Herz (Lage)“ und Hilfekarte „Kleiner Kreislauf“ von Jörn freigegeben; keine Wechselwirkung mit den Krankheitsbildern
   - Später: Wechselwirkung Herz und Lunge (z. B. Linksinsuffizienz → Lungenstauung, COPD → Rechtsherzbelastung), direkter Wechsel Herz ↔ Lunge, gemeinsames Schema; Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert
-- [ ] Leber mit Leberläppchen
+- [ ] Leber mit Leberläppchen – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Leber, B Leberläppchen, C Krankheitsbilder, Medikamente, Lupen, Export/AR; keine Vorlage, alle Texte von Jörn freigegeben
+  - [x] A: Form-Baustein `organe/leber/leber-form.js` (Leber als Ausguss unter der rechten Zwerchfellkuppel mit Mulden der Nachbarorgane und H-Furchen der Unterseite; vier Lappen, Gallenblase, Gefäße und Gänge, Bäume von Pfortader, Leberarterie, Gallengängen und Lebervenen, Bänder, Zwölffingerdarm-Abschnitt); der Körper zeigt Leber und Gallenblase daraus (Platzhalter bleiben als Ersatz) und bekommt die neuen Strukturen Pfortader, Leberarterie, Lebervenen und Gallengang (Wunsch von Jörn: auch im Körper verbunden)
+  - [x] A: Detailmodell `#leber` mit 17 Strukturen (Lappen, Bänder, Gefäße, Gallenwege, Umgebung: Zwölffingerdarm, Papille, Pankreasgang, Zwerchfell), Ausschnitte Übersicht, Unterseite, Leberpforte, Gallenwege, Durchsicht, Beschriftung, Lesehilfe; Kamerafahrt Körper → Leber und zurück („Leber öffnen“ bei Leber, Gallenblase und den vier neuen Strukturen)
+  - [x] A: Strömung (Pfortader violett, Leberarterie rot, Lebervenen und Hohlvene blau, Galle grün; Teilchen ohne Zufall) mit Schalter „nüchtern / nach dem Essen“ in der Zeile „Ansicht“ (Gallenblase füllt sich bzw. zieht sich zusammen); Schema als Pfortaderkreislauf von vorn mit denselben Teilchen, Legende, Kennzahlen; Hilfekarten (Aufgaben, Pfortader und Leberarterie, Galle, Pflege: Leberwerte, So liest du das Modell) und Üben: „Strukturen finden“ und neu „Wege verfolgen“ (vier Wege von Blut und Galle, Hilfe nach zwei Fehlern; schaltet Durchsicht und bei den Gallenwegen die Mahlzeit, beim Beenden zurück)
+  - [ ] B: Leberläppchen (`#leber/laeppchen`): Sechseck aufgeschnitten, Nachbarläppchen angedeutet; Zoomstufe wie Lunge → Alveole (Lebergewebe antippen „Leberläppchen hier ansehen“ oder Knopf „Läppchen“, an den Endpunkten des Pfortaderbaums); Blut von den Ecken zur Zentralvene, Galle entgegen, dazu Zucker (Glykogen), Ammoniak → Harnstoff, Bilirubin → Galle, Mahlzeit-Schalter; Schema (Querschnitt von oben, Zonen 1–3); Hilfekarten (Aufbau, Blut innen/Galle außen, Leberzelle als Fabrik, Zonen, So liest du das Modell) und Üben (Strukturen finden, Wege verfolgen)
+  - [ ] C: Krankheitsbilder (Leberzirrhose mit Pfortaderhochdruck, Fettleber, Virushepatitis, Gallenstein mit Gelbsucht), Medikamente (Paracetamol, Lactulose, Spironolacton), Lupen (Leber: Papille; Läppchen: Sinusoid mit Disse-Raum), Export und AR
+  - Offen (eigener Pull Request): Nephron – bei Auswahl eines Tubulusabschnitts (Strukturliste oder Antippen) leuchten die Abschnitte vom proximalen bis zum distalen Tubulus gar nicht und beim Sammelrohr das ganze Rohr: die sechs Abschnitte teilen sich `MAT.tubule`, `setSelected` setzt `emissive` nacheinander, der letzte gewinnt. Beim Üben ist es über ein Klon-Material schon gelöst (`leuchte` in nephron.js).
 - [ ] Magen und Darm mit Dünndarmzotte
 - [ ] Gehirn mit Neuron und Synapse
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
