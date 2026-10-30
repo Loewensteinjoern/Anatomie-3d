@@ -45,7 +45,7 @@ var STRUKTUREN = [
     txt: 'Die Zentralvenen mehrerer Läppchen münden in eine Sammelvene. Sie führt das Blut weiter zu den großen Lebervenen und damit zur unteren Hohlvene.',
     facts: { 'Nimmt auf': 'Zentralvenen', 'Weiter zu': 'Lebervenen', 'Lage': 'unter dem Läppchen' } },
   { id: 'nachbarn', de: 'Nachbarläppchen', lat: 'Lobuli hepatis', grp: 'Umgebung', col: 0xC7A58F,
-    txt: 'Jedes Läppchen ist von weiteren umgeben; sie teilen sich die Periportalfelder an den Ecken. Eine Leber hat Hunderttausende davon. Hier sind die Nachbarn nur angedeutet.',
+    txt: 'Jedes Läppchen ist von weiteren umgeben; sie teilen sich die Periportalfelder an den Ecken. Eine Leber hat Hunderttausende davon. Hier sind die Nachbarläppchen nur angedeutet.',
     facts: { 'Form': 'sechseckige Säulen, ca. 1–2 mm', 'Gemeinsam': 'Periportalfelder an den Ecken', 'Anzahl': 'Hunderttausende je Leber' } }
 ];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt */
@@ -302,8 +302,8 @@ function kupfferGeo() {   /* sternförmige Fresszellen: Körper mit kleinen Fort
   });
   return fuegen(t);
 }
-function nachbarnGeo() {   /* Seitenwände der sechs Nachbarsäulen (gemeinsame Wände nur einmal) */
-  var pos = [], nor = [], idx = [], schon = {};
+function nachbarnGeo() {   /* Seitenwände der sechs Nachbarsäulen (gemeinsame Wände nur einmal) und ihre Kanten als dünne Rohre */
+  var pos = [], nor = [], idx = [], schon = {}, kanten = [], kv = {}, kh = {};
   NACHBAR_WINKEL.forEach(function (w) {
     var cx = 2 * FAPO * Math.sin(w * DEG), cz = 2 * FAPO * Math.cos(w * DEG), k;
     for (k = 0; k < 6; k++) {
@@ -311,6 +311,9 @@ function nachbarnGeo() {   /* Seitenwände der sechs Nachbarsäulen (gemeinsame 
       var x0 = cx + FR * Math.sin(a0), z0 = cz + FR * Math.cos(a0), x1 = cx + FR * Math.sin(a1), z1 = cz + FR * Math.cos(a1);
       var kA = x0.toFixed(2) + ',' + z0.toFixed(2), kB = x1.toFixed(2) + ',' + z1.toFixed(2), key = kA < kB ? kA + '|' + kB : kB + '|' + kA;
       if (schon[key]) continue; schon[key] = true;
+      if (!kv[kA]) { kv[kA] = true; kanten.push(strecke([x0, 0, z0], [x0, FH, z0], 0.09, 3, true)); }
+      if (!kv[kB]) { kv[kB] = true; kanten.push(strecke([x1, 0, z1], [x1, FH, z1], 0.09, 3, true)); }
+      kanten.push(strecke([x0, 0, z0], [x1, 0, z1], 0.09, 3, true), strecke([x0, FH, z0], [x1, FH, z1], 0.09, 3, true));
       var nx = Math.sin((a0 + a1) / 2), nz = Math.cos((a0 + a1) / 2), b = pos.length / 3;
       pos.push(x0, 0, z0, x1, 0, z1, x1, FH, z1, x0, FH, z0);
       for (var i = 0; i < 4; i++) nor.push(nx, 0, nz);
@@ -321,7 +324,10 @@ function nachbarnGeo() {   /* Seitenwände der sechs Nachbarsäulen (gemeinsame 
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setIndex(idx);
-  return g;
+  var nw = pos.length / 3, kg = fuegen(kanten), alle = fuegen([{ g: g, m: new THREE.Matrix4() }, { g: kg, m: new THREE.Matrix4() }]), col = [], i;
+  for (i = 0; i < alle.attributes.position.count; i++) col.push(1, 1, 1, i < nw ? 0.125 : 1);   /* Alpha: Wände 0,125, Kanten 1 (mal Materialdeckkraft 0,4) */
+  alle.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  return alle;
 }
 /* Materialien (Farbe, Optionen für Kern.mat; dicht = zählt beim Antippen als undurchsichtig), Zeichenreihenfolge */
 function matDef() {
@@ -336,7 +342,7 @@ function matDef() {
     arterienast: [0xC8372D, { rough: 0.4, coat: 0.3, dicht: true }, 2],
     gallengang: [0x3F8F4A, { rough: 0.4, coat: 0.5, dicht: true }, 2],
     sammelvene: [0x34559E, { rough: 0.4, coat: 0.3, opacity: 0.6, dicht: true }, 3],
-    nachbarn: [0xC7A58F, { rough: 0.6, opacity: 0.05, side: D }, 6]
+    nachbarn: [0xC7A58F, { rough: 0.6, opacity: 0.4, side: D, vc: true }, 6]   /* Deckkraft je Ecke über die Vertexfarbe (Alpha): Wände ca. 0,05, Kanten 0,4 */
   };
 }
 /* Alle Teile des Läppchens: { sid, name, geo, inst (n, mat, col) oder null, order } */
@@ -880,14 +886,14 @@ function ankerBerechnen() {
     kupffer: [kup[0], kup[9], kup[6], kup[1], kup[5]],
     pfortaderast: tria('pf'), arterienast: tria('art'), gallengang: tria('gang'),
     sammelvene: [[11, SAMMEL_Y + SAMMEL_R, 0], [-11, SAMMEL_Y + SAMMEL_R, 0]],
-    nachbarn: [90, 270, 30, 330, 150, 210].map(function (g) { return pol(12, g, FH); })
+    nachbarn: [90, 270, 30, 330, 150, 210].map(function (g) { return pol(16, g, FH / 2); })   /* Mitte der äußeren senkrechten Kanten der Nachbarsäulen */
   }];
   Z.push({
     pfortaderast: tria('pf'), arterienast: tria('art'), gallengang: tria('gang'),
     balken: [platte(50, 5.4, OBEN), platte(70, 5.4, OBEN), platte(50, 3.6, OBEN)],
     sinusoide: [pol(4.2, 30, KANAL), pol(5.0, 60, KANAL), pol(3.5, 30, KANAL)],
     kanaelchen: [pol(5.4, 50, TUBE), pol(4.0, 50, TUBE), pol(5.4, 70, TUBE)],
-    nachbarn: [pol(12, 30, FH), pol(12, 90, FH), pol(12, 330, FH)]
+    nachbarn: [pol(16, 30, FH / 2), pol(16, 90, FH / 2), pol(16, 330, FH / 2), pol(16, 30, FH * 0.8), pol(16, 90, FH * 0.8), pol(16, 330, FH * 0.8)]
   });
   Z.push({
     zentralvene: [[0, 6.5, -RZ], [0, 3.0, -RZ], [0, 1.0, -RZ], [-0.64, 4.5, -0.64]],
@@ -904,7 +910,7 @@ function ankerBerechnen() {
   });
   AUSSCHNITTE.forEach(function (a, i) { Object.keys(Z[i]).forEach(function (id) { KAND[i][id] = Z[i][id].map(P); }); });
 }
-/* Sichtpruefung der Anker: in der ruhenden Ansicht (150 ms unveraendert) je Struktur den ersten Kandidaten waehlen, vor dem kein undurchsichtiges
+/* Sichtpruefung der Anker: in der ruhenden Ansicht (150 ms unveraendert) je Struktur den ersten Kandidaten waehlen, der im Bild liegt und vor dem kein undurchsichtiges
    Netz einer anderen Struktur liegt; sonst keine Beschriftung. Waehrend der Bewegung bleibt die letzte Wahl. */
 var sKey = '', sT = 0, sOk = true, sichtVer = 0, VIS = {};   /* VIS: gewaehlter Ankerpunkt je Struktur (null = verdeckt) */
 var rayS = new THREE.Raycaster(), dirS = new THREE.Vector3();
@@ -919,6 +925,11 @@ function frei(id, p) {
   }
   return true;
 }
+var pS = new THREE.Vector3();
+function imBild(p) {   /* Anker liegt sichtbar im Bild (nicht am Rand, nicht hinter der Kamera) */
+  pS.copy(p).project(camera);
+  return pS.z < 1 && Math.abs(pS.x) < 0.9 && Math.abs(pS.y) < 0.9;
+}
 function sichtPruefen(now, w, h) {
   var k = [view.theta.toFixed(4), view.phi.toFixed(4), view.dist.toFixed(3), view.target.x.toFixed(3), view.target.y.toFixed(3), view.target.z.toFixed(3), w, h, lv, aktiv].join('|');
   if (k !== sKey) { sKey = k; sT = now; sOk = false; return; }
@@ -929,12 +940,12 @@ function sichtPruefen(now, w, h) {
     if (!enabled[id]) return;
     var c = KAND[aktiv][id] || [], i;
     VIS[id] = null;
-    for (i = 0; i < c.length; i++) if (frei(id, c[i])) { VIS[id] = c[i]; break; }
+    for (i = 0; i < c.length; i++) if (imBild(c[i]) && frei(id, c[i])) { VIS[id] = c[i]; break; }
   });
   sichtVer++;
 }
 var KURZ = { pfortaderast: 'Pfortaderast', arterienast: 'Leberarterienast', zentralvene: 'Zentralvene', balken: 'Leberzellbalken' };
-var HANDYNAME = { balken: 'Zellbalken', kanaelchen: 'Gallenkanälchen', arterienast: 'Arterienast', nachbarn: 'Nachbarn', pfortaderast: 'Pfortaderast' };   /* kürzere Namen, wo die Spalte auf dem Handy schmal ist */
+var HANDYNAME = { balken: 'Zellbalken', kanaelchen: 'Gallenkanälchen', arterienast: 'Arterienast', pfortaderast: 'Pfortaderast' };   /* kürzere Namen, wo die Spalte auf dem Handy schmal ist */
 var HANDY_GROSS = ['zentralvene', 'balken', 'pfortaderast', 'sammelvene', 'nachbarn'];   /* Handy, Uebersicht: nur diese werden beschriftet */
 var LISTEN = [
   ['zentralvene', 'balken', 'sinusoide', 'kanaelchen', 'kupffer', 'pfortaderast', 'arterienast', 'gallengang', 'sammelvene', 'nachbarn'],
