@@ -41,6 +41,21 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #scard .wg-rueck{margin-top:8px}
 #scard .wg-ab{margin-top:8px;color:var(--ink)}
 
+/* Szenariokarte (Krankheitsbilder, Medikamente): unten links wie die Info- und Erklaerkarte (die beiden und sie schliessen sich gegenseitig), Aussehen: core/kern.css, .szkarte */
+#kcard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#kcard.show{display:block}
+#kcard.show.weg{display:none}
+#kcard .kick,#kcard h3{padding-right:70px}
+#kcard.min{padding-bottom:6px}
+#kcard .lead{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:var(--ink-dim)}
+#kcard .after{margin:4px 0 0;padding-top:9px;border-top:1px solid var(--line)}
+#kcard .after:empty{display:none}
+#kcard .after h5{margin:0 0 3px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+#kcard .after p{margin:0 0 8px;font-size:12px;line-height:1.5;color:var(--ink-dim)}
+#kcard .note:empty{display:none}
+@media (min-width:1001px) and (max-width:1160px){ body.schema #kcard{display:none} }   /* das Schema reicht hier bis an die Karte */
+
 /* Schema (vorbereitet, laeppchen.js): rechts am Rand unter der Werkzeugleiste (vier Zeilen) */
 #schema{top:176px;right:22px;bottom:76px;width:calc((100vh - 288px) * .637 + 26px);max-width:calc(100vw - 308px);
   padding:10px 12px 8px;display:none;flex-direction:column}
@@ -68,8 +83,8 @@ body.schema #labels,body.schema #leaders{display:none}
   #legend{display:none}
   /* Infokarte und Erklaerkarte: die Infokarte endet ueber der Werkzeugleiste (--wz = gemessene Hoehe der Werkzeugleiste, von laeppchen.js gesetzt; Werkzeugleiste unten bei 34vh + 6px) */
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + var(--wz,132px) + 14px);max-height:calc(66vh - var(--wz,132px) - 70px);overflow-y:auto}
-  #scard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
-  body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
+  #scard,#kcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck,body:has(#kcard.show:not(.weg)) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   /* Ueben (Strukturen finden, Wege verfolgen): kompakte Karte unten direkt ueber der Werkzeugleiste (26 % der Hoehe, laeppchen.js bereichFuer richtet den Bildbereich danach aus);
      Aufgabe und Abschluss scrollen, Stationsliste, Rueckmeldung, Zaehlung und Knoepfe bleiben sichtbar */
   body.ueben #scard.show{display:flex;flex-direction:column;top:auto;bottom:calc(34vh + var(--wz,132px) + 14px);height:26vh;max-height:26vh;overflow:hidden;padding:10px 14px}
@@ -90,9 +105,9 @@ body.schema #labels,body.schema #leaders{display:none}
   body.schema #tools{bottom:6px}
   body.schema #schema{bottom:calc(var(--wz,132px) + 12px)}
   body.schema #info{bottom:calc(var(--wz,132px) + 12px)}
+  body.schema #kcard{display:none}   /* das Schema nimmt den Platz der Karte ein */
   body.schema #toast{bottom:calc(var(--wz,132px) + 14px)}
-  #rail .tabs{flex-wrap:nowrap}
-  #rail .tab{flex:1 1 0}
+  /* Reiter: fuenf Reiter brechen wie am Desktop um (3 + 2), "Krankheitsbilder" bleibt lesbar */
 }
 
 /* Schalter, deren Wirkung erst in einem spaeteren Schritt folgt (Schema) */

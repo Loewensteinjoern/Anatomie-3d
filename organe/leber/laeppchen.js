@@ -7,7 +7,8 @@
    Modelleinheit: 1 Einheit = 0,1 mm (Läppchen: Ecke zu Mitte 8 Einheiten, Höhe der gezeigten Säule 8 Einheiten); die Größen sind symbolisch.
    Alles ist festgelegt, kein Zufall. Grundgerüst wie die Leber: 10 Strukturen mit je eigenem Material, Ausschnitte, Durchsicht, Beschriftung, Infokarte,
    Strukturliste, Lesehilfe. Dazu Strömung mit Mahlzeit und den Stoffen Zucker, Ammoniak/Harnstoff und Bilirubin (Abschnitt 6), Schema als Querschnitt von oben
-   (Abschnitt 7), Hilfekarten und Üben (Strukturen finden, drei Wege).
+   (Abschnitt 7), Hilfekarten und Üben (Strukturen finden, drei Wege). Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.leber): Reiter,
+   Erklärkarte und Wirkung im Läppchen (Abschnitt 6b).
    organ.start (Startansicht) und organ.form (Geometrie als reine Funktionen) dienen der Kamerafahrt aus der Leber (leber.js, Zoomstufe Leber -> Läppchen).
    ===================================================================== */
 (function () {
@@ -451,7 +452,8 @@ function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (Gefaesse, Kanaele, Kupffer-Zellen) */
 function weichMat(o) { return o.material.transparent && !o.material.userData.dicht; }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh) o.visible = !!enabled[o.userData.sid]; });
+  root.traverse(function (o) { if (o.isMesh && !o.userData.krank) o.visible = !!enabled[o.userData.sid]; });   /* die Netze der Krankheitsbilder stellt krSichtbar */
+  krSichtbar();
   lv++;
 }
 function stelleMat(m, transparent, opacity) {
@@ -474,7 +476,7 @@ function setSelected(id) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   closeCard();
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -487,9 +489,43 @@ function setSelected(id) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  kartenLage();
 }
 var quiz = null, quizT = null;   /* Üben "Strukturen finden": { n, ok, target, last, wait } */
 var wege = null, wegeT = null;   /* Üben "Wege verfolgen" */
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.leber): Reiter und Erklaerkarte (id kcard) unten links wie die Infokarte. Die Wirkung im Laeppchen steht
+   in Abschnitt 6b. Jeder Eintrag bekommt den Hinweis fuer das Laeppchen als note. */
+var SZ_DATEN = Kern.Szenarien.daten.leber.map(function (sc) { var o = Object.assign({}, sc); o.note = sc.hinweis.laeppchen; return o; });
+var SZW = { zirrhose: 0, aszites: 0, fett: 0, hepatitis: 0, stein: 0, nekrose3: 0, ammoniak: 1 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags); aszites hat im Laeppchen keine Wirkung */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: 'Krankheitsbild oder Medikament ausschalten',
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (wege) wegeEnd();
+      setSelected(null); closeCard();
+      krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt das Modell, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  lv++;
+}
 
 function ebene(sid, an) {
   enabled[sid] = an;
@@ -497,13 +533,15 @@ function ebene(sid, an) {
   applyVisibility();
 }
 (function leiste() {
-  /* Reiter: Strukturen, Hilfekarten, Ueben (die beiden letzten folgen in spaeteren Schritten) */
+  /* Reiter: Strukturen, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Hilfekarten', 'Üben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -522,6 +560,9 @@ function ebene(sid, an) {
     d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
     paneH.appendChild(d);
   });
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Wähle ein Krankheitsbild – im Läppchen siehst du, was mit den Zellen, den Sinusoiden und der Galle geschieht.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild.');
   /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
   var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Leberläppchen und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge den Weg von Blut und Galle: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
   var pb = document.createElement('div'); pb.className = 'pane-btn';
@@ -586,12 +627,12 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
-  lv++;
+  kartenLage();
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
-  lv++;
+  kartenLage();
 }
 function openHelp(key) {
   var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
@@ -761,6 +802,7 @@ function setStoff(name, an) {
   stoffe[name] = !!an;
   STOFFE.forEach(function (b) { if (b[1] === name) $(b[0]).classList.toggle('on', !!an); });
   if (ST) ST.gruppen.forEach(function (g) { if (g.stoff === name) g.im.visible = !!an; });
+  if (KRS && KRS.bil && name === 'bilirubin') KRS.bil.im.visible = !!an;
 }
 STOFFE.forEach(function (b) { $(b[0]).onclick = function () { setStoff(b[1], !stoffe[b[1]]); }; });
 
@@ -969,10 +1011,11 @@ function layoutLabels(w, h) {
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
-  if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var kk = SZ.el && SZ.el.classList.contains('show') && !SZ.el.classList.contains('weg') ? SZ.el : null;   /* offene Szenariokarte (Krankheitsbild, Medikament): ebenso */
+  if (!narrow && (unten || kk)) botL = Math.min(botL, h - 22 - (unten ? $('info') : kk).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei */
+  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten || (kk && !kk.classList.contains('min'))))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei */
     LISTEN[aktiv].forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen */
@@ -984,6 +1027,7 @@ function layoutLabels(w, h) {
     });
   }
   items.forEach(function (it) { it.side = it.sx < cx ? 'l' : 'r'; });
+  if (!narrow && kk && botL - topL < 100) items = items.filter(function (it) { return it.side !== 'l'; });   /* die hohe Szenariokarte laesst links keinen Platz: nur die Namen rechts */
   ['l', 'r'].forEach(function (side) {
     var g = items.filter(function (it) { return it.side === side; }).sort(function (p, q) { return p.sy - q.sy; });
     var top = side === 'l' ? topL : topR, bot = side === 'l' ? botL : botR, gp = g.length > 1 ? Math.min(gap, (bot - top) / (g.length - 1)) : gap, y = top;
@@ -1029,6 +1073,7 @@ function layoutLabels(w, h) {
    Ammoniak geht in die Zelle und kommt als Harnstoff ins Sinusoid zurueck; Bilirubin geht in die Zelle und fliesst als Galle durch das Kanaelchen ab.
    `anteil` blendet die beiden Zuckerwege weich ueber (1,5 s), `glyk` (0..1) fuellt bzw. leert die Zellen (nach dem Essen 5 s, nuechtern 8 s).
    ===================================================================== */
+var clockBl = 0, clockG = 0;                   /* Uhren des Bluts (bei Zirrhose halb so schnell) und der Galle (bei Gallenstau langsamer), sonst gleich clock (6b) */
 var anteil = 0, glyk = 0, glykGezeigt = -1;   /* anteil: Ueberblendung der Zuckerwege 0..1; glyk: Glykogenfuellung der Zellen 0..1 */
 var STR = { ANTEIL: 1.5, AUFNAHME: 5, ABGABE: 8, FADE: 0.5 };
 var ST = null;                                 /* nach dem Aufbau: Gruppen { art, stoff, list, im, ... } */
@@ -1167,7 +1212,14 @@ function pose(p, c, o) {
   if (g.mode === 1) fade *= sstep6((rt.tC - t) / 0.35);        /* Ammoniak: bis in die Zelle */
   else if (g.mode === 2) fade *= sstep6((t - rt.tC) / 0.35);   /* Harnstoff: ab der Zelle */
   o.s = g.s * w * fade;
+  if (KRS) {                                                   /* Krankheitsbilder (6b): Ammoniak weniger, Bilirubin geht bei Gallenstau zurueck ins Blut, die Galle staut sich */
+    if (g.art === 'ammoniak') o.s *= klemme((SZW.ammoniak - p.q) / 0.15 + 0.5);
+    else if (g.art === 'bilirubin') o.s *= 1 - SZW.stein;
+    else if (g.art === 'bilirubin-zurueck') o.s *= 1.3 * SZW.stein;
+    else if (g.art === 'galle') o.s *= 1 + 0.5 * SZW.stein;
+  }
 }
+function takt(g) { return g.art === 'pfortader' || g.art === 'arterie' ? clockBl : g.art === 'galle' ? clockG : clock; }
 function tmat6(em) {
   var m = Kern.mat(0xFFFFFF, { rough: 0.35 }, envTex);
   m.emissive.copy(srgb(em)).multiplyScalar(0.6);
@@ -1210,6 +1262,10 @@ function glykSetzen() {
   for (i = 0; i < n; i++) {
     a = 0.6 * sstep6(glyk * 1.5 - 0.5 * zellH[i]); b = 1 - a;
     A[i * 3] = zellBasis[i * 3] * b + GLYK_HELL.r * a; A[i * 3 + 1] = zellBasis[i * 3 + 1] * b + GLYK_HELL.g * a; A[i * 3 + 2] = zellBasis[i * 3 + 2] * b + GLYK_HELL.b * a;
+    if (KRS) {                                   /* abgestorbene Zellen (Paracetamol: Zone 3, Hepatitis: einzelne) sind dunkel, vor dem Glykogen */
+      var kw = Math.max(SZW.nekrose3 * KRS.z3[i], SZW.hepatitis * KRS.dk[i]);
+      if (kw > 0) { A[i * 3] = A[i * 3] * (1 - kw) + DUNKEL.r * kw; A[i * 3 + 1] = A[i * 3 + 1] * (1 - kw) + DUNKEL.g * kw; A[i * 3 + 2] = A[i * 3 + 2] * (1 - kw) + DUNKEL.b * kw; }
+    }
   }
   zellMesh.instanceColor.needsUpdate = true;
 }
@@ -1217,13 +1273,13 @@ function glykSetzen() {
 function stroemungBild() {
   if (!ST) return;
   glykSetzen();
-  var key = clock + '|' + anteil;
+  var key = clock + '|' + anteil + '|' + szVer;
   if (key === ST.letzt) return;
   ST.letzt = key;
-  ST.gruppen.forEach(function (g) {
+  (KRS && KRS.bil ? ST.gruppen.concat([KRS.bil]) : ST.gruppen).forEach(function (g) {
     var C = g.im.instanceColor.array, c0 = g.c0, c1 = g.c1;
     for (var i = 0; i < g.list.length; i++) {
-      pose(g.list[i], clock, STQ);
+      pose(g.list[i], takt(g), STQ);
       STM.makeScale(STQ.s, STQ.s, STQ.s); STM.setPosition(STQ.x, STQ.y, STQ.z);
       g.im.setMatrixAt(i, STM);
       C[i * 3] = c0.r + (c1.r - c0.r) * STQ.c; C[i * 3 + 1] = c0.g + (c1.g - c0.g) * STQ.c; C[i * 3 + 2] = c0.b + (c1.b - c0.b) * STQ.c;
@@ -1237,8 +1293,185 @@ function stroemungSchritt(dt) {
   if (!playing) return;
   var d = dt * speed, ziel = mahlzeit ? 1 : 0;
   clock += d;
+  clockBl += d * (1 - 0.5 * SZW.zirrhose);   /* Zirrhose: das Blut fliesst halb so schnell (6b) */
+  clockG += d * (1 - 0.65 * SZW.stein);      /* Gallenstein: die Galle staut sich, sie fliesst langsamer (6b) */
   if (anteil !== ziel) anteil = ziel > anteil ? Math.min(ziel, anteil + d / STR.ANTEIL) : Math.max(ziel, anteil - d / STR.ANTEIL);
   if (glyk !== ziel) glyk = ziel > glyk ? Math.min(ziel, glyk + d / STR.AUFNAHME) : Math.max(ziel, glyk - d / STR.ABGABE);
+}
+
+/* =====================================================================
+   6b. Krankheitsbilder und Medikamente im Laeppchen. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * Werte des Eintrags (Kern.Szenarien.daten.leber: zirrhose,
+   fett, hepatitis, stein, nekrose3, ammoniak als Faktor; aszites wirkt nur in der Leber). Alle three.js-Objekte entstehen erst bei der ersten Wahl (krankBauen), ohne Wahl aendert
+   sich nichts. Alles ist deterministisch (hash, Index, Lage), kein Zufall.
+   Zirrhose: Narbenstraenge (flache, faserige Baender) entlang der Aussenwaende und kurze Septen von den Ecken ins Laeppchen, Sinusoide enger (Breite * (1 - 0,4 zirrhose)), ca. 20 %
+   der Zellen fehlen (vor allem aussen; Instanz weich auf Groesse 0), Blut halb so schnell (clockBl). Fettleber: helle Fetttropfen in vielen Zellen (in Zone 3 mehr). Hepatitis:
+   Abwehrzellen gehaeuft an den Ecken (Periportalfeldern), ca. 10 % der Zellen dunkel. Gallenstein: die Galle in den Kanaelchen staut sich (langsamer, groesser), Bilirubin geht aus
+   den Zellen ins Sinusoid zurueck und fliesst zur Zentralvene (Gruppe bilirubin-zurueck statt Weg durch die Kanaelchen). Paracetamol (nekrose3): die Zellen im inneren Drittel
+   (Zone 3, nahe der Zentralvene) werden dunkel graubraun. Ammoniak: Faktor fuer die Zahl der orangen Teilchen. Zellfarben: erst Glykogen, darueber (vor Glykogen) dunkel (glykSetzen).
+   ===================================================================== */
+var DUNKEL = srgb(0x4A3C34);
+var KR_SINUS = 0.4;                                   /* Verengung der Sinusoide bei Wirkgroesse 1 (Breite * (1 - 0,4)) */
+/* Band entlang der Punkte P (Breitenrichtung W je Punkt, halbe Breite h) in die Listen pos/nor/idx */
+function bandStueck(pos, nor, idx, P, W, h) {
+  var b = pos.length / 3, i, t, nx, ny, nz, l, k = P.length;
+  for (i = 0; i < k; i++) {
+    var a = P[Math.max(0, i - 1)], c = P[Math.min(k - 1, i + 1)];
+    t = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    nx = t[1] * W[i][2] - t[2] * W[i][1]; ny = t[2] * W[i][0] - t[0] * W[i][2]; nz = t[0] * W[i][1] - t[1] * W[i][0];
+    l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1; nx /= l; ny /= l; nz /= l;
+    pos.push(P[i][0] + W[i][0] * h, P[i][1] + W[i][1] * h, P[i][2] + W[i][2] * h, P[i][0] - W[i][0] * h, P[i][1] - W[i][1] * h, P[i][2] - W[i][2] * h);
+    nor.push(nx, ny, nz, nx, ny, nz);
+  }
+  for (i = 0; i < k - 1; i++) idx.push(b + 2 * i, b + 2 * i + 1, b + 2 * i + 2, b + 2 * i + 1, b + 2 * i + 3, b + 2 * i + 2);
+}
+/* Narbenstraenge der Zirrhose: je Aussenwand (ausser der im aufgeschnittenen Keil) sechs flache Baender in verschiedener Hoehe, leicht geschwungen und schraeg (faserig), dazu von jeder
+   Ecke zwei kurze Septen ins Laeppchen */
+function narbeGeo() {
+  var pos = [], nor = [], idx = [], k, s, i, UP = [0, 1, 0];
+  for (k = 0; k < 6; k++) {
+    if (k === 5) continue;                                 /* die Wand zwischen Ecke 5 und Ecke 0 liegt im aufgeschnittenen Keil */
+    var a0 = eckeWinkel(k), a1 = eckeWinkel(k + 1), x0 = FR * Math.sin(a0), z0 = FR * Math.cos(a0), x1 = FR * Math.sin(a1), z1 = FR * Math.cos(a1);
+    var nx = -(Math.sin((a0 + a1) / 2)), nz = -(Math.cos((a0 + a1) / 2));   /* nach innen */
+    for (s = 0; s < 10; s++) {
+      var yb = 0.5 + 0.78 * s, ph = hash(k * 20 + s + 1) * 6.28, sl = (s % 2 ? 1 : -1) * (0.5 + 1.8 * hash(k * 20 + s + 40)), P = [], W = [], N = 24;
+      for (i = 0; i <= N; i++) {
+        var t = i / N, wob = 0.14 + 0.12 * Math.sin(9 * t + ph);
+        P.push([x0 + (x1 - x0) * t + nx * wob, yb + sl * (t - 0.5) + 0.2 * Math.sin(6 * t + ph * 2), z0 + (z1 - z0) * t + nz * wob]); W.push(UP);
+      }
+      bandStueck(pos, nor, idx, P, W, 0.16 + 0.1 * hash(k * 20 + s + 80));
+    }
+  }
+  for (k = 0; k < 6; k++) {
+    var a = eckeWinkel(k), sa = Math.sin(a), ca = Math.cos(a);
+    for (s = -1; s <= 1; s += 2) {
+      for (i = 0; i < 3; i++) {
+        var y = 1.8 + 2.2 * i, P2 = [], W2 = [], j;
+        for (j = 0; j <= 6; j++) { var r = 7.7 - 2.1 * j / 6; P2.push([r * sa + s * 1.25 * ca, y + 0.2 * Math.sin(j + i + k), r * ca - s * 1.25 * sa]); W2.push(UP); }
+        bandStueck(pos, nor, idx, P2, W2, 0.4);
+      }
+    }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+var KRS = null;   /* Daten der Krankheitsbilder (6b), entstehen bei der ersten Wahl; szVer: Version fuer stroemungBild */
+var szVer = 0;
+function krInst(geo, mt, n, name) {
+  var m = new THREE.InstancedMesh(geo, mt, n);
+  m.name = name; m.userData.krank = true; m.frustumCulled = false; m.raycast = function () {}; m.visible = false;
+  m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  root.add(m);
+  return m;
+}
+function krankBauen() {
+  if (KRS || abgebaut || !zellMesh || !ST) return;
+  var A = zellMesh.instanceMatrix.array, n = zellH.length, sm = STRUCT.sinusoide.meshes[0], i, k;
+  KRS = { mBasis: new Float32Array(A), sBasis: new Float32Array(sm.instanceMatrix.array), fehlt: new Float32Array(n), z3: new Float32Array(n), dk: new Float32Array(n),
+    tropfen: [], tPos: null, tR: null, immun: null, bil: null, narbe: null, sinus: sm };
+  var tl = [];
+  for (i = 0; i < n; i++) {
+    var o = i * 16, x = A[o + 12], y = A[o + 13], z = A[o + 14], r = Math.sqrt(x * x + z * z);
+    KRS.fehlt[i] = hash(i + 301) < klemme(0.1 + 0.2 * r / 6.5) ? 1 : 0;                  /* fehlende Zellen: ca. 20 %, aussen mehr */
+    KRS.z3[i] = 1 - klemme((r - 3.0) / 0.4);                                                  /* Zone 3: inneres Drittel (Radius < 3,2) mit weichem Rand */
+    KRS.dk[i] = hash(i + 501) < 0.1 ? 1 : 0;                                               /* einzelne dunkle Zellen bei Hepatitis: ca. 10 % */
+    if (hash(i + 701) < (r < 3.2 ? 0.75 : 0.5)) {                                           /* Fetttropfen: in Zone 3 etwas mehr */
+      var cw = Math.sqrt(A[o] * A[o] + A[o + 1] * A[o + 1] + A[o + 2] * A[o + 2]), ux = A[o] / cw, uy = A[o + 1] / cw, uz = A[o + 2] / cw;
+      var sd = (x * ux + y * uy + z * uz) < 0 ? -1 : 1, d = cw * 0.5 - 0.04;               /* an die Seite zum Sinusoid, dort ragt der Tropfen heraus */
+      tl.push(x + ux * sd * d, y + uy * sd * d, z + uz * sd * d, 0.24 + 0.08 * hash(i + 801));
+    }
+  }
+  KRS.tPos = new Float32Array(tl);
+  var nt = tl.length / 4;
+  KRS.tropfen = krInst(new THREE.SphereGeometry(1, 10, 7), Kern.mat(0xF1E3B0, { rough: 0.3, coat: 0.4 }, envTex), nt, 'Fetttropfen');
+  /* Abwehrzellen: je Ecke 16 kleine Kugeln um die Glisson-Trias */
+  var il = [];
+  for (k = 0; k < 6; k++) {
+    var e = eckePunkt(k, 'pf');
+    for (i = 0; i < 16; i++) {
+      var ang = i * 2.399963, rr = 0.8 + 0.6 * Math.sqrt(bruch(0.1 + (i + 16 * k) * 0.3247));
+      il.push(e[0] + rr * Math.cos(ang), 0.3 + (FH - 0.6) * bruch(0.3 + (i + 16 * k) * 0.6180339887), e[1] + rr * Math.sin(ang), 0.24 + 0.1 * hash(i + 16 * k + 900));
+    }
+  }
+  KRS.immun = { pos: new Float32Array(il), n: il.length / 4 };
+  var imm = Kern.mat(0x4B3FC4, { rough: 0.3, coat: 0.4 }, envTex); imm.emissive.copy(srgb(0x2A1F90)).multiplyScalar(0.5);   /* kraeftig indigo: hebt sich von den hellen Blutteilchen ab */
+  KRS.immunMesh = krInst(new THREE.SphereGeometry(1, 10, 7), imm, KRS.immun.n, 'Abwehrzellen');
+  /* Narbenstraenge */
+  var nm = Kern.mat(0xD6D1C4, { rough: 0.85, side: THREE.DoubleSide }, envTex);
+  nm.transparent = true; nm.opacity = 0; nm.depthWrite = false;
+  KRS.narbe = new THREE.Mesh(narbeGeo(), nm); KRS.narbe.name = 'Narbenstränge'; KRS.narbe.renderOrder = 5; KRS.narbe.userData.krank = true; KRS.narbe.raycast = function () {}; KRS.narbe.visible = false;
+  root.add(KRS.narbe);
+  /* Bilirubin, das bei Gallenstau ins Sinusoid zurueckgeht: eigene Gruppe mit den Phasen des Bilirubins, nicht in ST.gruppen (das Schema bleibt unveraendert) */
+  var bd = GRP.filter(function (d) { return d.art === 'bilirubin'; })[0], bi = GRP.indexOf(bd), bg = ST.gruppen.filter(function (g) { return g.art === 'bilirubin'; })[0];
+  var gz = { art: 'bilirubin-zurueck', stoff: 'bilirubin', name: 'Bilirubin (zurück ins Blut)', s: bd.s, c0: srgb(bd.c0), c1: srgb(bd.c0), css0: bd.c0, css1: bd.c0, list: [], cw: new Float32Array(bd.n) };
+  for (i = 0; i < bd.n; i++) {
+    var w = wahl(i + 53 * bi + 1), N = einlauf(w.k, 'pf', w.lane, w.y, false);
+    N.push(laneKnoten(w.lane, w.rc, w.y, 1.6, false)); N.push(knoten(zelle(w.lane, w.pl, w.rc, w.y), 1.2, 0, 0));
+    N.push(laneKnoten(w.lane, Math.max(w.lane.rin, w.rc - 0.9), w.y, 1.2, false));
+    var b = bg.list[i];
+    gz.list.push({ g: gz, rt: routeAus6(N.concat(abfluss(w.lane, w.y, w.sign))), phi: b.phi, ang: b.ang, rho: b.rho, q: b.q });
+  }
+  var m = tmat6(bd.c0), im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), m, gz.list.length);
+  m.name = 'teilchen-bilirubin-zurueck';
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(gz.list.length * 3), 3);
+  im.frustumCulled = false; im.name = gz.name; im.userData.teilchen = gz.art; im.userData.noexport = true; im.userData.krank = true;
+  im.visible = !!stoffe.bilirubin; im.raycast = function () {};
+  root.add(im); gz.im = im; KRS.bil = gz;
+  ST.letzt = '';
+}
+/* Stellung der Krankheitsbilder aus den Wirkgroessen: Zellen und Sinusoide (Instanzmatrizen), Tropfen, Abwehrzellen, Narben, Sichtbarkeit */
+function krSichtbar() {
+  if (!KRS) return;
+  KRS.tropfen.visible = SZW.fett > 0.002 && !!enabled.balken;
+  KRS.immunMesh.visible = SZW.hepatitis > 0.002;
+  KRS.narbe.visible = SZW.zirrhose > 0.002;
+}
+function krAnwenden() {
+  var z = SZW.zirrhose, A = zellMesh.instanceMatrix.array, B = KRS.mBasis, n = zellH.length, i, k, f, o;
+  var cols = [0, 1, 2, 4, 5, 6, 8, 9, 10];
+  for (i = 0; i < n; i++) {
+    f = Math.max(0.001, 1 - z * KRS.fehlt[i]); o = i * 16;
+    for (k = 0; k < 9; k++) A[o + cols[k]] = B[o + cols[k]] * f;
+  }
+  zellMesh.instanceMatrix.needsUpdate = true;
+  var S = KRS.sinus.instanceMatrix.array, SB = KRS.sBasis, ns = S.length / 16, fs = 1 - KR_SINUS * z;   /* Sinusoide: Breite (x-Achse der Instanz) */
+  for (i = 0; i < ns; i++) { o = i * 16; S[o] = SB[o] * fs; S[o + 1] = SB[o + 1] * fs; S[o + 2] = SB[o + 2] * fs; }
+  KRS.sinus.instanceMatrix.needsUpdate = true;
+  var T = KRS.tropfen.instanceMatrix.array, P = KRS.tPos, nt = P.length / 4, s;
+  for (i = 0; i < nt; i++) {
+    s = P[i * 4 + 3] * SZW.fett; o = i * 16;
+    T[o] = s; T[o + 1] = 0; T[o + 2] = 0; T[o + 3] = 0; T[o + 4] = 0; T[o + 5] = s; T[o + 6] = 0; T[o + 7] = 0; T[o + 8] = 0; T[o + 9] = 0; T[o + 10] = s; T[o + 11] = 0;
+    T[o + 12] = P[i * 4]; T[o + 13] = P[i * 4 + 1]; T[o + 14] = P[i * 4 + 2]; T[o + 15] = 1;
+  }
+  KRS.tropfen.instanceMatrix.needsUpdate = true;
+  var I = KRS.immunMesh.instanceMatrix.array, Q = KRS.immun.pos;
+  for (i = 0; i < KRS.immun.n; i++) {
+    s = Q[i * 4 + 3] * SZW.hepatitis; o = i * 16;
+    I[o] = s; I[o + 1] = 0; I[o + 2] = 0; I[o + 3] = 0; I[o + 4] = 0; I[o + 5] = s; I[o + 6] = 0; I[o + 7] = 0; I[o + 8] = 0; I[o + 9] = 0; I[o + 10] = s; I[o + 11] = 0;
+    I[o + 12] = Q[i * 4]; I[o + 13] = Q[i * 4 + 1]; I[o + 14] = Q[i * 4 + 2]; I[o + 15] = 1;
+  }
+  KRS.immunMesh.instanceMatrix.needsUpdate = true;
+  var nm = KRS.narbe.material; nm.opacity = klemme(z); nm.depthWrite = z > 0.95;
+  krSichtbar();
+  glykGezeigt = -1;                                   /* Zellfarben neu setzen (glykSetzen) */
+  szVer++;                                            /* Teilchen neu setzen */
+}
+function szenarioWirkung() {
+  var n = { zirrhose: 0, aszites: 0, fett: 0, hepatitis: 0, stein: 0, nekrose3: 0, ammoniak: 1 };
+  SZ_DATEN.forEach(function (sc) {
+    var a = SZ.anteil[sc.id], m = sc.modell;
+    if (!a) return;
+    Object.keys(n).forEach(function (k) { n[k] += a * ((m[k] === undefined ? (k === 'ammoniak' ? 1 : 0) : m[k]) - (k === 'ammoniak' ? 1 : 0)); });
+  });
+  if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
+  Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  if (!KRS) krankBauen();
+  if (!KRS) return;
+  krAnwenden();
+  lv++;
 }
 
 /* =====================================================================
@@ -1462,6 +1695,7 @@ var t0 = performance.now();
 var last = t0;
 var App = window.LaeppchenApp = { ready: false, aufbauMs: 0, schema: function (an) { setSchema(!!an); }, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris,
   mahlzeit: function (an) { setMahlzeit(!!an); },
+  szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   stoff: function (name, an) { if (name in stoffe) setStoff(name, !!an); }, stoffe: function () { return { zucker: stoffe.zucker, ammoniak: stoffe.ammoniak, bilirubin: stoffe.bilirubin }; },
   /* fuer die Pruefung: Antippen einer Struktur wie mit dem Finger (nur beim Ueben), Zustaende von "Wege verfolgen" und "Strukturen finden" */
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
@@ -1470,6 +1704,7 @@ var App = window.LaeppchenApp = { ready: false, aufbauMs: 0, schema: function (a
   stroemung: function () { return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, anteil: anteil, glykogen: glyk }; } };
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
   stroemungSchritt(dt); stroemungBild();
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   if (schemaOn) schemaTick();
@@ -1484,7 +1719,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  schemaWeicht(); SCH.abbauen();
+  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
