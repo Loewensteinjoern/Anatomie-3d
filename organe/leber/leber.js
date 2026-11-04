@@ -2286,7 +2286,6 @@ function lupeTick() {   /* nur solange offen: Text bei Wechsel des Zustands (auc
    die Datei hat Meter (reale Groesse).
    ===================================================================== */
 var EX = { P: 24, NKEY: 96 };
-var LAENGE_TXT = 'Leber ca. 26 cm breit';
 function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
   var r = null;
   SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
@@ -2337,15 +2336,15 @@ var exCfg = {
     stlStart: 'STL wird erzeugt …',
     glbStart: 'GLB wird erzeugt …',
     animStart: 'Strömung wird aufgezeichnet …',
-    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe: ' + LAENGE_TXT + '):', '- leber_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe):', '- leber_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
     stlFertig: function (i) {
-      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe (' + LAENGE_TXT + ') – STL kennt keine Farbe.';
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe – STL kennt keine Farbe.';
     },
     glbLiesmich: function (i) {
-      return [i.anim ? i.name + ': die Strömung von Blut und Galle (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell der Leber in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe: ' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter der Leber.'];
+      return [i.anim ? i.name + ': die Strömung von Blut und Galle (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell der Leber in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter der Leber.'];
     },
     glbFertig: function (i) {
-      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe (' + LAENGE_TXT + '), mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe, mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
     }
   }
 };
@@ -2355,7 +2354,7 @@ $('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
 
 /* =====================================================================
    7f. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
-   Die Leber wird in cm modelliert: 0,01 m je cm ist die reale Groesse (ca. 26 cm breit), gestartet wird in dieser Groesse. Die Stroemung laeuft weiter (Knopf Pause),
+   Die Leber wird in cm modelliert: 0,01 m je cm ist die reale Groesse, gestartet wird in dieser Groesse. Die Stroemung laeuft weiter (Knopf Pause),
    Beschriftung und Teilchen gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG und der AR-Aufbau entstehen erst beim ersten Klick: root ist um -M verschoben
    und bleibt unveraendert, arG wird hingestellt.
    ===================================================================== */

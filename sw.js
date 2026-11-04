@@ -8,7 +8,7 @@
    ========================================================================== */
 'use strict';
 
-var VERSION = '52f3d2d0abfe';
+var VERSION = '50692d866e16';
 var SPEICHER = 'anatomie-' + VERSION;
 
 /* Dateien der App (relativ zum Ordner von sw.js) */
