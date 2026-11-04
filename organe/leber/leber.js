@@ -1914,7 +1914,7 @@ function fahrtBild(now) {
 var KR_C = [-3.35, 109.75, 0.7];                  /* Mitte der Leber (Mitte der Gitterbox form.grenzen), Koerper-Koordinaten */
 var KR_FADE = 3;                                  /* Weite, auf der die Verschiebung ausserhalb der Leber auf 0 ausklingt (cm) */
 var KR_KNOTEN = 0.22, KR_RAND = 0.25;             /* Hoehe der Knoten (Zirrhose) und Aufblaehung am Unterrand (Fettleber), cm */
-var KR_ASZ = 0.38;                                /* Deckkraft des Aszites bei Wirkgroesse 1 */
+var KR_ASZ = 0.55;                                /* Deckkraft des Aszites bei Wirkgroesse 1 */
 var KR_WEIT = ['lebergang', 'blasengang', 'hauptgang'];   /* Gallengaenge, die beim Gallenstein weiter werden */
 var KR_FARBE = { zirrhose: srgb(0x9C7A62), fett: srgb(0xD4BC6A), hepatitis: srgb(0xB22A1E) };   /* Zielfarben, mit der Wirkgroesse in die Farbe der Lappen gemischt */
 var KD = { x: 0, y: 0, z: 0 };
@@ -1967,7 +1967,7 @@ function krEintrag(m, sid, fest) {
   }
   return e;
 }
-/* Aszites: Saum unter der Leber und am Unterrand - die Dreiecke der Lappen, die nach unten zeigen oder tief am Unterrand liegen, ein Stueck (0,45 bis 0,8 cm) entlang der Normale nach aussen */
+/* Aszites: Saum unter der Leber und am Unterrand - die Dreiecke der Lappen, die nach unten zeigen oder tief am Unterrand liegen, ein Stueck (0,6 bis 1,3 cm) entlang der Normale nach aussen */
 function aszitesGeo(liste) {
   var pos = [], nor = [], idx = [];
   liste.forEach(function (e) {
@@ -1975,13 +1975,13 @@ function aszitesGeo(liste) {
     var ind = e.m.geometry.index, P = e.P0, N = e.N0, map = {}, t, k;
     var ein = function (v) {
       if (map[v] === undefined) {
-        var off = 0.45 + 0.35 * Math.max(0, Math.min(1, -N[v * 3 + 1]));
+        var off = 0.6 + 0.7 * Math.max(0, Math.min(1, -N[v * 3 + 1]));
         map[v] = pos.length / 3;
         pos.push(P[v * 3] + N[v * 3] * off, P[v * 3 + 1] + N[v * 3 + 1] * off, P[v * 3 + 2] + N[v * 3 + 2] * off); nor.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
       }
       return map[v];
     };
-    var drin = function (v) { var ny = N[v * 3 + 1]; return ny < -0.25 || (ny < 0.3 && P[v * 3 + 1] < 105); };
+    var drin = function (v) { var ny = N[v * 3 + 1]; return ny < -0.25 || (ny < 0.3 && P[v * 3 + 1] < 106); };
     for (t = 0; t < ind.count; t += 3) {
       var a = ind.getX(t), b = ind.getX(t + 1), c = ind.getX(t + 2);
       if (drin(a) && drin(b) && drin(c)) idx.push(ein(a), ein(b), ein(c));
@@ -2007,7 +2007,7 @@ function steinBauen() {
     pa.setXYZ(v, x * r, y * r, z * r);
   }
   g.computeVertexNormals();   /* ohne Index: je Dreieck eine Normale = kantig */
-  var m = new THREE.Mesh(g, mat(0xC48A3C, { rough: 0.75 }));
+  var m = new THREE.Mesh(g, mat(0xA9793A, { rough: 0.75 }));
   m.name = 'Gallenstein'; m.renderOrder = 3; m.userData.krank = true; m.raycast = function () {};
   m.quaternion.setFromUnitVectors(V(0, 1, 0), tg); m.visible = false; m.frustumCulled = false;
   root.add(m);
@@ -2021,7 +2021,7 @@ function krankBauen() {
     if (d.id === 'zwerchfell') return;
     d.meshes.forEach(function (m) { m.frustumCulled = false; KR.liste.push(krEintrag(m, d.id, false)); });
   });
-  var am = new THREE.Mesh(aszitesGeo(KR.liste), mat(0x8FB6D8, { rough: 0.12, coat: 0.6, opacity: KR_ASZ }));
+  var am = new THREE.Mesh(aszitesGeo(KR.liste), mat(0xA8D6F6, { rough: 0.12, coat: 0.6, opacity: KR_ASZ }));
   am.name = 'Aszites'; am.renderOrder = 6; am.userData.krank = true; am.raycast = function () {}; am.material.opacity = 0; am.visible = false; am.frustumCulled = false;
   root.add(am); KR.asz = am; KR.liste.push(krEintrag(am, 'aszites', true));
   steinBauen();
@@ -2071,7 +2071,7 @@ function krAnwenden() {
   KR.asz.material.opacity = ao; KR.asz.visible = ao > 0.003;
   krD(KR.steinP[0], KR.steinP[1], KR.steinP[2], KD);                    /* Stein im Gang, waechst mit der Wirkgroesse */
   KR.stein.position.set(KR.steinP[0] + KD.x, KR.steinP[1] + KD.y, KR.steinP[2] + KD.z);
-  var ss = Math.max(0.001, st); KR.stein.scale.set(0.3 * ss, 0.42 * ss, 0.3 * ss);
+  var ss = Math.max(0.001, st); KR.stein.scale.set(0.42 * ss, 0.62 * ss, 0.42 * ss);
   krSichtbar();
   KR.anker.forEach(function (a) {                                        /* Anker der Beschriftung (Raum der Szene = Koerper - M) */
     krD(a.o.x + M[0], a.o.y + M[1], a.o.z + M[2], KD);

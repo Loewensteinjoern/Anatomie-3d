@@ -452,7 +452,7 @@ function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (Gefaesse, Kanaele, Kupffer-Zellen) */
 function weichMat(o) { return o.material.transparent && !o.material.userData.dicht; }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh && !o.userData.krank) o.visible = !!enabled[o.userData.sid]; });   /* die Netze der Krankheitsbilder stellt krSichtbar */
+  root.traverse(function (o) { if (o.isMesh && !o.userData.krank && !o.userData.teilchen) o.visible = !!enabled[o.userData.sid]; });   /* Teilchen (Stoffe-Schalter) und die Netze der Krankheitsbilder (krSichtbar) stellen sich selbst */
   krSichtbar();
   lv++;
 }
@@ -1324,31 +1324,32 @@ function bandStueck(pos, nor, idx, P, W, h) {
   }
   for (i = 0; i < k - 1; i++) idx.push(b + 2 * i, b + 2 * i + 1, b + 2 * i + 2, b + 2 * i + 1, b + 2 * i + 3, b + 2 * i + 2);
 }
-/* Narbenstraenge der Zirrhose: je Aussenwand (ausser der im aufgeschnittenen Keil) sechs flache Baender in verschiedener Hoehe, leicht geschwungen und schraeg (faserig), dazu von jeder
-   Ecke zwei kurze Septen ins Laeppchen */
+/* Narbengewebe der Zirrhose: je Aussenwand (ausser der im aufgeschnittenen Keil) eine duenne, leicht unregelmaessige Schicht genau auf der Wand (Wandebene, ganze Hoehe, nur nach innen
+   versetzt, nie ausserhalb), dazu von jeder Ecke zwei schmale Septen ein Stueck radial ins Laeppchen, senkrecht in voller Hoehe, neben den Aesten der Ecke in den Luecken der Zellbalken */
 function narbeGeo() {
   var pos = [], nor = [], idx = [], k, s, i, UP = [0, 1, 0];
   for (k = 0; k < 6; k++) {
     if (k === 5) continue;                                 /* die Wand zwischen Ecke 5 und Ecke 0 liegt im aufgeschnittenen Keil */
     var a0 = eckeWinkel(k), a1 = eckeWinkel(k + 1), x0 = FR * Math.sin(a0), z0 = FR * Math.cos(a0), x1 = FR * Math.sin(a1), z1 = FR * Math.cos(a1);
     var nx = -(Math.sin((a0 + a1) / 2)), nz = -(Math.cos((a0 + a1) / 2));   /* nach innen */
-    for (s = 0; s < 10; s++) {
-      var yb = 0.5 + 0.78 * s, ph = hash(k * 20 + s + 1) * 6.28, sl = (s % 2 ? 1 : -1) * (0.5 + 1.8 * hash(k * 20 + s + 40)), P = [], W = [], N = 24;
+    for (s = 0; s < 2; s++) {                              /* zwei duenne Lagen, die sich unterschiedlich nach innen wellen */
+      var ph = hash(k * 7 + s + 1) * 6.28, P = [], W = [], N = 28;
       for (i = 0; i <= N; i++) {
-        var t = i / N, wob = 0.14 + 0.12 * Math.sin(9 * t + ph);
-        P.push([x0 + (x1 - x0) * t + nx * wob, yb + sl * (t - 0.5) + 0.2 * Math.sin(6 * t + ph * 2), z0 + (z1 - z0) * t + nz * wob]); W.push(UP);
+        var t = i / N, wob = 0.03 + 0.05 * s + 0.06 * (0.5 + 0.5 * Math.sin(11 * t + ph)) * (0.5 + 0.5 * Math.sin(4 * t + 2 * ph));
+        P.push([x0 + (x1 - x0) * t + nx * wob, FH / 2, z0 + (z1 - z0) * t + nz * wob]); W.push(UP);
       }
-      bandStueck(pos, nor, idx, P, W, 0.16 + 0.1 * hash(k * 20 + s + 80));
+      bandStueck(pos, nor, idx, P, W, FH / 2);
     }
   }
   for (k = 0; k < 6; k++) {
     var a = eckeWinkel(k), sa = Math.sin(a), ca = Math.cos(a);
     for (s = -1; s <= 1; s += 2) {
-      for (i = 0; i < 3; i++) {
-        var y = 1.8 + 2.2 * i, P2 = [], W2 = [], j;
-        for (j = 0; j <= 6; j++) { var r = 7.7 - 2.1 * j / 6; P2.push([r * sa + s * 1.25 * ca, y + 0.2 * Math.sin(j + i + k), r * ca - s * 1.25 * sa]); W2.push(UP); }
-        bandStueck(pos, nor, idx, P2, W2, 0.4);
+      var len = 1.8 + 0.7 * hash(k * 2 + (s + 1) / 2 + 60), P2 = [], W2 = [], j;
+      for (j = 0; j <= 8; j++) {
+        var r = 7.7 - len * j / 8, tw = 1.25 + 0.08 * Math.sin(3 * j + k);
+        P2.push([r * sa + s * tw * ca, FH / 2, r * ca - s * tw * sa]); W2.push(UP);
       }
+      bandStueck(pos, nor, idx, P2, W2, FH / 2);
     }
   }
   var g = new THREE.BufferGeometry();
@@ -1399,7 +1400,7 @@ function krankBauen() {
   var imm = Kern.mat(0x4B3FC4, { rough: 0.3, coat: 0.4 }, envTex); imm.emissive.copy(srgb(0x2A1F90)).multiplyScalar(0.5);   /* kraeftig indigo: hebt sich von den hellen Blutteilchen ab */
   KRS.immunMesh = krInst(new THREE.SphereGeometry(1, 10, 7), imm, KRS.immun.n, 'Abwehrzellen');
   /* Narbenstraenge */
-  var nm = Kern.mat(0xD6D1C4, { rough: 0.85, side: THREE.DoubleSide }, envTex);
+  var nm = Kern.mat(0xCFCCC4, { rough: 0.85, side: THREE.DoubleSide }, envTex);   /* weisslich-grau, leicht durchscheinend (Deckkraft bis 0,6) */
   nm.transparent = true; nm.opacity = 0; nm.depthWrite = false;
   KRS.narbe = new THREE.Mesh(narbeGeo(), nm); KRS.narbe.name = 'Narbenstränge'; KRS.narbe.renderOrder = 5; KRS.narbe.userData.krank = true; KRS.narbe.raycast = function () {}; KRS.narbe.visible = false;
   root.add(KRS.narbe);
@@ -1454,7 +1455,7 @@ function krAnwenden() {
     I[o + 12] = Q[i * 4]; I[o + 13] = Q[i * 4 + 1]; I[o + 14] = Q[i * 4 + 2]; I[o + 15] = 1;
   }
   KRS.immunMesh.instanceMatrix.needsUpdate = true;
-  var nm = KRS.narbe.material; nm.opacity = klemme(z); nm.depthWrite = z > 0.95;
+  var nm = KRS.narbe.material; nm.opacity = 0.6 * klemme(z);
   krSichtbar();
   glykGezeigt = -1;                                   /* Zellfarben neu setzen (glykSetzen) */
   szVer++;                                            /* Teilchen neu setzen */
