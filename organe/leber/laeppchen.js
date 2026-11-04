@@ -66,6 +66,7 @@ var MARKUP = `<div id="title">
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Das Leberläppchen als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
     <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Wand eines Sinusoids bis zur Leberzelle">Lupe</button>
+    <button id="bAR" class="gh" title="Das Leberläppchen mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -120,6 +121,13 @@ var MARKUP = `<div id="title">
   <p class="note kz">Läppchen ca. 1–2 mm groß, Hunderttausende je Leber</p>
 </div>
 
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
 <div class="panel" id="info">
   <button class="cls" id="bCls" aria-label="Schließen">&times;</button>
   <span class="lat" id="iLat"></span>
@@ -135,6 +143,18 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">Nächste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Leberläppchen in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um das Läppchen hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Hilfekarten: [Schlüssel, Titel, Text, Merke] */
 var HILFE = [
@@ -1873,6 +1893,200 @@ function lupeTick(dt) {   /* nur solange offen: Zirrhose weich ueberblenden (ca.
 }
 
 /* =====================================================================
+   8c. Export (Kern.Export): GLB statisch und STL, jeweils der sichtbare Zustand (Durchsicht, ausgeblendete Strukturen, Krankheitsbild; ohne Teilchen, Beschriftung,
+   Lupe und Schema); GLB animiert mit der Stroemung von Blut, Galle und den eingeschalteten Stoffen als eine Schleife von EX.P Sekunden: jedes Teilchen ein Knoten mit Spuren
+   fuer Lage und Groesse. Die Routen haben verschieden lange Umlaufzeiten (W); damit die Schleife aufgeht, laeuft jedes Teilchen in EX.P Sekunden ganze Umlaeufe (mindestens
+   einen), sein Tempo weicht dadurch etwas vom Programm ab. Die Farbe eines Teilchens ist in der Datei fest (die Anfangsfarbe seiner Art). Mahlzeit, Zirrhose und Gallenstein
+   bleiben wie in der Ansicht beim Export. Massstab: 1 Modelleinheit (0,1 mm in Wirklichkeit) = 1 cm in der Datei, also 100-fach vergroessert.
+   Der gemeinsame Export kennt keine Instanzen (Zellbalken, Sinusoide, Fetttropfen, Abwehrzellen): sie werden fuer den Export (und die USDZ) kurz zu festen Netzen
+   zusammengefasst (Farbe je Zelle als Eckpunktfarbe) und danach wieder entfernt.
+   ===================================================================== */
+var EX = { P: 24, NKEY: 96 };
+var LAENGE_TXT = 'Läppchen in Wirklichkeit ca. 1–2 mm, im Export ca. 16 cm breit';
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+var exErsatz = [];   /* [{ o: Instanznetz, m: festes Netz }] waehrend eines Exports */
+function exSichtbar(o) { for (; o; o = o.parent) if (!o.visible) return false; return true; }
+function exInstanzenAn() {
+  var liste = [], M4 = new THREE.Matrix4(), V3 = new THREE.Vector3(), N3 = new THREE.Matrix3();
+  root.updateMatrixWorld(true);
+  root.traverse(function (o) { if (o.isInstancedMesh && o.parent === root && !o.userData.noexport && exSichtbar(o)) liste.push(o); });
+  liste.forEach(function (o) {
+    var src = o.geometry, pos = src.attributes.position, nor = src.attributes.normal, idx = src.index, vc = pos.count, ic = idx ? idx.count : vc;
+    var ia = o.instanceMatrix.array, col = o.instanceColor ? o.instanceColor.array : null, mc = o.material.color, n = 0, i, k, A = [];
+    for (i = 0; i < o.count; i++) {
+      M4.fromArray(ia, i * 16);
+      if (Math.abs(M4.determinant()) < 1e-12) continue;            /* Instanz mit Groesse 0 (fehlende Zelle): weglassen */
+      A.push(i);
+    }
+    n = A.length;
+    if (!n) return;
+    var P = new Float32Array(n * vc * 3), Nn = new Float32Array(n * vc * 3), C = new Float32Array(n * vc * 3), I = new Uint32Array(n * ic);
+    A.forEach(function (inst, j) {
+      M4.fromArray(ia, inst * 16).premultiply(o.matrix); N3.getNormalMatrix(M4);
+      var cr = mc.r * (col ? col[inst * 3] : 1), cg = mc.g * (col ? col[inst * 3 + 1] : 1), cb = mc.b * (col ? col[inst * 3 + 2] : 1);
+      for (k = 0; k < vc; k++) {
+        V3.set(pos.getX(k), pos.getY(k), pos.getZ(k)).applyMatrix4(M4);
+        var q = (j * vc + k) * 3;
+        P[q] = V3.x; P[q + 1] = V3.y; P[q + 2] = V3.z;
+        V3.set(nor.getX(k), nor.getY(k), nor.getZ(k)).applyMatrix3(N3).normalize();
+        Nn[q] = V3.x; Nn[q + 1] = V3.y; Nn[q + 2] = V3.z;
+        C[q] = cr; C[q + 1] = cg; C[q + 2] = cb;
+      }
+      for (k = 0; k < ic; k++) I[j * ic + k] = j * vc + (idx ? idx.getX(k) : k);
+    });
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(Nn, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.setIndex(new THREE.BufferAttribute(I, 1));
+    var mt = o.material.clone(); mt.vertexColors = true; mt.color.setRGB(1, 1, 1);
+    var m = new THREE.Mesh(g, mt); m.name = o.name; m.userData.sid = o.userData.sid || ''; m.renderOrder = o.renderOrder;
+    root.add(m); o.userData.noexport = true;
+    exErsatz.push({ o: o, m: m });
+  });
+}
+function exInstanzenAus() {
+  exErsatz.forEach(function (e) { root.remove(e.m); e.m.geometry.dispose(); e.m.material.dispose(); delete e.o.userData.noexport; });
+  exErsatz = [];
+}
+function exRun(art) {
+  var p = Kern.Export.run(art, exCfg);
+  return p && p.then ? p.then(exInstanzenAus, function (e) { exInstanzenAus(); throw e; }) : (exInstanzenAus(), p);
+}
+var exCfg = {
+  titel: 'Leberläppchen', praefix: 'laeppchen', wurzelName: 'Leberlaeppchen',
+  /* Schild unter dem Modell: Laeppchen x -8 bis 8, y bis -1 (Sammelvene bis -4,3), z -6,9 bis 6,9 -> x Mitte, unter der Sammelvene, vorn */
+  schild: [0, -5.8, 7.5],
+  bereit: function () { return App.ready; },
+  gruppen: function () { exInstanzenAn(); return [root]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },   /* aktives Krankheitsbild bzw. Medikament im Dateinamen */
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Lage und Groesse als Spuren ueber eine Periode (EX.P) */
+  animation: function (rootE) {
+    var times = new Float32Array(EX.NKEY + 1), tracks = [], nPart = 0, i, v = new THREE.Vector3();
+    for (i = 0; i <= EX.NKEY; i++) times[i] = i * EX.P / EX.NKEY;
+    root.updateMatrixWorld(true);
+    (KRS && KRS.bil ? ST.gruppen.concat([KRS.bil]) : ST.gruppen).forEach(function (g) {
+      if (!g.im.visible) return;                                    /* Stoff ausgeschaltet oder Gruppe nicht sichtbar */
+      var c0 = takt(g), f0 = g.art === 'pfortader' || g.art === 'arterie' ? 1 - 0.5 * SZW.zirrhose : g.art === 'galle' ? 1 - 0.65 * SZW.stein : 1;
+      var mt = null;
+      g.list.forEach(function (p, n) {
+        var W = p.rt.W, k = Math.max(1, Math.round(EX.P * f0 / W)), rate = k * W / EX.P;   /* ganze Umlaeufe je Periode */
+        var P = new Float32Array((EX.NKEY + 1) * 3), Sc = new Float32Array((EX.NKEY + 1) * 3), smax = 0;
+        for (i = 0; i <= EX.NKEY; i++) {
+          pose(p, c0 + times[i] * rate, STQ);
+          v.set(STQ.x, STQ.y, STQ.z).applyMatrix4(root.matrixWorld);
+          P[i * 3] = v.x; P[i * 3 + 1] = v.y; P[i * 3 + 2] = v.z;
+          Sc[i * 3] = Sc[i * 3 + 1] = Sc[i * 3 + 2] = STQ.s;
+          if (STQ.s > smax) smax = STQ.s;
+        }
+        if (smax <= 0) return;   /* nie sichtbar: gar nicht erst aufnehmen */
+        if (!mt) { mt = g.im.material.clone(); mt.color.copy(g.c0); mt.name = 'teilchen-' + g.art; }   /* eine feste Farbe je Art */
+        var node = new THREE.Mesh(g.im.geometry, mt); node.name = g.art.replace(/[^A-Za-z0-9_]/g, '_') + '_' + (n + 1);
+        node.position.set(P[0], P[1], P[2]); node.scale.set(Sc[0], Sc[1], Sc[2]);
+        rootE.add(node);
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc));
+        nPart++;
+      });
+    });
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Laeppchen_Stroemung', EX.P, tracks)], zusatz: sz ? sz.datei : 'normal', nPart: nPart };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, 100-fach vergrößert: ' + LAENGE_TXT + '):', '- laeppchen_ansicht.stl: alles, was beim Export sichtbar war', 'Eine Modelleinheit des Programms (0,1 mm in Wirklichkeit) ist in der Datei 1 cm. STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>100-fach vergrößert (' + LAENGE_TXT + ') – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': die Strömung von Blut, Galle und Stoffen (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell des Leberläppchens in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter, aber 100-fach vergrößert (' + LAENGE_TXT + '). Die Signatur steht in den Metadaten und auf dem Schild unter dem Modell.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>100-fach vergrößert (' + LAENGE_TXT + '), mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+$('bGlbA').onclick = function () { exRun('glb-anim'); };
+$('bGlbS').onclick = function () { exRun('glb'); };
+$('bStl').onclick = function () { exRun('stl'); };
+
+/* =====================================================================
+   8d. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Das Laeppchen steht 100-fach vergroessert auf dem Tisch (AR_SKALA m je Modelleinheit, ca. 19 cm breit); die Stroemung laeuft weiter (Knopf Pause), Beschriftung und
+   Teilchen gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG und der AR-Aufbau entstehen erst beim ersten Klick: root bleibt unveraendert, arG wird hingestellt.
+   ===================================================================== */
+var AR_SKALA = 0.012;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false, kamAlt = { near: camera.near, far: camera.far };
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });   /* nur die Abfrage: three.js-Objekte entstehen erst beim ersten Klick */
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.updateMatrixWorld(true);
+  root.traverse(function (o) {
+    if (o.isMesh && !o.userData.teilchen && !o.userData.noexport && exSichtbar(o)) b.expandByObject(o);
+  });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() { $('arPause').textContent = playing ? 'Pause' : 'Weiter'; }
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Leberlaeppchen_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.008, 0.012, 0.018, 0.027, 0.04], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt Modelleinheiten */
+      $('labels').style.display = 'none'; $('leaders').style.display = 'none';
+      arTexte();
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      $('labels').style.display = showLabels ? '' : 'none'; $('leaders').style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme des Laeppchens in der aktuellen Ansicht (ohne Teilchen; die Instanzen werden dafuer kurz zu festen Netzen) ---- */
+function usdzBuild() {
+  exInstanzenAn();
+  try {
+    return Kern.AR.usdz({ name: 'Leberlaeppchen', creator: 'Leberläppchen 3D - ' + Kern.WM, datei: 'laeppchen.usda', skala: AR_SKALA, gruppen: [root] });
+  } finally { exInstanzenAus(); }
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Das Leberläppchen öffnet sich in AR Quick Look. Mit zwei Fingern lässt es sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
@@ -1887,10 +2101,11 @@ var App = window.LaeppchenApp = { ready: false, aufbauMs: 0, schema: function (a
   wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice() }; },
   quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
   stroemung: function () { return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, anteil: anteil, glykogen: glyk }; } };
-function loop(now) {
+function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
   stroemungSchritt(dt); stroemungBild(); lupeTick(dt);
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   if (schemaOn) schemaTick();
   Kern.kamera(camera, view);
@@ -1904,6 +2119,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
+  AR && AR.abbauen();
   schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
@@ -1914,7 +2130,7 @@ organ.abbauen = function () {
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
   camera.clearViewOffset();
-  camera.updateProjectionMatrix();
+  camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
   /* DOM */
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; [b.el, b.ln, b.dot].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }); });
   labelBox.style.display = ''; leaderSvg.style.display = '';
@@ -1931,6 +2147,7 @@ return bauen().then(function () {
   applyVisibility();
   setSelected(selected);
   stroemungBauen();
+  Kern.Export.pruefeZiel('exp');
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });

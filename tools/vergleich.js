@@ -92,7 +92,11 @@
    „pause“ im Abstand von 1500 ms müssen gleich aussehen), „nach-dem-essen“ (#bEssen, nach 3 s) und „durchsicht-stroemung“; die Werte von LeberApp.stroemung() stehen in erg.stroemung und werden von
    `vergleichen` verglichen; Schema (#bSchema, erst nüchtern, dann nach dem Essen, Antippen des rechten Lappens → „schema-info“); Hilfekarten („hilfekarte“, erste Karte); Üben „ueben“ (Strukturen
    finden, #bQuiz, die Aufgabe hängt vom festen Zufallsstrom ab) und Wege verfolgen (#bWege: „wege-start“, nach zwei richtigen Stationen über LeberApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“)),
-   handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte und kein AR. Atlas-Kontexte uebergaenge-leber (Körper,
+   am Ende von desktop die Krankheitsbilder und Medikamente (Reiter, Zeile; „zirrhose“, „zirrhose-karte-zu“ (Karte eingeklappt), „fettleber“, „hepatitis“, „gallenstein“ (Ausschnitt Gallenwege),
+   „paracetamol“, „lactulose“, „spironolacton“, „szenario-aus“; die Wirkgrößen LeberApp.szw() stehen in erg.szw und werden von `vergleichen` verglichen) und die Lupe an der Papille („lupe-nuechtern“,
+   „lupe-essen“ (Chip data-m="1"), „lupe-stein“ (mit Gallenstein), „lupe-zu“), handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start, am Ende „zirrhose“ und „lupe“), datei (file://; danach die Exporte:
+   GLB statisch, GLB animiert (Strömung von Blut und Galle) und STL, dann GLB statisch und animiert mit Zirrhose im Dateinamen; Name, Größe und die Meldung mit Objekten und Dateigröße stehen in erg.exporte)
+   und abbau (Ausschnitt wechseln, Infokarte offen lassen); webxr (AR: Start, hinstellen, größer, Pause/Weiter in erg.ar.pause, beenden) und quicklook (USDZ). Atlas-Kontexte uebergaenge-leber (Körper,
    Leber über die Infokarte mit Kamerafahrt „fahrt-leber“, Leber, Browser-Zurück mit Rückfahrt „rueckfahrt-leber“; dann die Adresse #leber direkt, Zurück-Knopf „← Körper“; Endzustand in
    erg.uebergaengeLeber) und uebergaenge-leber-handy („fahrt-leber“, „leber“).
 
@@ -101,7 +105,10 @@
    1,5 s, Pause (#bPlay; die zwei Bilder „pause“ im Abstand von 1500 ms müssen gleich aussehen), „nach-dem-essen“ (#bEssen, nach 3 s: Zellen heller, Zucker biegt in die Zellen ab) und „stoffe-aus“ (die
    drei Schalter unter „Stoffe“ aus); die Werte von LaeppchenApp.stroemung() stehen in erg.stroemung; Schema (#bSchema, erst nüchtern, dann nach dem Essen, Antippen der Zentralvene → „schema-info“);
    Hilfekarten („hilfekarte“), Üben „ueben“ (Strukturen finden, hängt vom festen Zufallsstrom ab) und Wege verfolgen („wege-start“, nach zwei richtigen Stationen über LaeppchenApp.tippe „wege-zwei“, nach
-   zwei Fehlern „wege-leuchtet“)), handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start), datei (file://) und abbau; keine Exporte und kein AR. Atlas-Kontexte uebergaenge-laeppchen (Leber, Knopf „Läppchen“
+   zwei Fehlern „wege-leuchtet“); am Ende die Krankheitsbilder und Medikamente („zirrhose“, „fettleber“, „hepatitis“ (Ausschnitt Periportalfeld), „gallenstein“, „paracetamol“, „lactulose“, „spironolacton“,
+   „szenario-aus“; Wirkgrößen LaeppchenApp.szw() in erg.szw) und die Lupe am Sinusoid („lupe-gesund“, „lupe-zirrhose“ (Chip data-z="1"), „lupe-aus-krankheitsbild“ (Zirrhose gewählt: die Lupe beginnt mit
+   „Zirrhose“), „lupe-zu“)), handy (Übersicht, Info, Schema, Hilfekarte, Wege-Start, am Ende „zirrhose“ und „lupe“), datei (file://; danach die Exporte wie bei der Leber, 100-fach vergrößert), abbau, webxr und
+   quicklook wie bei der Leber. Atlas-Kontexte uebergaenge-laeppchen (Leber, Knopf „Läppchen“
    mit Kamerafahrt „fahrt-laeppchen“, Läppchen, Zurück-Knopf „← Leber“, Browser-Zurück mit Rückfahrt „rueckfahrt-leber“; dann einen Lappen an einem festen Punkt antippen, „Leberläppchen hier ansehen“
    („fahrt-laeppchen-punkt“, „laeppchen-von-leber“), Zurück-Knopf des Atlas zurück zur Leber „leber-von-laeppchen“; Endzustand in erg.uebergaengeLaeppchen) und uebergaenge-laeppchen-handy („fahrt-laeppchen“, „laeppchen“).
 
@@ -882,7 +889,7 @@ const MODELLE = {
     datei: 'index.html',
     bereit: () => !!(window.LeberApp && window.LeberApp.ready),
     kontexte: {
-      desktop: { opt: DESKTOP, async ablauf(t) {
+      desktop: { opt: DESKTOP, timeout: 90000, async ablauf(t) {
         const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.LeberApp.stroemung()); };
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
         await t.klick('#cam1'); await t.weiter(900); await t.bild('unterseite');
@@ -908,6 +915,29 @@ const MODELLE = {
         await t.js(() => { window.LeberApp.tippe('pfortader'); window.LeberApp.tippe('lappenR'); }); await t.weiter(300); await t.bild('wege-zwei');
         await t.js(() => { window.LeberApp.tippe('arterie'); window.LeberApp.tippe('arterie'); }); await t.weiter(300); await t.bild('wege-leuchtet');
         await t.klick('#bWege'); await t.weiter(300);
+        /* Krankheitsbilder, Medikamente und Lupe (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben); die Wirkgrößen LeberApp.szw() stehen in erg.szw */
+        const EINTRAEGE = [['Krankheitsbilder', 'Leberzirrhose mit Pfortaderhochdruck', 'zirrhose'], ['Krankheitsbilder', 'Fettleber', 'fettleber'], ['Krankheitsbilder', 'Virushepatitis', 'hepatitis'],
+          ['Krankheitsbilder', 'Gallenstein mit Gelbsucht', 'gallenstein'], ['Medikamente', 'Paracetamol – Überdosis (z. B. ben-u-ron®)', 'paracetamol'],
+          ['Medikamente', 'Lactulose bei Leberzirrhose (z. B. Bifiteral®)', 'lactulose'], ['Medikamente', 'Spironolacton bei Bauchwasser (z. B. Aldactone®)', 'spironolacton']];
+        const schalte = async (tab, name, ms) => { await t.klick('#rail .tabs .tab:text-is("' + tab + '")'); await t.klick('#rail .dis:has(b:text-is("' + name + '"))'); await t.weiter(ms); };
+        const szw = async (name) => { (t.erg.szw || (t.erg.szw = {}))[t.kname + '-' + name] = await t.js(() => window.LeberApp.szw()); };
+        for (const [tab, name, bild] of EINTRAEGE) {
+          await schalte(tab, name, 4000);
+          if (bild === 'gallenstein') { await t.klick('#cam3'); await t.weiter(900); }   /* Ausschnitt Gallenwege: Stein im Hauptgallengang */
+          await t.bild(bild); await szw(bild);
+          if (bild === 'zirrhose') { await t.klick('#bCardMin'); await t.weiter(300); await t.bild('zirrhose-karte-zu'); await t.klick('#bCardMin'); await t.weiter(300); }
+          if (bild === 'gallenstein') await t.klick('#cam0');
+          await schalte(tab, name, 1500);
+        }
+        await t.weiter(1500); await t.bild('szenario-aus'); await szw('szenario-aus');
+        /* Lupe an der Papille: nüchtern, nach dem Essen, mit Gallenstein, geschlossen */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe-nuechtern');
+        await t.klick('#lpChips button[data-m="1"]'); await t.weiter(2000); await t.bild('lupe-essen');
+        await t.klick('#bLupeX'); await t.weiter(300);
+        await t.js(() => window.LeberApp.szenario('gallenstein')); await t.weiter(4000);   /* über die Prüf-Schnittstelle: die Leiste ist nach der Lupe weitergescrollt */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-stein');
+        await t.klick('#bLupeX'); await t.weiter(600); await t.bild('lupe-zu');
+        await t.js(() => window.LeberApp.szenario(null)); await t.weiter(1500);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -915,9 +945,34 @@ const MODELLE = {
         await t.klick('#bCls'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema'); await t.klick('#bSchemaX'); await t.weiter(300);
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+        /* Krankheitsbild und Lupe (neue Bilder am Ende) */
+        await t.klick('#bWege'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")'); await t.klick('#rail .dis:has(b:text-is("Leberzirrhose mit Pfortaderhochdruck"))'); await t.weiter(4000); await t.bild('zirrhose');
+        await t.klick('#rail .dis:has(b:text-is("Leberzirrhose mit Pfortaderhochdruck"))'); await t.weiter(1500);
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+        /* Export per file:// (nach dem Bild, damit es unverändert bleibt): Name, Größe und Meldung (Objekte, Dateigröße) stehen in erg.exporte; dann mit Krankheitsbild im Dateinamen */
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
+        await t.js(() => window.LeberApp.szenario('zirrhose')); await t.weiter(2500);
+        await t.export('#bGlbS', 'glb-statisch-zirrhose'); await t.export('#bGlbA', 'glb-animiert-zirrhose');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {   /* AR: Start, hinstellen, größer, Pause/Weiter, beenden */
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'leber', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('unterseite');
@@ -929,7 +984,7 @@ const MODELLE = {
     datei: 'index.html',
     bereit: () => !!(window.LaeppchenApp && window.LaeppchenApp.ready),
     kontexte: {
-      desktop: { opt: DESKTOP, async ablauf(t) {
+      desktop: { opt: DESKTOP, timeout: 90000, async ablauf(t) {
         const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.LaeppchenApp.stroemung()); };
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
         await t.klick('#cam1'); await t.weiter(900); await t.bild('periportalfeld');
@@ -957,6 +1012,28 @@ const MODELLE = {
         await t.js(() => { window.LaeppchenApp.tippe('pfortaderast'); window.LaeppchenApp.tippe('sinusoide'); }); await t.weiter(300); await t.bild('wege-zwei');
         await t.js(() => { window.LaeppchenApp.tippe('gallengang'); window.LaeppchenApp.tippe('gallengang'); }); await t.weiter(300); await t.bild('wege-leuchtet');
         await t.klick('#bWege'); await t.weiter(300);
+        /* Krankheitsbilder, Medikamente und Lupe (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben); die Wirkgrößen LaeppchenApp.szw() stehen in erg.szw */
+        const EINTRAEGE = [['Krankheitsbilder', 'Leberzirrhose mit Pfortaderhochdruck', 'zirrhose'], ['Krankheitsbilder', 'Fettleber', 'fettleber'], ['Krankheitsbilder', 'Virushepatitis', 'hepatitis'],
+          ['Krankheitsbilder', 'Gallenstein mit Gelbsucht', 'gallenstein'], ['Medikamente', 'Paracetamol – Überdosis (z. B. ben-u-ron®)', 'paracetamol'],
+          ['Medikamente', 'Lactulose bei Leberzirrhose (z. B. Bifiteral®)', 'lactulose'], ['Medikamente', 'Spironolacton bei Bauchwasser (z. B. Aldactone®)', 'spironolacton']];
+        const schalte = async (tab, name, ms) => { await t.klick('#rail .tabs .tab:text-is("' + tab + '")'); await t.klick('#rail .dis:has(b:text-is("' + name + '"))'); await t.weiter(ms); };
+        const szw = async (name) => { (t.erg.szw || (t.erg.szw = {}))[t.kname + '-' + name] = await t.js(() => window.LaeppchenApp.szw()); };
+        for (const [tab, name, bild] of EINTRAEGE) {
+          await schalte(tab, name, 4000);
+          if (bild === 'hepatitis') { await t.klick('#cam1'); await t.weiter(900); }   /* Ausschnitt Periportalfeld: Abwehrzellen um die Glisson-Trias */
+          await t.bild(bild); await szw(bild);
+          if (bild === 'hepatitis') await t.klick('#cam0');
+          await schalte(tab, name, 1500);
+        }
+        await t.weiter(1500); await t.bild('szenario-aus'); await szw('szenario-aus');
+        /* Lupe am Sinusoid: gesund, Zirrhose (Chip), mit gewähltem Krankheitsbild (die Lupe beginnt mit „Zirrhose“), geschlossen */
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe-gesund');
+        await t.klick('#lpChips button[data-z="1"]'); await t.weiter(2000); await t.bild('lupe-zirrhose');
+        await t.klick('#bLupeX'); await t.weiter(300);
+        await t.js(() => window.LaeppchenApp.szenario('zirrhose')); await t.weiter(4000);   /* über die Prüf-Schnittstelle: die Leiste ist nach der Lupe weitergescrollt */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-aus-krankheitsbild');
+        await t.klick('#bLupeX'); await t.weiter(600); await t.bild('lupe-zu');
+        await t.js(() => window.LaeppchenApp.szenario(null)); await t.weiter(1500);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -964,9 +1041,34 @@ const MODELLE = {
         await t.klick('#bCls'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema'); await t.klick('#bSchemaX'); await t.weiter(300);
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(600); await t.bild('wege-start');
+        /* Krankheitsbild und Lupe (neue Bilder am Ende) */
+        await t.klick('#bWege'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")'); await t.klick('#rail .dis:has(b:text-is("Leberzirrhose mit Pfortaderhochdruck"))'); await t.weiter(4000); await t.bild('zirrhose');
+        await t.klick('#rail .dis:has(b:text-is("Leberzirrhose mit Pfortaderhochdruck"))'); await t.weiter(1500);
+        await t.klick('#bLupe'); await t.weiter(900); await t.bild('lupe');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+        /* Export per file:// (nach dem Bild, damit es unverändert bleibt): Name, Größe und Meldung (Objekte, Dateigröße) stehen in erg.exporte; dann mit Krankheitsbild im Dateinamen */
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
+        await t.js(() => window.LaeppchenApp.szenario('zirrhose')); await t.weiter(2500);
+        await t.export('#bGlbS', 'glb-statisch-zirrhose'); await t.export('#bGlbA', 'glb-animiert-zirrhose');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {   /* AR: Start, hinstellen, größer, Pause/Weiter, beenden */
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'laeppchen', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('periportalfeld');
@@ -1614,6 +1716,10 @@ async function vergleichen(va, vb) {
     for (const k of Object.keys(b.stroemung || {})) {   /* Werte von LeberApp.stroemung(): nur gegen vorhandene Referenz */
       if (!a.stroemung || !(k in a.stroemung)) ok.push(m + ' Strömung ' + k + ': neu (keine Referenz)');
       else vgl('Strömung ' + k, a.stroemung[k], b.stroemung[k]);
+    }
+    for (const k of Object.keys(b.szw || {})) {   /* Wirkgrößen von LeberApp.szw() und LaeppchenApp.szw(): nur gegen vorhandene Referenz */
+      if (!a.szw || !(k in a.szw)) ok.push(m + ' Wirkgrößen ' + k + ': neu (keine Referenz)');
+      else vgl('Wirkgrößen ' + k, a.szw[k], b.szw[k]);
     }
     const textB = {}; for (const k of Object.keys(a.text)) if (k in b.text) textB[k] = b.text[k];
     for (const k of Object.keys(b.text)) if (!(k in a.text)) ok.push(m + ' Seitentext ' + k + ': neu (keine Referenz)');
