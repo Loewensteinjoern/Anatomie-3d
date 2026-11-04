@@ -65,6 +65,7 @@ var MARKUP = `<div id="title">
     <button id="cam3" class="gh">Sinusoid</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Das Leberläppchen als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Querschnitt durch die Wand eines Sinusoids bis zur Leberzelle">Lupe</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -95,6 +96,15 @@ var MARKUP = `<div id="title">
   <div class="sch-head"><span class="kick">Schema &middot; Leberläppchen</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, Querschnitt von oben.</span>
   <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
   <div id="schemaBox"></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; Querschnitt</div>
+  <h3 id="lpTitle">Disse-Raum &ndash; wo Blut und Leberzelle sich begegnen</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-z="0" title="Durch die Fenster der Wand erreicht das Plasma die Leberzelle">gesund</button><button class="gh" data-z="1" title="Die Ito-Zelle bildet Narbengewebe, die Fenster schlie&szlig;en sich">Zirrhose</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#4A1E26"></i>Blut im Sinusoid</span><span><i style="background:#E3CFA8"></i>Wand mit Fenstern (Endothel)</span><span><i style="background:#9BB3BD"></i>Disse-Raum</span><span><i style="background:#E0B25C"></i>Ito-Zelle</span><span><i style="background:#8A4A3A"></i>Leberzelle</span><span id="lpLegNarbe" style="display:none"><i style="background:#7C8286"></i>Narbengewebe (nur bei Zirrhose)</span></div>
 </div>
 
 <div class="panel" id="legend">
@@ -489,6 +499,7 @@ function setSelected(id) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 var quiz = null, quizT = null;   /* Üben "Strukturen finden": { n, ok, target, last, wait } */
@@ -503,6 +514,7 @@ var SZ = Kern.Szenarien({
     if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
       if (quiz) quizEnd();
       if (wege) wegeEnd();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
       setSelected(null); closeCard();
       krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt das Modell, sie beginnt eingeklappt (Titelzeile) */
@@ -510,7 +522,7 @@ var SZ = Kern.Szenarien({
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -523,7 +535,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 
@@ -619,6 +631,7 @@ $('bLab').onclick = function () {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -1675,7 +1688,7 @@ function schemaPick(info) {
 function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); }   /* Hilfekarte, Ueben und Lupe weichen dem Schema */
   $('bSchema').classList.toggle('on', on);
   if (on) { SCH.build($('schemaBox'), schemaPick); SCH.update(selected, enabled, lv); }
   $('schema').classList.toggle('show', on);
@@ -1690,12 +1703,183 @@ $('bSchemaX').onclick = function () { setSchema(false); };
 function schemaTick() { SCH.update(selected, enabled, lv); }
 
 /* =====================================================================
+   8b. Lupe: Querschnitt durch die Wand eines Sinusoids bis zur Leberzelle (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv; kein three.js)
+   Von oben nach unten: Blut im Sinusoid (rote und violette Blutzellen, eine Kupffer-Zelle), Endothel als gestrichelte Linie mit Fenstern, Disse-Raum mit einer Ito-Zelle
+   (gelbe Vitamin-A-Tropfen), Mikrovilli, Leberzelle. Gesund: Plasmateilchen treten durch die Fenster, Zucker (gelb), Ammoniak (orange) und Bilirubin (braun) gehen in die
+   Zelle, Harnstoff (weiss) zurueck – nur die eingeschalteten Stoffe. Zirrhose (Chip oder Wirkgroesse SZW.zirrhose > 0,5 beim Oeffnen): Ito-Zelle ohne Tropfen, Narbengewebe
+   im Disse-Raum, Fenster zu, Mikrovilli flach, kaum Teilchen kommen durch; der Uebergang ist weich (LUPE.z). Alles nur aus `clock` und Index (kein Math.random).
+   Die Lupe zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte, Erklaer- und Szenariokarte schliessen sie bzw. weichen ihr.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 340, H: 236, z: 0, zZiel: 0, key: -1 };   /* z: 0 = gesund ... 1 = Zirrhose (weich) */
+var LU_T = {
+  gesund: 'Die Wand des Sinusoids hat Fenster. Das Blutplasma tritt hindurch in den schmalen Disse-Raum und umspült die Mikrovilli der Leberzelle – so nimmt sie Zucker, Ammoniak und Bilirubin auf und gibt Eiweiße, Zucker und Harnstoff zurück. Die Blutzellen bleiben im Sinusoid; Kupffer-Zellen fressen dort Bakterien und alte Blutzellen. Die Ito-Zelle speichert Vitamin A.',
+  zirrhose: 'Die Ito-Zelle verliert ihr Vitamin A und bildet Narbengewebe im Disse-Raum. Die Fenster der Wand schließen sich, die Mikrovilli werden flach. Das Plasma erreicht die Leberzelle kaum noch – der Austausch stockt, das Blut staut sich zurück zur Pfortader.'
+};
+var LU_WAND = 84, LU_ZELLE = 134;   /* Hoehe der Endothelwand und der Zelloberflaeche (Bildpunkte) */
+function luFrac(x) { return x - Math.floor(x); }
+function luHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function luRampe(v, e) { return Math.max(0, Math.min(1, v / e, (1 - v) / e)); }
+function luLabel(c, text, x, y, rechts) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+}
+function luLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+function luPunkt(c, x, y, r, farbe, alpha) {
+  if (alpha <= 0.01) return;
+  c.globalAlpha = Math.min(1, alpha); c.fillStyle = farbe; c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 0.7;
+  c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill(); c.stroke();
+  c.globalAlpha = 1;
+}
+/* ein Stoffteilchen: ab = true von oben (Sinusoid) nach unten (Zelle), false von unten nach oben (Harnstoff); y1 = Ende des Wegs */
+function luWeg(c, i, k, n, tempo, ab, y1, farbe, r, z) {
+  var p = luFrac((i + 0.37 * k) / n + clock * tempo), y0 = ab ? 14 : 170, h = luHash(i, k), h2 = luHash(i, k + 5);
+  var pw = (LU_WAND - y0) / (y1 - y0), pass = Math.max(0, Math.min(1, ((1 - 0.92 * z) - h) * 6));   /* pass: kommt durch das Fenster (Zirrhose: die meisten nicht) */
+  var cx = 17 + 34 * (Math.floor(h2 * 10)), y = y0 + (y1 - y0) * p, x = cx + (h - 0.5) * 8 * (1 - z), a = luRampe(p, 0.08);
+  if (p < pw) x += (1 - p / pw) * (h2 - 0.5) * 40;                       /* vor der Wand: dem Fenster entgegen */
+  else { var yh = ab ? LU_WAND - 4 : LU_WAND + 4; y = y + (yh - y) * (1 - pass); a *= pass + (1 - pass) * 0.7 * (1 - luFrac((p - pw) / (1 - pw))); }
+  luPunkt(c, x, y, r, farbe, a);
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, z = LUPE.z, g = 1 - z, i, k, x, y, a;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  /* Sinusoid (Blut), Disse-Raum, Leberzelle */
+  c.fillStyle = '#4A1E26'; c.fillRect(0, 0, W, LU_WAND);
+  c.fillStyle = '#9BB3BD'; c.fillRect(0, LU_WAND, W, LU_ZELLE - LU_WAND);
+  c.fillStyle = '#8A4A3A'; c.fillRect(0, LU_ZELLE, W, H - LU_ZELLE);
+  c.strokeStyle = '#5A2E24'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, LU_ZELLE); c.lineTo(W, LU_ZELLE); c.stroke();
+  c.fillStyle = '#5E2E2A'; c.strokeStyle = '#3E1E1C'; c.lineWidth = 1.2;
+  c.beginPath(); c.ellipse(112, 192, 36, 26, 0, 0, 6.2832); c.fill(); c.stroke();                 /* Zellkern der Leberzelle */
+  c.fillStyle = '#7A4338'; c.beginPath(); c.arc(118, 188, 7, 0, 6.2832); c.fill();
+  /* Narbengewebe (graue Fasern) im Disse-Raum */
+  if (z > 0.01) {
+    c.globalAlpha = 0.45 * z; c.fillStyle = '#7C8286'; c.fillRect(0, LU_WAND + 2, W, LU_ZELLE - LU_WAND - 2); c.globalAlpha = z;
+    c.strokeStyle = '#5E6468'; c.lineWidth = 1.6;
+    for (i = 0; i < 16; i++) {
+      x = luHash(i, 11) * W - 30; y = LU_WAND + 8 + luHash(i, 12) * (LU_ZELLE - LU_WAND - 16); a = 70 + luHash(i, 13) * 60;
+      c.beginPath(); c.moveTo(x, y);
+      for (k = 1; k <= 6; k++) c.lineTo(x + a * k / 6, y + Math.sin(k * 1.7 + i) * 4);
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+  }
+  /* Ito-Zelle mit Vitamin-A-Tropfen (verschwinden bei Zirrhose) */
+  c.fillStyle = '#E0B25C'; c.strokeStyle = '#8A6A2E'; c.lineWidth = 1.2;
+  c.beginPath(); c.ellipse(205, 108, 36, 14, 0, 0, 6.2832); c.fill(); c.stroke();
+  c.fillStyle = '#9A7430'; c.beginPath(); c.ellipse(222, 108, 8, 5, 0, 0, 6.2832); c.fill();
+  [[184, 106], [192, 113], [200, 104], [208, 114], [172, 109], [196, 110], [214, 102]].forEach(function (q, j) {
+    luPunkt(c, q[0], q[1], 3.2 * g + 0.01, '#F7D93A', g);
+  });
+  /* Mikrovilli (Zotten der Leberzelle), bei Zirrhose flach */
+  c.strokeStyle = '#C98A78'; c.lineWidth = 2; c.lineCap = 'round';
+  for (x = 4; x < W; x += 6) { c.beginPath(); c.moveTo(x, LU_ZELLE); c.lineTo(x, LU_ZELLE - (12 * g + 3 * z)); c.stroke(); }
+  c.lineCap = 'butt';
+  /* Endothel: gestrichelte Wand, die Fenster (Luecken) schliessen sich bei Zirrhose */
+  var gap = 14 * g;
+  c.strokeStyle = '#E3CFA8'; c.lineWidth = 3.4; c.lineCap = 'round';
+  for (k = 0; k < 11; k++) {
+    var x0 = 34 * k - 17 + gap / 2 + 1.7, x1 = 34 * k + 17 - gap / 2 - 1.7;
+    if (x1 <= x0) { x0 = 34 * k - 17; x1 = 34 * k + 17; }
+    c.beginPath(); c.moveTo(Math.max(-2, x0), LU_WAND); c.lineTo(Math.min(W + 2, x1), LU_WAND); c.stroke();
+  }
+  c.lineCap = 'butt';
+  /* Blut im Sinusoid: rote und violette Blutzellen treiben nach rechts, Kupffer-Zelle sitzt an der Wand */
+  for (i = 0; i < 9; i++) {
+    x = luFrac(i / 9 + clockBl * 0.03) * (W + 40) - 20; y = 16 + luHash(i, 21) * 44 + Math.sin(clockBl * 0.8 + i * 2.1) * 3;
+    if (i % 3 === 2) {                                                                          /* violett: weisse Blutzelle mit Kern */
+      c.fillStyle = '#8E5BB0'; c.strokeStyle = '#5A3578'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 7, 0, 6.2832); c.fill(); c.stroke();
+      c.fillStyle = '#5A3578'; c.beginPath(); c.arc(x + 1, y, 3.2, 0, 6.2832); c.fill();
+    } else {                                                                                    /* rot: rotes Blutkoerperchen (eingedellt) */
+      c.fillStyle = '#C0392B'; c.strokeStyle = '#7E1F18'; c.lineWidth = 1; c.beginPath(); c.ellipse(x, y, 9, 5.5, 0.2 * Math.sin(i), 0, 6.2832); c.fill(); c.stroke();
+      c.fillStyle = '#A02A20'; c.beginPath(); c.ellipse(x, y, 4, 2, 0.2 * Math.sin(i), 0, 6.2832); c.fill();
+    }
+  }
+  c.fillStyle = '#D9A441'; c.strokeStyle = '#8A6A28'; c.lineWidth = 1.2;
+  c.beginPath(); c.moveTo(48, LU_WAND - 2);
+  c.lineTo(52, 66); c.lineTo(58, 62); c.lineTo(64, 52); c.lineTo(72, 56); c.lineTo(80, 48); c.lineTo(88, 56); c.lineTo(96, 54); c.lineTo(94, 66); c.lineTo(100, LU_WAND - 2);
+  c.closePath(); c.fill(); c.stroke();                                                          /* Kupffer-Zelle */
+  c.fillStyle = '#8A6A28'; c.beginPath(); c.ellipse(74, 68, 8, 5, 0, 0, 6.2832); c.fill();
+  /* Teilchen: Plasma (hellblau) bis zur Zelle, die Stoffe in die Zelle hinein, Harnstoff zurueck */
+  for (i = 0; i < 22; i++) luWeg(c, i, 1, 22, 0.10, true, LU_ZELLE - 2, '#DDF1FF', 1.7, z);
+  if (stoffe.zucker) for (i = 0; i < 8; i++) luWeg(c, i, 2, 8, 0.09, true, 168, '#F2D13A', 2.4, z);
+  if (stoffe.ammoniak) {
+    for (i = 0; i < 8; i++) luWeg(c, i, 3, 8, 0.09, true, 168, '#F08A2E', 2.4, z);
+    for (i = 0; i < 8; i++) luWeg(c, i, 4, 8, 0.08, false, 40, '#FFFFFF', 2.4, z);
+  }
+  if (stoffe.bilirubin) for (i = 0; i < 6; i++) luWeg(c, i, 5, 6, 0.09, true, 168, '#8B5A2B', 2.4, z);
+  /* Beschriftung im Bild */
+  luLeiter(c, 40, 19, 66, 52);   luLabel(c, 'Kupffer-Zelle', 6, 16, false);
+  luLabel(c, 'Sinusoid', 334, 16, true);
+  luLeiter(c, 290, 47, 257, 82); luLabel(c, 'Fenster', 334, 50, true);
+  luLabel(c, 'Disse-Raum', 6, 112, false);
+  luLeiter(c, 282, 120, 244, 110); luLabel(c, 'Ito-Zelle', 334, 124, true);
+  luLeiter(c, 292, 152, 298, 133); luLabel(c, 'Mikrovilli', 334, 156, true);
+  luLabel(c, 'Leberzelle', 6, 226, false);
+}
+function lupeText() {
+  var k = LUPE.zZiel > 0.5 ? 1 : 0;
+  LUPE.key = k;
+  $('lpText').innerHTML = '<p' + (k ? ' class="lp-note"' : '') + '>' + LU_T[k ? 'zirrhose' : 'gesund'] + '</p>';
+  $('lpLegNarbe').style.display = k ? '' : 'none';
+}
+function lupeChips() {
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', (b.getAttribute('data-z') === '1') === (LUPE.zZiel > 0.5)); });
+}
+function lupeZustand(zi) {
+  LUPE.zZiel = zi ? 1 : 0;
+  lupeChips(); lupeText();
+}
+function lupeOeffnen() {
+  if (abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  if (!LUPE.open) { LUPE.zZiel = SZW.zirrhose > 0.5 ? 1 : 0; LUPE.z = LUPE.zZiel; }   /* ist Zirrhose gewaehlt, beginnt die Lupe mit "Zirrhose" */
+  lupeChips(); lupeText();
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+function lupeApp(an, z) {   /* fuer die Pruefung: oeffnen/schliessen, optional Zustand 'gesund' | 'zirrhose' (sofort, ohne Ueberblendung) */
+  if (an) lupeOeffnen(); else lupeClose();
+  if (an && z !== undefined && z !== null) { lupeZustand(z === 'zirrhose' || z === 1 || z === true); LUPE.z = LUPE.zZiel; lupeDraw(); }
+  return { offen: LUPE.open, zirrhose: LUPE.zZiel > 0.5, z: LUPE.z };
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { lupeZustand(b.getAttribute('data-z') === '1'); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick(dt) {   /* nur solange offen: Zirrhose weich ueberblenden (ca. 1,5 s) und neu zeichnen */
+  if (!LUPE.open) return;
+  var dz = LUPE.zZiel - LUPE.z;
+  if (dz) { LUPE.z += dz * (1 - Math.exp(-dt * 3)); if (Math.abs(LUPE.zZiel - LUPE.z) < 0.003) LUPE.z = LUPE.zZiel; }
+  lupeDraw();
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now();
 var last = t0;
 var App = window.LaeppchenApp = { ready: false, aufbauMs: 0, schema: function (an) { setSchema(!!an); }, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris,
   mahlzeit: function (an) { setMahlzeit(!!an); },
+  lupe: function (an, z) { return lupeApp(an, z); },   /* Lupe oeffnen/schliessen, optional mit Zustand ('gesund' | 'zirrhose') fuer die Pruefung */
   szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   stoff: function (name, an) { if (name in stoffe) setStoff(name, !!an); }, stoffe: function () { return { zucker: stoffe.zucker, ammoniak: stoffe.ammoniak, bilirubin: stoffe.bilirubin }; },
   /* fuer die Pruefung: Antippen einer Struktur wie mit dem Finger (nur beim Ueben), Zustaende von "Wege verfolgen" und "Strukturen finden" */
@@ -1706,7 +1890,7 @@ var App = window.LaeppchenApp = { ready: false, aufbauMs: 0, schema: function (a
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
-  stroemungSchritt(dt); stroemungBild();
+  stroemungSchritt(dt); stroemungBild(); lupeTick(dt);
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   if (schemaOn) schemaTick();
   Kern.kamera(camera, view);
@@ -1720,7 +1904,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);

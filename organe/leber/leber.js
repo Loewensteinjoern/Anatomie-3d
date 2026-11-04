@@ -123,6 +123,7 @@ var MARKUP = `<div id="title">
     <button id="bLaeppchen" class="gh" title="In ein Leberläppchen hineinzoomen">Läppchen</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Die Leber als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Längsschnitt durch die Papille, wo Galle und Pankreassaft in den Darm fließen">Lupe</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -147,6 +148,15 @@ var MARKUP = `<div id="title">
   <div class="sch-head"><span class="kick">Schema &middot; Leber</span><span class="sch-hint">Gleiche Teilchen wie im 3D-Modell, Blick von vorn.</span>
   <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
   <div id="schemaBox"></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; L&auml;ngsschnitt</div>
+  <h3 id="lpTitle">Papille &ndash; wo die Galle in den Darm flie&szlig;t</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-m="0" title="Der Schlie&szlig;muskel ist zu, die Galle flie&szlig;t in die Gallenblase">n&uuml;chtern</button><button class="gh" data-m="1" title="Der Schlie&szlig;muskel &ouml;ffnet sich, Galle und Pankreassaft flie&szlig;en in den Darm">nach dem Essen</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#5FAE5A"></i>Gallengang (Galle)</span><span><i style="background:#E6D98B"></i>Pankreasgang (Pankreassaft)</span><span><i style="background:#D0786A"></i>Schlie&szlig;muskel</span><span><i style="background:#B07E70"></i>Darmwand</span><span id="lpLegStein" style="display:none"><i style="background:#E2D3A6"></i>Gallenstein</span></div>
 </div>
 
 <div class="panel" id="legend">
@@ -511,6 +521,7 @@ function setSelected(id, punkt) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 
@@ -532,6 +543,7 @@ var SZ = Kern.Szenarien({
     if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
       if (quiz) quizEnd();
       if (wege) wegeEnd();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
       setSelected(null); closeCard();
       krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Leber, sie beginnt eingeklappt (Titelzeile) */
@@ -539,7 +551,7 @@ var SZ = Kern.Szenarien({
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -552,7 +564,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 
@@ -729,6 +741,7 @@ function ansicht(theta, phi, dist, target) {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -1367,6 +1380,7 @@ var MAHLZEIT_TXT = ['Nüchtern: Der Schließmuskel an der Papille ist zu – die
 function setMahlzeit(an, still) {
   if (an === mahlzeit) return;
   mahlzeit = an;
+  lupeChips();
   $('bNuechtern').classList.toggle('on', !an);
   $('bEssen').classList.toggle('on', an);
   if (!still) Kern.toast(MAHLZEIT_TXT[an ? 1 : 0]);
@@ -1686,7 +1700,7 @@ function schemaPick(info) {
 function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); }   /* Hilfekarte, Ueben und Lupe weichen dem Schema */
   $('bSchema').classList.toggle('on', on);
   if (on) { SCH.build($('schemaBox'), schemaPick); SCH.update(selected, enabled, lv); }
   $('schema').classList.toggle('show', on);
@@ -1817,6 +1831,7 @@ function laeppchenOeffnen(idx) {
   if (fz || abgebaut || lpWartet || !ST) return;
   if (lpP && !lpModul() && !lpFehl) { lpWartet = true; lpP.then(function () { lpWartet = false; if (!abgebaut) laeppchenOeffnen(idx); }); return; }
   schemaWeicht();
+  lupeClose();
   if (quiz) quizEnd();
   if (wege) wegeEnd();
   closeCard();
@@ -2094,11 +2109,162 @@ function szenarioWirkung() {
 }
 
 /* =====================================================================
+   7d. Lupe: Laengsschnitt durch die Papille (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv; kein three.js)
+   Oben links der Gallengang, oben rechts der Pankreasgang, beide muenden in die Ampulle; darunter der Schliessmuskel (Oddi, zwei Polster) und die Muendung durch die
+   Darmwand ins Lumen des Zwoelffingerdarms. Die Chips folgen dem Mahlzeit-Schalter der Leber und schalten ihn mit (ein Zustand). Der Muskel folgt `anteil`
+   (weich ueberblendet), die Teilchen nur aus `clock` und Index (kein Math.random): nach vorn mit Alpha anteil * (1 - Stein), nuechtern stehen die gruenen fast
+   und treiben langsam zurueck nach oben (Richtung Gallenblase). Gallenstein (SZW.stein): Stein in der Ampulle, Gaenge weiter, nichts erreicht das Lumen.
+   Die Lupe zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte, Erklaer- und Szenariokarte schliessen sie bzw. weichen ihr.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 340, H: 236, key: -1 };
+var PA_T = {
+  nuechtern: 'Der Schließmuskel der Papille (Oddi) ist zu. Die Galle staut sich im Gallengang und fließt in die Gallenblase, wo sie gesammelt und eingedickt wird.',
+  essen: 'Fett im Zwölffingerdarm gibt das Signal: Die Gallenblase zieht sich zusammen, der Schließmuskel öffnet sich. Galle und Pankreassaft fließen gemeinsam in den Darm und helfen, das Fett zu verdauen.',
+  stein: 'Ein Stein steckt vor der Mündung. Galle und Pankreassaft kommen nicht in den Darm – die Galle staut sich bis in die Leber zurück. Sitzt der Stein in der gemeinsamen Ampulle, kann auch die Bauchspeicheldrüse sich entzünden.'
+};
+var PA_G = [[38, 8], [92, 32], [138, 68], [163, 100], [170, 116], [170, 160], [170, 198], [176, 226]];   /* Weg der Galle: Gallengang, Ampulle, Muendung, Lumen (Bildpunkte) */
+var PA_Y = [[312, 22], [256, 44], [206, 76], [180, 102], [171, 118], [170, 160], [170, 198], [164, 226]];   /* Weg des Pankreassafts */
+function paWeg(pts) {   /* Polylinie mit Laengen: Punkt und Normale bei Anteil u (0..1) */
+  var cum = [0], i;
+  for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  var len = cum[cum.length - 1];
+  return { pts: pts, cum: cum, len: len, bis: function (k) { return cum[k] / len; }, at: function (u) {
+    var d = Math.max(0, Math.min(1, u)) * len, k = 1;
+    while (k < pts.length - 1 && cum[k] < d) k++;
+    var a = pts[k - 1], b = pts[k], t = (d - cum[k - 1]) / (cum[k] - cum[k - 1]), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
+    return [a[0] + dx * t, a[1] + dy * t, -dy / l, dx / l];
+  } };
+}
+var PA_WG = paWeg(PA_G), PA_WY = paWeg(PA_Y);
+function paFrac(x) { return x - Math.floor(x); }
+function paHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function paRampe(v, e) { return Math.max(0, Math.min(1, v / e, (1 - v) / e)); }
+function paLabel(c, text, x, y, rechts) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+}
+function paLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+function paRohr(c, pts, w, rand, fuell) {
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.strokeStyle = rand; c.lineWidth = w + 3;
+  c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke();
+  c.strokeStyle = fuell; c.lineWidth = w;
+  c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke();
+}
+function paTeilchen(c, weg, u, versatz, alpha, farbe, r) {
+  if (alpha <= 0.01) return;
+  var q = weg.at(u), sp = versatz * (2.5 + Math.max(0, q[1] - 198) * 0.25);
+  c.globalAlpha = alpha; c.fillStyle = farbe;
+  c.beginPath(); c.arc(q[0] + q[2] * sp, q[1] + q[3] * sp, r, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, o = anteil, st = Math.max(0, Math.min(1, SZW.stein)), fl = o * (1 - st), i, u, v, s;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, W, H);
+  /* Darmwand (Schichten) und Lumen des Zwoelffingerdarms */
+  c.fillStyle = '#2E1D22'; c.fillRect(0, 172, W, H - 172);
+  c.fillStyle = '#9A6A5C'; c.fillRect(0, 92, W, 14);
+  c.fillStyle = '#7B4C46'; c.fillRect(0, 106, W, 44);
+  c.fillStyle = '#B07E70'; c.fillRect(0, 150, W, 22);
+  c.strokeStyle = 'rgba(40,20,20,0.35)'; c.lineWidth = 0.8;
+  [106, 150].forEach(function (y) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); });
+  /* Papille: Schleimhauthuegel, der ins Lumen ragt */
+  c.fillStyle = '#B07E70'; c.strokeStyle = '#6A4038'; c.lineWidth = 1.2;
+  c.beginPath(); c.ellipse(170, 172, 42, 26, 0, 0, Math.PI); c.closePath(); c.fill(); c.stroke();
+  /* Gaenge (weiter bei Gallenstein), Ampulle und gemeinsamer Gang */
+  paRohr(c, PA_G.slice(0, 5), 14 * (1 + 0.5 * st), '#2E5E2C', '#5FAE5A');
+  paRohr(c, PA_Y.slice(0, 5), 10 * (1 + 0.5 * st), '#8F8440', '#E6D98B');
+  c.fillStyle = '#9DBB6C'; c.strokeStyle = '#4F6A32'; c.lineWidth = 1.5;
+  c.beginPath(); c.ellipse(170, 114, 17 + 5 * st, 15 + 3 * st, 0, 0, 6.2832); c.fill(); c.stroke();
+  paRohr(c, [[170, 122], [170, 198]], 2 + 6 * o, '#4F6A32', '#9DBB6C');
+  /* Schliessmuskel (Oddi): zwei Polster beidseits, geschlossen beruehren sie sich, offen weichen sie weich auseinander */
+  [-1, 1].forEach(function (sg) {
+    c.fillStyle = '#D0786A'; c.strokeStyle = '#7E3F37'; c.lineWidth = 1.2;
+    c.beginPath(); c.ellipse(170 + sg * (5.5 + 7 * o), 144, 7.5, 17, 0, 0, 6.2832); c.fill(); c.stroke();
+  });
+  /* Gallenstein in der Ampulle (kantig, deterministisch) */
+  if (st > 0.01) {
+    c.fillStyle = '#E2D3A6'; c.strokeStyle = '#8A7A4A'; c.lineWidth = 1.2;
+    c.beginPath();
+    for (i = 0; i < 7; i++) {
+      var a = i / 7 * 6.2832, rr = 1 + 0.18 * (paHash(i, 7) - 0.5) * 2;
+      c.lineTo(170 + Math.cos(a) * 9 * rr * st, 114 + Math.sin(a) * 7 * rr * st);
+    }
+    c.closePath(); c.fill(); c.stroke();
+  }
+  /* Teilchen: nach vorn (nur wenn offen und kein Stein), dazu nuechtern/bei Stein die Stauung (gruen treibt zurueck nach oben, gelb kaum) */
+  for (i = 0; i < 22; i++) { u = paFrac(i / 22 + clock * 0.16); paTeilchen(c, PA_WG, u, paHash(i, 1) - 0.5, fl * paRampe(u, 0.06), '#B6F0A4', 2.2); }
+  for (i = 0; i < 14; i++) { u = paFrac((i + 0.5) / 14 + clock * 0.14); paTeilchen(c, PA_WY, u, paHash(i, 2) - 0.5, fl * paRampe(u, 0.06), '#FFF3AE', 2); }
+  s = 1 - fl; u = PA_WG.bis(4) - 0.02;
+  for (i = 0; i < 10; i++) { v = paFrac(i / 10 + clock * 0.04); paTeilchen(c, PA_WG, u * (1 - v), paHash(i, 3) - 0.5, s * 0.9 * paRampe(v, 0.1), '#B6F0A4', 2.2); }
+  u = PA_WY.bis(4) - 0.04;
+  for (i = 0; i < 6; i++) { v = paFrac((i + 0.5) / 6 + clock * 0.02); paTeilchen(c, PA_WY, u * v, paHash(i, 4) - 0.5, s * 0.9 * paRampe(v, 0.1), '#FFF3AE', 2); }
+  /* Beschriftung im Bild */
+  paLeiter(c, 62, 62, 126, 62);  paLabel(c, 'Gallengang', 6, 66, false);
+  paLeiter(c, 262, 66, 292, 66); paLabel(c, 'Pankreasgang', 334, 70, true);
+  paLeiter(c, 198, 112, 292, 112); paLabel(c, 'Ampulle', 334, 116, true);
+  paLeiter(c, 104, 142, 156, 143); paLabel(c, 'Schließmuskel (Oddi)', 6, 146, false);
+  paLabel(c, 'Zwölffingerdarm', 8, 224, false);
+}
+function lupeText() {
+  var k = SZW.stein > 0.5 ? 2 : mahlzeit ? 1 : 0;
+  LUPE.key = k;
+  $('lpText').innerHTML = '<p' + (k === 2 ? ' class="lp-note"' : '') + '>' + PA_T[['nuechtern', 'essen', 'stein'][k]] + '</p>';
+  $('lpLegStein').style.display = k === 2 ? '' : 'none';
+}
+function lupeChips() {
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', (b.getAttribute('data-m') === '1') === mahlzeit); });
+}
+function lupeOeffnen() {
+  if (fz || abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  lupeChips(); lupeText();                               /* die Lupe beginnt im Zustand des Mahlzeit-Schalters */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+function lupeApp(an, z) {   /* fuer die Pruefung: oeffnen/schliessen, optional Zustand 'nuechtern' | 'essen' (schaltet den Mahlzeit-Schalter mit) */
+  if (an) lupeOeffnen(); else lupeClose();
+  if (an && z !== undefined && z !== null) { setMahlzeit(z === 'essen' || z === 1 || z === true, true); if (LUPE.open) lupeText(); }
+  return { offen: LUPE.open, mahlzeit: mahlzeit, anteil: anteil, stein: SZW.stein };
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { setMahlzeit(b.getAttribute('data-m') === '1', true); lupeText(); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick() {   /* nur solange offen: Text bei Wechsel des Zustands (auch Gallenstein) nachziehen und neu zeichnen */
+  if (!LUPE.open) return;
+  if (LUPE.key !== (SZW.stein > 0.5 ? 2 : mahlzeit ? 1 : 0)) lupeText();
+  lupeDraw();
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
 var App = window.LeberApp = { ready: false, aufbauMs: 0, schema: function (an) { setSchema(!!an); }, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris,
   mahlzeit: function (an) { setMahlzeit(!!an); },
+  lupe: function (an, z) { return lupeApp(an, z); },   /* Lupe oeffnen/schliessen, optional mit Zustand ('nuechtern' | 'essen') fuer die Pruefung */
   szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   /* fuer die Pruefung: Antippen einer Struktur wie mit dem Finger (nur beim Ueben), Zustaende von "Wege verfolgen" und "Strukturen finden" */
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
@@ -2109,7 +2275,7 @@ var App = window.LeberApp = { ready: false, aufbauMs: 0, schema: function (an) {
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!fz && SZ.schritt(dt)) szenarioWirkung();          /* Krankheitsbilder weich ueberblenden */
-  if (!fz) { stroemungSchritt(dt); stroemungBild(); }     /* waehrend der Fahrt zum Laeppchen steht die Stroemung */
+  if (!fz) { stroemungSchritt(dt); stroemungBild(); lupeTick(); }     /* waehrend der Fahrt zum Laeppchen steht die Stroemung */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   if (schemaOn) schemaTick();
@@ -2129,7 +2295,7 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   abgebaut = true;
   fz = null; canvas.style.pointerEvents = '';
-  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);

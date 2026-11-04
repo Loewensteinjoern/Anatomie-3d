@@ -17,6 +17,15 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #legend .note{margin-top:6px;font-size:10px;line-height:1.45;color:var(--ink-faint)}
 #legend .kz{color:var(--ink-dim)}
 
+/* Lupe (Sinusoid mit Disse-Raum): Lage und Groesse wie bei der Lunge; Schema und Lupe schliessen sich gegenseitig (laeppchen.js) */
+#lupe{left:286px;bottom:22px;width:620px;padding:12px 14px 10px;display:none}
+#lupe .hbtn{position:absolute;top:8px;right:8px;padding:3px 9px;font-size:13px;line-height:1}
+.lp-chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 10px}
+.lp-main{display:flex;gap:14px;align-items:flex-start}
+#lpCv{width:340px;height:236px;flex:0 0 340px;border-radius:2px;border:1px solid var(--line);display:block}
+.lp-text{flex:1;min-width:0;font-size:12px;line-height:1.45;color:var(--ink-dim)}
+.lp-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:10.5px;color:var(--ink-faint)}
+
 #info{bottom:22px;left:286px;width:326px;padding:16px 18px 17px;display:none}
 
 /* Reiter in der Leiste (Aussehen: core/kern.css): drei Reiter in einer Zeile */
@@ -84,6 +93,11 @@ body.schema #labels,body.schema #leaders{display:none}
   /* Infokarte und Erklaerkarte: die Infokarte endet ueber der Werkzeugleiste (--wz = gemessene Hoehe der Werkzeugleiste, von laeppchen.js gesetzt; Werkzeugleiste unten bei 34vh + 6px) */
   #info{left:12px;right:12px;width:auto;bottom:calc(34vh + var(--wz,132px) + 14px);max-height:calc(66vh - var(--wz,132px) - 70px);overflow-y:auto}
   #scard,#kcard{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:38vh}
+  /* Lupe: oben, ueber der Werkzeugleiste (die bleibt frei), Zurueck-Knopf des Atlas weicht */
+  #lupe{top:56px;bottom:auto;left:12px;right:12px;width:auto;max-height:calc(66vh - var(--wz,132px) - 70px);overflow-y:auto}
+  .lp-main{flex-direction:column}
+  #lpCv{width:100%;height:auto;flex:none;aspect-ratio:340/236}
+  body:has(#lupe.show) #atlasZurueck{display:none}
   body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck,body:has(#kcard.show:not(.weg)) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   /* Ueben (Strukturen finden, Wege verfolgen): kompakte Karte unten direkt ueber der Werkzeugleiste (26 % der Hoehe, laeppchen.js bereichFuer richtet den Bildbereich danach aus);
      Aufgabe und Abschluss scrollen, Stationsliste, Rueckmeldung, Zaehlung und Knoepfe bleiben sichtbar */
