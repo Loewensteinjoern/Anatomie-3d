@@ -1,6 +1,6 @@
 # Magen, PR A – Texte (von Jörn freigegeben, 6. November 2026)
 
-Änderungen gegenüber dem Entwurf (Jörn): Leber und Milz entfallen im Magenmodell (sie sind eigene Organe); Nüchternzeiten ohne Stundenangabe; Lagekontrolle der Magensonde durch Einblasen von Luft und Abhören. Stofffarben wie im Entwurf.
+Änderungen gegenüber dem Entwurf (Jörn): Leber und Milz entfallen im Magenmodell (sie sind eigene Organe); Nüchternzeiten ohne Stundenangabe; Lagekontrolle der Magensonde durch Abhören oder pH-Test, nach Hausstandard. Der Körper bekommt keine Magengefäße. Stofffarben wie im Entwurf.
 
 ## A. Magenmodell: Kopf, Seitentitel
 
@@ -162,7 +162,7 @@ Muskelwellen laufen etwa dreimal pro Minute vom Magenkörper zum Pförtner. Nur 
 Merke: Fettreiches Essen „liegt schwer im Magen“ – Fett im Zwölffingerdarm bremst die Entleerung.
 
 **4. Pflege: nüchtern, Erbrechen, Magensonde**
-Vor einer Narkose bleiben Patientinnen und Patienten nüchtern, damit kein Mageninhalt in die Lunge gelangt (Aspiration) – wie lange, legen die ärztliche Anordnung bzw. der Hausstandard fest. Beim Erbrechen achten Pflegende auf Menge, Farbe und Beimengungen: kaffeesatzartiges Erbrechen spricht für eine Blutung im Magen. Die Lage einer Magensonde wird vor jeder Gabe geprüft: Mit einer Blasenspritze wird Luft in die Sonde gegeben und mit dem Stethoskop über dem Magen abgehört, ob sie dort ankommt.
+Vor einer Narkose bleiben Patientinnen und Patienten nüchtern, damit kein Mageninhalt in die Lunge gelangt (Aspiration) – wie lange, legen die ärztliche Anordnung bzw. der Hausstandard fest. Beim Erbrechen achten Pflegende auf Menge, Farbe und Beimengungen: kaffeesatzartiges Erbrechen spricht für eine Blutung im Magen. Die Lage einer Magensonde wird vor jeder Gabe geprüft, zum Beispiel durch Abhören (mit einer Blasenspritze Luft in die Sonde geben und mit dem Stethoskop über dem Magen hören, ob sie dort ankommt) oder durch einen pH-Test des Magensafts – nach Hausstandard.
 Merke: Bei Bewusstseinsstörungen droht beim Erbrechen die Aspiration – Seitenlage, Absaugbereitschaft.
 
 **5. So liest du das Modell**
