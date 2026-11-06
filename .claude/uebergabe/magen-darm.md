@@ -6,7 +6,7 @@ Für einen neuen Chat. Zuerst lesen: `PLAN.md` (Phase 3, Abschnitt „Magen und 
 
 - Leber mit Leberläppchen ist fertig (PR #42, #43, #44 gemergt).
 - Magen und Darm: Grundsatzfragen und Einzelheiten für PR A sind abgestimmt (siehe PLAN.md).
-- Die Texte für PR A sind ein Entwurf, Jörn hat sie noch **nicht** freigegeben. Nächster Schritt: Jörn die Datei vorlegen, auf Freigabe oder Änderungswünsche warten. Offen sind dabei zwei Rückfragen an ihn: die Farben der Stoffe (gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, türkis Magensaft; grün ist in der Leber die Galle) und die Nüchternzeiten in der Pflegekarte (6 Stunden feste Nahrung, klare Flüssigkeit bis 2 Stunden, nach ärztlicher Anordnung).
+- Die Texte für PR A hat Jörn am 6. November 2026 freigegeben (mit Änderungen, siehe Kopf von `magen-a-texte.md`). Jörn möchte geduzt werden.
 - Arbeitszweig: `claude/magen-darm-a` (von `main`, enthält nur PLAN.md und diese Übergabe; noch kein Code).
 
 ## Vorgehen (wie bei der Leber, von Jörn so gewünscht)

@@ -1,4 +1,6 @@
-# Magen, PR A – Texte, Entwurf zur Freigabe (noch NICHT freigegeben)
+# Magen, PR A – Texte (von Jörn freigegeben, 6. November 2026)
+
+Änderungen gegenüber dem Entwurf (Jörn): Leber und Milz entfallen im Magenmodell (sie sind eigene Organe); Nüchternzeiten ohne Stundenangabe; Lagekontrolle der Magensonde durch Einblasen von Luft und Abhören. Stofffarben wie im Entwurf.
 
 ## A. Magenmodell: Kopf, Seitentitel
 
@@ -98,12 +100,6 @@ Zwei Stränge des Vagusnervs ziehen mit der Speiseröhre durch das Zwerchfell an
 **Zwerchfell (Lage)** · *Diaphragma*
 Die Muskelplatte über dem Magen. Die Speiseröhre tritt durch eine Lücke im Zwerchfell zum Magen. Ist diese Lücke zu weit, kann ein Teil des Magens in den Brustraum rutschen (Hiatushernie).
 
-**Leber (Lage)** · *Hepar*
-Der linke Leberlappen liegt rechts vorn über dem Magen. Zwischen Leber und kleiner Kurvatur spannt sich das kleine Netz.
-
-**Milz (Lage)** · *Lien*
-Die Milz liegt links hinter dem Magen unter dem Zwerchfell. Sie ist mit der großen Kurvatur durch ein Band verbunden.
-
 ## C. Körper (Infokarten, Knöpfe)
 
 - Magen: behält seinen Text, bekommt „Magen öffnen“ und „3D“.
@@ -166,7 +162,7 @@ Muskelwellen laufen etwa dreimal pro Minute vom Magenkörper zum Pförtner. Nur 
 Merke: Fettreiches Essen „liegt schwer im Magen“ – Fett im Zwölffingerdarm bremst die Entleerung.
 
 **4. Pflege: nüchtern, Erbrechen, Magensonde**
-Vor einer Narkose bleiben Patientinnen und Patienten nüchtern, damit kein Mageninhalt in die Lunge gelangt (Aspiration): meist 6 Stunden ohne feste Nahrung, klare Flüssigkeit bis 2 Stunden vorher – nach ärztlicher Anordnung. Beim Erbrechen achten Pflegende auf Menge, Farbe und Beimengungen: kaffeesatzartiges Erbrechen spricht für eine Blutung im Magen. Die Lage einer Magensonde wird vor jeder Gabe geprüft, zum Beispiel über den pH-Wert des Magensafts.
+Vor einer Narkose bleiben Patientinnen und Patienten nüchtern, damit kein Mageninhalt in die Lunge gelangt (Aspiration) – wie lange, legen die ärztliche Anordnung bzw. der Hausstandard fest. Beim Erbrechen achten Pflegende auf Menge, Farbe und Beimengungen: kaffeesatzartiges Erbrechen spricht für eine Blutung im Magen. Die Lage einer Magensonde wird vor jeder Gabe geprüft: Mit einer Blasenspritze wird Luft in die Sonde gegeben und mit dem Stethoskop über dem Magen abgehört, ob sie dort ankommt.
 Merke: Bei Bewusstseinsstörungen droht beim Erbrechen die Aspiration – Seitenlage, Absaugbereitschaft.
 
 **5. So liest du das Modell**
@@ -178,7 +174,7 @@ Merke: Säure und Pepsin verdauen im Magen nur Eiweiß an – die eigentliche Ve
 Einleitung im Reiter: Finde die gesuchte Struktur am Magen und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge einen Weg: Tippe die Stationen der Reihe nach an.
 Knöpfe: Strukturen finden (während des Übens: Üben beenden) · Wege verfolgen (während des Übens: Wege beenden)
 
-Strukturen finden (wie bei der Leber): Karte „Üben“ – Tippe auf: ‹Struktur› – Drehe den Magen, wenn du die Struktur nicht gleich siehst. Rückmeldung wie bei der Leber. Gesucht werden alle Strukturen außer Zwerchfell, Leber und Milz; die Magenschleimhaut und die Magenmuskulatur nur in der Innenansicht.
+Strukturen finden (wie bei der Leber): Karte „Üben“ – Tippe auf: ‹Struktur› – Drehe den Magen, wenn du die Struktur nicht gleich siehst. Rückmeldung wie bei der Leber. Gesucht werden alle Strukturen außer dem Zwerchfell; die Magenschleimhaut und die Magenmuskulatur nur in der Innenansicht.
 
 Wege verfolgen (Beschriftung solange aus; Rückmeldungen, Zählung, Knöpfe wie bei der Leber; Titel „Weg ‹i› von 3: ‹Titel›“):
 - Weg 1 „Weg der Nahrung“ – Aufgabe: Ein Bissen wurde geschluckt. Tippe seine Stationen der Reihe nach an, bis er den Magen verlässt. – Hinweis: Das Modell zeigt jetzt „nach dem Essen“. – Stationen: Speiseröhre → Mageneingang → Magenkörper → Magenvorhof → Pförtner → Zwölffingerdarm – Abschluss: Geschafft: Im Magenkörper wird die Nahrung gesammelt, im Vorhof zerkleinert, und der Pförtner gibt sie portionsweise an den Zwölffingerdarm weiter.
