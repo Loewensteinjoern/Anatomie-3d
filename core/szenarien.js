@@ -9,6 +9,7 @@
         after, note), karte (ID des Karten-Elements), dauer (Ueberblendzeit
         in s), anteil (optional: vorhandenes Objekt), beimWechsel(id),
         beimEinklappen(), ausTitel (Titel des Ausschalt-Knopfs).
+   Daten je Organ: Kern.Szenarien.daten.atmung (Lunge, Alveole), Kern.Szenarien.daten.leber (Leber, Leberlaeppchen).
    ========================================================================== */
 var Kern = window.Kern = window.Kern || {};
 (function (K) {
@@ -178,4 +179,58 @@ var Kern = window.Kern = window.Kern || {};
         modell: { sz: 'hypo', o: 0, spaeter: { nach: 4, t: 0.50, f: 0.50 } } }
     ]
   };
+  /* Daten fuer Leber und Leberlaeppchen (Reiter Krankheitsbilder und Medikamente): Kern.Szenarien.daten.leber. Felder wie oben; hinweis = { leber, laeppchen } statt note
+     (jedes Modul setzt daraus note); datei = Namensteil fuer den Export; modell = Wirkgroessen 0..1 (zirrhose, aszites, fett, hepatitis, stein, nekrose3; ammoniak = Faktor fuer
+     die Menge der Ammoniakteilchen, neutral 1; nicht genannte Groessen sind neutral 0). Texte freigegeben (PR C). */
+  K.Szenarien.daten.leber = [
+    { id: 'zirrhose', kind: 'disease', name: 'Leberzirrhose mit Pfortaderhochdruck', short: 'Narben bauen die Leber um, das Pfortaderblut staut sich', kicker: 'Chronische Lebererkrankung · Endstadium vieler Leberschäden',
+      lead: 'Über Jahre gehen Leberzellen zugrunde und werden durch Narbengewebe ersetzt. Die Leber wird klein, hart und knotig. Das Blut aus der Pfortader kommt nur noch schwer hindurch.',
+      values: [['Leber', 'klein, hart, knotige Oberfläche'], ['Pfortaderdruck', 'erhöht (Pfortaderhochdruck)'], ['Ursachen', 'Alkohol, Virushepatitis, Fettleber'], ['Folgen', 'Bauchwasser, Krampfadern der Speiseröhre, Verwirrtheit']],
+      steps: [['Zellen gehen zugrunde.', 'Alkohol, Viren oder Fett schädigen die Leberzellen immer wieder.'], ['Narben ziehen durch die Leber.', 'Ito-Zellen bilden Bindegewebe, das die Läppchen umbaut und die Sinusoide einengt.'], ['Das Blut staut sich vor der Leber.', 'In der Pfortader steigt der Druck, das Blut sucht Umgehungswege, etwa über Venen der Speiseröhre.'], ['Die Leistung fällt aus.', 'Weniger Eiweiß im Blut und der hohe Druck lassen Wasser in den Bauch treten (Aszites); Ammoniak wird nicht mehr abgebaut und gelangt ins Gehirn.']],
+      after: [['Behandlung', 'Ursache ausschalten (kein Alkohol), Wasser ausschwemmen (z. B. Spironolacton), Ammoniak senken (Lactulose), Krampfadern der Speiseröhre behandeln; als letzte Möglichkeit eine Lebertransplantation.'], ['Pflege beobachtet', 'Bauchumfang und Gewicht täglich, Ein- und Ausfuhr, Bewusstsein und Schrift (Zeichen der Enzephalopathie), Blutungszeichen (Bluterbrechen, Teerstuhl), Haut und Augen auf Gelbfärbung.']],
+      hinweis: { leber: 'In 3D ist die Leber kleiner und knotig, das Pfortaderblut fließt langsamer, unter der Leber sammelt sich Bauchwasser.', laeppchen: 'Im Läppchen ziehen Narbenstränge an den Rändern entlang, die Sinusoide sind eng und das Blut fließt langsamer.' },
+      datei: 'zirrhose', modell: { zirrhose: 1, aszites: 1 } },
+    { id: 'fettleber', kind: 'disease', name: 'Fettleber', short: 'Fett lagert sich in den Leberzellen ein', kicker: 'Stoffwechselstörung der Leber · häufig und anfangs stumm',
+      lead: 'In den Leberzellen sammeln sich Fetttröpfchen. Die Leber wird größer, weicher und gelblich. Lange merkt man nichts davon.',
+      values: [['Leber', 'vergrößert, gelblich, stumpfer Rand'], ['Beschwerden', 'meist keine, manchmal Druck im Oberbauch'], ['Ursachen', 'Übergewicht, Diabetes, Alkohol'], ['Verlauf', 'rückbildbar, kann zur Entzündung und Zirrhose führen']],
+      steps: [['Zu viel Fett kommt an.', 'Mit dem Pfortaderblut erreichen viele Fettsäuren und Zucker die Leber.'], ['Die Zellen speichern Fett.', 'Sie bilden daraus Fett, können es aber nicht schnell genug abgeben.'], ['Tropfen füllen die Zellen.', 'Große Fetttröpfchen schieben den Zellkern an den Rand.'], ['Die Leber wird groß und gelb.', 'Bleibt die Ursache, kann sich die Leber entzünden und vernarben.']],
+      after: [['Behandlung', 'Gewicht langsam senken, Bewegung, Blutzucker gut einstellen, kein Alkohol – dann bildet sich die Fettleber zurück.'], ['Pflege beobachtet', 'Gewicht und Bauchumfang, Blutzucker, Ernährung und Trinkgewohnheiten; zu kleinen, erreichbaren Schritten motivieren.']],
+      hinweis: { leber: 'In 3D ist die Leber größer, gelblich und hat einen stumpferen Rand.', laeppchen: 'Im Läppchen tragen die Leberzellen helle Fetttropfen.' },
+      datei: 'fettleber', modell: { fett: 1 } },
+    { id: 'hepatitis', kind: 'disease', name: 'Virushepatitis', short: 'Viren entzünden die Leber', kicker: 'Entzündung der Leber · durch Viren (Hepatitis A bis E)',
+      lead: 'Hepatitisviren befallen die Leberzellen. Das Abwehrsystem greift die befallenen Zellen an, sie sterben ab. Die Leber schwillt an.',
+      values: [['Leber', 'geschwollen, druckempfindlich'], ['Leberwerte', 'GOT und GPT stark erhöht'], ['Übertragung', 'A und E über Nahrung, B, C und D über Blut und Sexualkontakt'], ['Verlauf', 'B und C können chronisch werden']],
+      steps: [['Viren erreichen die Leber.', 'Sie dringen in die Leberzellen ein und vermehren sich dort.'], ['Abwehrzellen wandern ein.', 'Sie sammeln sich zuerst an den Ecken der Läppchen.'], ['Befallene Zellen sterben.', 'Ihr Inhalt, darunter die Leberwerte, gelangt ins Blut.'], ['Gelbsucht kann folgen.', 'Weniger Zellen nehmen Bilirubin auf und geben es in die Galle ab – es bleibt im Blut.']],
+      after: [['Behandlung', 'Schonung, kein Alkohol, keine leberschädigenden Medikamente; Hepatitis B und C mit antiviralen Mitteln. Gegen A und B gibt es eine Impfung.'], ['Pflege beobachtet', 'Gelbfärbung von Augen und Haut, dunkler Urin, heller Stuhl, Müdigkeit; Hygiene: Handschuhe bei Blutkontakt, bei A und E Händehygiene und eigene Toilette.']],
+      hinweis: { leber: 'In 3D ist die Leber leicht geschwollen.', laeppchen: 'Im Läppchen sammeln sich Abwehrzellen an den Ecken, einzelne Leberzellen sind abgestorben (dunkel).' },
+      datei: 'hepatitis', modell: { hepatitis: 1 } },
+    { id: 'gallenstein', kind: 'disease', name: 'Gallenstein mit Gelbsucht', short: 'ein Stein verschließt den Gallengang, die Galle staut sich zurück', kicker: 'Gallenwege · Verschlussikterus',
+      lead: 'Ein Gallenstein ist aus der Gallenblase in den Gallengang gerutscht und steckt vor der Papille fest. Die Galle kann nicht in den Darm abfließen und staut sich bis in die Leber zurück.',
+      values: [['Gallenwege', 'erweitert, Gallenblase prall'], ['Haut und Augen', 'gelb (Ikterus)'], ['Urin und Stuhl', 'Urin dunkel, Stuhl hell'], ['Schmerz', 'kolikartig im rechten Oberbauch']],
+      steps: [['Der Stein steckt fest.', 'Er verschließt den Gallengang kurz vor der Papille.'], ['Die Galle staut sich.', 'Die Gallenwege und die Gallenblase werden weit.'], ['Bilirubin geht ins Blut zurück.', 'Die Leberzellen können die Galle nicht loswerden und geben Bilirubin ans Blut ab.'], ['Gelb, dunkel, hell.', 'Bilirubin färbt Haut und Augen gelb und den Urin dunkel; im Darm fehlt die Galle, der Stuhl wird hell.']],
+      after: [['Behandlung', 'Schmerzmittel und krampflösende Mittel, Stein über eine Spiegelung (ERCP) entfernen, später die Gallenblase entfernen. Bei Fieber Antibiotika (Gallenwegsentzündung).'], ['Pflege beobachtet', 'Schmerzen, Fieber und Schüttelfrost, Farbe von Haut, Augen, Urin und Stuhl, Juckreiz (Hautpflege, Nägel kurz); vor der ERCP nüchtern lassen.']],
+      hinweis: { leber: 'In 3D steckt der Stein vor der Papille, die Gallenwege und die Gallenblase sind weit, in den Darm fließt keine Galle.', laeppchen: 'Im Läppchen staut sich die Galle in den Kanälchen, Bilirubin (braun) tritt zurück ins Blut.' },
+      datei: 'gallenstein', modell: { stein: 1 } },
+    { id: 'paracetamol', kind: 'drug', name: 'Paracetamol – Überdosis (z. B. ben-u-ron®)', short: 'in zu hoher Dosis zerstört es Leberzellen', kicker: 'Medikament · Schmerz- und Fiebermittel, Vergiftung',
+      lead: 'In normaler Dosis wird Paracetamol in der Leber gefahrlos abgebaut. In zu hoher Dosis entsteht ein giftiges Zwischenprodukt, das die Leberzellen um die Zentralvene zerstört.',
+      values: [['Höchstdosis', 'für Erwachsene meist 4 g pro Tag, bei Lebervorschaden weniger'], ['Gefahr ab', 'ca. 7,5–10 g auf einmal'], ['Gegenmittel', 'Acetylcystein (ACC), früh gegeben'], ['Erste Zeichen', 'oft erst nach 1–2 Tagen']],
+      steps: [['', 'Paracetamol erreicht die Leberzellen.'], ['', 'Ein kleiner Teil wird zu einem giftigen Zwischenprodukt umgebaut, vor allem in den Zellen nahe der Zentralvene.'], ['', 'Normalerweise macht ein Schutzstoff (Glutathion) es unschädlich – bei einer Überdosis ist er aufgebraucht.'], ['', 'Die Zellen um die Zentralvene sterben ab; Acetylcystein füllt den Schutzstoff wieder auf.']],
+      after: [['Achtung', 'Viele Kombipräparate enthalten Paracetamol – Dosen zusammenzählen. Alkohol und Hunger senken die sichere Menge.'], ['Pflege beobachtet', 'Einnahmemenge und -zeit genau erfragen und weitergeben; auch ohne Beschwerden ärztlich abklären lassen; Übelkeit, Schmerz im rechten Oberbauch, später Gelbsucht und Verwirrtheit.']],
+      hinweis: { leber: 'Im Läppchen werden die Zellen um die Zentralvene dunkel (Zone 3); die Leber zeigt keine Veränderung.', laeppchen: 'Im Läppchen werden die Zellen um die Zentralvene dunkel (Zone 3); die Leber zeigt keine Veränderung.' },
+      datei: 'paracetamol', modell: { nekrose3: 1 } },
+    { id: 'lactulose', kind: 'drug', name: 'Lactulose bei Leberzirrhose (z. B. Bifiteral®)', short: 'senkt das Ammoniak, das aus dem Darm kommt', kicker: 'Medikament · Abführmittel gegen hepatische Enzephalopathie',
+      lead: 'Bei Zirrhose kann die Leber Ammoniak nicht mehr ausreichend zu Harnstoff umbauen. Lactulose sorgt dafür, dass im Darm weniger Ammoniak entsteht und ins Blut gelangt.',
+      values: [['Wirkung', 'Ammoniak im Pfortaderblut ↓'], ['Ziel', '2–3 weiche Stühle pro Tag'], ['Gabe', 'als Saft, mehrmals täglich'], ['Nebenwirkungen', 'Blähungen, Durchfall']],
+      steps: [['', 'Lactulose ist ein Zucker, der im Dünndarm nicht aufgenommen wird.'], ['', 'Im Dickdarm bauen Bakterien ihn zu Säuren ab; Ammoniak wird zu Ammonium und bleibt im Darm.'], ['', 'Der Stuhl wird weich und schneller ausgeschieden – mit ihm das Ammonium.'], ['', 'Mit dem Pfortaderblut erreicht weniger Ammoniak die Leber und den Körper.']],
+      after: [['Achtung', 'Dosis nach der Zahl der Stühle anpassen; zu viel Durchfall führt zu Flüssigkeits- und Salzverlust.'], ['Pflege beobachtet', 'Zahl und Beschaffenheit der Stühle, Bewusstsein und Orientierung, Schrift; Hautschutz bei häufigem Stuhlgang.']],
+      hinweis: { leber: 'Wirkt bei Zirrhose. In Leber und Läppchen kommen weniger orange Ammoniakteilchen mit dem Pfortaderblut.', laeppchen: 'Wirkt bei Zirrhose. In Leber und Läppchen kommen weniger orange Ammoniakteilchen mit dem Pfortaderblut.' },
+      datei: 'lactulose', modell: { zirrhose: 1, aszites: 1, ammoniak: 0.3 } },
+    { id: 'spironolacton', kind: 'drug', name: 'Spironolacton bei Bauchwasser (z. B. Aldactone®)', short: 'schwemmt das Bauchwasser bei Zirrhose aus', kicker: 'Medikament · kaliumsparendes Diuretikum',
+      lead: 'Bei Zirrhose hält der Körper über das Hormon Aldosteron zu viel Salz und Wasser zurück. Spironolacton blockiert Aldosteron in der Niere – Salz und Wasser werden ausgeschieden, das Bauchwasser geht zurück.',
+      values: [['Wirkung', 'Bauchwasser ↓, Gewicht ↓'], ['Wirkbeginn', 'langsam, über Tage'], ['Kalium', 'bleibt im Körper (Gefahr: zu hoch)'], ['Nebenwirkungen', 'Brustvergrößerung beim Mann, Salzmangel']],
+      steps: [['', 'Spironolacton erreicht die Niere.'], ['', 'Es besetzt dort die Andockstellen von Aldosteron.'], ['', 'Die Niere scheidet mehr Natrium und Wasser aus, Kalium bleibt.'], ['', 'Aus dem Bauchraum wird langsam Flüssigkeit zurückgeholt.']],
+      after: [['Achtung', 'Nicht zu schnell entwässern (Ziel meist höchstens 0,5–1 kg pro Tag); Kalium und Natrium regelmäßig kontrollieren.'], ['Pflege beobachtet', 'Gewicht täglich zur gleichen Zeit, Bauchumfang, Ein- und Ausfuhr, Zeichen von Austrocknung und Verwirrtheit.']],
+      hinweis: { leber: 'Wirkt bei Zirrhose. In der Leber wird das Bauchwasser weniger; im Läppchen ändert sich nichts.', laeppchen: 'Wirkt bei Zirrhose. In der Leber wird das Bauchwasser weniger; im Läppchen ändert sich nichts.' },
+      datei: 'spironolacton', modell: { zirrhose: 1, aszites: 0.25 } }
+  ];
 })(Kern);

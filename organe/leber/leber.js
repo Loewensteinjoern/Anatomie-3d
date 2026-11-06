@@ -11,6 +11,8 @@
    denselben Teilchen). Die Karte fuer Hilfekarten und Ueben ist im Markup nur vorbereitet und wird in einem spaeteren Schritt gefuellt.
    Zoomstufe Leber -> Leberlaeppchen (Abschnitt 7b): Lebergewebe antippen -> "Leberlaeppchen hier ansehen" (naechster Endast des Pfortaderbaums im Lappen), Knopf
    "Laeppchen" (feste Stelle im rechten Lappen); das Laeppchen entsteht aus organe/leber/laeppchen.js (organ.form), die Kamera landet in dessen Startansicht (Adresse leber/laeppchen).
+   Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.leber): Reiter und Erklaerkarte; in 3D wirken Zirrhose (kleiner, knotig, Aszites, Pfortaderblut langsamer),
+   Fettleber, Hepatitis und Gallenstein (Abschnitt 7c).
    ===================================================================== */
 (function () {
 'use strict';
@@ -121,6 +123,8 @@ var MARKUP = `<div id="title">
     <button id="bLaeppchen" class="gh" title="In ein Leberläppchen hineinzoomen">Läppchen</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Die Leber als flaches Schema: gleiche Teilchen, gleiche Strömung">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Längsschnitt durch die Papille, wo Galle und Pankreassaft in den Darm fließen">Lupe</button>
+    <button id="bAR" class="gh" title="Die Leber mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -147,6 +151,15 @@ var MARKUP = `<div id="title">
   <div id="schemaBox"></div>
 </div>
 
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schlie&szlig;en">&times;</button>
+  <div class="lp-kick">Lupe &middot; L&auml;ngsschnitt</div>
+  <h3 id="lpTitle">Papille &ndash; wo die Galle in den Darm flie&szlig;t</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-m="0" title="Der Schlie&szlig;muskel ist zu, die Galle flie&szlig;t in die Gallenblase">n&uuml;chtern</button><button class="gh" data-m="1" title="Der Schlie&szlig;muskel &ouml;ffnet sich, Galle und Pankreassaft flie&szlig;en in den Darm">nach dem Essen</button></div>
+  <div class="lp-main"><canvas id="lpCv"></canvas><div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg"><span><i style="background:#5FAE5A"></i>Gallengang (Galle)</span><span><i style="background:#E6D98B"></i>Pankreasgang (Pankreassaft)</span><span><i style="background:#D0786A"></i>Schlie&szlig;muskel</span><span><i style="background:#B07E70"></i>Darmwand</span><span id="lpLegStein" style="display:none"><i style="background:#E2D3A6"></i>Gallenstein</span></div>
+</div>
+
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
   <p><b style="color:#A98BDC">Violett</b> Pfortader – Blut aus Darm und Milz.<br>
@@ -159,6 +172,13 @@ var MARKUP = `<div id="title">
   <p class="note kz">Durchblutung ca. 1,5 l Blut pro Minute (ein Viertel des Herzzeitvolumens)<br>
   davon ¾ über die Pfortader, ¼ über die Leberarterie<br>
   Galle ca. 0,5–1 l pro Tag, Gallenblase fasst ca. 50 ml</p>
+</div>
+
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
 </div>
 
 <div class="panel" id="info">
@@ -177,6 +197,18 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">Nächste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Leber in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um die Leber hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Notiz der Lesehilfe: ohne und mit Durchsicht */
 var LEGNOTE = ['Die Leber von vorn, wie sie im Körper liegt. „Durchsicht“ zeigt die Gefäße im Inneren.',
@@ -301,7 +333,7 @@ function weiter(a, b) { return function (f) { return setLoad(a + f * (b - a)); }
    mit radien (Radius je Steuerpunkt) stueckweise linear; Enden mit Kappe (offen: ohne); alle Linien zu einer Geometrie. Die Steuerpunkte laufen wie in der Form
    (kurve in leber-form.js) als Catmull-Rom-Kurve. */
 function rohre(linien) {
-  var pos = [], nor = [], idx = [];
+  var pos = [], nor = [], idx = [], radial = [];   /* radial: je Eckpunkt Richtung weg von der Mittellinie und Radius (x, y, z, r) - die Krankheitsbilder weiten damit die Gaenge (Abschnitt 7c) */
   linien.forEach(function (l) {
     var kurve = new THREE.CatmullRomCurve3(l.pts.map(function (p) { return V(p[0], p[1], p[2]); }), false, 'catmullrom', 0.5);
     var rm = l.radien ? Math.max.apply(null, l.radien) : Math.max(l.r0, l.r1), rad = l.seiten || (rm > 0.5 ? 14 : rm > 0.2 ? 10 : 7), tub = l.segmente || Math.max(6, l.pts.length * 5);
@@ -309,17 +341,20 @@ function rohre(linien) {
       if (l.radien) { var u = t * (l.radien.length - 1), k = Math.min(l.radien.length - 2, Math.floor(u)); return l.radien[k] + (l.radien[k + 1] - l.radien[k]) * (u - k); }
       return l.r0 + (l.r1 - l.r0) * t * t * (3 - 2 * t);
     };
-    var g = new THREE.TubeGeometry(kurve, tub, rm, rad, false), p = g.attributes.position, n = g.attributes.normal, base = pos.length / 3, i, j;
+    var g = new THREE.TubeGeometry(kurve, tub, rm, rad, false), p = g.attributes.position, n = g.attributes.normal, base = pos.length / 3, i, j, rd = new Float32Array(p.count * 4);
     for (i = 0; i <= tub; i++) {   /* jeden Ring um seine Mitte auf den Radius an dieser Stelle skalieren */
-      var f = radius(i / tub) / rm, c0 = kurve.getPointAt(i / tub);
-      for (j = 0; j <= rad; j++) { var v0 = i * (rad + 1) + j; p.setXYZ(v0, c0.x + (p.getX(v0) - c0.x) * f, c0.y + (p.getY(v0) - c0.y) * f, c0.z + (p.getZ(v0) - c0.z) * f); }
+      var rr = radius(i / tub), f = rr / rm, c0 = kurve.getPointAt(i / tub);
+      for (j = 0; j <= rad; j++) {
+        var v0 = i * (rad + 1) + j; p.setXYZ(v0, c0.x + (p.getX(v0) - c0.x) * f, c0.y + (p.getY(v0) - c0.y) * f, c0.z + (p.getZ(v0) - c0.z) * f);
+        if (rr > 1e-9) { rd[v0 * 4] = (p.getX(v0) - c0.x) / rr; rd[v0 * 4 + 1] = (p.getY(v0) - c0.y) / rr; rd[v0 * 4 + 2] = (p.getZ(v0) - c0.z) / rr; rd[v0 * 4 + 3] = rr; }
+      }
     }
-    for (i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); }
+    for (i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); radial.push(rd[i * 4], rd[i * 4 + 1], rd[i * 4 + 2], rd[i * 4 + 3]); }
     for (i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
     if (!l.offen) [[0, -1, 0], [1, 1, tub * (rad + 1)]].forEach(function (e) {   /* [Ort auf der Kurve, Richtung der Kappe, Ring im Rohr] */
       var c = kurve.getPointAt(e[0]), T = kurve.getTangentAt(e[0]), b0 = pos.length / 3;
-      pos.push(c.x, c.y, c.z); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]);
-      for (j = 0; j < rad; j++) { var v = e[2] + j; pos.push(p.getX(v), p.getY(v), p.getZ(v)); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); }
+      pos.push(c.x, c.y, c.z); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); radial.push(0, 0, 0, 0);
+      for (j = 0; j < rad; j++) { var v = e[2] + j; pos.push(p.getX(v), p.getY(v), p.getZ(v)); nor.push(T.x * e[1], T.y * e[1], T.z * e[1]); radial.push(rd[v * 4], rd[v * 4 + 1], rd[v * 4 + 2], rd[v * 4 + 3]); }
       for (j = 0; j < rad; j++) {
         var a = b0 + 1 + j, b = b0 + 1 + (j + 1) % rad;
         var ax = pos[a * 3] - c.x, ay = pos[a * 3 + 1] - c.y, az = pos[a * 3 + 2] - c.z, bx = pos[b * 3] - c.x, by = pos[b * 3 + 1] - c.y, bz = pos[b * 3 + 2] - c.z;
@@ -333,6 +368,7 @@ function rohre(linien) {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   geo.setIndex(idx);
+  geo.radial = new Float32Array(radial);
   return geo;
 }
 
@@ -461,7 +497,8 @@ function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt (Gefaesse, Gaenge, Gallenblase) */
 function weichMat(o) { return o.material.transparent && !o.material.userData.dicht; }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen) o.visible = !!enabled[o.userData.sid]; });   /* Teilchen blendet die Stroemung selbst aus */
+  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen && !o.userData.krank) o.visible = !!enabled[o.userData.sid]; });
+  krSichtbar();   /* Teilchen blendet die Stroemung selbst aus, Aszites und Stein die Krankheitsbilder */
   lv++;
 }
 /* Glas (Durchsicht) der Lappen; Material nur neu uebersetzen, wenn sich transparent aendert */
@@ -491,7 +528,7 @@ function setSelected(id, punkt) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -504,6 +541,8 @@ function setSelected(id, punkt) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
+  kartenLage();
 }
 
 /* Ebene ein- oder ausschalten (Schalter der Leiste und Ausschnitte) */
@@ -512,14 +551,53 @@ function ebene(sid, an) {
   var row = $('row-' + sid); if (row) row.classList.toggle('off', !an);
   applyVisibility();
 }
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.leber): Reiter und Erklaerkarte (id kcard) unten links wie die Infokarte. Die Wirkung in 3D steht
+   in Abschnitt 7c. Jeder Eintrag bekommt den Hinweis fuer die Leber als note. */
+var SZ_DATEN = Kern.Szenarien.daten.leber.map(function (sc) { var o = Object.assign({}, sc); o.note = sc.hinweis.leber; return o; });
+var SZW = { zirrhose: 0, aszites: 0, fett: 0, hepatitis: 0, stein: 0, ammoniak: 1 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags); ammoniak ist in der Leber ohne Wirkung */
+var SK = 1;                                                                               /* aktueller Massstab des Lebergewebes um seine Mitte (Abschnitt 7c); 1 = unveraendert */
+var KR = null;                                                                            /* Daten der Krankheitsbilder (Abschnitt 7c); entstehen erst bei der ersten Wahl */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: 'Krankheitsbild oder Medikament ausschalten',
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (wege) wegeEnd();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
+      setSelected(null); closeCard();
+      krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Leber, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
+  lv++;
+}
+
 (function leiste() {
-  /* Reiter: Strukturen, Hilfekarten, Ueben */
+  /* Reiter: Strukturen, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Hilfekarten', 'Üben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -538,6 +616,9 @@ function ebene(sid, an) {
     d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
     paneH.appendChild(d);
   });
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', 'Wähle ein Krankheitsbild – die Leber verändert Größe, Oberfläche und Farbe, bei Gallenstein staut sich die Galle.');
+  SZ.liste(paneM, 'drug', 'Medikamente', 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild.');
   /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
   var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur an der Leber und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge den Weg von Blut und Galle: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
   var pb = document.createElement('div'); pb.className = 'pane-btn';
@@ -680,6 +761,7 @@ function ansicht(theta, phi, dist, target) {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -688,12 +770,12 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
-  lv++;
+  kartenLage();
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
-  lv++;
+  kartenLage();
 }
 function openHelp(key) {
   var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
@@ -992,10 +1074,11 @@ function layoutLabels(w, h) {
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
-  if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var kk = SZ.el && SZ.el.classList.contains('show') && !SZ.el.classList.contains('weg') ? SZ.el : null;   /* offene Szenariokarte (Krankheitsbild, Medikament): ebenso */
+  if (!narrow && (unten || kk)) botL = Math.min(botL, h - 22 - (unten ? $('info') : kk).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt die Leber, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte keine Beschriftung */
+  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten || (kk && !kk.classList.contains('min'))))) {   /* Handy: die Karte deckt die Leber, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte keine Beschriftung */
     LISTEN[aktiv].forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
@@ -1007,6 +1090,7 @@ function layoutLabels(w, h) {
     });
   }
   items.forEach(function (it) { it.side = it.sx < cx ? 'l' : 'r'; });
+  if (!narrow && kk && botL - topL < 100) items = items.filter(function (it) { return it.side !== 'l'; });   /* die hohe Szenariokarte laesst links keinen Platz: nur die Namen rechts */
   ['l', 'r'].forEach(function (side) {
     var g = items.filter(function (it) { return it.side === side; }).sort(function (p, q) { return p.sy - q.sy; });
     var top = side === 'l' ? topL : topR, bot = side === 'l' ? botL : botR, gp = g.length > 1 ? Math.min(gap, (bot - top) / (g.length - 1)) : gap, y = top;
@@ -1054,7 +1138,7 @@ function layoutLabels(w, h) {
    durch den Gallenblasengang in den Hauptgallengang. `anteil` blendet die beiden Wege weich ueber (1,5 s); die Gallenblase zieht sich nach dem Essen in 3 s auf
    72 % ihres Volumens zusammen (Skalierung zum Hals hin) und fuellt sich nuechtern in 6 s wieder. Die Blutstroeme bleiben dabei gleich.
    ===================================================================== */
-var playing = true, speed = 1, clock = 0;
+var playing = true, speed = 1, clock = 0, clockPf = 0;   /* clockPf: Uhr des Pfortaderbluts (bei Zirrhose langsamer, sonst gleich clock) */
 var mahlzeit = false, anteil = 0, kontr = 0;   /* mahlzeit: true = nach dem Essen; anteil: Ueberblendung der Gallenwege 0..1; kontr: Zusammenziehen der Gallenblase 0..1 */
 var STR = { ANTEIL: 1.5, ZIEHEN: 3, FUELLEN: 6, REST: 0.72, FADE: 0.6, N: { pfortader: 180, arterie: 60, vene: 100, becken: 40, galle: 70, rueck: 14 } };
 var ST = null;                                 /* nach dem Aufbau: Gruppen { art, list, im }, Gallenblase */
@@ -1143,14 +1227,16 @@ function routePunkt(rt, t, o) {
 }
 var GBH = form.GALLENBLASE.hals.p;   /* Hals der Gallenblase = Fixpunkt beim Zusammenziehen */
 function gbSkala() {   /* Skalierung der Gallenblase aus kontr (Fuellung f = 1 ... REST, Volumen ~ s^3) */
-  var f = 1 - (1 - STR.REST) * sstep6(kontr);
-  return Math.pow(f, 1 / 3);
+  var f = 1 - (1 - STR.REST) * sstep6(kontr * (1 - SZW.stein));   /* Gallenstein: die Gallenblase bleibt prall und ist weiter (Abschnitt 7c) */
+  return Math.pow(f, 1 / 3) * (1 + 0.3 * SZW.stein);
 }
 function gbSetzen() {
   var s = gbSkala(), m = STRUCT.gallenblase.meshes[0];
   if (!m) return s;
+  var h = GBH;
+  if (SK !== 1) { krD(GBH[0], GBH[1], GBH[2], KD); h = [GBH[0] + KD.x, GBH[1] + KD.y, GBH[2] + KD.z]; }   /* Hals mit dem Lebergewebe verschoben (Abschnitt 7c) */
   m.scale.setScalar(s);
-  m.position.set(GBH[0] * (1 - s), GBH[1] * (1 - s), GBH[2] * (1 - s));
+  m.position.set(h[0] * (1 - s), h[1] * (1 - s), h[2] * (1 - s));
   return s;
 }
 /* Teilchen einer Gruppe: p = { rt, phi, ang, rho, kind, q }; kind 0 immer, 1 = Weg nuechtern, 2 = Weg nach dem Essen, 3 = Rueckfluss aus der Gallenblase.
@@ -1163,11 +1249,17 @@ function pose(p, c, sg, o) {
   var tx = rt.X[i + 1] - rt.X[i], ty = rt.Y[i + 1] - rt.Y[i], tz = rt.Z[i + 1] - rt.Z[i], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
   tx /= tl; ty /= tl; tz /= tl;
   if (sid === SIDX.gallenblase) {   /* in der Gallenblase mit ihr zusammenziehen */
-    o.x = GBH[0] + sg * (o.x - GBH[0]); o.y = GBH[1] + sg * (o.y - GBH[1]); o.z = GBH[2] + sg * (o.z - GBH[2]); r *= sg;
-  } else if (sid === SIDX.hohlvene && (aktiv === 2 || (aktiv === 1 && o.y < HV_KURZ))) ok = false;   /* der Teil der Hohlvene, den der Ausschnitt weglaesst */
+    var hx = GBH[0], hy = GBH[1], hz = GBH[2];
+    if (SK !== 1) { krD(hx, hy, hz, KD); hx += KD.x; hy += KD.y; hz += KD.z; krD(o.x, o.y, o.z, KD); o.x += KD.x; o.y += KD.y; o.z += KD.z; }   /* mit dem Lebergewebe verschoben (Abschnitt 7c) */
+    o.x = hx + sg * (o.x - hx); o.y = hy + sg * (o.y - hy); o.z = hz + sg * (o.z - hz); r *= sg;
+  } else {
+    if (SK !== 1) { krD(o.x, o.y, o.z, KD); o.x += KD.x; o.y += KD.y; o.z += KD.z; }
+    if (sid === SIDX.hohlvene && (aktiv === 2 || (aktiv === 1 && o.y < HV_KURZ))) ok = false;   /* der Teil der Hohlvene, den der Ausschnitt weglaesst */
+  }
   if (p.kind) {
-    var vN = Math.max(0, Math.min(1, (p.q - anteil) / 0.15 + 0.5));   /* Anteil der Teilchen, die noch den Weg "nuechtern" nehmen (je Teilchen eine feste Schwelle) */
-    if (p.kind === 3) w = sstep6(anteil);
+    var an = anteil * (1 - SZW.stein);   /* Gallenstein: nach dem Essen kommt keine Galle durch, alle nehmen den Weg in die Gallenblase (Abschnitt 7c) */
+    var vN = Math.max(0, Math.min(1, (p.q - an) / 0.15 + 0.5));   /* Anteil der Teilchen, die noch den Weg "nuechtern" nehmen (je Teilchen eine feste Schwelle) */
+    if (p.kind === 3) w = sstep6(an);
     else {
       var wj = sstep6((t - rt.tJ + 0.4) / 0.8);   /* an der Gabelung weich von einem auf den anderen Weg */
       w = p.kind === 1 ? 1 + (vN - 1) * wj : (1 - vN) * wj;
@@ -1274,7 +1366,7 @@ function stroemungBild() {
   SIDS.forEach(function (s, k) { ST.an[k] = !!enabled[s]; });
   ST.gruppen.forEach(function (g) {
     for (var i = 0; i < g.list.length; i++) {
-      pose(g.list[i], clock, ST.sg, STQ);
+      pose(g.list[i], g.art === 'pfortader' ? clockPf : clock, ST.sg, STQ);
       STM.makeScale(STQ.s, STQ.s, STQ.s); STM.setPosition(STQ.x, STQ.y, STQ.z);
       g.im.setMatrixAt(i, STM);
     }
@@ -1286,6 +1378,7 @@ function stroemungSchritt(dt) {
   if (!playing) return;
   var d = dt * speed, ziel = mahlzeit ? 1 : 0;
   clock += d;
+  clockPf += d * (1 - 0.5 * SZW.zirrhose);   /* Zirrhose: das Pfortaderblut fliesst halb so schnell (Abschnitt 7c) */
   if (anteil !== ziel) anteil = ziel > anteil ? Math.min(ziel, anteil + d / STR.ANTEIL) : Math.max(ziel, anteil - d / STR.ANTEIL);
   if (kontr !== ziel) kontr = ziel > kontr ? Math.min(ziel, kontr + d / STR.ZIEHEN) : Math.max(ziel, kontr - d / STR.FUELLEN);
 }
@@ -1307,6 +1400,7 @@ var MAHLZEIT_TXT = ['Nüchtern: Der Schließmuskel an der Papille ist zu – die
 function setMahlzeit(an, still) {
   if (an === mahlzeit) return;
   mahlzeit = an;
+  lupeChips();
   $('bNuechtern').classList.toggle('on', !an);
   $('bEssen').classList.toggle('on', an);
   if (!still) Kern.toast(MAHLZEIT_TXT[an ? 1 : 0]);
@@ -1626,7 +1720,7 @@ function schemaPick(info) {
 function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); }   /* Hilfekarte, Ueben und Lupe weichen dem Schema */
   $('bSchema').classList.toggle('on', on);
   if (on) { SCH.build($('schemaBox'), schemaPick); SCH.update(selected, enabled, lv); }
   $('schema').classList.toggle('show', on);
@@ -1684,6 +1778,7 @@ function lpModul() { return Kern.Organe && Kern.Organe.laeppchen; }
 function laeppchenLage(idx) {
   var B = form.baeume(), ep = B.endpunkte[idx], ast = B.pfortader.filter(function (a) { return a.pts[a.pts.length - 1] === ep.p; })[0];
   var e = V(ep.p[0], ep.p[1], ep.p[2]), m = V(ast.pts[1][0], ast.pts[1][1], ast.pts[1][2]);
+  if (SK !== 1) { krD(e.x, e.y, e.z, KD); e.x += KD.x; e.y += KD.y; e.z += KD.z; krD(m.x, m.y, m.z, KD); m.x += KD.x; m.y += KD.y; m.z += KD.z; }   /* aktives Krankheitsbild: der Endast liegt verschoben (Abschnitt 7c) */
   var d = e.clone().sub(m).normalize(), vorn = V(0, 0, 1);
   if (Math.abs(d.z) > 0.95) vorn = V(1, 0, 0);
   var az = vorn.sub(d.clone().multiplyScalar(vorn.dot(d))).normalize(), ay = d.clone(), ax = new THREE.Vector3().crossVectors(ay, az);
@@ -1756,9 +1851,11 @@ function laeppchenOeffnen(idx) {
   if (fz || abgebaut || lpWartet || !ST) return;
   if (lpP && !lpModul() && !lpFehl) { lpWartet = true; lpP.then(function () { lpWartet = false; if (!abgebaut) laeppchenOeffnen(idx); }); return; }
   schemaWeicht();
+  lupeClose();
   if (quiz) quizEnd();
   if (wege) wegeEnd();
   closeCard();
+  SZ.el.classList.add('weg');   /* die Szenariokarte weicht der Fahrt (das Krankheitsbild bleibt in der Leber stehen, bei der Rueckkehr ist alles neu aufgebaut) */
   lpLetzte = idx = (idx === null || idx === undefined) ? laeppchenStandard() : idx;
   LP = laeppchenLage(idx);
   var w = window.innerWidth, h = window.innerHeight, ziel = laeppchenZiel(w, h), r = bereich(w, h);
@@ -1839,20 +1936,514 @@ function fahrtBild(now) {
 }
 
 /* =====================================================================
+   7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * Werte des Eintrags (Kern.Szenarien.daten.leber: zirrhose, aszites, fett,
+   hepatitis, stein). Alle three.js-Objekte entstehen erst bei der ersten Wahl (krankBauen), ohne Wahl aendert sich nichts.
+   Lebergewebe: Massstab SK = 1 - 0,15 zirrhose + 0,08 fett + 0,04 hepatitis um die Mitte KR_C. Dieselbe Verschiebung krD (Gewicht 1 im Lebergewebe und bis KR_FADE cm daneben,
+   danach ausklingend auf 0, Abstand aus form.leber) wirkt auf alle Netze ausser dem Zwerchfell, auf die Teilchen und die Anker der Beschriftung: die Gefaesse und die Gallenblase
+   bleiben angeschlossen, an Pforte und Hohlvene entstehen keine Luecken, die Staemme weiter aussen bleiben stehen. Die Netze behalten ihre Ausgangslage (P0) und werden je Aenderung
+   neu gesetzt. Zirrhose: dazu Knoten auf den Lappen (Verschiebung entlang der Normale um ein Muster aus Sinusfunktionen der Lage, kein Zufall; die Normalen folgen), Farbe blasser und
+   braeunlicher, Aszites als durchscheinender, blaeulicher Saum unter der Leber und am Unterrand (Netz aus den Unterseiten der Lappen), Pfortaderteilchen halb so schnell (clockPf).
+   Fettleber: gelblich, Rand am Unterrand etwas aufgeblaeht. Hepatitis: minimal roeter. Gallenstein: Stein im Hauptgallengang kurz vor der Papille, Gallengaenge (Radius) und Gallenblase
+   um 30 % weiter, die Galle fliesst auch nach dem Essen nicht in den Zwoelffingerdarm (pose).
+   ===================================================================== */
+var KR_C = [-3.35, 109.75, 0.7];                  /* Mitte der Leber (Mitte der Gitterbox form.grenzen), Koerper-Koordinaten */
+var KR_FADE = 3;                                  /* Weite, auf der die Verschiebung ausserhalb der Leber auf 0 ausklingt (cm) */
+var KR_KNOTEN = 0.22, KR_RAND = 0.25;             /* Hoehe der Knoten (Zirrhose) und Aufblaehung am Unterrand (Fettleber), cm */
+var KR_ASZ = 0.55;                                /* Deckkraft des Aszites bei Wirkgroesse 1 */
+var KR_WEIT = ['lebergang', 'blasengang', 'hauptgang'];   /* Gallengaenge, die beim Gallenstein weiter werden */
+var KR_FARBE = { zirrhose: srgb(0x9C7A62), fett: srgb(0xD4BC6A), hepatitis: srgb(0xB22A1E) };   /* Zielfarben, mit der Wirkgroesse in die Farbe der Lappen gemischt */
+var KD = { x: 0, y: 0, z: 0 };
+/* Gewicht der Verschiebung an einem Punkt (Koerper-Koordinaten): 1 in der Leber, ausserhalb weich auf 0 */
+function krGewicht(x, y, z) {
+  var d = form.leber(x, y, z);
+  if (d <= 0) return 1;
+  if (d >= KR_FADE) return 0;
+  var t = d / KR_FADE;
+  return 1 - t * t * (3 - 2 * t);
+}
+/* Verschiebung des Punkts (x, y, z) in Ruhelage durch den Massstab SK -> o */
+function krD(x, y, z, o) {
+  if (SK === 1) { o.x = o.y = o.z = 0; return; }
+  var k = (SK - 1) * krGewicht(x, y, z);
+  o.x = k * (x - KR_C[0]); o.y = k * (y - KR_C[1]); o.z = k * (z - KR_C[2]);
+}
+/* Knotenmuster der Zirrhose (-1 bis 1): runde Knoten von ca. 1,3 cm mit Furchen dazwischen (Nulldurchgaenge zweier gegeneinander gedrehter Sinus-Gitter), deterministisch aus der Lage */
+function knoten(x, y, z) {
+  var f1 = Math.sin(2.4 * x + 1.1) * Math.sin(2.7 * y + 0.4) * Math.sin(2.2 * z + 2.0);
+  var u = 0.8 * x + 0.6 * z, w = -0.6 * x + 0.8 * z, f2 = Math.sin(2.1 * u + 0.3) * Math.sin(2.5 * y + 1.7) * Math.sin(2.4 * w + 0.9);
+  return 0.6 * (f1 < 0 ? -1 : 1) * Math.pow(Math.abs(f1), 0.6) + 0.4 * (f2 < 0 ? -1 : 1) * Math.pow(Math.abs(f2), 0.6);
+}
+/* Eintrag eines Netzes: Ausgangslage P0 und Gewichte W je Eckpunkt (null = 1: Lappen und Aszites); Lappen zusaetzlich Normalen N0, Knoten K, Neigung Gt der Knoten, Unterseite U */
+function krEintrag(m, sid, fest) {
+  var g = m.geometry, pa = g.attributes.position, n = pa.count, P0 = new Float32Array(pa.array), v, i;
+  var e = { m: m, sid: sid, n: n, P0: P0, W: null, anyW: true, lobe: LAPPEN.indexOf(sid) >= 0, R: g.radial || null, zuletzt: false, nrmVerschoben: false };
+  e.wid = !!e.R && KR_WEIT.indexOf(sid) >= 0;
+  if (!e.lobe && !fest) {
+    var G = form.grenzen, F = KR_FADE, W = new Float32Array(n), any = false;
+    for (v = 0; v < n; v++) {
+      var x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2];
+      if (x < G[0][0] - F || x > G[1][0] + F || y < G[0][1] - F || y > G[1][1] + F || z < G[0][2] - F || z > G[1][2] + F) continue;   /* weit weg von der Leber: Gewicht 0 */
+      W[v] = krGewicht(x, y, z); if (W[v] > 0) any = true;
+    }
+    e.W = W; e.anyW = any;
+  }
+  if (e.lobe) {
+    var N0 = new Float32Array(g.attributes.normal.array), K = new Float32Array(n), Gt = new Float32Array(n * 3), U = new Float32Array(n), h = 0.05;
+    for (v = 0; v < n; v++) {
+      i = v * 3;
+      var px = P0[i], py = P0[i + 1], pz = P0[i + 2], nx = N0[i], ny = N0[i + 1], nz = N0[i + 2];
+      K[v] = knoten(px, py, pz);
+      var gx = (knoten(px + h, py, pz) - knoten(px - h, py, pz)) / (2 * h), gy = (knoten(px, py + h, pz) - knoten(px, py - h, pz)) / (2 * h), gz = (knoten(px, py, pz + h) - knoten(px, py, pz - h)) / (2 * h);
+      var dn = gx * nx + gy * ny + gz * nz;
+      Gt[i] = gx - dn * nx; Gt[i + 1] = gy - dn * ny; Gt[i + 2] = gz - dn * nz;   /* Anteil der Neigung in der Flaeche: aendert die Normale */
+      var tt = Math.max(0, Math.min(1, (0.2 - ny) / 0.8)); U[v] = tt * tt * (3 - 2 * tt);   /* 1 auf der Unterseite, 0 oben und vorn */
+    }
+    e.N0 = N0; e.K = K; e.Gt = Gt; e.U = U;
+  }
+  return e;
+}
+/* Aszites: Saum unter der Leber und am Unterrand - die Dreiecke der Lappen, die nach unten zeigen oder tief am Unterrand liegen, ein Stueck (0,6 bis 1,3 cm) entlang der Normale nach aussen */
+function aszitesGeo(liste) {
+  var pos = [], nor = [], idx = [];
+  liste.forEach(function (e) {
+    if (!e.lobe) return;
+    var ind = e.m.geometry.index, P = e.P0, N = e.N0, map = {}, t, k;
+    var ein = function (v) {
+      if (map[v] === undefined) {
+        var off = 0.6 + 0.7 * Math.max(0, Math.min(1, -N[v * 3 + 1]));
+        map[v] = pos.length / 3;
+        pos.push(P[v * 3] + N[v * 3] * off, P[v * 3 + 1] + N[v * 3 + 1] * off, P[v * 3 + 2] + N[v * 3 + 2] * off); nor.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]);
+      }
+      return map[v];
+    };
+    var drin = function (v) { var ny = N[v * 3 + 1]; return ny < -0.25 || (ny < 0.3 && P[v * 3 + 1] < 106); };
+    for (t = 0; t < ind.count; t += 3) {
+      var a = ind.getX(t), b = ind.getX(t + 1), c = ind.getX(t + 2);
+      if (drin(a) && drin(b) && drin(c)) idx.push(ein(a), ein(b), ein(c));
+    }
+  });
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+/* Gallenstein: kantig gerundeter Brocken (Ikosaeder, deterministisch verformt) im Hauptgallengang 1 cm vor der Papille, laenglich entlang des Gangs */
+function steinBauen() {
+  var hg = form.GEFAESSE.gallengang.filter(function (g) { return g.id === 'hauptgallengang'; })[0], c = form.kurve(hg.pts, 8), L = 0, k, S = [0];
+  for (k = 1; k < c.length; k++) { L += Math.sqrt(Math.pow(c[k][0] - c[k - 1][0], 2) + Math.pow(c[k][1] - c[k - 1][1], 2) + Math.pow(c[k][2] - c[k - 1][2], 2)); S.push(L); }
+  var ziel = L - 1.0, j = 1;
+  while (j < c.length - 1 && S[j] < ziel) j++;
+  var f = (ziel - S[j - 1]) / ((S[j] - S[j - 1]) || 1), a = c[j - 1], b = c[j];
+  var p = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f], tg = V(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
+  var g = new THREE.IcosahedronGeometry(1, 1), pa = g.attributes.position, v;
+  for (v = 0; v < pa.count; v++) {
+    var x = pa.getX(v), y = pa.getY(v), z = pa.getZ(v), r = 1 + 0.16 * Math.sin(9.1 * x + 1.3 * y + 0.5) * Math.cos(7.7 * y - 2.1 * z) + 0.1 * Math.sin(11.3 * z + 3 * x);
+    pa.setXYZ(v, x * r, y * r, z * r);
+  }
+  g.computeVertexNormals();   /* ohne Index: je Dreieck eine Normale = kantig */
+  var m = new THREE.Mesh(g, mat(0xA9793A, { rough: 0.75 }));
+  m.name = 'Gallenstein'; m.renderOrder = 3; m.userData.krank = true; m.raycast = function () {};
+  m.quaternion.setFromUnitVectors(V(0, 1, 0), tg); m.visible = false; m.frustumCulled = false;
+  root.add(m);
+  KR.stein = m; KR.steinP = p;
+}
+function krankBauen() {
+  if (KR || abgebaut || !STRUCT.lappenR.meshes.length) return;
+  KR = { liste: [], col: {}, asz: null, stein: null, steinP: null, anker: [] };
+  LAPPEN.forEach(function (sid) { KR.col[sid] = MAT[sid].color.clone(); });
+  ORDER.forEach(function (d) {
+    if (d.id === 'zwerchfell') return;
+    d.meshes.forEach(function (m) { m.frustumCulled = false; KR.liste.push(krEintrag(m, d.id, false)); });
+  });
+  var am = new THREE.Mesh(aszitesGeo(KR.liste), mat(0xA8D6F6, { rough: 0.12, coat: 0.6, opacity: KR_ASZ }));
+  am.name = 'Aszites'; am.renderOrder = 6; am.userData.krank = true; am.raycast = function () {}; am.material.opacity = 0; am.visible = false; am.frustumCulled = false;
+  root.add(am); KR.asz = am; KR.liste.push(krEintrag(am, 'aszites', true));
+  steinBauen();
+  KAND.forEach(function (o) { Object.keys(o).forEach(function (id) { o[id].forEach(function (v) { KR.anker.push({ v: v, o: v.clone() }); }); }); });
+}
+function krSichtbar() {
+  if (!KR) return;
+  KR.stein.visible = SZW.stein > 0.002 && !!enabled.hauptgang;
+}
+/* Netze, Farbe, Aszites, Stein und Anker nach den Wirkgroessen setzen */
+function krAnwenden() {
+  var z = SZW.zirrhose, f = SZW.fett, hp = SZW.hepatitis, st = SZW.stein, C = KR_C;
+  SK = 1 - 0.15 * z + 0.08 * f + 0.04 * hp;
+  var ds = SK - 1, aK = KR_KNOTEN * z, aF = KR_RAND * f, wd = 0.3 * st;
+  KR.liste.forEach(function (e) {
+    if (!e.anyW && !e.wid) return;
+    var tut = ds !== 0 || aK !== 0 || aF !== 0 || (wd !== 0 && e.wid);
+    if (!tut && !e.zuletzt) return;                                    /* unveraendert in Ruhelage */
+    e.zuletzt = tut;
+    var g = e.m.geometry, pa = g.attributes.position, a = pa.array, P = e.P0, W = e.W, R = e.R, v, i, k, dx, dy, dz;
+    for (v = 0; v < e.n; v++) {
+      i = v * 3; k = ds * (W ? W[v] : 1);
+      dx = k * (P[i] - C[0]); dy = k * (P[i + 1] - C[1]); dz = k * (P[i + 2] - C[2]);
+      if (e.lobe) { var q = aK * e.K[v] + aF * e.U[v]; dx += e.N0[i] * q; dy += e.N0[i + 1] * q; dz += e.N0[i + 2] * q; }
+      if (e.wid && wd !== 0) { var rr = R[v * 4 + 3] * wd; dx += R[v * 4] * rr; dy += R[v * 4 + 1] * rr; dz += R[v * 4 + 2] * rr; }
+      a[i] = P[i] + dx; a[i + 1] = P[i + 1] + dy; a[i + 2] = P[i + 2] + dz;
+    }
+    pa.needsUpdate = true;
+    if (e.lobe && (aK !== 0 || e.nrmVerschoben)) {                     /* Normalen folgen den Knoten */
+      var na = g.attributes.normal, nv = na.array, N0 = e.N0, Gt = e.Gt;
+      for (v = 0; v < e.n; v++) {
+        i = v * 3;
+        var nx = N0[i] - aK * Gt[i], ny = N0[i + 1] - aK * Gt[i + 1], nz = N0[i + 2] - aK * Gt[i + 2], l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+        nv[i] = nx / l; nv[i + 1] = ny / l; nv[i + 2] = nz / l;
+      }
+      e.nrmVerschoben = aK !== 0; na.needsUpdate = true;
+    }
+    g.computeBoundingSphere();
+  });
+  LAPPEN.forEach(function (sid) {                                       /* Farbe der Lappen: Grundfarbe, mit den Zielfarben nach Wirkgroesse gemischt */
+    var c = MAT[sid].color; c.copy(KR.col[sid]);
+    if (z) c.lerp(KR_FARBE.zirrhose, 0.5 * z);
+    if (f) c.lerp(KR_FARBE.fett, 0.55 * f);
+    if (hp) c.lerp(KR_FARBE.hepatitis, 0.25 * hp);
+  });
+  var ao = Math.min(1, SZW.aszites) * KR_ASZ;
+  KR.asz.material.opacity = ao; KR.asz.visible = ao > 0.003;
+  krD(KR.steinP[0], KR.steinP[1], KR.steinP[2], KD);                    /* Stein im Gang, waechst mit der Wirkgroesse */
+  KR.stein.position.set(KR.steinP[0] + KD.x, KR.steinP[1] + KD.y, KR.steinP[2] + KD.z);
+  var ss = Math.max(0.001, st); KR.stein.scale.set(0.42 * ss, 0.62 * ss, 0.42 * ss);
+  krSichtbar();
+  KR.anker.forEach(function (a) {                                        /* Anker der Beschriftung (Raum der Szene = Koerper - M) */
+    krD(a.o.x + M[0], a.o.y + M[1], a.o.z + M[2], KD);
+    a.v.set(a.o.x + KD.x, a.o.y + KD.y, a.o.z + KD.z);
+  });
+}
+function szenarioWirkung() {
+  var n = { zirrhose: 0, aszites: 0, fett: 0, hepatitis: 0, stein: 0, ammoniak: 1 };
+  SZ_DATEN.forEach(function (sc) {
+    var a = SZ.anteil[sc.id], m = sc.modell;
+    if (!a) return;
+    Object.keys(n).forEach(function (k) { n[k] += a * ((m[k] === undefined ? (k === 'ammoniak' ? 1 : 0) : m[k]) - (k === 'ammoniak' ? 1 : 0)); });
+  });
+  if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
+  Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  if (!KR) krankBauen();
+  if (!KR) return;
+  krAnwenden();
+  lv++;
+}
+
+/* =====================================================================
+   7d. Lupe: Laengsschnitt durch die Papille (Knopf "Lupe" in der Zeile "Ansicht", Panel #lupe, Canvas #lpCv; kein three.js)
+   Oben links der Gallengang, oben rechts der Pankreasgang, beide muenden in die Ampulle; darunter der Schliessmuskel (Oddi, zwei Polster) und die Muendung durch die
+   Darmwand ins Lumen des Zwoelffingerdarms. Die Chips folgen dem Mahlzeit-Schalter der Leber und schalten ihn mit (ein Zustand). Der Muskel folgt `anteil`
+   (weich ueberblendet), die Teilchen nur aus `clock` und Index (kein Math.random): nach vorn mit Alpha anteil * (1 - Stein), nuechtern stehen die gruenen fast
+   und treiben langsam zurueck nach oben (Richtung Gallenblase). Gallenstein (SZW.stein): Stein in der Ampulle, Gaenge weiter, nichts erreicht das Lumen.
+   Die Lupe zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte, Erklaer- und Szenariokarte schliessen sie bzw. weichen ihr.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 340, H: 236, key: -1 };
+var PA_T = {
+  nuechtern: 'Der Schließmuskel der Papille (Oddi) ist zu. Die Galle staut sich im Gallengang und fließt in die Gallenblase, wo sie gesammelt und eingedickt wird.',
+  essen: 'Fett im Zwölffingerdarm gibt das Signal: Die Gallenblase zieht sich zusammen, der Schließmuskel öffnet sich. Galle und Pankreassaft fließen gemeinsam in den Darm und helfen, das Fett zu verdauen.',
+  stein: 'Ein Stein steckt vor der Mündung. Galle und Pankreassaft kommen nicht in den Darm – die Galle staut sich bis in die Leber zurück. Sitzt der Stein in der gemeinsamen Ampulle, kann auch die Bauchspeicheldrüse sich entzünden.'
+};
+var PA_G = [[38, 8], [92, 32], [138, 68], [163, 100], [170, 116], [170, 160], [170, 198], [176, 226]];   /* Weg der Galle: Gallengang, Ampulle, Muendung, Lumen (Bildpunkte) */
+var PA_Y = [[312, 22], [256, 44], [206, 76], [180, 102], [171, 118], [170, 160], [170, 198], [164, 226]];   /* Weg des Pankreassafts */
+function paWeg(pts) {   /* Polylinie mit Laengen: Punkt und Normale bei Anteil u (0..1) */
+  var cum = [0], i;
+  for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  var len = cum[cum.length - 1];
+  return { pts: pts, cum: cum, len: len, bis: function (k) { return cum[k] / len; }, at: function (u) {
+    var d = Math.max(0, Math.min(1, u)) * len, k = 1;
+    while (k < pts.length - 1 && cum[k] < d) k++;
+    var a = pts[k - 1], b = pts[k], t = (d - cum[k - 1]) / (cum[k] - cum[k - 1]), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
+    return [a[0] + dx * t, a[1] + dy * t, -dy / l, dx / l];
+  } };
+}
+var PA_WG = paWeg(PA_G), PA_WY = paWeg(PA_Y);
+function paFrac(x) { return x - Math.floor(x); }
+function paHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function paRampe(v, e) { return Math.max(0, Math.min(1, v / e, (1 - v) / e)); }
+function paLabel(c, text, x, y, rechts) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+}
+function paLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+function paRohr(c, pts, w, rand, fuell) {
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.strokeStyle = rand; c.lineWidth = w + 3;
+  c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke();
+  c.strokeStyle = fuell; c.lineWidth = w;
+  c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.stroke();
+}
+function paTeilchen(c, weg, u, versatz, alpha, farbe, r) {
+  if (alpha <= 0.01) return;
+  var q = weg.at(u), sp = versatz * (2.5 + Math.max(0, q[1] - 198) * 0.25);
+  c.globalAlpha = alpha; c.fillStyle = farbe;
+  c.beginPath(); c.arc(q[0] + q[2] * sp, q[1] + q[3] * sp, r, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  var W = LUPE.W, H = LUPE.H, o = anteil, st = Math.max(0, Math.min(1, SZW.stein)), fl = o * (1 - st), i, u, v, s;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, W, H);
+  /* Darmwand (Schichten) und Lumen des Zwoelffingerdarms */
+  c.fillStyle = '#2E1D22'; c.fillRect(0, 172, W, H - 172);
+  c.fillStyle = '#9A6A5C'; c.fillRect(0, 92, W, 14);
+  c.fillStyle = '#7B4C46'; c.fillRect(0, 106, W, 44);
+  c.fillStyle = '#B07E70'; c.fillRect(0, 150, W, 22);
+  c.strokeStyle = 'rgba(40,20,20,0.35)'; c.lineWidth = 0.8;
+  [106, 150].forEach(function (y) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); });
+  /* Papille: Schleimhauthuegel, der ins Lumen ragt */
+  c.fillStyle = '#B07E70'; c.strokeStyle = '#6A4038'; c.lineWidth = 1.2;
+  c.beginPath(); c.ellipse(170, 172, 42, 26, 0, 0, Math.PI); c.closePath(); c.fill(); c.stroke();
+  /* Gaenge (weiter bei Gallenstein), Ampulle und gemeinsamer Gang */
+  paRohr(c, PA_G.slice(0, 5), 14 * (1 + 0.5 * st), '#2E5E2C', '#5FAE5A');
+  paRohr(c, PA_Y.slice(0, 5), 10 * (1 + 0.5 * st), '#8F8440', '#E6D98B');
+  c.fillStyle = '#9DBB6C'; c.strokeStyle = '#4F6A32'; c.lineWidth = 1.5;
+  c.beginPath(); c.ellipse(170, 114, 17 + 5 * st, 15 + 3 * st, 0, 0, 6.2832); c.fill(); c.stroke();
+  paRohr(c, [[170, 122], [170, 198]], 2 + 6 * o, '#4F6A32', '#9DBB6C');
+  /* Schliessmuskel (Oddi): zwei Polster beidseits, geschlossen beruehren sie sich, offen weichen sie weich auseinander */
+  [-1, 1].forEach(function (sg) {
+    c.fillStyle = '#D0786A'; c.strokeStyle = '#7E3F37'; c.lineWidth = 1.2;
+    c.beginPath(); c.ellipse(170 + sg * (5.5 + 7 * o), 144, 7.5, 17, 0, 0, 6.2832); c.fill(); c.stroke();
+  });
+  /* Gallenstein in der Ampulle (kantig, deterministisch) */
+  if (st > 0.01) {
+    c.fillStyle = '#E2D3A6'; c.strokeStyle = '#8A7A4A'; c.lineWidth = 1.2;
+    c.beginPath();
+    for (i = 0; i < 7; i++) {
+      var a = i / 7 * 6.2832, rr = 1 + 0.18 * (paHash(i, 7) - 0.5) * 2;
+      c.lineTo(170 + Math.cos(a) * 9 * rr * st, 114 + Math.sin(a) * 7 * rr * st);
+    }
+    c.closePath(); c.fill(); c.stroke();
+  }
+  /* Teilchen: nach vorn (nur wenn offen und kein Stein), dazu nuechtern/bei Stein die Stauung (gruen treibt zurueck nach oben, gelb kaum) */
+  for (i = 0; i < 22; i++) { u = paFrac(i / 22 + clock * 0.16); paTeilchen(c, PA_WG, u, paHash(i, 1) - 0.5, fl * paRampe(u, 0.06), '#B6F0A4', 2.2); }
+  for (i = 0; i < 14; i++) { u = paFrac((i + 0.5) / 14 + clock * 0.14); paTeilchen(c, PA_WY, u, paHash(i, 2) - 0.5, fl * paRampe(u, 0.06), '#FFF3AE', 2); }
+  s = 1 - fl; u = PA_WG.bis(4) - 0.02;
+  for (i = 0; i < 10; i++) { v = paFrac(i / 10 + clock * 0.04); paTeilchen(c, PA_WG, u * (1 - v), paHash(i, 3) - 0.5, s * 0.9 * paRampe(v, 0.1), '#B6F0A4', 2.2); }
+  u = PA_WY.bis(4) - 0.04;
+  for (i = 0; i < 6; i++) { v = paFrac((i + 0.5) / 6 + clock * 0.02); paTeilchen(c, PA_WY, u * v, paHash(i, 4) - 0.5, s * 0.9 * paRampe(v, 0.1), '#FFF3AE', 2); }
+  /* Beschriftung im Bild */
+  paLeiter(c, 62, 62, 126, 62);  paLabel(c, 'Gallengang', 6, 66, false);
+  paLeiter(c, 262, 66, 292, 66); paLabel(c, 'Pankreasgang', 334, 70, true);
+  paLeiter(c, 198, 112, 292, 112); paLabel(c, 'Ampulle', 334, 116, true);
+  paLeiter(c, 104, 142, 156, 143); paLabel(c, 'Schließmuskel (Oddi)', 6, 146, false);
+  paLabel(c, 'Zwölffingerdarm', 8, 224, false);
+}
+function lupeText() {
+  var k = SZW.stein > 0.5 ? 2 : mahlzeit ? 1 : 0;
+  LUPE.key = k;
+  $('lpText').innerHTML = '<p' + (k === 2 ? ' class="lp-note"' : '') + '>' + PA_T[['nuechtern', 'essen', 'stein'][k]] + '</p>';
+  $('lpLegStein').style.display = k === 2 ? '' : 'none';
+}
+function lupeChips() {
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.classList.toggle('on', (b.getAttribute('data-m') === '1') === mahlzeit); });
+}
+function lupeOeffnen() {
+  if (fz || abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  lupeChips(); lupeText();                               /* die Lupe beginnt im Zustand des Mahlzeit-Schalters */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+function lupeApp(an, z) {   /* fuer die Pruefung: oeffnen/schliessen, optional Zustand 'nuechtern' | 'essen' (schaltet den Mahlzeit-Schalter mit) */
+  if (an) lupeOeffnen(); else lupeClose();
+  if (an && z !== undefined && z !== null) { setMahlzeit(z === 'essen' || z === 1 || z === true, true); if (LUPE.open) lupeText(); }
+  return { offen: LUPE.open, mahlzeit: mahlzeit, anteil: anteil, stein: SZW.stein };
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').children, function (b) { b.addEventListener('click', function () { setMahlzeit(b.getAttribute('data-m') === '1', true); lupeText(); }); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick() {   /* nur solange offen: Text bei Wechsel des Zustands (auch Gallenstein) nachziehen und neu zeichnen */
+  if (!LUPE.open) return;
+  if (LUPE.key !== (SZW.stein > 0.5 ? 2 : mahlzeit ? 1 : 0)) lupeText();
+  lupeDraw();
+}
+
+/* =====================================================================
+   7e. Export (Kern.Export): GLB statisch und STL, jeweils der sichtbare Zustand (Durchsicht, ausgeblendete Strukturen, Krankheitsbild; ohne Teilchen, Beschriftung,
+   Lupe und Schema); GLB animiert mit der Stroemung von Blut und Galle als eine Schleife von EX.P Sekunden: jedes Teilchen ein Knoten mit Spuren fuer Lage und Groesse.
+   Die Routen haben verschieden lange Umlaufzeiten (W); damit die Schleife aufgeht, laeuft jedes Teilchen in EX.P Sekunden ganze Umlaeufe (mindestens einen), sein Tempo
+   weicht dadurch etwas vom Programm ab. Mahlzeit, Gallenblase, Zirrhose und Gallenstein bleiben wie in der Ansicht beim Export. Massstab: 1 Modelleinheit = 1 cm,
+   die Datei hat Meter (reale Groesse).
+   ===================================================================== */
+var EX = { P: 24, NKEY: 96 };
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+var exCfg = {
+  titel: 'Leber', praefix: 'leber', wurzelName: 'Leber',
+  /* Schild unter dem Modell: Bounding-Box der exportierten Teile (Wurzel um -M verschoben, ohne Teilchen) x -11,9 bis 10,0, y -10,8 bis 12,1, z -5,3 bis 7,6
+     -> x Mitte, y 1,5 cm unter der Unterkante, z vorn (max z) */
+  schild: [-1, -12.3, 7.7],
+  bereit: function () { return App.ready; },
+  gruppen: function () { root.updateMatrixWorld(true); return [root]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },   /* aktives Krankheitsbild bzw. Medikament im Dateinamen */
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Lage und Groesse als Spuren ueber eine Periode (EX.P) */
+  animation: function (rootE) {
+    var times = new Float32Array(EX.NKEY + 1), tracks = [], nPart = 0, i, v = new THREE.Vector3();
+    for (i = 0; i <= EX.NKEY; i++) times[i] = i * EX.P / EX.NKEY;
+    root.updateMatrixWorld(true);
+    ST.sg = gbSetzen();
+    SIDS.forEach(function (sd, k) { ST.an[k] = !!enabled[sd]; });
+    ST.gruppen.forEach(function (g) {
+      var pf = g.art === 'pfortader', c0 = pf ? clockPf : clock, f0 = pf ? 1 - 0.5 * SZW.zirrhose : 1;   /* Zirrhose: Pfortaderblut halb so schnell */
+      g.list.forEach(function (p, n) {
+        var W = p.rt.W, k = Math.max(1, Math.round(EX.P * f0 / W)), rate = k * W / EX.P;   /* ganze Umlaeufe je Periode */
+        var P = new Float32Array((EX.NKEY + 1) * 3), Sc = new Float32Array((EX.NKEY + 1) * 3), smax = 0;
+        for (i = 0; i <= EX.NKEY; i++) {
+          pose(p, c0 + times[i] * rate, ST.sg, STQ);
+          v.set(STQ.x, STQ.y, STQ.z).applyMatrix4(root.matrixWorld);
+          P[i * 3] = v.x; P[i * 3 + 1] = v.y; P[i * 3 + 2] = v.z;
+          Sc[i * 3] = Sc[i * 3 + 1] = Sc[i * 3 + 2] = STQ.s;
+          if (STQ.s > smax) smax = STQ.s;
+        }
+        if (smax <= 0) return;   /* nie sichtbar (anderer Gallenweg, ausgeblendete Struktur): gar nicht erst aufnehmen */
+        var node = new THREE.Mesh(g.im.geometry, g.im.material); node.name = g.name.replace(/[^A-Za-z0-9_]/g, '_') + '_' + (n + 1);
+        node.position.set(P[0], P[1], P[2]); node.scale.set(Sc[0], Sc[1], Sc[2]);
+        rootE.add(node);
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, P));
+        tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, Sc));
+        nPart++;
+      });
+    });
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Leber_Stroemung', EX.P, tracks)], zusatz: sz ? sz.datei : 'normal', nPart: nPart };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe):', '- leber_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': die Strömung von Blut und Galle (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell der Leber in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter der Leber.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe, mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+$('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
+$('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
+$('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
+
+/* =====================================================================
+   7f. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Die Leber wird in cm modelliert: 0,01 m je cm ist die reale Groesse, gestartet wird in dieser Groesse. Die Stroemung laeuft weiter (Knopf Pause),
+   Beschriftung und Teilchen gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG und der AR-Aufbau entstehen erst beim ersten Klick: root ist um -M verschoben
+   und bleibt unveraendert, arG wird hingestellt.
+   ===================================================================== */
+var AR_SKALA = 0.01;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false, kamAlt = { near: camera.near, far: camera.far };
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });   /* nur die Abfrage: three.js-Objekte entstehen erst beim ersten Klick */
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.updateMatrixWorld(true);
+  root.traverse(function (o) {
+    for (var q = o; q; q = q.parent) if (!q.visible) return;
+    if (o.isMesh && !o.userData.teilchen && !o.userData.noexport) b.expandByObject(o);
+  });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() { $('arPause').textContent = playing ? 'Pause' : 'Weiter'; }
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Leber_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt cm */
+      $('labels').style.display = 'none'; $('leaders').style.display = 'none';
+      arTexte();
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      $('labels').style.display = showLabels ? '' : 'none'; $('leaders').style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (fz || abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme der Leber in der aktuellen Ansicht (ohne Teilchen) ---- */
+function usdzBuild() {
+  root.updateMatrixWorld(true);
+  return Kern.AR.usdz({
+    name: 'Leber', creator: 'Leber 3D - ' + Kern.WM, datei: 'leber.usda', skala: AR_SKALA,
+    gruppen: [root]
+  });
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Die Leber öffnet sich in AR Quick Look. Mit zwei Fingern lässt sie sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
 var App = window.LeberApp = { ready: false, aufbauMs: 0, schema: function (an) { setSchema(!!an); }, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris,
   mahlzeit: function (an) { setMahlzeit(!!an); },
+  lupe: function (an, z) { return lupeApp(an, z); },   /* Lupe oeffnen/schliessen, optional mit Zustand ('nuechtern' | 'essen') fuer die Pruefung */
+  szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   /* fuer die Pruefung: Antippen einer Struktur wie mit dem Finger (nur beim Ueben), Zustaende von "Wege verfolgen" und "Strukturen finden" */
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
   wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice() }; },
   quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
   laeppchen: function (i) { laeppchenOeffnen(i === undefined ? null : i); }, endpunkte: function () { return form.baeume().endpunkte.map(function (e) { return { p: e.p.slice(), lappen: e.lappen, r: e.r }; }); },
   stroemung: function () { return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, anteil: anteil, gallenblase: 1 - (1 - STR.REST) * sstep6(kontr) }; } };
-function loop(now) {
+function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (!fz) { stroemungSchritt(dt); stroemungBild(); }     /* waehrend der Fahrt zum Laeppchen steht die Stroemung */
+  if (!fz && SZ.schritt(dt)) szenarioWirkung();          /* Krankheitsbilder weich ueberblenden */
+  if (!fz) { stroemungSchritt(dt); stroemungBild(); lupeTick(); }     /* waehrend der Fahrt zum Laeppchen steht die Stroemung */
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? fahrtBild(now) : false;
   if (schemaOn) schemaTick();
@@ -1872,7 +2463,8 @@ organ.bild = loop; organ.groesse = groesse;
 organ.abbauen = function () {
   abgebaut = true;
   fz = null; canvas.style.pointerEvents = '';
-  schemaWeicht(); SCH.abbauen();
+  AR && AR.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
@@ -1882,7 +2474,7 @@ organ.abbauen = function () {
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
   camera.clearViewOffset();
-  camera.updateProjectionMatrix();
+  camera.near = kamAlt.near; camera.far = kamAlt.far; camera.updateProjectionMatrix();
   /* DOM */
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; [b.el, b.ln, b.dot].forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }); });
   labelBox.style.display = ''; leaderSvg.style.display = '';
@@ -1899,6 +2491,7 @@ return bauen().then(function () {
   applyVisibility();
   setSelected(selected);
   stroemungBauen();
+  Kern.Export.pruefeZiel('exp');
   lpP = Kern.organLaden('laeppchen', { ohneCss: true }).then(function (o) { return o; }, function (e) { lpFehl = true; console.warn(e && e.message || e); return null; });   /* nur das Skript, im Hintergrund: liefert organ.form und organ.start fuer die Fahrt */
   if (umg.von === 'laeppchen') return lpP.then(function () { if (!abgebaut) rueckkehr(); }).then(fertig);   /* Rueckweg aus dem Laeppchen-Modell */
   fertig();
