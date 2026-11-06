@@ -152,28 +152,37 @@ var BAHN = {
 /* ---- Kennpunkte (Magen nuechtern; bei Fuellung f siehe kennpunkte(f)) ---- */
 var EINGANG = { p: [3.8, 107.6, 1.0] };     /* Ende der Speiseroehre, Mageneingang (Kardia) */
 var PFOERTNER = { p: [-2.0, 104.0, 3.2] };  /* Uebergang in den Zwoelffingerdarm */
-var FUNDUS = { p: [7.4, 111.9, 0.2] };      /* hoechster Punkt des Magengrunds */
-var ANGULUS = { p: [3.6, 102.8, 2.5] };     /* Knick der kleinen Kurvatur (Incisura angularis) */
+var FUNDUS = { p: [7.4, 112.8, 0.8] };      /* hoechster Punkt des Magengrunds */
+var ANGULUS = { p: [3.2, 101.8, 3.0] };     /* Knick der kleinen Kurvatur (Incisura angularis) */
 
 /* ---- Magen: Mittellinie mit Radien ----
    Steuerpunkte c (Mitte), r (Radius in der Ebene des Schlauchs), rz (Radius in der Tiefe, der Magen ist flacher als breit), g (Richtung zur grossen
    Kurvatur, in x/y); r1, rz1: Radien bei Fuellung 1. Beim Fuellen bleibt die kleine Kurvatur an ihrem Ort: die Mitte wandert um den Zuwachs
    des Radius in Richtung g (0,95) und um 0,7 des Zuwachses nach vorn. */
 var KP = [
-  { c: [7.4, 108.8, 0.9], r: 3.4, rz: 2.6, g: [0.7, 0.7], r1: 4.3, rz1: 4.0 },      /* Magengrund (Fundus) */
-  { c: [8.4, 106.2, 0.6], r: 3.9, rz: 2.0, g: [1.0, 0.0], r1: 5.0, rz1: 4.1 },      /* Magenkoerper oben */
-  { c: [7.6, 102.6, 0.5], r: 3.8, rz: 1.6, g: [0.9, -0.45], r1: 5.0, rz1: 4.1 },    /* Magenkoerper unten */
-  { c: [5.0, 100.0, 2.0], r: 3.0, rz: 1.6, g: [0.25, -1.0], r1: 4.1, rz1: 3.5 },    /* tiefster Punkt der grossen Kurvatur */
-  { c: [1.4, 100.6, 3.0], r: 2.3, rz: 1.7, g: [0.0, -1.0], r1: 3.1, rz1: 2.9 },     /* Magenvorhof (Antrum) */
-  { c: [-0.6, 102.4, 3.5], r: 1.7, rz: 1.55, g: [-0.3, -1.0], r1: 2.1, rz1: 2.0 },
+  { c: [7.4, 109.9, 0.8], r: 2.9, rz: 2.3, g: [0.7, 0.7], r1: 3.9, rz1: 3.4 },      /* Magengrund (Fundus) */
+  { c: [5.4, 105.9, 1.5], r: 2.2, rz: 1.7, g: [1.0, 0.0], r1: 3.2, rz1: 2.9 },      /* Magenkoerper oben */
+  { c: [5.2, 102.2, 1.7], r: 1.9, rz: 1.4, g: [0.9, -0.4], r1: 3.3, rz1: 3.0 },     /* Magenkoerper unten */
+  { c: [4.0, 99.6, 2.8], r: 2.2, rz: 1.7, g: [0.2, -1.0], r1: 3.0, rz1: 2.6 },      /* tiefster Punkt der grossen Kurvatur */
+  { c: [1.3, 100.2, 3.4], r: 1.9, rz: 1.7, g: [0.0, -1.0], r1: 2.5, rz1: 2.3 },     /* Magenvorhof (Antrum) */
+  { c: [-0.5, 102.2, 3.6], r: 1.6, rz: 1.5, g: [-0.3, -1.0], r1: 1.9, rz1: 1.8 },
   { c: [-1.2, 103.4, 3.4], r: 1.4, rz: 1.3, g: [-0.5, -1.0], r1: 1.45, rz1: 1.4 },  /* Pfoertnerkanal */
   { c: [-2.0, 104.0, 3.2], r: 1.0, rz: 1.0, g: [-0.5, -1.0], r1: 1.0, rz1: 1.0 }    /* Pfoertner = Anfang des Zwoelffingerdarms */
 ];
 var PRO = 6;          /* Abtastpunkte je Abschnitt der Mittellinie */
 var DUO_EXT = [0.8, 1.6];   /* Verlaengerung ins Duodenum (nur fuer Schichten und Innenraum): Abstaende (cm) vom Pfoertner auf der Bahn des Zwoelffingerdarms */
 var ESO_STUMPF = 1.8;       /* Laenge (cm) der Speiseroehre, die im Feld des Magens mitgefuehrt wird (weicher Anschluss) */
+var ESO_R_AUSSEN = 0.7;     /* Radius des Speiseroehren-Stumpfs im Feld der Aussenflaeche (Rohr im Koerper: 0,8) */
 var ESO_TIEF = 1.0;         /* der Kanal der Speiseroehre laeuft so weit (cm) ueber den Mageneingang hinaus in den Magen */
 var ZW_ABSTAND = 0.35;      /* Abstand des Magens zur Zwerchfellkuppel (cm) */
+
+/* Querer Dickdarm (Bahn wie im Koerper, r 1,8) laeuft ueber die linke Seite des Magens: er drueckt dort eine flache Rinne in die Wand
+   (Abstand 0,1 cm; die Rinne folgt den Schichten, um die Tiefe o weiter innen; sie verschwindet bei f > 0,4). Mittellinie der Abschnitte rund um den Magen, einmal berechnet. */
+var KOLON = null, KOLON_R = 1.8, KOLON_LUECKE = 0.1;
+function kolon() {
+  if (!KOLON) KOLON = kette(kurve(BAHN.dickdarm.pts, 6).slice(6 * 5, 6 * 11 + 1), 0);
+  return KOLON;
+}
 
 var STATE = {};
 function zustand(f, ext) {
@@ -196,13 +205,12 @@ function zustand(f, ext) {
   var X = new Float64Array(n), Y = new Float64Array(n), Z = new Float64Array(n), R = new Float64Array(n), RZ = new Float64Array(n);
   var GX = new Float64Array(n), GY = new Float64Array(n), SC = new Float64Array(n), W = new Float64Array(n), LP = new Float64Array(n);
   var iEnde = nSt * PRO;
+  /* Radien und Richtung zur grossen Kurvatur laufen als Catmull-Rom-Kurve mit (glatt, ohne Absaetze an den Steuerpunkten) */
+  var ar = kurve(steuer.map(function (s) { return [s.r, s.rz, s.g[0]]; }), PRO), ag = kurve(steuer.map(function (s) { return [s.g[1], 0, 0]; }), PRO);
   for (j = 0; j < n; j++) {
-    var a = Math.min(Math.floor(j / PRO), steuer.length - 2), u = j / PRO - a; if (j === n - 1) { a = steuer.length - 2; u = 1; }
-    u = u * u * (3 - 2 * u);
-    var A = steuer[a], B = steuer[a + 1];
     X[j] = cu[j][0]; Y[j] = cu[j][1]; Z[j] = cu[j][2];
-    R[j] = A.r + (B.r - A.r) * u; RZ[j] = A.rz + (B.rz - A.rz) * u;
-    var gx = A.g[0] + (B.g[0] - A.g[0]) * u, gy = A.g[1] + (B.g[1] - A.g[1]) * u, gl2 = Math.sqrt(gx * gx + gy * gy) || 1;
+    R[j] = ar[j][0]; RZ[j] = ar[j][1];
+    var gx = ar[j][2], gy = ag[j][0], gl2 = Math.sqrt(gx * gx + gy * gy) || 1;
     GX[j] = gx / gl2; GY[j] = gy / gl2;
     SC[j] = j ? SC[j - 1] + Math.sqrt(Math.pow(X[j] - X[j - 1], 2) + Math.pow(Y[j] - Y[j - 1], 2) + Math.pow(Z[j] - Z[j - 1], 2)) : 0;
   }
@@ -212,11 +220,14 @@ function zustand(f, ext) {
     W[j] = j > iEnde ? 0 : 1 - glatt(0.5, 0.78, sf);   /* Gewicht der schraegen Muskelschicht: Fundus und Korpus, laeuft zum Antrum aus */
     LP[j] = L - SC[j];                                  /* Abstand (cm) zum Pfoertner (hinter dem Pfoertner negativ) */
   }
-  var m = n - 1, SG = new Float64Array(m * 7), TX = new Float64Array(m * 3);
+  var m = n - 1, SG = new Float64Array(m * 7), TX = new Float64Array(n * 3);
+  for (j = 0; j < n; j++) {   /* Richtung der Mittellinie je Abtastpunkt (zentrale Differenz), zwischen den Punkten wird gemischt: keine Spruenge der Falten */
+    var ta = Math.max(j - 1, 0), tb2 = Math.min(j + 1, n - 1), ux = X[tb2] - X[ta], uy = Y[tb2] - Y[ta], uz = Z[tb2] - Z[ta], ul = Math.sqrt(ux * ux + uy * uy + uz * uz) || 1;
+    TX[j * 3] = ux / ul; TX[j * 3 + 1] = uy / ul; TX[j * 3 + 2] = uz / ul;
+  }
   for (j = 0; j < m; j++) {
-    var vx = X[j + 1] - X[j], vy = Y[j + 1] - Y[j], vz = Z[j + 1] - Z[j], l2 = vx * vx + vy * vy + vz * vz, ll = Math.sqrt(l2) || 1;
+    var vx = X[j + 1] - X[j], vy = Y[j + 1] - Y[j], vz = Z[j + 1] - Z[j], l2 = vx * vx + vy * vy + vz * vz;
     SG[j * 7] = X[j]; SG[j * 7 + 1] = Y[j]; SG[j * 7 + 2] = Z[j]; SG[j * 7 + 3] = vx; SG[j * 7 + 4] = vy; SG[j * 7 + 5] = vz; SG[j * 7 + 6] = l2 > 0 ? 1 / l2 : 0;
-    TX[j * 3] = vx / ll; TX[j * 3 + 1] = vy / ll; TX[j * 3 + 2] = vz / ll;
   }
   st.n = n; st.m = m; st.mSt = iEnde;   /* mSt: Zahl der Abschnitte bis zum Pfoertner */
   st.X = X; st.Y = Y; st.Z = Z; st.R = R; st.RZ = RZ; st.GX = GX; st.GY = GY; st.SC = SC; st.W = W; st.LP = LP; st.SG = SG; st.TX = TX; st.L = L;
@@ -274,11 +285,14 @@ function werte(st, x, y, z, voll) {
   var kup = y > 103.5 ? kuppel(x, z) - ZW_ABSTAND : 1e9;
   var nah = (x - EINGANG.p[0]) * (x - EINGANG.p[0]) + (y - EINGANG.p[1]) * (y - EINGANG.p[1]) + (z - EINGANG.p[2]) * (z - EINGANG.p[2]) < 64;
   var dSt = nah ? stumpfAbstand(st, x, y, z, st.esEnde) : 1e9;   /* nur der Teil bis zum Mageneingang */
+  var kolonR = (KOLON_R + KOLON_LUECKE) * (1 - glatt(0, 0.4, st.f));   /* die Rinne gibt es nur im nuechternen Magen: ein gefuellter Magen verdraengt den Dickdarm */
+  var dKo = x > 3 && y > 98 && z > -6 ? kolon()(x, y, z) : 9;
   var o0, k, rr, rrz, a, zz, q;
   if (!voll) {
     rr = r; rrz = rz; a = rr / rrz; zz = oz * a; q = Math.sqrt(oxy2 + zz * zz) - rr;
-    if (nah) q = smin(q, dSt - 0.77, 0.9);
+    if (nah) q = smin(q, dSt - ESO_R_AUSSEN, 0.9);   /* etwas schlanker als das Rohr der Speiseroehre im Koerper (keine doppelte Flaeche) */
     if (kup < 1e8) q = smax(q, 0.5 * (y - kup), 0.7);
+    if (kolonR > 1e-6 && dKo < 4) q = smax(q, kolonR - dKo, 0.6);
     return q;
   }
   var lp = st.LP[jb] + (st.LP[j1] - st.LP[jb]) * tb, w = st.W[jb] + (st.W[j1] - st.W[jb]) * tb;
@@ -291,14 +305,16 @@ function werte(st, x, y, z, voll) {
     a = rr / rrz; if (a > 4) a = 4; zz = oz * a; q = Math.sqrt(oxy2 + zz * zz) - rr;
     if (nah) q = smin(q, dSt - Math.max(0.77 - o0, 0.02), 0.9);
     if (kup < 1e8) q = smax(q, 0.5 * (y - (kup - o0)), 0.7);
+    if (kolonR > 1e-6 && dKo < 4) q = smax(q, kolonR * (1 + o0 / (KOLON_R + KOLON_LUECKE)) - dKo, 0.6);
     B[k] = q;
   }
   QCH = nah ? stumpfAbstand(st, x, y, z, st.es.length / 7) - 0.3 : 1e9;
   /* Falten (Rugae): Laengsfalten der Schleimhaut nach innen */
   var H = faltenHoehe(st.f);
   if (H > 0.005 && B[5] < 0.6) {
-    var tx = st.TX[jb * 3], ty = st.TX[jb * 3 + 1], tz = st.TX[jb * 3 + 2];
-    var gx = st.GX[jb], gy = st.GY[jb], gt = gx * tx + gy * ty;
+    var tx = st.TX[jb * 3] + (st.TX[j1 * 3] - st.TX[jb * 3]) * tb, ty = st.TX[jb * 3 + 1] + (st.TX[j1 * 3 + 1] - st.TX[jb * 3 + 1]) * tb, tz = st.TX[jb * 3 + 2] + (st.TX[j1 * 3 + 2] - st.TX[jb * 3 + 2]) * tb, tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
+    tx /= tl; ty /= tl; tz /= tl;
+    var gx = st.GX[jb] + (st.GX[j1] - st.GX[jb]) * tb, gy = st.GY[jb] + (st.GY[j1] - st.GY[jb]) * tb, gt = gx * tx + gy * ty;
     var nx = gx - gt * tx, ny = gy - gt * ty, nz = -gt * tz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1; nx /= nl; ny /= nl; nz /= nl;
     var bx = ty * nz - tz * ny, by = tz * nx - tx * nz, bz = tx * ny - ty * nx; if (bz < 0) { bx = -bx; by = -by; bz = -bz; }
     var pa = ox * nx + oy * ny + oz * nz, pb = ox * bx + oy * by + oz * bz;
@@ -429,55 +445,92 @@ function schnitt(f) {
 }
 
 /* ---- Gefaesse und Nerv ---- */
+var AORTA = { pts: [[4.9, 121, -3.9], [5.0, 118, -3.9], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], r: 1.25 };   /* wie im Koerper (nur als Hindernis) */
+/* Punkte aus den Hindernissen (Abstandsfelder, innen < 0) herausschieben, bis die Rohre mit Radius r mindestens 0,04 cm Luft haben;
+   die ersten und letzten fest Punkte bleiben stehen (Ursprung und Muendung) */
+function abdraengen(pts, r, hindernisse, fest0, fest1) {
+  var p = pts.map(function (q) { return q.slice(); }), it, i, k, e = 0.04, n = p.length;
+  for (it = 0; it < 10; it++) {
+    for (i = fest0; i < n - fest1; i++) {
+      for (k = 0; k < hindernisse.length; k++) {
+        var h = hindernisse[k], v = h(p[i][0], p[i][1], p[i][2]) - (r + 0.04);
+        if (v >= 0) continue;
+        var gx = h(p[i][0] + e, p[i][1], p[i][2]) - h(p[i][0] - e, p[i][1], p[i][2]), gy = h(p[i][0], p[i][1] + e, p[i][2]) - h(p[i][0], p[i][1] - e, p[i][2]), gz = h(p[i][0], p[i][1], p[i][2] + e) - h(p[i][0], p[i][1], p[i][2] - e);
+        var gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1;
+        p[i][0] -= v * gx / gl * 1.02; p[i][1] -= v * gy / gl * 1.02; p[i][2] -= v * gz / gl * 1.02;
+      }
+    }
+    if (it === 4) p = glaetten(p, 1).map(function (q, j) { return j < fest0 || j >= n - fest1 ? pts[j].slice() : q; });
+  }
+  return p;
+}
+/* Linienzug als Gefaess: Kurve durch die Wegpunkte, aus den Hindernissen geschoben, in Schritten von 0,5 cm */
+function strecke(pts, r, hindernisse, fest0, fest1) {
+  var c = neuAbtasten(kurve(pts, 6), 0.5), n = c.length, i;
+  /* feste Enden bleiben die ersten und letzten Wegpunkte */
+  c[0] = pts[0].slice(); c[n - 1] = pts[pts.length - 1].slice();
+  return abdraengen(c, r, hindernisse, fest0 || 0, fest1 || 0);
+}
 function gefaesse(f) {
   f = f || 0;
   var LE = Kern.Formen && Kern.Formen.leber;
   if (!LE) throw new Error('Die Gefaesse brauchen die Form der Leber, sie ist nicht geladen.');
-  var kA = kurvaturen(f, 0.25, 0), kV = kurvaturen(f, 0.3, 0.45), kN = kurvaturen(f, 0.12, 0.7), kM = kurvaturen(f, 0.12, -0.7);
+  var feld = magen(f), eso = kette(kurve(BAHN.speiseroehre.pts, 8), 0.8), aorta = kette(kurve(AORTA.pts, 8), AORTA.r);
+  var duo = kette(kurve(BAHN.zwoelffingerdarm.pts, 8).slice(8), 1.0), kolon = kette(kurve(BAHN.dickdarm.pts, 6).slice(6 * 5, 6 * 11 + 1), KOLON_R);
+  var kA = kurvaturen(f, 0.25, 0.3), kV = kurvaturen(f, 0.3, -0.3), kN = kurvaturen(f, 0.14, 0.9), kM = kurvaturen(f, 0.14, -0.9), kH = kurvaturen(f, 0.25, -1.2);
   var klA = kA.klein, grA = kA.gross, klV = kV.klein, grV = kV.gross, ia = kA.angulus, iv = kV.angulus;
-  var A = LE.GEFAESSE.leberarterie[0].pts[0], truncusEnde = [A[0] - 0.1, A[1] - 0.7, A[2] + 0.5];
-  var P0 = LE.GEFAESSE.pfortader[0].pts;   /* Pfortaderstamm: Zusammenfluss -> Teilung an der Pforte */
-  var stamm = P0[1], zusammenfluss = LE.ZUSAMMENFLUSS;
-  var st = zustand(f, false), cardia = klA.findIndex(function (p) { return p[1] < EINGANG.p[1] - 0.6; });
-  if (cardia < 0) cardia = 0;
   function von(poly, i0, i1) { return i0 <= i1 ? poly.slice(i0, i1 + 1) : poly.slice(i1, i0 + 1).reverse(); }
-  function dazwischen(poly, t) { return poly[Math.max(0, Math.min(poly.length - 1, t))]; }
-  var gm = Math.floor(grA.length * 0.62), gmV = Math.floor(grV.length * 0.62);   /* Mitte der grossen Kurvatur: Treffpunkt der Gefaesse */
-  var milz = [7.4, 106.1, -3.0];   /* Hilus der Milz */
-  /* Arterien */
+  function naechster(poly, p) { var b = 0, bd = 1e9, i; for (i = 0; i < poly.length; i++) { var d = Math.pow(poly[i][0] - p[0], 2) + Math.pow(poly[i][1] - p[1], 2) + Math.pow(poly[i][2] - p[2], 2); if (d < bd) { bd = d; b = i; } } return b; }
+  var GE = LE.GEFAESSE, A = GE.leberarterie[0].pts[0], truncusEnde = [A[0] - 0.1, A[1] - 0.7, A[2] + 0.5];
+  var stamm = GE.pfortader[0].pts[1], milzM = amBogen(kurve(GE.pfortader[1].pts, 12), LE.STUMPF - 0.2), mesM = amBogen(kurve(GE.pfortader[2].pts, 12), 2.2);
+  var gm = Math.floor(grA.length * 0.6), gmV = Math.floor(grV.length * 0.6);   /* Mitte der grossen Kurvatur: Treffpunkt der Gefaesse */
+  var hilus = [7.4, 106.3, -3.0];                                                  /* Milzhilus (hinter dem Magen) */
+  var iH = kH.gross.findIndex(function (p) { return p[1] <= 107.6; }), pH = kH.gross[iH];   /* Magenwand hinten-seitlich auf Hoehe des Hilus */
+  var oM = [feld, eso, kolon, aorta], oM2 = [feld, eso, duo, kolon, aorta];
+  /* Arterien (vom Ursprung weg) */
   var arterien = [
     { id: 'truncus', pts: [A.slice(), truncusEnde], r0: 0.32, r1: 0.3 },
-    { id: 'gastrica-sinistra', pts: [truncusEnde, [A[0] + 0.2, A[1] - 1.2, A[2] + 0.0]].concat(von(klA, cardia, ia)), r0: 0.24, r1: 0.18 },
-    { id: 'gastrica-dextra', pts: [LE.GEFAESSE.leberarterie[0].pts[4].slice(), [-0.9, 106.0, 1.8]].concat(von(klA, klA.length - 1, ia)), r0: 0.16, r1: 0.18 },
-    { id: 'gastroomentalis-dextra', pts: [[-0.9, 103.6, 1.6]].concat(von(grA, grA.length - 1, gm)), r0: 0.2, r1: 0.2 },
-    { id: 'gastroomentalis-sinistra', pts: [milz].concat(von(grA, 3, gm)), r0: 0.22, r1: 0.2 }
+    { id: 'gastrica-sinistra', pts: strecke([truncusEnde, [3.5, 107.6, -1.3], [3.7, 106.5, -0.2]].concat(von(klA, klA.findIndex(function (p) { return p[1] < 106.4; }), ia)), 0.22, oM, 2, 0), r0: 0.24, r1: 0.18 },
+    { id: 'gastrica-dextra', pts: strecke([GE.leberarterie[0].pts[4].slice(), [-1.0, 106.2, 1.6]].concat(von(klA, klA.length - 1, ia)), 0.17, oM2, 1, 0), r0: 0.17, r1: 0.18 },
+    { id: 'gastroomentalis-dextra', pts: strecke([[-0.8, 102.8, 0.7]].concat(von(grA, grA.length - 1, gm)), 0.2, oM2, 1, 0), r0: 0.2, r1: 0.2 },
+    { id: 'gastroomentalis-sinistra', pts: strecke([hilus, pH].concat(von(grA, naechster(grA, pH), gm)), 0.21, oM, 1, 0), r0: 0.22, r1: 0.2 }
   ];
-  [6, 12, 18].forEach(function (i, k) {   /* kurze Aeste zum Fundus */
-    var q = dazwischen(grA, Math.floor(i / 3)), m = [(milz[0] + q[0]) / 2 + 0.4, (milz[1] + q[1]) / 2 + 0.3, (milz[2] + q[2]) / 2 + 0.5];
-    arterien.push({ id: 'gastricae-breves-' + (k + 1), pts: [milz, m, q], r0: 0.15, r1: 0.13 });
+  [1, 3, 5].forEach(function (i, k) {   /* kurze Aeste zum Fundus */
+    var q = kH.gross[Math.min(i, kH.gross.length - 1)], m = [(hilus[0] + q[0]) / 2, (hilus[1] + q[1]) / 2 + 0.2, (hilus[2] + q[2]) / 2];
+    arterien.push({ id: 'gastricae-breves-' + (k + 1), pts: strecke([hilus, m, q], 0.14, [feld], 1, 0), r0: 0.15, r1: 0.13 });
   });
   /* Venen (Fliessrichtung zur Muendung) */
   var venen = [
-    { id: 'gastrica-sinistra', pts: von(klV, ia, cardia).concat([[3.2, 105.8, 0.4], [1.2, 105.1, -0.1], stamm.slice()]), r0: 0.22, r1: 0.28 },
-    { id: 'gastrica-dextra', pts: von(klV, iv, klV.length - 1).concat([[-1.2, 105.4, 2.6], [-1.3, 104.8, 0.8], stamm.slice()]), r0: 0.2, r1: 0.25 },
-    { id: 'gastroomentalis-sinistra', pts: von(grV, gmV, 3).concat([[milz[0] - 0.8, milz[1] - 0.3, milz[2] - 1.2], LE.GEFAESSE.pfortader[1].pts[3].slice()]), r0: 0.24, r1: 0.3 },
-    { id: 'gastroomentalis-dextra', pts: von(grV, gmV, grV.length - 1).concat([[0.7, 97.6, 1.8], [0.15, 98.3, -0.6]]), r0: 0.24, r1: 0.3 }
+    { id: 'gastrica-sinistra', pts: strecke(von(klV, iv, klV.findIndex(function (p) { return p[1] < 106.4; })).concat([[3.4, 106.0, -0.6], [2.4, 105.4, -0.8], [0.9, 104.8, -0.6], stamm.slice()]), 0.25, oM, 0, 1), r0: 0.22, r1: 0.28 },
+    { id: 'gastrica-dextra', pts: strecke(von(klV, iv, klV.length - 1).concat([[-1.1, 105.5, 2.4], [-1.2, 105.0, 0.8], stamm.slice()]), 0.22, oM2, 0, 1), r0: 0.2, r1: 0.25 },
+    { id: 'gastroomentalis-sinistra', pts: strecke(von(grV, gmV, naechster(grV, pH)).concat([pH, hilus, [5.4, 104.6, -3.0], milzM]), 0.26, [feld, kolon], 0, 1), r0: 0.24, r1: 0.3 },
+    { id: 'gastroomentalis-dextra', pts: strecke(von(grV, gmV, grV.length - 1).concat([[-0.2, 98.8, 1.6], mesM]), 0.26, oM2, 0, 1), r0: 0.24, r1: 0.3 }
   ];
   /* Pfortader: Stamm ab Zusammenfluss, dazu die Stuempfe von Milz- und Mesenterialvene wie im Lebermodell */
-  var pf = LE.GEFAESSE.pfortader.map(function (g) {
+  var pf = GE.pfortader.map(function (g) {
     return { id: g.id, pts: g.id === 'pfortaderStamm' ? g.pts : LE.stumpf(g.pts, LE.STUMPF), r0: g.r0, r1: g.r1 };
   });
-  /* Vagus: vorderer und hinterer Strang an der Speiseroehre (ab ca. 6 cm ueber dem Mageneingang), dann Aeste an der kleinen Kurvatur bis zum Antrum */
-  var eso = kurve(BAHN.speiseroehre.pts, 10).filter(function (p) { return p[1] <= EINGANG.p[1] + 6; });
+  /* Vagus: vorderer und hinterer Strang auf der Speiseroehre (ab 6 cm ueber dem Mageneingang), dann Aeste an der kleinen Kurvatur bis zum Antrum */
+  var ec = neuAbtasten(kurve(BAHN.speiseroehre.pts, 12).filter(function (p) { return p[1] <= EINGANG.p[1] + 6; }), 0.8);
+  function strang(vz, kl) {
+    var pts = ec.map(function (p, i) {
+      var q = ec[Math.min(i + 1, ec.length - 1)], o = ec[Math.max(i - 1, 0)], tx = q[0] - o[0], ty = q[1] - o[1], tz = q[2] - o[2], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
+      tx /= tl; ty /= tl; tz /= tl;
+      var nx = -tz * tx, ny = -tz * ty, nz = 1 - tz * tz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;   /* z-Achse senkrecht zur Speiseroehre */
+      return [p[0] + vz * nx / nl * 0.93, p[1] + vz * ny / nl * 0.93, p[2] + vz * nz / nl * 0.93];
+    });
+    var ast = kl.slice(0, Math.max(2, kl.length - 3));
+    return strecke(pts.concat(ast), 0.14, [feld], 0, 0);
+  }
   var vagus = [
-    { id: 'vagus-vorn', pts: eso.map(function (p) { return [p[0], p[1], p[2] + 0.95]; }).filter(function (p, i) { return i % 3 === 0; }).concat(von(kN.klein, 0, kN.klein.length - 3).filter(function (p, i) { return i % 2 === 0; })), r0: 0.14, r1: 0.1 },
-    { id: 'vagus-hinten', pts: eso.map(function (p) { return [p[0], p[1], p[2] - 0.95]; }).filter(function (p, i) { return i % 3 === 0; }).concat(von(kM.klein, 0, kM.klein.length - 3).filter(function (p, i) { return i % 2 === 0; })), r0: 0.14, r1: 0.1 }
+    { id: 'vagus-vorn', pts: strang(1, kN.klein), r0: 0.14, r1: 0.1 },
+    { id: 'vagus-hinten', pts: strang(-1, kM.klein), r0: 0.14, r1: 0.1 }
   ];
   return { magenarterien: arterien, magenvenen: venen, pfortader: pf, vagus: vagus };
 }
 
 /* ---- Zwerchfell (nur Lage): Ausschnitt der Kuppel ueber dem linken Oberbauch, 0,3 cm dick, mit der Luecke fuer die Speiseroehre (Hiatus) ---- */
-var ZW = { x0: -2, x1: 13, z0: -4.5, z1: 7 };
+var ZW = { x0: -2, x1: 13, z0: -4.5, z1: 7, y0: 103.5, dicke: 0.3 };
 function zwerchfell() {
   var eso = kurve(BAHN.speiseroehre.pts, 12), i, hia = null;
   for (i = 1; i < eso.length; i++) {
@@ -485,15 +538,16 @@ function zwerchfell() {
     if (d0 >= 0 && d1 < 0) { hia = eso.slice(Math.max(0, i - 6), Math.min(eso.length, i + 6)); break; }
   }
   var loch = hia ? kette(hia, 0.8 + 0.5) : null;
-  var lo = 1e9, hi = -1e9, x, z;
-  for (x = ZW.x0; x <= ZW.x1; x += 0.5) for (z = ZW.z0; z <= ZW.z1; z += 0.5) { var k = kuppel(x, z); if (k < lo) lo = k; if (k > hi) hi = k; }
+  var hi = -1e9, x, z;
+  for (x = ZW.x0; x <= ZW.x1; x += 0.5) for (z = ZW.z0; z <= ZW.z1; z += 0.5) { var k = kuppel(x, z); if (k > hi) hi = k; }
   return {
     sdf: function (x, y, z) {
-      var k = kuppel(x, z), d = 0.7 * (Math.abs(y - k) - 0.15);
-      d = Math.max(d, ZW.x0 - x, x - ZW.x1, ZW.z0 - z, z - ZW.z1);
+      var k = kuppel(x, z), kx = kuppel(x + 0.05, z) - k, kz = kuppel(x, z + 0.05) - k;
+      var d = Math.abs(y - k) / Math.sqrt(1 + (kx * kx + kz * kz) / 0.0025) - ZW.dicke / 2;   /* senkrecht zur Flaeche gemessen */
+      d = Math.max(d, ZW.x0 - x, x - ZW.x1, ZW.z0 - z, z - ZW.z1, ZW.y0 - y);
       return loch ? Math.max(d, -loch(x, y, z)) : d;
     },
-    grenzen: [[ZW.x0, Math.floor(lo - 0.3), ZW.z0], [ZW.x1, Math.ceil(hi + 0.3), ZW.z1]],
+    grenzen: [[ZW.x0, ZW.y0 - 0.3, ZW.z0], [ZW.x1, Math.ceil(hi + 0.3), ZW.z1]],
     hiatus: hia ? hia[Math.floor(hia.length / 2)] : null
   };
 }
