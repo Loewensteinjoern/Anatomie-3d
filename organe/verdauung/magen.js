@@ -76,15 +76,40 @@ var MARKUP = `<div id="title">
     <button id="cam1" class="gh" title="Die vordere Magenwand ist abgehoben: Falten und Muskelschichten">Innenansicht</button>
     <button id="cam2" class="gh">Mageneingang</button>
     <button id="cam3" class="gh">Pförtner</button>
+    <span class="sep"></span>
+    <button id="bSchema" class="gh" title="Der Weg der Nahrung von Mund bis After – der Magen hervorgehoben">Schema</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
     <button id="bSee" class="gh" title="Magenwand durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
     <button id="bLab" class="gh on">Beschriftung</button>
+    <span class="sep"></span>
+    <button id="bNuechtern" class="gh on" title="Zwischen den Mahlzeiten: Der Magen ist klein, die Falten sind hoch">nüchtern</button>
+    <button id="bEssen" class="gh" title="Nach einer Mahlzeit: Der Magen ist gefüllt, Muskelwellen treiben den Speisebrei zum Pförtner">nach dem Essen</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Stoffe</span>
+    <button id="bKh" class="gh on" title="Kohlenhydrate ein- oder ausblenden">Kohlenhydrate</button>
+    <button id="bEiw" class="gh on" title="Eiweiß ein- oder ausblenden">Eiweiß</button>
+    <button id="bFett" class="gh on" title="Fett ein- oder ausblenden">Fett</button>
+    <button id="bWasser" class="gh on" title="Wasser ein- oder ausblenden">Wasser</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Strömung</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bS0" class="gh">langsam</button>
+    <button id="bS1" class="gh on">normal</button>
+    <button id="bS2" class="gh">schnell</button>
   </div>
 </div>
 
 <div class="panel" id="rail"></div>
+
+<div class="panel" id="schema" aria-label="Schema: Weg der Nahrung">
+  <div class="sch-head"><span class="kick">Schema &middot; Weg der Nahrung</span><span class="sch-hint">Gleiche Stoffe wie im 3D-Modell, der Magen hervorgehoben.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
+  <div id="schemaBox"></div>
+</div>
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
@@ -131,7 +156,7 @@ function abstandFuer(ext, r, fov, h) {
   var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
-/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (WERKZEUG_H, zwei Zeilen; kommen Zeilen dazu, ist sie neu zu messen); aufbauen misst sie selbst, die Werte stimmen ueberein.
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (WERKZEUG_H, vier Zeilen; kommen Zeilen dazu, ist sie neu zu messen); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
@@ -140,7 +165,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 80, handy: 70, umbruch: 345 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 345 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Magens im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -188,8 +213,11 @@ MAT.vagus = mat(STRUCT.vagus.col, { rough: 0.5, coat: 0.2 });
 ['arterien', 'venen', 'vagus'].forEach(function (k) { MAT[k + 'D'] = mat(STRUCT[k].col, { rough: 0.4, coat: 0.3 }); });   /* Teile an der vorderen Wand (blenden mit dem Deckel aus) */
 MAT.zwerchfell = mat(0xC98378, { rough: 0.6, opacity: 0.3, side: THREE.DoubleSide });   /* heller als der Farbpunkt: sonst liest sich die Platte vor dem dunklen Grund als Schatten */
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
+/* Wand, Schleimhaut, Kappen und Gefaesse nehmen an der Fuellung und an den Wellen teil (Abschnitt 2b) */
+Object.keys(MAT).forEach(function (k) { if (k !== 'speiseroehre' && k !== 'zwoelffingerRohr' && k !== 'zwerchfell') welleMat(MAT[k]); });
 
 var root = new THREE.Group(); root.name = 'Magen'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
+root.visible = false;   /* erst nach dem Aufbau zeigen: three.js (r128) legt die Morph-Tabelle eines Netzes beim ersten Zeichnen an, die Morph-Ziele (Abschnitt 2b) muessen davor da sein */
 var deckel = new THREE.Group(); deckel.name = 'Deckel (vordere Haelfte)'; root.add(deckel);                 /* vordere Haelfte der Wand: gleitet bei der Innenansicht nach vorn */
 var tris = { wand: 0, innen: 0, kappen: 0, rohre: 0, zwerchfell: 0 };
 var hinten = [], vorn = [], kappen = [];   /* alle Meshes der hinteren Haelfte, des Deckels und der Kappen (fuer Beschriftung und Antippen) */
@@ -479,6 +507,269 @@ function zwerchfellGeo(zf) {
   return g;
 }
 
+/* =====================================================================
+   2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
+   Jedes Netz der Wand (Aussenflaeche, Schleimhaut, Kappen, Gefaesse) bekommt ein Morph-Ziel: die Lage seiner Punkte bei Fuellung f = 1 (der Magen dehnt sich, die Falten
+   glaetten sich). Die Abbildung eines Punkts p (nuechtern) auf f = 1 ist form.abbilden(p, 1) (Parameter in der Mittellinie, Tiefe in der Wand, Falten gestaucht) plus eine
+   Verschiebung durch die Nachbarn und das Zwerchfell (die Aussenflaeche weicht bei Fuellung aus): sie wird auf einem groben Gitter (GS) aus einem Newton-Schritt auf dem
+   Feld der Aussenflaeche (Tiefe unter der Aussenflaeche bleibt) bestimmt und dazwischen linear gemischt, so dass alle Netze (Aussenflaeche, Schnittkappen, Schleimhaut)
+   dieselbe Abbildung nutzen und aneinander haengen bleiben. Die Gefaesse folgen ueber ihre Mittellinien (Rohre mit gleicher Aufteilung). Die Muskelwellen und der Pfoertner
+   laufen im Vertex-Shader (onBeforeCompile): je Punkt sind Lage s entlang der Mittellinie (Bogenlaenge, 0 = Magengrund, 1 = Pfoertner), Gewicht w, Vektor von der Mittellinie
+   zum Punkt (nuechtern d0 und gefuellt d1) und Richtung der Mittellinie hinterlegt; die Welle schnuert die Wand um die Mittellinie ein (Gauss-Profil in s, in den
+   Uniforms uWelle), der Pfoertner schliesst den Innenraum im Kanal (uKc). Wo die Zuordnung zur Mittellinie mehrdeutig ist (Innenseite der Biegung), wird sie ueber ein
+   grobes Gitter weich gemischt (keine Spruenge, keine Risse).
+   ===================================================================== */
+var ML = null, FA = null;                                   /* Tabellen der Mittellinie (nuechtern, gefuellt) und Abbildung */
+var GS = 0.5;                                               /* Gitterweite der Verschiebung durch die Nachbarn (cm) */
+var MG = { aussen: [], innen: [], kappe: [], rohr: [] };    /* Netze je Gruppe (mit Morph-Ziel) */
+var MORPH = [];                                             /* alle Netze mit Morph-Ziel (Fuellung) */
+var WU = { uWelle: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] }, uKc: { value: 0.85 }, uPyl: { value: new THREE.Vector2(0.9, 0.95) }, uL: { value: 20 } };
+var WELLE_B = 0.055;                                        /* halbe Breite der Welle (in s, Anteil der Bogenlaenge) */
+var GLSL_KOPF = [
+  'attribute vec2 aS;', 'attribute vec3 aD0;', 'attribute vec3 aD1;', 'attribute vec3 aT;',
+  'uniform vec3 uWelle[3];', 'uniform float uKc;', 'uniform vec2 uPyl;', 'uniform float uL;',
+  'float wK(float s) { float k = 0.0; for (int i = 0; i < 3; i++) { float t = (s - uWelle[i].x) / uWelle[i].z; k += uWelle[i].y * exp(-t * t); } return min(k, 0.7) * (1.0 - smoothstep(0.93, 0.985, s)); }',
+  'float wDK(float s) { float k = 0.0; for (int i = 0; i < 3; i++) { float t = (s - uWelle[i].x) / uWelle[i].z; k += uWelle[i].y * exp(-t * t) * (-2.0 * t / uWelle[i].z); } return k * (1.0 - smoothstep(0.93, 0.985, s)); }'
+].join('\n');
+var GLSL_POS = [
+  '{', '  vec3 dd = mix(aD0, aD1, morphTargetInfluences[0]);',
+  '  float kw = wK(aS.x) * aS.y;',
+  '  float gg = 1.0 - smoothstep(0.35, 1.2, length(dd));',
+  '  float sc = (1.0 - kw) * (1.0 - uKc * smoothstep(uPyl.x, uPyl.y, aS.x) * gg * aS.y);',
+  '  transformed += dd * (sc - 1.0);', '}'
+].join('\n');
+var GLSL_NOR = [
+  '{', '  vec3 dd2 = mix(aD0, aD1, morphTargetInfluences[0]);', '  float dl = length(dd2);',
+  '  float ct = dl > 1e-4 ? abs(dot(normalize(objectNormal), dd2 / dl)) : 0.0;',
+  '  float sg = dot(objectNormal, dd2) >= 0.0 ? 1.0 : -1.0;',
+  '  objectNormal = normalize(objectNormal + aT * (wDK(aS.x) * aS.y * dl / uL * sg * ct));', '}'
+].join('\n');
+function welleMat(m) {   /* Material fuer Morph-Ziel und Wellen */
+  m.morphTargets = true; m.morphNormals = true;
+  m.onBeforeCompile = function (sh) {
+    sh.uniforms.uWelle = WU.uWelle; sh.uniforms.uKc = WU.uKc; sh.uniforms.uPyl = WU.uPyl; sh.uniforms.uL = WU.uL;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + GLSL_KOPF)
+      .replace('#include <morphnormal_vertex>', '#include <morphnormal_vertex>\n' + GLSL_NOR)
+      .replace('#include <morphtarget_vertex>', '#include <morphtarget_vertex>\n' + GLSL_POS);
+  };
+}
+
+/* Tabellen: Mittellinie nuechtern und gefuellt (gleiche Parameter), Bogenlaenge nuechtern */
+function mlBauen() {
+  var m0 = form.mittellinie(0), m1 = form.mittellinie(1), n = m0.length, i;
+  ML = { n: n, m: n - 1, P0: [], P1: [], R: [], RZ: [], SC: [0], L: 0 };
+  for (i = 0; i < n; i++) {
+    ML.P0.push(m0[i].p); ML.P1.push(m1[i].p); ML.R.push(m0[i].r); ML.RZ.push(m0[i].rz);
+    if (i) ML.SC.push(ML.SC[i - 1] + Math.sqrt(Math.pow(m0[i].p[0] - m0[i - 1].p[0], 2) + Math.pow(m0[i].p[1] - m0[i - 1].p[1], 2) + Math.pow(m0[i].p[2] - m0[i - 1].p[2], 2)));
+  }
+  ML.L = ML.SC[n - 1];
+  WU.uL.value = ML.L;
+  WU.uPyl.value.set((ML.L - 2.2) / ML.L, (ML.L - 1.2) / ML.L);   /* Pfoertnerkanal: die letzten 2,2 cm vor dem Pfoertner (Einschnuerung des Innenraums ab hier) */
+}
+function mlU(P, u, o) {   /* Punkt der Mittellinie zum Parameter u (Index mit Nachkomma) */
+  var i0 = Math.min(ML.m - 1, Math.max(0, Math.floor(u))), t = u - i0, a = P[i0], b = P[i0 + 1];
+  o[0] = a[0] + (b[0] - a[0]) * t; o[1] = a[1] + (b[1] - a[1]) * t; o[2] = a[2] + (b[2] - a[2]) * t;
+  return o;
+}
+function mlSig(u) { var i0 = Math.min(ML.m - 1, Math.max(0, Math.floor(u))), t = u - i0; return (ML.SC[i0] + (ML.SC[i0 + 1] - ML.SC[i0]) * t) / ML.L; }
+function mlUvonSig(s) {   /* Umkehrung: Parameter u zur Bogenlaenge s (0..1) */
+  var x = Math.max(0, Math.min(1, s)) * ML.L, lo = 0, hi = ML.m;
+  while (hi - lo > 1) { var mi = (lo + hi) >> 1; if (ML.SC[mi] <= x) lo = mi; else hi = mi; }
+  return lo + (x - ML.SC[lo]) / Math.max(1e-9, ML.SC[lo + 1] - ML.SC[lo]);
+}
+function mlTang(u, o) {   /* Richtung der Mittellinie (Mittel aus nuechtern und gefuellt) */
+  var i0 = Math.min(ML.m - 1, Math.max(0, Math.floor(u))), k, l = 0;
+  for (k = 0; k < 3; k++) o[k] = (ML.P0[i0 + 1][k] - ML.P0[i0][k]) + (ML.P1[i0 + 1][k] - ML.P1[i0][k]);
+  l = Math.sqrt(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]) || 1;
+  o[0] /= l; o[1] /= l; o[2] /= l;
+  return o;
+}
+/* Lage eines nuechternen Punkts zur Mittellinie: Parameter u (weiches Minimum ueber die Nachbarabschnitte). An der Innenseite der Biegung (Incisura) ist die Zuordnung
+   mehrdeutig und springt; deshalb wird sie nur an den Knoten eines groben Gitters (GW) berechnet und dazwischen linear gemischt: die Einschnuerung haengt dann stetig vom
+   Ort ab (keine Risse), an der Biegung gleitet sie weich aus. */
+var KO = { u: 0, s: 0 }, GW = 0.7, KN = new Map();
+function koord(p) {
+  var m = ML.m, P = ML.P0, R = ML.R, RZ = ML.RZ, j, b = 1e9, bj = 0, kz = KZ_, tt = TT_;
+  for (j = 0; j < m; j++) {
+    var a = P[j], c = P[j + 1], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], l2 = vx * vx + vy * vy + vz * vz;
+    var t = ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy + (p[2] - a[2]) * vz) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    var dx = p[0] - a[0] - vx * t, dy = p[1] - a[1] - vy * t, dz = p[2] - a[2] - vz * t;
+    var rt = R[j] + (R[j + 1] - R[j]) * t, rzt = RZ[j] + (RZ[j + 1] - RZ[j]) * t, at = rt / rzt, zt = dz * at;
+    kz[j] = (Math.sqrt(dx * dx + dy * dy + zt * zt) - rt) / (at > 1 ? at : 1); tt[j] = t;
+    if (kz[j] < b) { b = kz[j]; bj = j; }
+  }
+  var sw = 0, su = 0;
+  for (j = Math.max(0, bj - 3); j <= Math.min(m - 1, bj + 3); j++) { var w = Math.exp(-(kz[j] - b) * 8); sw += w; su += w * (j + tt[j]); }
+  KO.u = su / sw; KO.s = mlSig(KO.u);
+  return KO;
+}
+function wellenKnoten(i, j, k) {   /* Knoten des Gitters: Bogenlaenge s, Punkt der Mittellinie (nuechtern, gefuellt) und Richtung */
+  var key = i + 4096 * (j + 4096 * k), v = KN.get(key);
+  if (v) return v;
+  var o = koord([i * GW, 90 + j * GW, -12 + k * GW]);
+  v = { s: o.s, c0: mlU(ML.P0, o.u, [0, 0, 0]), c1: mlU(ML.P1, o.u, [0, 0, 0]), t: mlTang(o.u, [0, 0, 0]) };
+  KN.set(key, v);
+  return v;
+}
+function wellenFeld(p, o) {   /* s, c0, c1, t am Ort p (trilinear aus den Knoten) */
+  var fx = p[0] / GW, fy = (p[1] - 90) / GW, fz_ = (p[2] + 12) / GW, i = Math.floor(fx), j = Math.floor(fy), k = Math.floor(fz_), u = fx - i, v = fy - j, w = fz_ - k, c, q;
+  o.s = 0; o.c0[0] = o.c0[1] = o.c0[2] = 0; o.c1[0] = o.c1[1] = o.c1[2] = 0; o.t[0] = o.t[1] = o.t[2] = 0;
+  for (c = 0; c < 8; c++) {
+    var di = c & 1, dj = (c >> 1) & 1, dk = c >> 2, wt = (di ? u : 1 - u) * (dj ? v : 1 - v) * (dk ? w : 1 - w);
+    if (wt < 1e-9) continue;
+    var n = wellenKnoten(i + di, j + dj, k + dk);
+    o.s += wt * n.s;
+    for (q = 0; q < 3; q++) { o.c0[q] += wt * n.c0[q]; o.c1[q] += wt * n.c1[q]; o.t[q] += wt * n.t[q]; }
+  }
+  var l = Math.sqrt(o.t[0] * o.t[0] + o.t[1] * o.t[1] + o.t[2] * o.t[2]) || 1; o.t[0] /= l; o.t[1] /= l; o.t[2] /= l;
+  return o;
+}
+var KZ_ = new Float64Array(128), TT_ = new Float64Array(128);
+
+/* Abbildung auf f = 1 (siehe Kopf): Verschiebung durch die Nachbarn auf dem Gitter */
+function abbildungBauen() {
+  var a0 = form.aussen(0).sdf, a1 = form.aussen(1).sdf, cache = new Map();
+  function grad(f, p, g0, e) { return [(f(p[0] + e, p[1], p[2]) - g0) / e, (f(p[0], p[1] + e, p[2]) - g0) / e, (f(p[0], p[1], p[2] + e) - g0) / e]; }
+  var eso = form.speiseroehreAnzeige();
+  function knoten(i, j, k) {
+    var key = i + 4096 * (j + 4096 * k), v = cache.get(key);
+    if (v) return v;
+    var g = [i * GS, 90 + j * GS, -12 + k * GS], a = a0(g[0], g[1], g[2]);
+    v = [0, 0, 0];
+    if (a < 1.9 && a > -3.3) {
+      var gu = g, tg = a, gr, l, d, it;
+      if (a < -0.45) {   /* tiefer als die Muskelschichten: die Verschiebung der Wand darueber gilt auch hier (Falten flachen sich ab, sie folgen nicht der Dellung) */
+        gr = grad(a0, g, a, 0.05); l = Math.sqrt(gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2]) || 1; d = -a - 0.45;
+        gu = [g[0] + d * gr[0] / l, g[1] + d * gr[1] / l, g[2] + d * gr[2] / l]; tg = -0.45;
+      }
+      var q0 = form.abbilden(gu, 1), q = q0;
+      for (it = 0; it < 3; it++) {   /* Newton auf dem Feld der gefuellten Aussenflaeche: Tiefe tg unter der Flaeche */
+        var g1 = a1(q[0], q[1], q[2]), r = g1 - tg;
+        if (Math.abs(r) < 0.02) break;
+        gr = grad(a1, q, g1, 0.05); var gg = gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2];
+        if (gg < 1e-6) break;
+        d = r / gg; l = Math.sqrt(gg) * Math.abs(d); if (l > 0.8) d *= 0.8 / l;
+        q = [q[0] - d * gr[0], q[1] - d * gr[1], q[2] - d * gr[2]];
+      }
+      var de = 1e9, e, dd;
+      for (e = 0; e < eso.length; e++) { dd = Math.sqrt(Math.pow(eso[e][0] - gu[0], 2) + Math.pow(eso[e][1] - gu[1], 2) + Math.pow(eso[e][2] - gu[2], 2)); if (dd < de) de = dd; }
+      var w = (1 - sstep(1.2, 2.2, a)) * (1 - sstep(2.6, 3.3, -a)) * sstep(1.0, 2.4, de);   /* weit weg vom Magen und am Stumpf der Speiseroehre keine Verschiebung */
+      v = [(q[0] - q0[0]) * w, (q[1] - q0[1]) * w, (q[2] - q0[2]) * w];
+    }
+    cache.set(key, v);
+    return v;
+  }
+  function newton(f, q, tg, it, tol) {   /* Punkt q auf die Flaeche f = tg ziehen (Newton-Schritte, hoechstens 0,8 cm je Schritt) */
+    var i;
+    for (i = 0; i < it; i++) {
+      var g0 = f(q[0], q[1], q[2]), r = g0 - tg;
+      if (Math.abs(r) < tol) break;
+      var gr = grad(f, q, g0, 0.05), gg = gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2];
+      if (gg < 1e-6) break;
+      var d = r / gg, l = Math.sqrt(gg) * Math.abs(d); if (l > 0.8) d *= 0.8 / l;
+      q = [q[0] - d * gr[0], q[1] - d * gr[1], q[2] - d * gr[2]];
+    }
+    return q;
+  }
+  FA = {
+    a0: a0,
+    abb: function (p) {
+      var q0 = form.abbilden(p, 1);
+      var fx = p[0] / GS, fy = (p[1] - 90) / GS, fz_ = (p[2] + 12) / GS, i = Math.floor(fx), j = Math.floor(fy), k = Math.floor(fz_), u = fx - i, v = fy - j, w = fz_ - k, dx = 0, dy = 0, dz = 0, c;
+      for (c = 0; c < 8; c++) {
+        var di = c & 1, dj = (c >> 1) & 1, dk = c >> 2, wt = (di ? u : 1 - u) * (dj ? v : 1 - v) * (dk ? w : 1 - w);
+        if (wt < 1e-6) continue;
+        var n = knoten(i + di, j + dj, k + dk); dx += wt * n[0]; dy += wt * n[1]; dz += wt * n[2];
+      }
+      var q = [q0[0] + dx, q0[1] + dy, q0[2] + dz], a = a0(p[0], p[1], p[2]), qn, wgt;
+      /* Feinabstimmung (das Gitter gibt die Verschiebung nur grob wieder): Aussenseite und Muskelschichten halten ihre Tiefe unter der gefuellten Aussenflaeche, die
+         die Schleimhaut darunter folgt ihnen ueber die Verschiebung des Gitters */
+      if (a > -0.8 && a < 1.5) {
+        wgt = a < -0.5 ? sstep(-0.8, -0.5, a) : 1;
+        if (Math.abs(a1(q[0], q[1], q[2]) - Math.max(a, -0.45)) > 0.04) { qn = newton(a1, q, Math.max(a, -0.45), 2, 0.03); q = [q[0] + (qn[0] - q[0]) * wgt, q[1] + (qn[1] - q[1]) * wgt, q[2] + (qn[2] - q[2]) * wgt]; }
+      }
+      return q;
+    }
+  };
+  FA.abbF = function (p) {   /* wie abb, fuer Punkte ausserhalb der Wand (Gefaesse): weit weg vom Magen keine Verschiebung */
+    var q = FA.abb(p), wf = 1 - sstep(1.2, 2.6, a0(p[0], p[1], p[2]));
+    return [p[0] + (q[0] - p[0]) * wf, p[1] + (q[1] - p[1]) * wf, p[2] + (q[2] - p[2]) * wf];
+  };
+}
+
+/* Daten je Punkt (nuechtern p, gefuellt q): s und w (Welle), d0, d1 (Vektor von der Mittellinie), t (Richtung) */
+var WF = { s: 0, c0: [0, 0, 0], c1: [0, 0, 0], t: [0, 0, 0] };
+function punktDaten(p, q, fade) {
+  var o = wellenFeld(p, WF), c0 = o.c0, c1 = o.c1;
+  return { q: q, s: o.s, w: fade, d0: [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]], d1: [q[0] - c1[0], q[1] - c1[1], q[2] - c1[2]], t: [o.t[0], o.t[1], o.t[2]], n: null };
+}
+/* Netze einer Gruppe (Aussenflaeche, Schleimhaut, Kappen: Dreiecke ohne Index): Morph-Ziel, Normalen des gefuellten Netzes (gemeinsam ueber die Gruppe, damit an den Nahtstellen
+   keine Spruenge entstehen) und die Attribute der Welle; async in Scheiben, damit der Ladebalken weiterlaeuft */
+async function morphGruppe(meshes, feld, von, bis, titel) {
+  var tab = new Map(), uniq = [], mi, i, k;
+  var key = function (x, y, z) { return Math.round(x * 400) + 8192 * (Math.round((y - 90) * 400) + 8192 * Math.round((z + 12) * 400)); };
+  var vorher = performance.now(), gesamt = 0;
+  meshes.forEach(function (m) { gesamt += m.geometry.attributes.position.count; });
+  var fertig = 0;
+  for (mi = 0; mi < meshes.length; mi++) {
+    var P = meshes[mi].geometry.attributes.position.array, ids = new Int32Array(P.length / 3);
+    for (i = 0; i < ids.length; i++) {
+      var kk = key(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]), id = tab.get(kk);
+      if (id === undefined) {
+        var p = [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]];
+        id = uniq.length; uniq.push(punktDaten(p, FA.abb(p), 1)); tab.set(kk, id);
+      }
+      ids[i] = id;
+      if (performance.now() - vorher > 40) { await setLoad(von + (bis - von) * (fertig + i) / gesamt, titel); vorher = performance.now(); if (abgebaut) return; }
+    }
+    fertig += ids.length;
+    meshes[mi].userData.ids = ids;
+  }
+  /* Normalen des gefuellten Netzes: aus dem Gefaelle des Abstandsfelds an der neuen Lage (glatt; Gefaelle zeigt wie bei den nuechternen Netzen nach aussen); Netze ohne Feld
+     (Schnittkappen, eben) behalten ihre Normalen */
+  if (feld) {
+    var e = 0.04, fv = [0, 0, 0, 0];
+    for (i = 0; i < uniq.length; i++) {
+      var q = uniq[i].q, g0 = feld(q[0], q[1], q[2]), gx = feld(q[0] + e, q[1], q[2]) - g0, gy = feld(q[0], q[1] + e, q[2]) - g0, gz = feld(q[0], q[1], q[2] + e) - g0, gl = Math.sqrt(gx * gx + gy * gy + gz * gz);
+      uniq[i].n = gl > 1e-9 ? [gx / gl, gy / gl, gz / gl] : null;
+    }
+  }
+  meshes.forEach(function (m) {
+    var g = m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, ids = m.userData.ids, nv = ids.length;
+    var dP = new Float32Array(nv * 3), dN = new Float32Array(nv * 3), S = new Float32Array(nv * 2), D0 = new Float32Array(nv * 3), D1 = new Float32Array(nv * 3), T = new Float32Array(nv * 3);
+    for (i = 0; i < nv; i++) {
+      var o = uniq[ids[i]], n1x = N[i * 3], n1y = N[i * 3 + 1], n1z = N[i * 3 + 2];
+      if (o.n) { n1x = o.n[0]; n1y = o.n[1]; n1z = o.n[2]; }
+      for (k = 0; k < 3; k++) { dP[i * 3 + k] = o.q[k] - P[i * 3 + k]; D0[i * 3 + k] = o.d0[k]; D1[i * 3 + k] = o.d1[k]; T[i * 3 + k] = o.t[k]; }
+      dN[i * 3] = n1x - N[i * 3]; dN[i * 3 + 1] = n1y - N[i * 3 + 1]; dN[i * 3 + 2] = n1z - N[i * 3 + 2];
+      S[i * 2] = o.s; S[i * 2 + 1] = o.w;
+    }
+    morphSetzen(m, dP, dN, S, D0, D1, T);
+    delete m.userData.ids;
+  });
+}
+function morphSetzen(m, dP, dN, S, D0, D1, T) {
+  var g = m.geometry;
+  g.morphAttributes.position = [new THREE.BufferAttribute(dP, 3)]; g.morphAttributes.normal = [new THREE.BufferAttribute(dN, 3)]; g.morphTargetsRelative = true;
+  g.setAttribute('aS', new THREE.BufferAttribute(S, 2)); g.setAttribute('aD0', new THREE.BufferAttribute(D0, 3)); g.setAttribute('aD1', new THREE.BufferAttribute(D1, 3)); g.setAttribute('aT', new THREE.BufferAttribute(T, 3));
+  m.updateMorphTargets(); m.frustumCulled = false;
+  if (MORPH.indexOf(m) < 0) MORPH.push(m);
+}
+/* Gefaesse und Nerv: Rohre entlang der abgebildeten Mittellinien (gleiche Aufteilung wie das nuechterne Rohr): Differenz der Punkte ist das Morph-Ziel */
+function morphRohr(m, geo1) {
+  var g = m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, P1 = geo1.attributes.position.array, N1 = geo1.attributes.normal.array, nv = P.length / 3, i, k;
+  var dP = new Float32Array(nv * 3), dN = new Float32Array(nv * 3), S = new Float32Array(nv * 2), D0 = new Float32Array(nv * 3), D1 = new Float32Array(nv * 3), T = new Float32Array(nv * 3);
+  for (i = 0; i < nv; i++) {
+    var p = [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]], q = [P1[i * 3], P1[i * 3 + 1], P1[i * 3 + 2]], a = FA.a0(p[0], p[1], p[2]);
+    var o = punktDaten(p, q, 1 - sstep(1.2, 2.6, a));   /* weit weg von der Wand (Pfortader) keine Einschnuerung */
+    for (k = 0; k < 3; k++) { dP[i * 3 + k] = q[k] - p[k]; dN[i * 3 + k] = N1[i * 3 + k] - N[i * 3 + k]; D0[i * 3 + k] = o.d0[k]; D1[i * 3 + k] = o.d1[k]; T[i * 3 + k] = o.t[k]; }
+    S[i * 2] = o.s; S[i * 2 + 1] = o.w;
+  }
+  morphSetzen(m, dP, dN, S, D0, D1, T);
+}
+/* Fuellung setzen (0 = nuechtern, 1 = nach dem Essen) */
+function fuellungSetzen(f) { for (var i = 0; i < MORPH.length; i++) MORPH[i].morphTargetInfluences[0] = f; }
+
 var geoDaten = null;   /* Kennpunkte fuer die Beschriftung (Koerper-Koordinaten), nach dem Aufbau */
 /* Aufbau: Formen laden -> Aussenwand -> Innenraum -> Kappen -> Rohre -> Zwerchfell (asynchron mit Ladebalken; nach jedem await prueft abgebaut) */
 async function bauen() {
@@ -486,6 +777,7 @@ async function bauen() {
   lform = await Kern.formLaden('lunge'); if (abgebaut) return;
   await Kern.formLaden('leber'); if (abgebaut) return;   /* Pfortader und Leberarterie fuer die Gefaesse (die Form der Verdauung greift beim Auswerten darauf zu) */
   form = await Kern.formLaden('verdauung'); if (abgebaut) return;
+  mlBauen(); abbildungBauen();
   await setLoad(0.03, 'Magenwand'); if (abgebaut) return;
   var bogen = bogenFunktion(), L = bogen.L, E = form.EINGANG.p, P = form.PFOERTNER.p, kp = form.kennpunkte(0), scAng = bogen(kp.ANGULUS.p[0], kp.ANGULUS.p[1], kp.ANGULUS.p[2]);
   var duo = form.kurve(form.BAHN.zwoelffingerdarm.pts, 12), td = [duo[1][0] - duo[0][0], duo[1][1] - duo[0][1], duo[1][2] - duo[0][2]], tl = Math.sqrt(td[0] * td[0] + td[1] * td[1] + td[2] * td[2]);
@@ -510,7 +802,7 @@ async function bauen() {
     Object.keys(z).forEach(function (sid) {
       if (!z[sid]) return;
       var d = h[0] === 'deckel';
-      addMesh(sid, z[sid], MAT[sid + (d ? 'D' : '')], STRUCT[sid].de + (d ? ' (vorn)' : ''), 3, h[0]); tris.wand += anz(z[sid]);
+      MG.aussen.push(addMesh(sid, z[sid], MAT[sid + (d ? 'D' : '')], STRUCT[sid].de + (d ? ' (vorn)' : ''), 3, h[0])); tris.wand += anz(z[sid]);
     });
   });
   await setLoad(0.24, 'Schleimhaut mit Falten'); if (abgebaut) return;
@@ -524,14 +816,14 @@ async function bauen() {
     Object.keys(z).forEach(function (zid) {
       if (!z[zid]) return;
       var d = h[0] === 'deckel', e = INNEN[zid];
-      addMesh(e[0], z[zid], MAT[e[1] + (d ? 'D' : '')], STRUCT[e[0]].de + ' (innen' + (d ? ', vorn' : '') + ')', 2, h[0]); tris.innen += anz(z[zid]);
+      MG.innen.push(addMesh(e[0], z[zid], MAT[e[1] + (d ? 'D' : '')], STRUCT[e[0]].de + ' (innen' + (d ? ', vorn' : '') + ')', 2, h[0])); tris.innen += anz(z[zid]);
     });
   });
   await setLoad(0.66, 'Schnittflächen'); if (abgebaut) return;
   var kg = kappenGeo(), KS = [['schleimhaut', 'schleimhaut'], ['muskulatur', 'kSchraeg'], ['muskulatur', 'kRing'], ['muskulatur', 'kLaengs'], ['pfoertner', 'kPfoertner'], ['mageneingang', 'kEingang']];
   kg.forEach(function (g, k) {
     if (!g) return;
-    addMesh(KS[k][0], g, MAT[KS[k][1]], STRUCT[KS[k][0]].de + ' (Schnittfläche)', 2, 'kappe'); tris.kappen += anz(g);
+    MG.kappe.push(addMesh(KS[k][0], g, MAT[KS[k][1]], STRUCT[KS[k][0]].de + ' (Schnittfläche)', 2, 'kappe')); tris.kappen += anz(g);
   });
   await setLoad(0.72, 'Speiseröhre und Zwölffingerdarm'); if (abgebaut) return;
   /* Speiseroehre: von 2,5 cm ueber der Luecke im Zwerchfell bis 1,5 cm vor dem Ende des Stumpfs in der Wand (ueberlappt dessen oberes Ende); oben offen */
@@ -545,7 +837,7 @@ async function bauen() {
   var dg = rohre([{ pts: dp, r0: 1.03, r1: 1.03, seiten: 24, segmente: 48, offen: true }]);
   addMesh('zwoelffinger', dg, MAT.zwoelffingerRohr, STRUCT.zwoelffinger.de + ' (Rohr)', 3); tris.rohre += anz(dg);
   await setLoad(0.78, 'Gefäße und Nerv'); if (abgebaut) return;
-  var G = form.gefaesse(0), ln = function (g) { return { pts: g.pts, r0: g.r0, r1: g.r1 }; };
+  var G = form.gefaesse(0), ln = function (g) { return { pts: g.pts, r0: g.r0, r1: g.r1 }; }, rohrPaare = [];
   /* Was an der vorderen Wand liegt (Aeste der Gefaesse und der vordere Vagusstrang unterhalb der Hoehe VORN_Y), gehoert zum Deckel und blendet mit ihm aus: die Linien werden an der
      Schnittflaeche geteilt (die Teile teilen sich den Grenzpunkt, es bleibt keine Luecke); die Pfortader und alles oberhalb bleiben stehen */
   var istVorn = function (p) { return cut(p[0], p[1], p[2]) > 0 && p[1] < VORN_Y; };
@@ -566,15 +858,24 @@ async function bauen() {
   [['arterien', G.magenarterien, true], ['venen', G.magenvenen, true], ['pfortader', G.pfortader, false], ['vagus', G.vagus, true]].forEach(function (a) {
     var hin = [], vor = [];
     a[1].forEach(function (l) { if (a[2]) { var t = teilen(l); hin = hin.concat(t.hin); vor = vor.concat(t.vor); } else hin.push(ln(l)); });
-    if (hin.length) { var geo = rohre(hin); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo); }
-    if (vor.length) { var gv = rohre(vor); addMesh(a[0], gv, MAT[a[0] + 'D'], STRUCT[a[0]].de + ' (vorn)', 4, 'deckel'); tris.rohre += anz(gv); }
+    if (hin.length) { var geo = rohre(hin), mh = addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo); rohrPaare.push({ m: mh, lin: hin }); }
+    if (vor.length) { var gv = rohre(vor), mv = addMesh(a[0], gv, MAT[a[0] + 'D'], STRUCT[a[0]].de + ' (vorn)', 4, 'deckel'); tris.rohre += anz(gv); rohrPaare.push({ m: mv, lin: vor }); }
   });
   await setLoad(0.84, 'Zwerchfell'); if (abgebaut) return;
   var zf = form.zwerchfell(), zg = zwerchfellGeo(zf);
   addMesh('zwerchfell', zg, MAT.zwerchfell, STRUCT.zwerchfell.de, 5); tris.zwerchfell = anz(zg);
-  geoDaten = { E: E, P: P, eso: ep, duo: dp, G: G, vorn: istVorn };
+  geoDaten = { E: E, P: P, eso: ep, duo: dp, G: G, G1: form.gefaesse(1), vorn: istVorn };
+  /* Fuellung: Morph-Ziele aller Netze der Wand und der Gefaesse (Abschnitt 2b) */
+  await setLoad(0.86, 'Magen dehnt sich'); if (abgebaut) return;
+  await morphGruppe(MG.aussen, form.aussen(1).sdf, 0.86, 0.89, 'Magen dehnt sich'); if (abgebaut) return;
+  await morphGruppe(MG.innen, form.lumen(1).sdf, 0.89, 0.93, 'Falten glätten sich'); if (abgebaut) return;
+  await morphGruppe(MG.kappe, null, 0.93, 0.95, 'Schnittflächen'); if (abgebaut) return;
+  rohrPaare.forEach(function (rp) {
+    var lin1 = rp.lin.map(function (l) { return { pts: l.pts.map(FA.abbF), r0: l.r0, r1: l.r1 }; });
+    var g1 = rohre(lin1); morphRohr(rp.m, g1); g1.dispose();
+  });
   await setLoad(0.97, 'Beschriftung'); if (abgebaut) return;
-  ankerBerechnen();
+  ankerBeide();
 }
 
 /* =====================================================================
@@ -588,7 +889,7 @@ function sichtbar(o) { while (o) { if (!o.visible) return false; o = o.parent; }
 /* Durchscheinende Huelle, die beim Antippen und in der Sichtpruefung wie ein undurchsichtiges Netz zaehlt: das Zwerchfell zaehlt nicht, die Wand bei Durchsicht auch nicht */
 function weichMat(o) { return o.material.transparent && !o.material.userData.dicht; }
 function applyVisibility() {
-  root.traverse(function (o) { if (o.isMesh) o.visible = !!enabled[o.userData.sid] && (!o.userData.kappe || openK > 0.02); });
+  root.traverse(function (o) { if (o.isMesh && !o.userData.teilchen) o.visible = !!enabled[o.userData.sid] && (!o.userData.kappe || openK > 0.02); });   /* Teilchen stellen sich selbst (Stoffe-Schalter) */
   lv++;
 }
 /* Glas (Durchsicht) der Wand und Ausblenden des Deckels; Material nur neu uebersetzen, wenn sich transparent oder side aendert */
@@ -804,8 +1105,22 @@ canvas.addEventListener('click', canvasKlick);
 /* Kandidaten fuer den Ankerpunkt je Ausschnitt und Struktur (Raum der Szene); sichtPruefen waehlt in der ruhenden Ansicht den ersten sichtbaren.
    Bei den Bereichen der Wand: Punkt auf der Oberflaeche an der Stelle, an der die Gerade durch den Koerper-Punkt q in Blickrichtung des Ausschnitts auf das Netz trifft;
    sonst Punkte auf den Mittellinien. */
-var KAND = [{}, {}, {}, {}], rayA = new THREE.Raycaster();
-function ankerBerechnen() {
+var KAND = [{}, {}, {}, {}], KAND0 = null, KAND1 = null, rayA = new THREE.Raycaster();
+/* Ankerpunkte fuer die Fuellung f (0 nuechtern, 1 nach dem Essen; die Netze stehen dabei auf f): ankerBerechnen fuellt KAND, ankerBeide merkt sich beide Zustaende */
+function ankerBeide() {
+  [0, 1].forEach(function (f) { KAND = [{}, {}, {}, {}]; fuellungSetzen(f); ankerBerechnen(f); if (f) KAND1 = KAND; else KAND0 = KAND; });
+  fuellungSetzen(fe);
+}
+/* Kandidaten fuer die Ankerpunkte der Struktur id im Ausschnitt i bei der aktuellen Fuellung: zwischen den beiden Zustaenden gemischt (Punkt fuer Punkt, wenn beide gleich viele haben) */
+function kand(i, id) {
+  if (!KAND0) return [];   /* vor dem Ende des Aufbaus */
+  var a = KAND0[i][id] || [], b = KAND1[i][id] || [];
+  if (fe <= 0.001) return a;
+  if (fe >= 0.999) return b;
+  if (a.length !== b.length) return fe < 0.5 ? a : b;
+  return a.map(function (p, k) { return p.clone().lerp(b[k], fe); });
+}
+function ankerBerechnen(fuell) {
   root.updateMatrixWorld(true);
   var D = geoDaten, P = function (a) { return K3(a[0], a[1], a[2]); };
   var liste = function (arr) { return arr.filter(Boolean).map(P); };
@@ -822,7 +1137,7 @@ function ankerBerechnen() {
   };
   var vonSid = function (sid, art) { return STRUCT[sid].meshes.filter(function (m) { return art === 'hinten' ? hinten.indexOf(m) >= 0 : art === 'kappe' ? m.userData.kappe : !m.userData.kappe; }); };
   var bogenPunkt = function (poly, f) { return poly[Math.min(poly.length - 1, Math.round(f * (poly.length - 1)))]; };
-  var G = D.G, zw = function (x, z) { return [x, lform.kuppel(x, z), z]; };
+  var G = fuell ? D.G1 : D.G, zw = function (x, z) { return [x, lform.kuppel(x, z), z]; };
   var eso = D.eso;
   var linie = function (l, f) { return bogenPunkt(l.pts, f); };
   var seite = function (p, dz) { return [p[0], p[1], p[2] + dz]; };
@@ -865,10 +1180,11 @@ function ankerBerechnen() {
   var punktAus = function (meshes, zielP) {   /* Eckpunkt der Netze, der dem Zielpunkt (Koerper) am naechsten liegt */
     var b = null, bd = 1e30;
     meshes.forEach(function (m) {
-      var p = m.geometry.attributes.position.array;
+      var p = m.geometry.attributes.position.array, mp = fuell && m.geometry.morphAttributes.position ? m.geometry.morphAttributes.position[0].array : null;
       for (var k = 0; k < p.length; k += 3) {
-        var d = Math.pow(p[k] - zielP[0], 2) + Math.pow(p[k + 1] - zielP[1], 2) + Math.pow(p[k + 2] - zielP[2], 2);
-        if (d < bd) { bd = d; b = [p[k], p[k + 1], p[k + 2]]; }
+        var px = p[k] + (mp ? mp[k] : 0), py = p[k + 1] + (mp ? mp[k + 1] : 0), pz = p[k + 2] + (mp ? mp[k + 2] : 0);
+        var d = Math.pow(px - zielP[0], 2) + Math.pow(py - zielP[1], 2) + Math.pow(pz - zielP[2], 2);
+        if (d < bd) { bd = d; b = [px, py, pz]; }
       }
     });
     return b;
@@ -905,9 +1221,9 @@ function sichtPruefen(now, w, h) {
   camera.updateMatrixWorld(); root.updateMatrixWorld(true);
   beschriftet().forEach(function (id) {
     if (!enabled[id]) return;
-    var c = KAND[aktiv][id] || [], i;
+    var c = kand(aktiv, id), i;
     VIS[id] = null;
-    for (i = 0; i < c.length; i++) if (frei(id, c[i])) { VIS[id] = c[i]; break; }
+    for (i = 0; i < c.length; i++) if (frei(id, c[i])) { VIS[id] = i; break; }   /* Nummer des Kandidaten: der Punkt folgt der Fuellung */
   });
   sichtVer++;
 }
@@ -958,7 +1274,7 @@ function layoutLabels(w, h) {
     beschriftet().forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
-      var an = id in VIS ? VIS[id] : (KAND[aktiv][id] || [])[0];
+      var kc = kand(aktiv, id), an = kc[id in VIS ? VIS[id] : 0];   /* VIS: Nummer des gewaehlten Kandidaten (null = verdeckt) */
       if (!an) return;
       pv.copy(an).project(camera);   /* ANKER liegen schon im Raum der Szene (Koerper-Koordinaten minus M) */
       if (pv.z > 1) return;
@@ -1002,18 +1318,592 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
+   6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau) und Magensaft (tuerkis) als Teilchen, dazu der Mahlzeit-Schalter.
+   Symbolisch, nicht massstaeblich, die Zeit ist stark gerafft. Alles ist eine reine Funktion von clock (Sekunden bei "normal") und dem Index des Teilchens: kein Zufall,
+   die Zahl der Teilchen steht beim Aufbau fest. Je Art ein InstancedMesh. Die Teilchen liegen in Schlauchkoordinaten des Innenraums: Stelle s entlang der Mittellinie,
+   Winkel und Abstand; der Abstand ist ein Bruchteil der Reichweite bis zur Schleimhaut (mit Rand), die beim Aufbau in acht Richtungen aus dem Feld des Innenraums gemessen
+   wird (nuechtern und gefuellt, dazwischen linear): so bleiben die Teilchen im Innenraum, auch waehrend der Fuellung und der Wellen (dort schrumpft der Abstand mit).
+   Nach dem Essen (Zeit te seit dem Wechsel, Zyklus P = 126 s, damit sich die Wellen im Takt wiederholen): jedes Teilchen schluckt sich durch die Speiseroehre, kommt im Magen
+   an, sammelt sich im Magenkoerper, wird von den Wellen zum Antrum geschoben (kleine Vor- und Rueckbewegung beim Durchlaufen der Welle) und verlaesst den Magen mit einer
+   Welle durch den Pfoertner (bei offenem Pfoertner) in den Zwoelffingerdarm, wo es ein Stueck weiterlaeuft. Aufenthaltszeit: Wasser kurz (laeuft an der kleinen Kurvatur
+   entlang), Kohlenhydrate, dann Eiweiss (wird kleiner: Spaltung), Fett am laengsten (schwimmt oben). Magensaft tritt aus der Wand von Magengrund und Magenkoerper nach
+   innen. Nuechtern: wenig Magensaft, keine Wellen, der Pfoertner ist zu. Die Welle: Gauss-Profil, laeuft in 3,2 s von der Mitte des Magenkoerpers zum Pfoertner, alle 4,5 s
+   eine; wenn sie ankommt, oeffnet sich der Pfoertner kurz. Pause haelt alles an; die Fuellung des Magens laeuft in Echtzeit (der Schalter soll auch in der Pause wirken).
+   ===================================================================== */
+var playing = true, speed = 1, clock = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* tM: Uhrzeit des Wechsels zu "nach dem Essen"; fzR: Fuellung roh 0..1, fe: weich */
+var SZ_ = { FUELL: 1.8, P: 126, TW: 4.5, TA0: 5.0, TT: 3.2, SCHLUCK: 3.6, EIN: 2.2, WS0: 0.34, WE: 0.96, DUO: 6.5, DUOV: 1.5, KC: 0.85 };
+var R2A = 0.7548776662466927, R2B = 0.5698402909980532;   /* Plastikzahl-Folge (R2): gleichmaessig verteilte Paare aus dem Index */
+function bruch(v) { return v - Math.floor(v); }
+var KINDS = [
+  { id: 'kh', name: 'Kohlenhydrate', col: 0xE6C94A, em: 0x7A5F10, n: 60, res: 32, rad: 0.13, a: [0.30, 0.50], b: [0.80, 0.92], btn: 'bKh' },
+  { id: 'eiweiss', name: 'Eiweiß', col: 0xF09A3E, em: 0x7A3A08, n: 54, res: 58, rad: 0.17, a: [0.28, 0.48], b: [0.74, 0.90], btn: 'bEiw' },
+  { id: 'fett', name: 'Fett', col: 0xF2F2EE, em: 0x66665F, n: 36, res: 82, rad: 0.15, a: [0.13, 0.27], b: [0.78, 0.92], btn: 'bFett' },
+  { id: 'wasser', name: 'Wasser', col: 0x8FD0F0, em: 0x1F5A86, n: 48, res: 17, rad: 0.11, a: [0.17, 0.19], b: [0.90, 0.96], btn: 'bWasser' },
+  { id: 'saft', name: 'Magensaft', col: 0x3FC9B8, em: 0x0E6A5E, n: 50, rad: 0.10 }
+];
+var KI = { kh: 0, eiweiss: 1, fett: 2, wasser: 3, saft: 4 };
+var SAFT_N0 = 12;                       /* soviele Tropfen Magensaft gibt es auch nuechtern */
+var kindOn = [true, true, true, true, true];
+var SL = null, WL = [], WOFF = 0, ST = null, ENT = null, DUOP = null, wellenKey = '';
+var SQ = { x: 0, y: 0, z: 0, s: 0 }, STM = new THREE.Matrix4(), LB = { st: 0, sig: 0, u: 0, tb: 0, ta: 0, x: 0, y: 0, z: 0, r: 0 };
+
+/* ---- Schlauchtabellen: Mittellinie, Rahmen und Reichweite bis zur Schleimhaut in acht Richtungen (nuechtern, gefuellt) ---- */
+function reichweite(f, c, d) {
+  if (f(c[0], c[1], c[2]) >= 0) return 0;
+  var t = 0, st = 0.12, k;
+  while (t < 7) { t += st; if (f(c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t) >= 0) break; }
+  if (t >= 7) return 7;
+  var lo = t - st, hi = t;
+  for (k = 0; k < 6; k++) { var mi = (lo + hi) / 2; if (f(c[0] + d[0] * mi, c[1] + d[1] * mi, c[2] + d[2] * mi) >= 0) hi = mi; else lo = mi; }
+  return lo;
+}
+function schlauchBauen() {
+  var NK = 40, lu = [form.lumen(0).sdf, form.lumen(1).sdf], fi, i, j, c = [0, 0, 0], a = [0, 0, 0], b = [0, 0, 0];
+  SL = { NK: NK, C: [], EN: [], EZ: [], EX: [], WC: [], WS: [] };
+  for (fi = 0; fi < 2; fi++) {
+    var P = fi ? ML.P1 : ML.P0, C = new Float32Array(NK * 3), EN = new Float32Array(NK * 3), EZ = new Float32Array(NK * 3), EX = new Float32Array(NK * 8), WC = new Float32Array(NK), WS = new Float32Array(NK), lastC = 1, lastS = 0;
+    for (i = 0; i < NK; i++) {
+      var u = mlUvonSig(i / (NK - 1)), i0 = Math.min(ML.m - 1, Math.floor(u)), k;
+      mlU(P, u, c);
+      var T = [P[i0 + 1][0] - P[i0][0], P[i0 + 1][1] - P[i0][1], P[i0 + 1][2] - P[i0][2]], tl = Math.sqrt(T[0] * T[0] + T[1] * T[1] + T[2] * T[2]) || 1;
+      T = [T[0] / tl, T[1] / tl, T[2] / tl];
+      var ez = [-T[2] * T[0], -T[2] * T[1], 1 - T[2] * T[2]], el = Math.sqrt(ez[0] * ez[0] + ez[1] * ez[1] + ez[2] * ez[2]);
+      if (el < 1e-3) { ez = [1, 0, 0]; el = 1; }
+      ez = [ez[0] / el, ez[1] / el, ez[2] / el];
+      var en = [T[1] * ez[2] - T[2] * ez[1], T[2] * ez[0] - T[0] * ez[2], T[0] * ez[1] - T[1] * ez[0]];
+      for (k = 0; k < 3; k++) { C[i * 3 + k] = c[k]; EN[i * 3 + k] = en[k]; EZ[i * 3 + k] = ez[k]; }
+      for (j = 0; j < 8; j++) {
+        var ca = Math.cos(j * PI / 4), sa = Math.sin(j * PI / 4), d = [ca * en[0] + sa * ez[0], ca * en[1] + sa * ez[1], ca * en[2] + sa * ez[2]];
+        EX[i * 8 + j] = reichweite(lu[fi], c, d);
+      }
+      /* Richtung zur Innenseite der Biegung (kleine Kurvatur): Mitte der Sehne im Fenster von 7 Abschnitten, senkrecht zur Mittellinie */
+      mlU(P, Math.max(0, u - 7), a); mlU(P, Math.min(ML.m, u + 7), b);
+      var cv = [(a[0] + b[0]) / 2 - c[0], (a[1] + b[1]) / 2 - c[1], (a[2] + b[2]) / 2 - c[2]], dt = cv[0] * T[0] + cv[1] * T[1] + cv[2] * T[2];
+      cv = [cv[0] - dt * T[0], cv[1] - dt * T[1], cv[2] - dt * T[2]];
+      if (Math.sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2]) > 0.25) {
+        var gx = cv[0] * en[0] + cv[1] * en[1] + cv[2] * en[2], gz = cv[0] * ez[0] + cv[1] * ez[1] + cv[2] * ez[2], gl = Math.sqrt(gx * gx + gz * gz) || 1;
+        lastC = gx / gl; lastS = gz / gl;
+      }
+      WC[i] = lastC; WS[i] = lastS;
+    }
+    SL.C.push(C); SL.EN.push(EN); SL.EZ.push(EZ); SL.EX.push(EX); SL.WC.push(WC); SL.WS.push(WS);
+  }
+}
+/* Wellenstaerke (Einschnuerung) am Ort s */
+function wellenK(s) {
+  var k = 0, i;
+  for (i = 0; i < WL.length; i++) { var t = (s - WL[i].s) / WELLE_B; k += WL[i].a * Math.exp(-t * t); }
+  return Math.min(k, 0.7) * (1 - sstep(0.93, 0.985, s));   /* wie im Shader: am Ende des Antrums laeuft die Welle aus (der Pfoertner schliesst sich selbst) */
+}
+/* Punkt in Schlauchkoordinaten (s, Winkel phi, Abstand rho 0..1 der nutzbaren Reichweite, Radius des Teilchens) in SQ; kw = Einschnuerung durch die Welle.
+   Der nutzbare Abstand haelt Rand zur Schleimhaut (Netz und Feld weichen bis ca. 0,1 cm voneinander ab; Falten nuechtern bis 0,3 cm hoch) */
+function schlauchPunkt(sig, phi, rho, rad, kw, out) {
+  var NK = SL.NK, x = Math.max(0, Math.min(1, sig)) * (NK - 1), i0 = Math.min(NK - 2, Math.floor(x)), t = x - i0, f = fe, k, i1 = i0 + 1;
+  var jj = (phi / (PI / 4)) % 8; if (jj < 0) jj += 8;
+  var j0 = Math.floor(jj), tj = jj - j0, j1 = (j0 + 1) % 8, ex = 0, cx = 0, cy = 0, cz = 0, nx = 0, ny = 0, nz = 0, zx = 0, zy = 0, zz = 0, fi;
+  for (fi = 0; fi < 2; fi++) {
+    var w = fi ? f : 1 - f; if (w <= 0) continue;
+    var E = SL.EX[fi], C = SL.C[fi], EN = SL.EN[fi], EZ = SL.EZ[fi];
+    ex += w * ((E[i0 * 8 + j0] + (E[i0 * 8 + j1] - E[i0 * 8 + j0]) * tj) * (1 - t) + (E[i1 * 8 + j0] + (E[i1 * 8 + j1] - E[i1 * 8 + j0]) * tj) * t);
+    cx += w * (C[i0 * 3] + (C[i1 * 3] - C[i0 * 3]) * t); cy += w * (C[i0 * 3 + 1] + (C[i1 * 3 + 1] - C[i0 * 3 + 1]) * t); cz += w * (C[i0 * 3 + 2] + (C[i1 * 3 + 2] - C[i0 * 3 + 2]) * t);
+    nx += w * (EN[i0 * 3] + (EN[i1 * 3] - EN[i0 * 3]) * t); ny += w * (EN[i0 * 3 + 1] + (EN[i1 * 3 + 1] - EN[i0 * 3 + 1]) * t); nz += w * (EN[i0 * 3 + 2] + (EN[i1 * 3 + 2] - EN[i0 * 3 + 2]) * t);
+    zx += w * (EZ[i0 * 3] + (EZ[i1 * 3] - EZ[i0 * 3]) * t); zy += w * (EZ[i0 * 3 + 1] + (EZ[i1 * 3 + 1] - EZ[i0 * 3 + 1]) * t); zz += w * (EZ[i0 * 3 + 2] + (EZ[i1 * 3 + 2] - EZ[i0 * 3 + 2]) * t);
+  }
+  var use = Math.max(0, ex * 0.75 - 0.08 - rad - 0.12 * (1 - f)), off = rho * use * (1 - kw) * (1 - WU.uKc.value * sstep(WU.uPyl.value.x, WU.uPyl.value.y, sig)), ca = Math.cos(phi) * off, sa = Math.sin(phi) * off;
+  out.x = cx + nx * ca + zx * sa; out.y = cy + ny * ca + zy * sa; out.z = cz + nz * ca + zz * sa;
+  return out;
+}
+function innenWinkel(sig) {   /* Richtung zur kleinen Kurvatur (Winkel in der Querschnittsebene) bei s */
+  var NK = SL.NK, x = Math.max(0, Math.min(1, sig)) * (NK - 1), i0 = Math.min(NK - 2, Math.floor(x)), t = x - i0, c = 0, s = 0, fi;
+  for (fi = 0; fi < 2; fi++) {
+    var w = fi ? fe : 1 - fe; if (w <= 0) continue;
+    c += w * (SL.WC[fi][i0] + (SL.WC[fi][i0 + 1] - SL.WC[fi][i0]) * t); s += w * (SL.WS[fi][i0] + (SL.WS[fi][i0 + 1] - SL.WS[fi][i0]) * t);
+  }
+  return Math.atan2(s, c);
+}
+/* Linienzug mit Bogenlaenge: Punkt bei Bogenlaenge s (Entfernung in cm), Richtung in tg */
+function linieBauen(pts) {
+  var cum = [0], i;
+  for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.sqrt(Math.pow(pts[i][0] - pts[i - 1][0], 2) + Math.pow(pts[i][1] - pts[i - 1][1], 2) + Math.pow(pts[i][2] - pts[i - 1][2], 2)));
+  return { p: pts, cum: cum, L: cum[cum.length - 1] };
+}
+var TG = [0, 0, 1];
+function linieBei(ln, s, o) {
+  var n = ln.p.length, lo = 0, hi = n - 1;
+  s = Math.max(0, Math.min(ln.L, s));
+  while (hi - lo > 1) { var mi = (lo + hi) >> 1; if (ln.cum[mi] <= s) lo = mi; else hi = mi; }
+  var d = ln.cum[hi] - ln.cum[lo], t = d > 1e-9 ? (s - ln.cum[lo]) / d : 0, a = ln.p[lo], b = ln.p[hi], k, l = 0;
+  for (k = 0; k < 3; k++) { o[k] = a[k] + (b[k] - a[k]) * t; TG[k] = b[k] - a[k]; l += TG[k] * TG[k]; }
+  l = Math.sqrt(l) || 1; TG[0] /= l; TG[1] /= l; TG[2] /= l;
+  return o;
+}
+function querVersatz(ang, r, out) {   /* Versatz r senkrecht zur Richtung TG unter dem Winkel ang */
+  var ax = Math.abs(TG[1]) < 0.9 ? 0 : 1, ay = Math.abs(TG[1]) < 0.9 ? 1 : 0;
+  var n1x = -TG[2] * ay, n1y = TG[2] * ax, n1z = TG[0] * ay - TG[1] * ax, nl = Math.sqrt(n1x * n1x + n1y * n1y + n1z * n1z) || 1;
+  n1x /= nl; n1y /= nl; n1z /= nl;
+  var n2x = TG[1] * n1z - TG[2] * n1y, n2y = TG[2] * n1x - TG[0] * n1z, n2z = TG[0] * n1y - TG[1] * n1x, ca = Math.cos(ang) * r, sa = Math.sin(ang) * r;
+  out[0] += n1x * ca + n2x * sa; out[1] += n1y * ca + n2y * sa; out[2] += n1z * ca + n2z * sa;
+}
+/* Wege der Teilchen ausserhalb des Magens: Speiseroehre bis in den Magen (Kanal der Schleimhaut), Zwoelffingerdarm */
+function wegeBauen() {
+  var ea = form.speiseroehreAnzeige(), eso = form.kurve(form.BAHN.speiseroehre.pts, 12), ende = eso[eso.length - 1], vor = eso[eso.length - 3], c1 = ML.P0[9];
+  var rc = [ende[0] - vor[0], ende[1] - vor[1], ende[2] - vor[2]], rl = Math.sqrt(rc[0] * rc[0] + rc[1] * rc[1] + rc[2] * rc[2]) || 1;
+  var uu = [c1[0] - ende[0], c1[1] - ende[1], c1[2] - ende[2]], ul = Math.sqrt(uu[0] * uu[0] + uu[1] * uu[1] + uu[2] * uu[2]) || 1;
+  var dv = [0.3 * rc[0] / rl + uu[0] / ul, 0.3 * rc[1] / rl + uu[1] / ul, 0.3 * rc[2] / rl + uu[2] / ul], dl = Math.sqrt(dv[0] * dv[0] + dv[1] * dv[1] + dv[2] * dv[2]) || 1;
+  var innen = [ende[0] + dv[0] / dl * 1.5, ende[1] + dv[1] / dl * 1.5, ende[2] + dv[2] / dl * 1.5];   /* Ende des Kanals im Magen (Tiefe 1,5 cm wie ESO_TIEF der Form) */
+  ENT = linieBauen(ea.concat([ende, innen]));
+  var duo = form.kurve(form.BAHN.zwoelffingerdarm.pts, 12);
+  DUOP = linieBauen(duo.slice(0, 12 * 3 + 7));
+}
+/* Teilchen: feste Eigenschaften je Index */
+function teilchenDaten() {
+  KINDS.forEach(function (K, ki) {
+    var n = K.n, i;
+    K.e = []; K.x = []; K.sa = []; K.sb = []; K.phi0 = []; K.rho = []; K.pz = []; K.ta = [];
+    for (i = 0; i < n; i++) {
+      var q = bruch(0.5 + i * R2A + ki * 0.37), ph = bruch(0.1 + i * R2B + ki * 0.21);
+      if (ki === KI.saft) { K.pz.push(ph); K.e.push(0); K.x.push(0); K.sa.push(0.06 + 0.5 * bruch(0.3 + i * R2A)); K.sb.push(7 + 5 * bruch(0.7 + i * 0.6180339887)); K.phi0.push(2 * PI * bruch(0.2 + i * R2B)); K.rho.push(0); K.ta.push(0); continue; }
+      var e = SZ_.SCHLUCK + 0.4 + 24 * q, ziel = e + K.res * (0.92 + 0.16 * bruch(0.3 + i * R2B)), nw = Math.ceil((ziel - SZ_.TA0) / SZ_.TW), x = SZ_.TA0 + nw * SZ_.TW;
+      K.e.push(e); K.x.push(x); K.pz.push(ph);
+      K.sa.push(K.a[0] + (K.a[1] - K.a[0]) * bruch(0.3 + i * 0.6180339887)); K.sb.push(K.b[0] + (K.b[1] - K.b[0]) * bruch(0.7 + i * R2A));
+      K.phi0.push(2 * PI * bruch(0.2 + i * R2B)); K.rho.push(ki === KI.wasser ? 0.55 + 0.35 * bruch(0.4 + i * R2A) : Math.sqrt(bruch(0.1 + i * 0.3247)));
+      K.ta.push(Math.max(0, Math.min(36, SZ_.P - (x - e) - SZ_.DUO - 3)));   /* Schema: so lange laeuft das Teilchen hinter dem Magen, bevor der Zyklus von vorn beginnt */
+    }
+    K.st = new Int8Array(n); K.sg = new Float32Array(n); K.tb = new Float32Array(n); K.tA = new Float32Array(n); K.vis = new Float32Array(n);
+  });
+}
+/* Zustand eines Teilchens nach dem Essen zur Zyklusphase ph (0 .. P); schreibt die Stufe in LB.st (0 aus, 1 Speiseroehre, 2 Magen, 3 Pfoertner, 4 Zwoelffingerdarm,
+   5 weiter im Darm und 6 vor dem Schlucken (die beiden nur im Schema)), s, Lage und Groesse */
+var PUSH = 0.045;
+function lauf(ki, i, ph, o) {
+  var K = KINDS[ki], e = K.e[i], x = K.x[i], tl = ph - e, tex = x - e - 0.9, rad = K.rad, f = fe;
+  o.st = 0; o.r = 0; o.sig = 0; o.tb = e - ph; o.ta = ph - x - 0.5;
+  if (ph < e - SZ_.SCHLUCK) { if (o.tb < 8) o.st = 6; return; }
+  if (ph < e) {   /* Speiseroehre: Bogenlaenge in cm, kleiner Abstand von der Achse (Rohr 0,8 cm) */
+    o.st = 1; var u = (ph - (e - SZ_.SCHLUCK)) / SZ_.SCHLUCK, o3 = [0, 0, 0];
+    linieBei(ENT, u * ENT.L, o3); querVersatz(2 * PI * K.pz[i] * 7 + i, 0.22 * K.rho[i], o3);
+    o.x = o3[0]; o.y = o3[1]; o.z = o3[2]; o.r = rad * Math.min(1, u * 4, (1 - u) * 6 + 0.35) * sstep(0, 0.2, f); o.sig = 0; return;
+  }
+  if (ph < x - 0.9) {   /* im Magen */
+    o.st = 2;
+    var pi_, sig, phi, rho, sz = rad;
+    if (ki === KI.fett) pi_ = sstep(0, 1, (tl - (tex - 17)) / 15);
+    else if (ki === KI.wasser) pi_ = sstep(0, 1, (tl - 0.5) / 5.5);
+    else pi_ = sstep(0, 1, (tl - SZ_.EIN) / Math.max(4, tex - SZ_.EIN - 2));
+    sig = K.sa[i] + (K.sb[i] - K.sa[i]) * pi_ + 0.012 * Math.sin(2 * PI * (ph / SZ_.TW + K.pz[i]));
+    for (var w = 0; w < WL.length; w++) { var dz = (WL[w].s - sig) / 0.08; if (WL[w].a > 0.01) sig += PUSH * Math.exp(-dz * dz) * Math.min(1, WL[w].a / 0.2); }   /* die Welle schiebt das Teilchen ein Stueck vor */
+    sig = Math.max(0.03, Math.min(0.965, sig));
+    if (ki === KI.wasser) { phi = innenWinkel(sig); rho = K.rho[i]; }   /* Magenstrasse: an der kleinen Kurvatur entlang */
+    else { phi = K.phi0[i] + 0.5 * Math.sin(0.25 * ph + K.pz[i] * 6.2832); rho = K.rho[i]; }
+    if (ki === KI.eiweiss) sz = rad * (1 - 0.45 * sstep(0, 1, tl / Math.max(1, tex)));   /* Eiweiss wird gespalten: die Teilchen werden kleiner */
+    schlauchPunkt(sig, phi, rho, sz, wellenK(sig), SQ);
+    if (tl < SZ_.EIN) {   /* Ankunft: vom Ende des Kanals zur Stelle im Magen */
+      var a = sstep(0, 1, tl / SZ_.EIN), ek = linieBei(ENT, ENT.L, [0, 0, 0]);
+      SQ.x = ek[0] + (SQ.x - ek[0]) * a; SQ.y = ek[1] + (SQ.y - ek[1]) * a; SQ.z = ek[2] + (SQ.z - ek[2]) * a;
+    }
+    o.x = SQ.x; o.y = SQ.y; o.z = SQ.z; o.sig = sig; o.r = sz * Math.min(1, 0.3 + tl * 1.2) * sstep(0, 0.25, f);
+    return;
+  }
+  if (ph < x + 0.5) {   /* Pfoertner: von der Wartestelle durch den Kanal */
+    o.st = 3; var v = (ph - (x - 0.9)) / 1.4, s2 = K.sb[i] + (1 - K.sb[i]) * sstep(0, 1, v), sz2 = rad * (1 - 0.35 * sstep(0, 1, tl / Math.max(1, tex)) * (ki === KI.eiweiss ? 1.2 : 0)) * 0.55;
+    schlauchPunkt(s2, K.phi0[i], 0.3 * K.rho[i], sz2, wellenK(s2), SQ);
+    o.x = SQ.x; o.y = SQ.y; o.z = SQ.z; o.sig = s2; o.r = sz2 * sstep(0, 0.25, f); return;
+  }
+  if (ph < x + 0.5 + SZ_.DUO) {   /* Zwoelffingerdarm: ein Stueck weiter (kleine Portion) */
+    o.st = 4; var d = ph - x - 0.5, o4 = [0, 0, 0];
+    linieBei(DUOP, d * SZ_.DUOV, o4); querVersatz(K.phi0[i], 0.18 * K.rho[i] + 0.05, o4);
+    o.x = o4[0]; o.y = o4[1]; o.z = o4[2]; o.sig = 1; o.r = rad * 0.55 * Math.min(1, (SZ_.DUO - d) * 1.5) * Math.min(1, 0.4 + d * 1.5) * sstep(0, 0.25, f); return;
+  }
+  if (o.ta < K.ta[i]) o.st = 5;
+}
+/* Magensaft: aus der Wand von Magengrund und Magenkoerper nach innen (Lebensdauer 7..12 s, ueber clock) */
+function saftZustand(i, o) {
+  var K = KINDS[KI.saft], L = K.sb[i], u = bruch((clock + K.pz[i] * L * 3.7) / L), sig = K.sa[i] + 0.05 * u, phi = K.phi0[i] + 0.7 * u, rho = 1 - 0.78 * sstep(0, 0.6, u), rad = K.rad;
+  var vis = i < SAFT_N0 ? 1 : sstep(0, 1, (fe - (i - SAFT_N0) / (K.n - SAFT_N0) * 0.8) / 0.2);
+  schlauchPunkt(sig, phi, rho, rad, wellenK(sig), SQ);
+  o.x = SQ.x; o.y = SQ.y; o.z = SQ.z; o.sig = sig; o.r = rad * vis * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u)); o.st = o.r > 0.001 ? 2 : 0;
+}
+function tmat(col, em) {
+  var m = mat(col, { rough: 0.35 });
+  m.emissive.copy(srgb(em)).multiplyScalar(0.6);
+  return m;
+}
+/* Aufbau: Tabellen, Wege, Teilchen (immer gleich viele Objekte, unabhaengig von der Auswahl) */
+function stroemungBauen() {
+  schlauchBauen(); wegeBauen(); teilchenDaten();
+  ST = { gruppen: [], letzt: '' };
+  KINDS.forEach(function (K, ki) {
+    var m = tmat(K.col, K.em), geo = new THREE.SphereGeometry(1, 10, 7), im = new THREE.InstancedMesh(geo, m, K.n);
+    m.name = 'teilchen-' + K.id;
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    im.frustumCulled = false;
+    im.name = K.name; im.userData.teilchen = K.id; im.userData.noexport = true;
+    im.raycast = function () {};   /* Teilchen sind nicht anklickbar */
+    root.add(im); K.im = im; ST.gruppen.push(im);
+  });
+  stroemungBild();
+}
+/* Wellen und Pfoertner fuer die Zeit te nach dem Essen: Uniforms des Shaders, Liste WL fuer die Teilchen; WOFF = Oeffnung des Pfoertners 0..1 */
+function wellenSetzen() {
+  var te = clock - tM, TW = SZ_.TW, TT = SZ_.TT, n0 = Math.floor((te - SZ_.TA0) / TW) - 1, n, c = 0, i, offen = 0;
+  WL.length = 0;
+  for (n = n0; n <= n0 + 3; n++) {
+    var tn = SZ_.TA0 + n * TW, u = 1 - (tn - te) / TT;
+    if (n < 0) continue;
+    var x = (te - tn) / 0.8; if (x > -1 && x < 1) offen = Math.max(offen, (1 - x * x) * (1 - x * x));
+    if (u < 0 || u > 1.15) continue;
+    var s = SZ_.WS0 + (SZ_.WE - SZ_.WS0) * Math.min(1, u), base = 0.14 + 0.34 * sstep(0.45, 0.82, s), env = sstep(0, 0.12, u) * (1 - sstep(1.0, 1.15, u));
+    WL.push({ s: s, a: base * env * fe });
+  }
+  for (i = 0; i < 3; i++) { var w = WL[i]; WU.uWelle.value[i].set(w ? w.s : 0, w ? w.a : 0, WELLE_B); }
+  WOFF = offen * fe;
+  WU.uKc.value = SZ_.KC * (1 - WOFF);
+}
+/* je Bild: Teilchen setzen (nur wenn sich Zeit, Fuellung, Auswahl oder Ausschnitt aendern) */
+function stroemungBild() {
+  if (!ST || !SL) return;
+  var key = clock + '|' + fe + '|' + lv + '|' + tM + '|' + kindOn.join('');
+  if (key === ST.letzt) return;
+  ST.letzt = key;
+  var te = clock - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P, ki, i;
+  for (ki = 0; ki < KINDS.length; ki++) {
+    var K = KINDS[ki], im = K.im;
+    im.visible = kindOn[ki];
+    for (i = 0; i < K.n; i++) {
+      if (ki === KI.saft) saftZustand(i, LB); else lauf(ki, i, ph, LB);
+      K.st[i] = LB.st; K.sg[i] = LB.sig; K.tb[i] = LB.tb; K.tA[i] = LB.ta;
+      var r = (LB.st >= 1 && LB.st <= 4) ? LB.r : 0;
+      K.vis[i] = r;
+      STM.makeScale(r, r, r); STM.setPosition(LB.x, LB.y, LB.z);
+      im.setMatrixAt(i, STM);
+    }
+    im.instanceMatrix.needsUpdate = true;
+  }
+}
+/* je Bild: Uhr und Fuellung fortschreiben (Pause haelt die Strömung an, die Fuellung laeuft in Echtzeit) */
+function stroemungSchritt(dt) {
+  var ziel = mahlzeit ? 1 : 0;
+  if (!fzFest && fzR !== ziel) fzR = ziel > fzR ? Math.min(ziel, fzR + dt / SZ_.FUELL) : Math.max(ziel, fzR - dt / SZ_.FUELL);
+  fe = sstep(0, 1, fzR);
+  if (playing) clock += dt * speed;
+}
+$('bPlay').onclick = function () {
+  playing = !playing;
+  this.textContent = playing ? 'Pause' : 'Abspielen';
+  this.classList.toggle('on', playing);
+};
+[['bS0', 0.35], ['bS1', 1], ['bS2', 2.0]].forEach(function (b) {
+  $(b[0]).onclick = function () {
+    speed = b[1];
+    ['bS0', 'bS1', 'bS2'].forEach(function (id) { $(id).classList.remove('on'); });
+    this.classList.add('on');
+  };
+});
+KINDS.forEach(function (K, ki) {
+  if (!K.btn) return;
+  $(K.btn).onclick = function () { stoffSetzen(ki, !kindOn[ki]); };
+});
+function stoffSetzen(ki, an) {
+  kindOn[ki] = an; $(KINDS[ki].btn).classList.toggle('on', an);
+  if (ST) ST.letzt = ''; lv++;
+}
+/* Mahlzeit-Schalter: nuechtern (klein, Falten hoch, kaum Magensaft, Pfoertner zu) oder nach dem Essen (gedehnt, Falten flach, Muskelwellen) */
+var MAHLZEIT_TXT = ['Nüchtern: Der Magen ist klein und fast leer, der Pförtner bleibt meist zu.',
+  'Nach dem Essen: Der Magen dehnt sich, Magensaft fließt, Muskelwellen treiben den Speisebrei portionsweise durch den Pförtner.'];
+function setMahlzeit(an, still) {
+  if (an === mahlzeit) return;
+  mahlzeit = an; fzFest = false;
+  if (an) tM = clock;
+  $('bNuechtern').classList.toggle('on', !an);
+  $('bEssen').classList.toggle('on', an);
+  if (!still) Kern.toast(MAHLZEIT_TXT[an ? 1 : 0]);
+  lv++;
+}
+$('bNuechtern').onclick = function () { setMahlzeit(false); };
+$('bEssen').onclick = function () { setMahlzeit(true); };
+
+/* =====================================================================
+   7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
+   Flaches Bild von oben nach unten (Bildkoordinaten 460 x 722): Mund, Speiseroehre, Magen (hervorgehoben), Zwoelffingerdarm, Duenndarm, Dickdarm, Mastdarm,
+   dazu Kaestchen der Zufluesse, nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit. Die Punkte sind dieselben Teilchen wie im 3D-Modell (gleiche
+   Farben, gleiche Zeitfunktion lauf/saftZustand aus Abschnitt 6; Tempo, Pause, Mahlzeit und Stoffe-Schalter gelten mit): im Magen laufen sie entlang der Mittellinie des
+   Schema-Magens (Lage s wie im 3D-Magen), davor durch Mund und Speiseroehre, danach durch Zwoelffingerdarm, Duenndarm und Dickdarm. Nuechtern gibt es nur wenig
+   Magensaft. Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall; gebaut wird es erst beim ersten Oeffnen.
+   ===================================================================== */
+var SCH = (function () {
+  var NS = 'http://www.w3.org/2000/svg', W = 460, H = 722;
+  var BRASS = '#E0A94A', DIM = '#8DA7B1', INK = '#E7EFF0', DARK = '#0B171C';
+  var svg = null, built = false, DOT = [], DYN = {}, seen = {}, PTH = null;
+  function f1(v) { return Math.round(v * 10) / 10; }
+  function E(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function text(g, x, y, s, size, fill, o) {
+    var a = { x: f1(x), y: f1(y), fill: fill, 'font-size': size, 'font-weight': 500, stroke: '#122229', 'stroke-width': 2.6, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+    if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+    return E('text', a, g, s);
+  }
+  function abzeichen(g, x, y, n) {
+    E('circle', { cx: f1(x), cy: f1(y), r: 6.6, fill: DARK, stroke: BRASS, 'stroke-width': 1.3 }, g);
+    E('text', { x: f1(x), y: f1(y + 3.3), 'text-anchor': 'middle', fill: BRASS, 'font-size': 9.5, 'font-weight': 700 }, g, String(n));
+  }
+  /* Catmull-Rom durch Punkte [x, y, r] (Spannung 0,5), n Punkte je Abschnitt */
+  function glatt(pts, n) {
+    var out = [], i, k, m = pts.length;
+    for (i = 0; i < m - 1; i++) {
+      var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(m - 1, i + 2)];
+      for (k = 0; k < n; k++) {
+        var t = k / n, t2 = t * t, t3 = t2 * t, o = [];
+        for (var c = 0; c < p1.length; c++) o.push(0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+        out.push(o);
+      }
+    }
+    out.push(pts[m - 1].slice());
+    return out;
+  }
+  function laenge(poly) {
+    var cum = [0], i;
+    for (i = 1; i < poly.length; i++) cum.push(cum[i - 1] + Math.sqrt(Math.pow(poly[i][0] - poly[i - 1][0], 2) + Math.pow(poly[i][1] - poly[i - 1][1], 2)));
+    return { p: poly, cum: cum, L: cum[cum.length - 1] };
+  }
+  function bei(ln, s, o) {   /* Punkt, Richtung (o.tx, o.ty), Radius (o.r, falls vorhanden) bei Bogenlaenge s */
+    s = Math.max(0, Math.min(ln.L, s));
+    var lo = 0, hi = ln.p.length - 1;
+    while (hi - lo > 1) { var m = (lo + hi) >> 1; if (ln.cum[m] <= s) lo = m; else hi = m; }
+    var d = ln.cum[hi] - ln.cum[lo], t = d > 1e-9 ? (s - ln.cum[lo]) / d : 0, a = ln.p[lo], b = ln.p[hi], l;
+    o.x = a[0] + (b[0] - a[0]) * t; o.y = a[1] + (b[1] - a[1]) * t; o.r = a.length > 2 ? a[2] + (b[2] - a[2]) * t : 0;
+    o.tx = b[0] - a[0]; o.ty = b[1] - a[1]; l = Math.sqrt(o.tx * o.tx + o.ty * o.ty) || 1; o.tx /= l; o.ty /= l;
+    return o;
+  }
+  function band(poly) {   /* Rohr mit wechselnder Breite um eine Mittellinie [x, y, r] */
+    var n = poly.length, A = '', B = '', i;
+    for (i = 0; i < n; i++) {
+      var i0 = Math.max(0, i - 1), i1 = Math.min(n - 1, i + 1), dx = poly[i1][0] - poly[i0][0], dy = poly[i1][1] - poly[i0][1], l = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / l * poly[i][2], ny = dx / l * poly[i][2];
+      A += (i ? 'L' : 'M') + f1(poly[i][0] + nx) + ' ' + f1(poly[i][1] + ny);
+      B = 'L' + f1(poly[i][0] - nx) + ' ' + f1(poly[i][1] - ny) + B;
+    }
+    return A + B + 'Z';
+  }
+  function linienPfad(pts) { var d = ''; pts.forEach(function (p, i) { d += (i ? 'L' : 'M') + f1(p[0]) + ' ' + f1(p[1]); }); return d; }
+  function rohr(g, pts, w, fill, rand) {   /* Schlauch als dicke Linie mit dunklem Rand */
+    var d = linienPfad(pts);
+    E('path', { d: d, fill: 'none', stroke: rand || DARK, 'stroke-width': w + 2.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    E('path', { d: d, fill: 'none', stroke: fill, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  }
+
+  /* ---- Lage der Stationen (Bildpunkte) ---- */
+  var MUND = [230, 31];
+  var ESO = [[230, 46], [231, 70], [262, 98], [286, 126], [288, 152]];
+  var MAG = glatt([[326, 126, 24], [332, 158, 40], [326, 196, 42], [308, 228, 37], [268, 250, 29], [222, 254, 22], [184, 244, 16], [160, 230, 12]], 8);
+  var DUO = glatt([[160, 230], [144, 240], [138, 262], [150, 282], [176, 290]], 6);
+  var SI = glatt([[176, 290], [178, 326], [330, 326], [334, 348], [124, 348], [120, 370], [330, 370], [334, 392], [124, 392], [120, 414], [330, 414], [338, 432]], 4);
+  var DICK = glatt([[338, 432], [372, 440], [372, 322], [360, 310], [80, 310], [68, 322], [68, 440], [100, 462], [190, 456], [230, 474]], 5);
+  var REKT = [[230, 474], [230, 494]];
+  var ZEITEN = [4.5, 17, 12, 2.5];   /* Sekunden, die ein Teilchen fuer Zwoelffingerdarm, Duenndarm, Dickdarm und Mastdarm braucht */
+  var LN = null;
+
+  function bauePfade() {
+    LN = { eso: laenge([MUND].concat(ESO)), mag: laenge(MAG), strecken: [laenge(DUO), laenge(SI), laenge(DICK), laenge(REKT)] };
+  }
+  /* Lage eines Teilchens im Schema: Stufe st, Zeiten tb / ta, Lage s im Magen, Index i; schreibt P.x, P.y */
+  var P = { x: 0, y: 0, r: 0, tx: 0, ty: 0 };
+  function lage(K, ki, i, o) {
+    var st = K.st[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, lat;
+    if (st === 6) { o.x = MUND[0] + seitl * 14; o.y = MUND[1] + Math.cos(i * 1.7) * 4; return; }
+    if (st === 1) {   /* Mund -> Speiseroehre */
+      var u = 1 - K.tb[i] / SZ_.SCHLUCK; bei(LN.eso, (0.25 + 0.75 * u) * LN.eso.L, P);
+      o.x = P.x - P.ty * seitl * 3; o.y = P.y + P.tx * seitl * 3; return;
+    }
+    if (st === 2 || st === 3) {
+      var s = K.sg[i]; bei(LN.mag, s * LN.mag.L, P);
+      lat = ki === KI.saft ? seitl : (ki === KI.wasser ? 0.75 : seitl);   /* Wasser an der inneren Seite (kleine Kurvatur) */
+      var ox = P.x - P.ty * lat * P.r * 0.55, oy = P.y + P.tx * lat * P.r * 0.55;
+      var tl = -K.tb[i];
+      if (st === 2 && ki !== KI.saft && tl < SZ_.EIN) {   /* Ankunft vom Ende der Speiseroehre */
+        var a = tl <= 0 ? 0 : tl / SZ_.EIN; a = a * a * (3 - 2 * a);
+        ox = ESO[4][0] + (ox - ESO[4][0]) * a; oy = ESO[4][1] + (oy - ESO[4][1]) * a;
+      }
+      o.x = ox; o.y = oy; return;
+    }
+    /* hinter dem Magen: Zeit ta seit dem Pfoertner */
+    var ta = K.tA[i], k = 0, t0 = 0;
+    while (k < 3 && ta > t0 + ZEITEN[k]) { t0 += ZEITEN[k]; k++; }
+    var fr = Math.max(0, Math.min(1, (ta - t0) / ZEITEN[k])), ln = LN.strecken[k];
+    bei(ln, fr * ln.L, P);
+    o.x = P.x - P.ty * seitl * 2.5; o.y = P.y + P.tx * seitl * 2.5;
+  }
+
+  function build(box) {
+    if (built) return;
+    box.innerHTML = '';
+    bauePfade();
+    svg = E('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'font-family': 'Inter, "Segoe UI", system-ui, sans-serif',
+      'aria-label': 'Schema: der Weg der Nahrung von Mund bis After, der Magen hervorgehoben' }, box);
+    var i;
+    /* ---- Darm: Dickdarm hinten, dann Duenndarm, Zwoelffingerdarm; Mastdarm ---- */
+    var gd = E('g', null, svg);
+    rohr(gd, DICK.map(function (q) { return [q[0], q[1]]; }), 15, '#B87868');
+    rohr(gd, REKT, 14, '#B87868');
+    rohr(gd, SI.map(function (q) { return [q[0], q[1]]; }), 11, '#D9937E');
+    rohr(gd, DUO.map(function (q) { return [q[0], q[1]]; }), 13, '#E3A58C');
+    E('circle', { cx: 230, cy: 499, r: 5, fill: DARK, stroke: '#B87868', 'stroke-width': 1.4 }, gd);
+    /* ---- Mund und Speiseroehre ---- */
+    var gm = E('g', null, svg);
+    rohr(gm, ESO, 11, '#D99A8A');
+    E('path', { d: 'M196 31 Q230 8 264 31 Q230 54 196 31 Z', fill: '#C96B6B', stroke: DARK, 'stroke-width': 1.4, 'stroke-linejoin': 'round' }, gm);
+    E('path', { d: 'M204 31 Q230 37 256 31', fill: 'none', stroke: '#6A2A2A', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, gm);
+    /* ---- Magen: hervorgehoben (groesser, kraeftiger Rand) ---- */
+    var gs = E('g', null, svg);
+    E('path', { d: band(MAG), fill: '#E88F8C', 'fill-opacity': 0.96, stroke: BRASS, 'stroke-width': 2.6, 'stroke-linejoin': 'round' }, gs);
+    E('circle', { cx: MAG[0][0], cy: MAG[0][1], r: MAG[0][2], fill: '#E88F8C', 'fill-opacity': 0.96, stroke: BRASS, 'stroke-width': 2.6 }, gs);
+    E('path', { d: band(MAG), fill: '#E88F8C', stroke: 'none' }, gs);   /* Rand der Kappe am Beginn nicht doppelt zeichnen */
+    var ml = MAG.map(function (q) { return [q[0], q[1]]; });
+    E('path', { d: linienPfad(ml.slice(6)), fill: 'none', stroke: '#B8605E', 'stroke-opacity': 0.5, 'stroke-width': 1, 'stroke-dasharray': '3 3' }, gs);
+    /* ---- Teilchen: je Art ein Pool von Kreisen ---- */
+    var gt = E('g', { 'pointer-events': 'none' }, svg), FM = [['#F0DA6E', '#6A560A'], ['#F5AE60', '#6A3206'], ['#FFFFFF', '#55554F'], ['#A8DEF6', '#1A4E74'], ['#5FDAC8', '#0B5A50']];
+    DOT = KINDS.map(function (K, ki) {
+      var gg = E('g', null, gt), arr = [];
+      for (i = 0; i < K.n; i++) arr.push({ el: E('circle', { r: 2, fill: FM[ki][0], stroke: FM[ki][1], 'stroke-width': 0.7, display: 'none' }, gg), on: false, x: -1, y: -1, r: -1 });
+      return arr;
+    });
+    /* ---- Beschriftung ---- */
+    var ga = E('g', { 'pointer-events': 'none' }, svg), LBL = { 'letter-spacing': 1.2, 'font-weight': 600 };
+    function leiter(x0, y0, x1, y1) {
+      E('line', { x1: f1(x0), y1: f1(y0), x2: f1(x1), y2: f1(y1), stroke: BRASS, 'stroke-width': 0.8, 'stroke-dasharray': '2 2' }, ga);
+      E('circle', { cx: f1(x0), cy: f1(y0), r: 1.8, fill: BRASS }, ga);
+    }
+    function station(s, tx, ty, anker, px, py, lx, ly, o) {
+      if (px !== undefined) leiter(px, py, lx, ly);
+      var a = { 'letter-spacing': 1.2, 'font-weight': 600 }; if (anker) a['text-anchor'] = anker; if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+      text(ga, tx, ty, s, 9.5, DIM, a);
+    }
+    station('MUND', 8, 34, null, 196, 31, 56, 31);
+    station('SPEISERÖHRE', 8, 96, null, 258, 96, 100, 92);
+    text(ga, 262, 202, 'MAGEN', 14, INK, { 'text-anchor': 'middle', 'letter-spacing': 2.4, 'font-weight': 700 });
+    station('ZWÖLFFINGERDARM', 8, 258, null, 140, 262, 124, 254);
+    station('DÜNNDARM', 8, 378, null, 121, 372, 76, 374);
+    station('DICKDARM', 388, 378, null, 372, 372, 384, 374, { 'font-size': 9 });
+    station('MASTDARM', 250, 490, null, 232, 486, 247, 487);
+    function kasten(cx, cy, s, px, py) {
+      var w = Math.round(s.length * 5.5 + 12);
+      if (px !== undefined) E('line', { x1: f1(cx), y1: f1(cy), x2: f1(px), y2: f1(py), stroke: '#9C7530', 'stroke-width': 1, 'stroke-dasharray': '2 2' }, ga);
+      E('rect', { x: f1(cx - w / 2), y: f1(cy - 8), width: w, height: 16, rx: 3, fill: DARK, 'fill-opacity': 0.9, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+      text(ga, cx, cy + 3.3, s, 9.5, INK, { 'text-anchor': 'middle', 'stroke-width': 0, 'font-weight': 600 });
+    }
+    kasten(330, 31, 'Speichel', 262, 31);
+    kasten(410, 158, 'Magensaft', 352, 162);
+    kasten(238, 276, 'Galle', 164, 288);
+    kasten(300, 288, 'Pankreassaft', 176, 292);
+    /* Abzeichen an den Stationen */
+    [[218, 24], [236, 76], [262, 202 + 18], [166, 266], [96, 352], [352, 340], [244, 480]].forEach(function (p, q) { abzeichen(ga, p[0], p[1], q + 1); });
+    /* Legende, zwei Spalten */
+    var LG = [
+      ['Mund', 'Zähne zerkleinern, Speichel beginnt', 'die Verdauung der Kohlenhydrate'],
+      ['Speiseröhre', 'Muskelwellen bringen den Bissen', 'in 5–10 Sekunden zum Magen'],
+      ['Magen', 'Säure und Pepsin spalten Eiweiß,', 'der Speisebrei wird portionsweise weitergegeben'],
+      ['Zwölffingerdarm', 'Galle und Pankreassaft neutralisieren', 'und spalten alle Nährstoffe'],
+      ['Dünndarm', 'Die Bausteine gehen über die Zotten', 'ins Blut und in die Lymphe'],
+      ['Dickdarm', 'Wasser und Salze werden entzogen,', 'der Stuhl wird eingedickt'],
+      ['Mastdarm', 'Der Stuhl wird gesammelt', 'und ausgeschieden']
+    ];
+    var COL = [8, 236], ly0 = 520;
+    LG.forEach(function (t, q) {
+      var cx = COL[q < 4 ? 0 : 1], cy = ly0 + (q % 4) * 40.5;
+      abzeichen(ga, cx + 7, cy - 3, q + 1);
+      text(ga, cx + 20, cy, t[0], 10.5, q === 2 ? INK : BRASS, { 'font-weight': 700 });
+      text(ga, cx + 20, cy + 11.5, t[1], 8.6, DIM, { 'stroke-width': 2.2 });
+      text(ga, cx + 20, cy + 22, t[2], 8.6, DIM, { 'stroke-width': 2.2 });
+    });
+    /* Kennzahlen */
+    var kx = COL[1], ky = ly0 + 3 * 40.5 - 13;
+    E('rect', { x: kx, y: f1(ky), width: 216, height: 66, rx: 4, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+    text(ga, kx + 8, ky + 14, 'KENNZAHLEN · VERDAUUNG', 8.5, BRASS, { 'font-weight': 700, 'letter-spacing': 0.8, 'stroke-width': 0 });
+    ['Mund und Speiseröhre: Sekunden', 'Magen: 1–5 Stunden', 'Dünndarm: 3–6 Stunden', 'Dickdarm: 1–3 Tage'].forEach(function (s, q) {
+      text(ga, kx + 8, ky + 27 + q * 11, s, 8.6, DIM, { 'stroke-width': 0 });
+    });
+    /* Hinweiszeile je nach Mahlzeit, zwei Zeilen */
+    DYN.hint = [text(ga, 8, ly0 + 3 * 40.5 + 62, '', 8.8, INK, { 'stroke-width': 2.2 }), text(ga, 8, ly0 + 3 * 40.5 + 74, '', 8.8, INK, { 'stroke-width': 2.2 })];
+    seen = { mz: -1 };
+    built = true;
+  }
+
+  function update() {
+    if (!built) return;
+    var ki, i, o = { x: 0, y: 0 };
+    for (ki = 0; ki < KINDS.length; ki++) {
+      var K = KINDS[ki], pool = DOT[ki], show = K.im.visible;
+      for (i = 0; i < K.n; i++) {
+        var q = pool[i], st = K.st[i], v = show && st > 0 && (ki === KI.saft ? K.vis[i] > 0.01 : (K.st[i] >= 1 && fe > 0.05));
+        if (v) {
+          lage(K, ki, i, o);
+          var rr = Math.round(Math.max(1.7, Math.min(4.2, (K.vis[i] > 0 ? K.vis[i] : K.rad * 0.55) * 19)) * 10) / 10, x = f1(o.x), y = f1(o.y);
+          if (x !== q.x) { q.el.setAttribute('cx', x); q.x = x; }
+          if (y !== q.y) { q.el.setAttribute('cy', y); q.y = y; }
+          if (rr !== q.r) { q.el.setAttribute('r', rr); q.r = rr; }
+          if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+        } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+      }
+    }
+    if (mahlzeit !== seen.mz) {
+      seen.mz = mahlzeit;
+      var t = MAHLZEIT_TXT[mahlzeit ? 1 : 0], k = t.indexOf(', '), z1 = t.slice(0, k + 1), z2 = t.slice(k + 2);
+      DYN.hint[0].textContent = z1; DYN.hint[1].textContent = z2;
+    }
+  }
+  function abbauen() { svg = null; built = false; DOT = []; DYN = {}; seen = {}; LN = null; }
+  return { build: build, update: update, abbauen: abbauen, get svg() { return svg; } };
+})();
+
+var schemaOn = false;
+function setSchema(on) {
+  if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
+  schemaOn = on;
+  $('bSchema').classList.toggle('on', on);
+  if (on) { SCH.build($('schemaBox')); SCH.update(); }
+  $('schema').classList.toggle('show', on);
+  document.body.classList.toggle('schema', on);
+  canvas.style.visibility = on ? 'hidden' : '';
+  lv++;
+}
+/* Das Schema weicht anderen Ansichten: hier ergaenzen spaetere Schritte ihre Gruende (Hilfekarten, Ueben, Lupe, AR) */
+function schemaWeicht() { if (schemaOn) setSchema(false); }
+$('bSchema').onclick = function () { setSchema(!schemaOn); };
+$('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
-var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris, offen: function () { return openK; } };
+var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris, offen: function () { return openK; },
+  mahlzeit: function (an) { setMahlzeit(!!an); },
+  schema: function (an) { setSchema(!!an); },
+  stoffe: function (id, an) { if (id in KI && KINDS[KI[id]].btn) stoffSetzen(KI[id], !!an); },
+  /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art, Pfoertner, Fuellung, Wellen) und Lage der Teilchen (Koerper-Koordinaten) */
+  stroemung: function () {
+    var n = {}; KINDS.forEach(function (K) { var c = 0; for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) c++; n[K.id] = K.im && K.im.visible ? c : 0; });
+    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, fuellung: fe, te: clock - tM, pfoertnerOffen: WOFF, wellen: WL.map(function (w) { return { s: w.s, a: w.a }; }), sichtbar: n };
+  },
+  teilchen: function () {
+    var out = [];
+    KINDS.forEach(function (K, ki) { for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) { K.im.getMatrixAt(i, STM); out.push({ art: K.id, st: K.st[i], s: K.sg[i], r: K.vis[i], p: [STM.elements[12], STM.elements[13], STM.elements[14]] }); } });
+    return out;
+  },
+  stand: function (f, te) { /* fuer die Pruefung: Fuellung (roh 0..1) und Zeit sofort setzen und festhalten */ fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) { tM = clock - te; } $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
+  form: function () { return form; }, aussenSdf: function () { return form.aussen(fe); } };
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (openK !== openZiel) {   /* Deckel gleitet weich (ca. 600 ms) */
     openK = Math.max(0, Math.min(1, openK + Math.sign(openZiel - openK) * dt / 0.6));
     applyLook(); lv++;
   }
+  if (ST) { stroemungSchritt(dt); wellenSetzen(); fuellungSetzen(fe); stroemungBild(); if (schemaOn) SCH.update(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
+  if (schemaOn) return;                                   /* Schema offen: das Bild des Magens ist ausgeblendet und wird nicht gezeichnet */
   renderer.render(scene, camera);
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
@@ -1027,6 +1917,8 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
+  schemaWeicht(); SCH.abbauen();
+  clearTimeout(Kern.toast._t);
   canvas.removeEventListener('click', canvasKlick);
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
   scene.children.filter(function (o) { return !o.isLight; }).forEach(function (o) { Kern.entsorgen(o, envTex); });
@@ -1037,6 +1929,7 @@ organ.abbauen = function () {
   labelBox.style.display = ''; leaderSvg.style.display = '';
   umg.bereich.innerHTML = '';
   $('bootBar').style.width = ''; $('bootSt').textContent = '';
+  var tt = $('toast'); tt.classList.remove('show'); tt.innerHTML = '';
   delete window.MagenApp;
 };
 applyVisibility();
@@ -1047,6 +1940,8 @@ return bauen().then(function () {
   applyVisibility();
   applyLook();
   setSelected(selected);
+  stroemungBauen();
+  root.visible = true;
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });

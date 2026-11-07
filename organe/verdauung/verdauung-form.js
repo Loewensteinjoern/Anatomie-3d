@@ -25,7 +25,7 @@
                             pfoertnerRing, eingangRing (Wand fuer die Darstellung etwa 0,8 cm dick, Tiefe von aussen: Laengsmuskel 0-0,2, Ringmuskel
                             0,2-0,4..0,55, schraege Schicht 0,4-0,55 (nur Fundus und Korpus), Schleimhaut 0,55-0,8 cm, dazu die Wuelste von Pfoertner
                             und Mageneingang; im Zwoelffingerdarm duenner); die Schleimhaut traegt die Falten (Rugae); lumen(f) = Innenraum (mit dem
-                            Kanal zur Speiseroehre); aussen(f) = Aussenflaeche samt Verlaengerung ins Duodenum und Stumpf der Speiseroehre (Gitterbox
+                            Kanal zur Speiseroehre; im Pfoertnerkanal mindestens PYL_KANAL = 0,3 cm weit, damit das Netz geschlossen bleibt und die Muskelwellen den Pfoertner oeffnen und schliessen koennen); aussen(f) = Aussenflaeche samt Verlaengerung ins Duodenum und Stumpf der Speiseroehre (Gitterbox
                             in .grenzen); schichtFeld(f) = Funktion (x, y, z) -> Werte aller sechs Schichten (in der Reihenfolge von schichten) und der Randflaechen mit
                             nur einer Auswertung; schnittZ(f) = Hoehe z der Schnittflaeche (z = zs(x, y)); abbilden(p, f) = Punkt p der Form bei f = 0
                             auf den entsprechenden Punkt bei f (Parameter der Mittellinie, Querschnitt, Falten geglaettet, Speiseroehre bleibt; optional
@@ -182,6 +182,7 @@ var DUO_EXT = [0.8, 1.6];   /* Verlaengerung ins Duodenum (nur fuer Schichten un
 var ESO_STUMPF = 1.8;       /* Laenge (cm) der Speiseroehre, die im Feld des Magens mitgefuehrt wird (weicher Anschluss) */
 var ESO_R_AUSSEN = 0.7;     /* Radius des Speiseroehren-Stumpfs im Feld der Aussenflaeche (Rohr im Koerper: 0,8) */
 var ESO_TIEF = 1.5;         /* der Kanal der Speiseroehre laeuft so weit (cm) ueber den Mageneingang hinaus in den Magen */
+var PYL_KANAL = 0.3;        /* Mindestradius (cm) des Innenraums im Pfoertnerkanal (nur Detailmodell: lumen, schichten) */
 var ZW_ABSTAND = 0.7;       /* Abstand des Magens zur Zwerchfellkuppel (cm) */
 
 /* Nachbarn, denen der Magen ausweicht: Leber (Form der Leber, erst beim Auswerten geholt), Milz, linke Niere, Bauchspeicheldruese und Aorta (Lage wie im
@@ -361,12 +362,18 @@ function werte(st, x, y, z, voll) {
   var kmax = voll === 2 ? 1 : 7, kmin = voll === 3 ? 5 : 0;   /* voll === 2: nur die Aussenflaeche B[0] (mit Verlaengerung ins Duodenum), voll === 3: nur B[5] und B[6] (Lumen) */
   if (kmax > 1) offsets(st, jb, j1, tb, x, y, z); else OFF[0] = 0;
   var off = OFF;
+  var pylK = kmax > 6 || voll === 3 ? glatt(2.6, 1.4, st.LP[jb] + (st.LP[j1] - st.LP[jb]) * tb) : 0;   /* Gewicht des Pfoertnerkanals (Abstand zum Pfoertner unter 2,6 cm) */
   /* Randflaeche k = Vereinigung aller Abschnitte, die in Frage kommen (Wert der Aussenflaeche hoechstens 2 cm ueber dem kleinsten): stetig auch an der Innenseite der Biegung */
   for (k = kmin; k < kmax; k++) {
     o0 = off[k]; q = 1e9;
     for (c = 0; c < nseg; c++) {
       if (KZ[c] > db + 2) continue;
       rr = RTA[c] - o0; rrz = RZA[c] - o0; if (rr < 0.02) rr = 0.02; if (rrz < 0.02) rrz = 0.02;
+      if (k === 6 && pylK > 0) {   /* Kanal des Pfoertners: der Innenraum bleibt hier mindestens PYL_KANAL weit offen (sonst waere er zu eng fuer das Netz und die Wellen koennten ihn nicht oeffnen), die Schleimhaut darunter bleibt duenn */
+        var fl = PYL_KANAL * pylK, m5 = RTA[c] - off[5] - 0.03;
+        if (fl > m5) fl = m5 > 0.02 ? m5 : 0.02;
+        if (rr < fl) rr = fl; if (rrz < fl) rrz = fl;
+      }
       a = rr / rrz; if (a > 4) a = 4; zz = DZA[c] * a; qc = (Math.sqrt(DXA[c] * DXA[c] + DYA[c] * DYA[c] + zz * zz) - rr) / (a > 1 ? a : 1);   /* durch a geteilt: der Abstand wird nicht ueberschaetzt */
       if (qc < q) q = qc;
     }
