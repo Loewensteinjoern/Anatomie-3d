@@ -16,6 +16,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #legend p{margin:0;font-size:11px;line-height:1.55;color:var(--ink-dim)}
 #legend .note{margin-top:6px;font-size:10px;line-height:1.45;color:var(--ink-faint)}
 #legend .kz{color:var(--ink-dim)}
+/* Lesehilfe zugeklappt (Reiter Hilfekarten und Ueben, oder per Klick auf die Ueberschrift): nur die Ueberschrift */
+#legend h4{cursor:pointer}
+#legend.zu h4{margin-bottom:0}
+#legend.zu p{display:none}
 
 /* Reiter in der Leiste (Aussehen: core/kern.css): drei Reiter in einer Zeile */
 #rail .tabs{flex-wrap:wrap;gap:3px;padding:0 6px 10px}
@@ -63,15 +67,18 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   body:has(#info.show) #atlasZurueck,body:has(#scard.show) #atlasZurueck{display:none}   /* offene Karte reicht bis unter den Zurueck-Knopf des Atlas: solange ausgeblendet */
   /* Ueben (Strukturen finden, Wege verfolgen): kompakte Karte unten direkt ueber der Werkzeugleiste (26 % der Hoehe, magen.js bereichFuer richtet den Bildbereich danach aus);
      Aufgabe und Abschluss scrollen, Stationsliste, Rueckmeldung, Zaehlung und Knoepfe bleiben sichtbar */
-  body.ueben #scard.show{display:flex;flex-direction:column;top:auto;bottom:calc(34vh + var(--wz,100px) + 14px);height:26vh;max-height:26vh;overflow:hidden;padding:10px 14px}
-  body.ueben #scard h3{margin:2px 0 4px;font-size:14px}
-  body.ueben #scard #sLead{flex:1 1 auto;min-height:0;margin:0 0 4px;display:flex;flex-direction:column;font-size:12px;line-height:1.4}
-  body.ueben #scard .wg-text{flex:1 1 0;min-height:2.6em;overflow-y:auto}
+  body.ueben #scard.show{display:flex;flex-direction:column;top:auto;bottom:calc(34vh + var(--wz,100px) + 14px);height:20vh;max-height:20vh;overflow:hidden;padding:8px 12px}
+  body.ueben #scard .kick{font-size:9px}
+  body.ueben #scard h3{margin:1px 0 3px;font-size:13px;padding-right:34px}
+  body.ueben #scard #sLead{flex:1 1 auto;min-height:0;margin:0 0 3px;display:flex;flex-direction:column;font-size:11.5px;line-height:1.35}
+  body.ueben #scard .wg-text{flex:0 1 auto;min-height:2.6em;overflow-y:auto}   /* Stationenzeile folgt direkt unter dem Text */
+  body.ueben #scard .wg-hint{margin-top:2px;font-size:11px;line-height:1.3}
   body.ueben #scard .wg-text.fertig{display:none}
   body.ueben #scard .wg-abw{flex:1 1 0;min-height:0;overflow-y:auto}
-  body.ueben #scard .wg-liste{margin-top:4px;flex:none}
-  body.ueben #scard .wg-rueck{margin-top:4px;flex:none}
-  body.ueben #scard .qa{margin-top:4px;flex:none}
+  body.ueben #scard .wg-liste{margin-top:3px;font-size:10.5px;line-height:1.4;flex:none}
+  body.ueben #scard .wg-rueck{margin-top:3px;flex:none}
+  body.ueben #scard .qa{margin-top:auto;flex:none}
+  body.ueben #scard .qa .gh{padding:5px 8px;font-size:11px}
   body.ueben #scard #sAfter{display:none}
 }
 

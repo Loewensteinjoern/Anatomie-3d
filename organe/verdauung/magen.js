@@ -184,7 +184,7 @@ var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens
 var DECKEL_WEG = 7;                                /* so weit gleitet die vordere Haelfte nach vorn (cm) */
 /* Freier Bereich fuer Magen und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
 function bereichFuer(w, h, toolsOben, toolsUnten, ueben) {
-  if (w < 1000 && ueben) return { x0: 0, x1: w, y0: 60, y1: Math.max(150, toolsOben - 14 - 0.26 * h), labW: 104, fit: 70 };   /* Handy beim Ueben: die Karte (26 % der Hoehe) liegt direkt ueber der Werkzeugleiste, der Magen steht darueber */
+  if (w < 1000 && ueben) return { x0: 0, x1: w, y0: 54, y1: Math.max(150, toolsOben - 14 - 0.20 * h), labW: 104, fit: 70 };   /* Handy beim Ueben: die Karte (20 % der Hoehe) liegt direkt ueber der Werkzeugleiste, der Magen steht darueber */
   if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 70 };   /* Handy: links und rechts bleibt je eine Namensspalte (labW) frei, der Magen steht dazwischen */
   return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil(toolsUnten) + 6), y1: h - 30, labW: 142, fit: 100 };
 }
@@ -1005,6 +1005,8 @@ function waehleListe(id) {
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
       b.classList.add('on'); panes.forEach(function (pn, pk) { pn.style.display = pk === k ? '' : 'none'; });
+      $('legend').classList.toggle('zu', k !== 0);   /* Hilfekarten und Ueben zeigen ihren Inhalt ganz: die Lesehilfe ist dann zugeklappt (Klick auf die Ueberschrift klappt sie auf) */
+      railHoehe(window.innerWidth);
     });
     tabs.appendChild(b);
   });
@@ -1058,6 +1060,7 @@ function waehleListe(id) {
 function legNoteSetzen() {   /* erste Notiz nur ohne Durchsicht und ohne Innenansicht; die zweite steht immer (im Markup) genau einmal */
   var n = $('legNote'), zeigen = !(seeThrough || openZiel);
   n.textContent = zeigen ? LEGNOTE[0] : ''; n.style.display = zeigen ? '' : 'none';
+  railHoehe(window.innerWidth);                          /* die Lesehilfe wird kuerzer oder laenger */
 }
 function durchsicht(an) {
   seeThrough = an;
@@ -1145,6 +1148,7 @@ function groesse(w, h) {
   lv++;
 }
 /* Desktop: die Leiste endet ueber der Lesehilfe (sonst liegt diese ueber den unteren Zeilen, die dann nicht anklickbar sind) */
+$('legend').querySelector('h4').addEventListener('click', function () { $('legend').classList.toggle('zu'); railHoehe(window.innerWidth); });
 function railHoehe(w) {
   var rail = $('rail'), lg = $('legend').getBoundingClientRect(), rt = rail.getBoundingClientRect().top;
   rail.style.maxHeight = (w > 1000 && lg.height > 0 && lg.top > rt + 160) ? Math.floor(lg.top - 12 - rt) + 'px' : '';
