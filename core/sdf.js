@@ -20,11 +20,8 @@ var Kern = window.Kern = window.Kern || {};
   /* Wertet fn(x,y,z) auf dem Gitter aus - blockweise, grobe Vorpruefung
      (Bloecke weit weg von der Flaeche werden nur interpoliert). Async:
      fortschritt(0..1) darf ein Promise liefern (Ladebalken). fn sollte den
-     Abstand nicht ueberschaetzen. schwelle (optional): Breite des genau
-     ausgewerteten Bandes in Einheiten von Blockgroesse * h (Standard
-     1,15 * Wurzel 3; kleiner = weniger Auswertungen, nur fuer Felder, die den
-     Abstand sicher nicht ueberschaetzen). */
-  async function evalFeld(G, fn, fortschritt, schwelle) {
+     Abstand nicht ueberschaetzen. */
+  async function evalFeld(G, fn, fortschritt) {
     const { nx, ny, nz, h, o } = G;
     const N = nx * ny * nz;
     const T = new Float32Array(N);
@@ -36,7 +33,7 @@ var Kern = window.Kern = window.Kern || {};
       const gi = Math.min(i * B, nx - 1), gj = Math.min(j * B, ny - 1), gk = Math.min(k * B, nz - 1);
       coarse[i + cx * (j + cy * k)] = fn(o[0] + gi * h, o[1] + gj * h, o[2] + gk * h);
     }
-    const thr = schwelle ? schwelle * B * h : 1.15 * B * h * Math.sqrt(3);
+    const thr = 1.15 * B * h * Math.sqrt(3);
     let t0 = Date.now();
     for (let kb = 0; kb < bz; kb++) {
       for (let jb = 0; jb < by; jb++) for (let ib = 0; ib < bx; ib++) {

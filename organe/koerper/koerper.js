@@ -1090,7 +1090,7 @@ ZIELE.leber = { theta: 0, phi: PI / 2, ext: [28, 26], target: [-2.9, 107.6, 0.5]
 ZIELE.gallenblase = ZIELE.pfortader = ZIELE.leberarterie = ZIELE.lebervenen = ZIELE.gallengang = ZIELE.leber;   /* gleiches Ziel: das Leber-Modell */
 /* Strukturen, die das Magen-Modell mitzeigt (Magen, Ende der Speiseroehre, Zwerchfell): sie bleiben bei der Fahrt sichtbar; der Rest blendet aus */
 var MAGEN_MIT = ['magen', 'speiseroehre', 'zwerchfell'];
-ZIELE.magen = { theta: -0.3, phi: 1.75, ext: [24, 24], target: [3, 106, 1], mit: MAGEN_MIT };   /* Ersatz, wenn das Magen-Modul fehlt (Ansicht des Magens leicht von unten links) */
+ZIELE.magen = { theta: -0.3, phi: 1.75, ext: [24, 26], target: [3, 106, 1], mit: MAGEN_MIT };   /* Ersatz, wenn das Magen-Modul fehlt (Ansicht des Magens leicht von unten links) */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];

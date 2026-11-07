@@ -117,7 +117,7 @@ var M = [4, 105, 0];
 /* Ausschnitt 'Uebersicht' (Breite und Hoehe im freien Bereich, cm) und Kamera: gemeinsam fuer das Modell und fuer die Fahrt aus dem Koerper;
    ziel = Blickpunkt in Modell-Koordinaten (Koerper-Punkt ZIEL_K minus M); leicht von unten links, damit Pfoertner, Kurvaturen und Magengrund gut zu sehen sind */
 var ZIEL_K = [3, 106, 1];
-var UEBERSICHT = { theta: -0.3, phi: 1.75, ext: [24, 24], halb: 12, ziel: [ZIEL_K[0] - M[0], ZIEL_K[1] - M[1], ZIEL_K[2] - M[2]] };
+var UEBERSICHT = { theta: -0.3, phi: 1.75, ext: [24, 26], halb: 12, ziel: [ZIEL_K[0] - M[0], ZIEL_K[1] - M[1], ZIEL_K[2] - M[2]] };
 var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
 var DECKEL_WEG = 7;                                /* so weit gleitet die vordere Haelfte nach vorn (cm) */
 /* Freier Bereich fuer Magen und Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
@@ -185,7 +185,8 @@ MAT.speiseroehre = mat(STRUCT.speiseroehre.col, { rough: 0.5, coat: 0.3, side: T
 MAT.zwoelffingerRohr = mat(STRUCT.zwoelffinger.col, { rough: 0.5, coat: 0.35, side: THREE.DoubleSide });
 ['arterien', 'venen', 'pfortader'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
 MAT.vagus = mat(STRUCT.vagus.col, { rough: 0.5, coat: 0.2 });
-MAT.zwerchfell = mat(STRUCT.zwerchfell.col, { rough: 0.6, opacity: 0.18, side: THREE.DoubleSide });
+['arterien', 'venen', 'vagus'].forEach(function (k) { MAT[k + 'D'] = mat(STRUCT[k].col, { rough: 0.4, coat: 0.3 }); });   /* Teile an der vorderen Wand (blenden mit dem Deckel aus) */
+MAT.zwerchfell = mat(0xC98378, { rough: 0.6, opacity: 0.3, side: THREE.DoubleSide });   /* heller als der Farbpunkt: sonst liest sich die Platte vor dem dunklen Grund als Schatten */
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
 
 var root = new THREE.Group(); root.name = 'Magen'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
@@ -208,10 +209,10 @@ var anz = function (g) { return g.index ? g.index.count / 3 : g.attributes.posit
    2. Geometrie: Aussenwand und Innenraum in Bereichen, Kappen der Schnittflaeche, Rohre (Speiseroehre, Zwoelffingerdarm, Gefaesse, Nerv), Zwerchfell
    ===================================================================== */
 var klein = Math.min(screen.width, screen.height) < 500 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.maxTouchPoints || 0) > 0;
+var VORN_Y = 109.5;                               /* Gefaesse und Nerven der vorderen Wand: nur unterhalb dieser Hoehe (cm) gehoeren sie zum Deckel */
 var HA = klein ? 0.28 : 0.2;                      /* Gitterweite der Aussenflaeche (cm) */
 var HI = klein ? 0.2 : 0.16;                      /* Gitterweite des Innenraums (mit den Falten) */
 var HC = klein ? 0.14 : 0.1;                      /* Raster der Schnittflaeche (Kappen) */
-var BAND = 1.0, BAND_I = 2.4;                     /* Breite des genau ausgewerteten Bandes (S.evalFeld, schwelle): Aussenflaeche und Innenraum (die Falten ueberschaetzen den Abstand etwas) */
 
 /* Normalen aus dem Gradienten des Abstandsfelds (zentrale Differenzen): glatter als die Mittelung der Dreiecksnormalen */
 function feldNormalen(g, fn) {
@@ -224,8 +225,8 @@ function feldNormalen(g, fn) {
   n.needsUpdate = true;
 }
 /* Netz aus einem Abstandsfeld: Gitter ueber bounds mit Weite h, Normalen aus dem Feld */
-async function netz(fn, bounds, h, fortschritt, schwelle) {
-  var G = S.makeGrid(bounds, h), F = await S.evalFeld(G, fn, fortschritt, schwelle);
+async function netz(fn, bounds, h, fortschritt) {
+  var G = S.makeGrid(bounds, h), F = await S.evalFeld(G, fn, fortschritt);
   if (abgebaut) return null;
   var g = S.geometrie(G, F);
   feldNormalen(g, fn);
@@ -436,7 +437,7 @@ function bogenFunktion() {
 /* Zwerchfell: duenne Kuppelflaeche (form.kuppel der Lunge) ueber dem Magen, nur dort, wo form.zwerchfell() sie zeigt (Ausschnitt ueber dem linken Oberbauch mit der Luecke
    fuer die Speiseroehre; ohne Boden, damit der Rand glatt bleibt); Gitter in x/z mit Weite ZW_H, Dreiecke am Rand und am Loch werden an der Nullstelle des Felds (Wert der Form auf der Kuppel) beschnitten
    (linear zwischen den Gitterpunkten), Normalen aus der Neigung der Kuppel (wie zwerchfellGeo in leber.js) */
-var ZW_H = 0.15, ZW_RAND = 2.2, ZW_LOCH = 3.6;
+var ZW_H = 0.15, ZW_RAND = 3.0, ZW_LOCH = 4.4;
 function zwerchfellGeo(zf) {
   var kup = lform.kuppel, X0 = zf.grenzen[0][0], X1 = zf.grenzen[1][0], Z0 = zf.grenzen[0][2], Z1 = zf.grenzen[1][2];
   var nx = Math.ceil((X1 - X0) / ZW_H), nz = Math.ceil((Z1 - Z0) / ZW_H), F = new Float32Array((nx + 1) * (nz + 1)), i, j;
@@ -501,7 +502,7 @@ async function bauen() {
   ];
   var ZONEN_I = [ZONEN[0], ZONEN[1], { id: 'pfoertner', g: function (x, y, z) { return L - 1.7 - bogen(x, y, z); } }];
   var aus = form.aussen(0);
-  var gA = await netz(aus.sdf, aus.grenzen, HA, weiter(0.03, 0.2), BAND); if (abgebaut) return;
+  var gA = await netz(aus.sdf, aus.grenzen, HA, weiter(0.03, 0.2)); if (abgebaut) return;
   await setLoad(0.2, 'Magenwand'); if (abgebaut) return;
   var tA = schneide(gA, cut); gA.dispose();
   [['hinten', tA.neg], ['deckel', tA.pos]].forEach(function (h) {
@@ -514,7 +515,7 @@ async function bauen() {
   });
   await setLoad(0.24, 'Schleimhaut mit Falten'); if (abgebaut) return;
   var lu = form.lumen(0);
-  var gI = await netz(lu.sdf, lu.grenzen, HI, weiter(0.24, 0.62), BAND_I); if (abgebaut) return;
+  var gI = await netz(lu.sdf, lu.grenzen, HI, weiter(0.24, 0.62)); if (abgebaut) return;
   await setLoad(0.62, 'Schleimhaut mit Falten'); if (abgebaut) return;
   var tI = schneide(gI, cut); gI.dispose();
   var INNEN = { zwoelffinger: ['schleimhaut', 'schleimhaut'], mageneingang: ['mageneingang', 'eingangI'], pfoertner: ['pfoertner', 'pfoertnerI'], schleimhaut: ['schleimhaut', 'schleimhaut'] };
@@ -533,10 +534,10 @@ async function bauen() {
     addMesh(KS[k][0], g, MAT[KS[k][1]], STRUCT[KS[k][0]].de + ' (Schnittfläche)', 2, 'kappe'); tris.kappen += anz(g);
   });
   await setLoad(0.72, 'Speiseröhre und Zwölffingerdarm'); if (abgebaut) return;
-  /* Speiseroehre: die letzten 6,2 cm bis 0,5 cm vor dem Ende des Stumpfs in der Wand (ueberlappt dessen oberes Ende); oben offen */
-  var eso = form.kurve(form.BAHN.speiseroehre.pts, 12), el = 0, i;
+  /* Speiseroehre: von 2,5 cm ueber der Luecke im Zwerchfell bis 1,5 cm vor dem Ende des Stumpfs in der Wand (ueberlappt dessen oberes Ende); oben offen */
+  var eso = form.speiseroehreAnzeige(), el = 0, i;
   for (i = 1; i < eso.length; i++) el += Math.sqrt(Math.pow(eso[i][0] - eso[i - 1][0], 2) + Math.pow(eso[i][1] - eso[i - 1][1], 2) + Math.pow(eso[i][2] - eso[i - 1][2], 2));
-  var ep = bogenTeil(eso, el - 6.2, el - 1.5);   /* gezeigter Teil der Speiseroehre */
+  var ep = bogenTeil(eso, 0, el - 1.5);   /* gezeigter Teil der Speiseroehre */
   var eg = rohre([{ pts: ep, r0: form.BAHN.speiseroehre.r, r1: form.BAHN.speiseroehre.r, seiten: 20, segmente: 40, offen: true }]);
   addMesh('speiseroehre', eg, MAT.speiseroehre, STRUCT.speiseroehre.de, 3); tris.rohre += anz(eg);
   /* Zwoelffingerdarm: ab 1,2 cm hinter dem Pfoertner (ueberlappt die Verlaengerung der Wand) bis zum absteigenden Teil; am Ende offen */
@@ -545,14 +546,33 @@ async function bauen() {
   addMesh('zwoelffinger', dg, MAT.zwoelffingerRohr, STRUCT.zwoelffinger.de + ' (Rohr)', 3); tris.rohre += anz(dg);
   await setLoad(0.78, 'Gefäße und Nerv'); if (abgebaut) return;
   var G = form.gefaesse(0), ln = function (g) { return { pts: g.pts, r0: g.r0, r1: g.r1 }; };
-  [['arterien', G.magenarterien], ['venen', G.magenvenen], ['pfortader', G.pfortader], ['vagus', G.vagus]].forEach(function (a) {
-    var geo = rohre(a[1].map(ln));
-    addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4); tris.rohre += anz(geo);
+  /* Was an der vorderen Wand liegt (Aeste der Gefaesse und der vordere Vagusstrang unterhalb der Hoehe VORN_Y), gehoert zum Deckel und blendet mit ihm aus: die Linien werden an der
+     Schnittflaeche geteilt (die Teile teilen sich den Grenzpunkt, es bleibt keine Luecke); die Pfortader und alles oberhalb bleiben stehen */
+  var istVorn = function (p) { return cut(p[0], p[1], p[2]) > 0 && p[1] < VORN_Y; };
+  function teilen(l) {
+    var n = l.pts.length, hin = [], vor = [], run = [], flag = null, i, rad = function (t) { return l.r0 + (l.r1 - l.r0) * t * t * (3 - 2 * t); };
+    function ab(ende) {
+      if (run.length > 1) (flag ? vor : hin).push({ pts: run.map(function (q) { return q.p; }), r0: rad(run[0].i / (n - 1)), r1: rad(run[run.length - 1].i / (n - 1)) });
+      run = ende ? [run[run.length - 1]] : [];
+    }
+    for (i = 0; i < n; i++) {
+      var f = istVorn(l.pts[i]);
+      if (flag !== null && f !== flag) { run.push({ p: l.pts[i], i: i }); ab(true); flag = f; continue; }   /* Grenzpunkt gehoert zu beiden Teilen */
+      flag = f; run.push({ p: l.pts[i], i: i });
+    }
+    ab(false);
+    return { hin: hin, vor: vor };
+  }
+  [['arterien', G.magenarterien, true], ['venen', G.magenvenen, true], ['pfortader', G.pfortader, false], ['vagus', G.vagus, true]].forEach(function (a) {
+    var hin = [], vor = [];
+    a[1].forEach(function (l) { if (a[2]) { var t = teilen(l); hin = hin.concat(t.hin); vor = vor.concat(t.vor); } else hin.push(ln(l)); });
+    if (hin.length) { var geo = rohre(hin); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo); }
+    if (vor.length) { var gv = rohre(vor); addMesh(a[0], gv, MAT[a[0] + 'D'], STRUCT[a[0]].de + ' (vorn)', 4, 'deckel'); tris.rohre += anz(gv); }
   });
   await setLoad(0.84, 'Zwerchfell'); if (abgebaut) return;
   var zf = form.zwerchfell(), zg = zwerchfellGeo(zf);
   addMesh('zwerchfell', zg, MAT.zwerchfell, STRUCT.zwerchfell.de, 5); tris.zwerchfell = anz(zg);
-  geoDaten = { E: E, P: P, eso: ep, duo: dp, G: G };
+  geoDaten = { E: E, P: P, eso: ep, duo: dp, G: G, vorn: istVorn };
   await setLoad(0.97, 'Beschriftung'); if (abgebaut) return;
   ankerBerechnen();
 }
@@ -585,7 +605,7 @@ function applyLook() {
     stelleMat(MAT[sid], seeThrough, seeThrough ? GLAS : 1);
     stelleMat(MAT[sid + 'D'], seeThrough || a < 0.999, (seeThrough ? GLAS : 1) * a);
   });
-  ['schleimhaut', 'eingangI', 'pfoertnerI'].forEach(function (k) { stelleMat(MAT[k + 'D'], a < 0.999, a); });
+  ['schleimhaut', 'eingangI', 'pfoertnerI', 'arterien', 'venen', 'vagus'].forEach(function (k) { stelleMat(MAT[k + 'D'], a < 0.999, a); });
   var kv = openK > 0.02;
   kappen.forEach(function (m) { m.visible = kv && !!enabled[m.userData.sid]; });
 }
@@ -659,7 +679,10 @@ function waehleListe(id) {
   });
 })();
 
-function legNoteSetzen() { $('legNote').textContent = LEGNOTE[(seeThrough || openZiel) ? 1 : 0]; }
+function legNoteSetzen() {   /* erste Notiz nur ohne Durchsicht und ohne Innenansicht; die zweite steht immer (im Markup) genau einmal */
+  var n = $('legNote'), zeigen = !(seeThrough || openZiel);
+  n.textContent = zeigen ? LEGNOTE[0] : ''; n.style.display = zeigen ? '' : 'none';
+}
 function durchsicht(an) {
   seeThrough = an;
   $('bSee').classList.toggle('on', an);
@@ -703,7 +726,7 @@ var AUSSCHNITTE = [
   { name: 'Übersicht', theta: UEBERSICHT.theta, phi: UEBERSICHT.phi, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb, innen: false },
   { name: 'Innenansicht', theta: 0, phi: 1.5, target: K3(3, 105.5, 1), ext: [22, 23], halb: 11, innen: true },
   { name: 'Mageneingang', theta: -0.15, phi: 1.45, target: K3(5, 108, 1), ext: [15, 14], halb: 7.5, innen: true },
-  { name: 'Pförtner', theta: 0.25, phi: 1.5, target: K3(-1.5, 102.5, 2.5), ext: [18, 13], halb: 9, innen: true }
+  { name: 'Pförtner', theta: 0.3, phi: 1.45, target: K3(2, 103, 2), ext: [24, 16], halb: 12, innen: true }
 ];
 var view = { theta: AUSSCHNITTE[0].theta, phi: AUSSCHNITTE[0].phi, dist: 70, target: AUSSCHNITTE[0].target.clone() };
 var orbit = Kern.orbit(canvas, view, { minDist: 4, maxDist: 160 });
@@ -823,6 +846,10 @@ function ankerBerechnen() {
       vagus: [linie(G.vagus[0], 0.15), linie(G.vagus[0], 0.6), linie(G.vagus[1], 0.3), linie(G.vagus[1], 0.7)],
       zwerchfell: [zw(8, 0), zw(4, 3), zw(10, -2), zw(0, 3), zw(6, -3)]
     };
+    if (i > 0) {   /* Aeste an der vorderen Wand blenden mit dem Deckel aus: nur die Punkte dahinter beschriften */
+      ['arterien', 'venen', 'vagus'].forEach(function (k) { o[k] = o[k].filter(function (q) { return !D.vorn(q); }); });
+      if (!o.vagus.length) o.vagus = [linie(G.vagus[1], 0.5), linie(G.vagus[1], 0.8)].filter(function (q) { return !D.vorn(q); });
+    }
     if (i > 0) {   /* hinter der abgehobenen Haelfte: Eingang, Pfoertner und Schleimhaut innen */
       o.mageneingang = [seite(D.E, 0.2)];
       o.pfoertner = [seite(D.P, -0.3), [D.P[0] + 0.7, D.P[1] - 1.2, D.P[2] - 0.4]];
@@ -922,7 +949,7 @@ function layoutLabels(w, h) {
   var colL = Math.min(cx - 20, Math.max(r.x0 + r.labW + 4, cx - a.halb * pxcm - 12));
   var colR = Math.max(cx + 20, Math.min(r.x1 - r.labW - 4, cx + a.halb * pxcm + 12));
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
-  var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
+  var botL = narrow ? r.y1 - 6 : h - 58, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
   if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
@@ -965,6 +992,7 @@ function layoutLabels(w, h) {
     b.el.style.display = ''; b.ln.style.display = ''; b.dot.style.display = '';
     b.nm.textContent = narrow && HANDYNAME[it.id] || b.de;
     b.el.className = 'lbl ' + it.side + ((selected && it.id !== selected) ? ' dim' : '') + (it.id === selected ? ' sel' : '');
+    var bw = b.el.offsetWidth; lx = it.side === 'l' ? Math.max(lx, bw + 8) : Math.min(lx, w - bw - 10);   /* nicht ueber den Bildrand hinaus */
     b.el.style.left = lx + 'px'; b.el.style.top = it.ly + 'px';
     b.el.style.transform = it.side === 'l' ? 'translate(-100%,-50%)' : 'translateY(-50%)';
     var ex = it.side === 'l' ? lx + 7 : lx - 7;

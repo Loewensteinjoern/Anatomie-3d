@@ -33,6 +33,7 @@
      mittellinie(f), kurvaturen(f, ab, dz), kennpunkte(f), EINGANG, PFOERTNER, FUNDUS, ANGULUS (je { p }), schnitt(f)
      gefaesse(f)            { magenarterien, magenvenen, pfortader, vagus }: je Liste von { id, pts, r0, r1 } (Venen und Pfortader
                             in Fliessrichtung, Arterien und Nerven vom Ursprung weg)
+     speiseroehreAnzeige()  Teil der Speiseroehre von 2,5 cm ueber dem Hiatus bis zum Mageneingang (Punkte von oben nach unten)
      zwerchfell()           { sdf, grenzen, hiatus, loch, rand }: Ausschnitt der Zwerchfellkuppel ueber dem linken Oberbauch mit dem Hiatus (Mitte, Abstandsfeld loch der Luecke, rand = x0, x1, z0, z1)
      kurve(pts, n), kette(poly, r)   Catmull-Rom-Kurve wie THREE.CatmullRomCurve3 im Koerper und Abstandsfeld einer Linienfolge
    ========================================================================== */
@@ -308,7 +309,7 @@ function stumpfAbstand(st, x, y, z, nseg) {
    (0,30 im Korpus, 0,40 im Antrum), 3 Ende schraege Schicht (0,40), 4 Ende Pfoertnerwulst, 5 Ende Wulst des Mageneingangs (= Beginn der
    Schleimhaut), 6 Innenflaeche der Schleimhaut samt Falten. QCH = Abstand zum Kanal der Speiseroehre (< 0 im Kanal). */
 var B = new Float64Array(8), QCH = 0;
-var NF = 18;       /* Zahl der Falten um den Umfang */
+var NF = 10;       /* Zahl der Falten um den Umfang (wenige, breite Laengsfalten: feinere waeren vom Gitter der Netze nicht aufzuloesen) */
 var FALTE = 0.3;   /* Hoehe der Falten (cm) im nuechternen Magen (die Wand ist fuer die Darstellung dick, der leere Magen flach: hoehere Falten stiessen in der Mitte zusammen) */
 function faltenHoehe(f) { return FALTE * (1 - f) * (1 - f) * (1 - 0.5 * f) + 0.01 * f; }
 
@@ -400,13 +401,12 @@ function werte(st, x, y, z, voll) {
     var th = Math.atan2(pb, pa), ct = Math.cos(th), sn = Math.sin(th);
     var sf = sCm / st.L;
     var gross = glatt(-0.2, 0.5, ct);   /* 1 an der grossen Kurvatur: Falten wellen sich; an der kleinen Kurvatur laufen sie gerade und parallel (Magenstrasse) */
-    var ph = NF * th + gross * (0.8 * Math.sin(0.8 * sCm) + 0.3 * Math.sin(1.9 * sCm + 2 * th));
+    var ph = NF * th + gross * 0.25 * Math.sin(0.5 * sCm);   /* Laengsfalten, an der grossen Kurvatur sanft gewellt */
     var u = 0.5 + 0.5 * Math.cos(ph), prof = u * u * (3 - 2 * u);
-    var wth = 0.35 + 0.65 * glatt(-0.4, 0.9, ct - 0.8 * sn), amp = (1 - glatt(0.55, 0.9, sf)) * glatt(0, 0.06, sf);
+    var wth = 0.35 + 0.65 * glatt(-0.4, 0.9, ct - 0.8 * sn), amp = (1 - glatt(0.45, 0.8, sf)) * glatt(0, 0.06, sf);
     var rho = Math.sqrt(pa * pa + pb * pb) + 0.4, amW = H * amp * wth;
     /* Falten: die Innenflaeche rueckt um die Faltenhoehe nach innen; die Verschiebung klingt tiefer im Innenraum als die Faltenhoehe ab (im fast leeren Magen liegen
-       gegenueberliegende Seiten der Wand nah beieinander, in der Mitte waere die Phase der Falten sonst zufaellig); das Feld ueberschaetzt den Abstand an steilen Flanken
-       (die Netze der Form nutzen dafuer ein breiteres Band, S.evalFeld) */
+       gegenueberliegende Seiten der Wand nah beieinander, in der Mitte waere die Phase der Falten sonst zufaellig); das Feld ueberschaetzt den Abstand an steilen Flanken. */
     B[6] = B[6] + amW * prof * glatt(0.3, -0.3, B[5]) * (1 - glatt(amW + 0.05, amW + 0.5, -B[6])) * glatt(0.2, 0.9, rho - 0.4);   /* auf der Achse ist der Winkel der Falten nicht definiert: dort keine */
   }
   return 0;
@@ -616,6 +616,19 @@ function schnitt(f) {
   };
 }
 
+/* Teil der Speiseroehre fuer die Detailmodelle: von 2,5 cm ueber der Luecke im Zwerchfell (Hiatus, wo der Weg die Kuppel durchstoesst) bis zum Mageneingang (Punkte von oben nach unten) */
+function speiseroehreAnzeige() {
+  var eso = kurve(BAHN.speiseroehre.pts, 12), i, j = 0;
+  for (i = 1; i < eso.length; i++) {
+    if (eso[i - 1][1] - kuppel(eso[i - 1][0], eso[i - 1][2]) >= 0 && eso[i][1] - kuppel(eso[i][0], eso[i][2]) < 0) {
+      var acc = 0; j = i;
+      while (j > 0 && acc < 2.5) { acc += laenge([eso[j], eso[j - 1]]); j--; }
+      break;
+    }
+  }
+  return eso.slice(j);
+}
+
 /* ---- Gefaesse und Nerv ---- */
 var AORTA = { pts: [[4.9, 121, -3.9], [5.0, 118, -3.9], [4.4, 110, -2.6], [3.2, 102, -0.8], [1.8, 94, 0.2]], r: 1.25 };   /* wie im Koerper (nur als Hindernis) */
 /* Punkte aus den Hindernissen (Abstandsfelder, innen < 0) herausschieben, bis die Rohre mit Radius r mindestens 0,04 cm Luft haben;
@@ -686,8 +699,8 @@ function gefaesse(f) {
   var pf = GE.pfortader.map(function (g) {
     return { id: g.id, pts: g.id === 'pfortaderStamm' ? g.pts : LE.stumpf(g.pts, LE.STUMPF), r0: g.r0, r1: g.r1 };
   });
-  /* Vagus: vorderer und hinterer Strang auf der Speiseroehre (ab 6 cm ueber dem Mageneingang), dann Aeste an der kleinen Kurvatur bis zum Antrum */
-  var ec = neuAbtasten(kurve(BAHN.speiseroehre.pts, 12).filter(function (p) { return p[1] <= EINGANG.p[1] + 6; }), 0.8);
+  /* Vagus: vorderer und hinterer Strang auf der Speiseroehre (ab 2,5 cm ueber dem Hiatus), dann Aeste an der kleinen Kurvatur bis zum Antrum */
+  var ec = neuAbtasten(speiseroehreAnzeige(), 0.8);
   function strang(vz, kl) {
     var pts = ec.map(function (p, i) {
       var q = ec[Math.min(i + 1, ec.length - 1)], o = ec[Math.max(i - 1, 0)], tx = q[0] - o[0], ty = q[1] - o[1], tz = q[2] - o[2], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
@@ -733,6 +746,6 @@ Kern.form('verdauung', {
   BAHN: BAHN, magen: magen, magenGrenzen: magenGrenzen, schichten: schichten, lumen: lumen, aussen: aussen, schichtFeld: schichtFeld, schnittZ: schnittZ, abbilden: abbilden,
   mittellinie: mittellinie, kurvaturen: kurvaturen, kennpunkte: kennpunkte, schnitt: schnitt,
   EINGANG: EINGANG, PFOERTNER: PFOERTNER, FUNDUS: FUNDUS, ANGULUS: ANGULUS,
-  gefaesse: gefaesse, zwerchfell: zwerchfell, kurve: kurve, kette: kette
+  gefaesse: gefaesse, zwerchfell: zwerchfell, speiseroehreAnzeige: speiseroehreAnzeige, kurve: kurve, kette: kette
 });
 })();
