@@ -7,7 +7,7 @@ Für einen neuen Chat. Zuerst lesen: `PLAN.md` (Phase 3, Abschnitt „Magen und 
 - Leber mit Leberläppchen ist fertig (PR #42, #43, #44 gemergt).
 - Magen und Darm: Grundsatzfragen und Einzelheiten für PR A sind abgestimmt (siehe PLAN.md).
 - Die Texte für PR A hat Jörn am 6. November 2026 freigegeben (mit Änderungen, siehe Kopf von `magen-a-texte.md`). Jörn möchte geduzt werden.
-- Arbeitszweig: `claude/magen-darm-a` (von `main`, enthält nur PLAN.md und diese Übergabe; noch kein Code).
+- PR A ist als PR #45 offen (Zweig `claude/magen-darm-a-y9fvgi`): Form des Verdauungstrakts, Körper, Magenmodell mit Stoffen, Mahlzeit, Schema, Hilfekarten und Üben. Nächster Schritt nach dem Merge: PR B (Darm mit Dünndarmzotte) – zuerst Einzelheiten und Texte mit Jörn abstimmen.
 
 ## Vorgehen (wie bei der Leber, von Jörn so gewünscht)
 
