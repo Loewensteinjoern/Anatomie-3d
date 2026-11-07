@@ -40,7 +40,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 }
 
 /* Schema (magen.js, Abschnitt 7): rechts am Rand unter der Werkzeugleiste; Bild 460 x 722 */
-#schema{top:166px;right:22px;bottom:76px;width:calc((100vh - 278px) * .637 + 26px);max-width:calc(100vw - 308px);
+#schema{top:176px;right:22px;bottom:40px;width:calc((100vh - 254px) * 1.48 + 26px);max-width:calc(100vw - 308px);
   padding:10px 12px 8px;display:none;flex-direction:column}
 #schema.show{display:flex}
 #schema .sch-head{display:flex;align-items:baseline;gap:12px;padding-right:36px;min-height:15px}
@@ -54,6 +54,8 @@ body.schema #labels,body.schema #leaders{display:none}
   /* Schema: oben, ueber der Werkzeugleiste; bei offenem Schema Leiste weg, Werkzeugleiste ganz unten, Schema/Infokarte/Hinweis darueber */
   #schema{left:12px;right:12px;top:62px;bottom:calc(34vh + var(--wz,132px) + 14px);width:auto;max-width:none;padding:8px 8px 6px;background:rgba(18,34,41,.98)}
   #schema .sch-hint{display:none}
+  #schemaBox{display:block;overflow-y:auto}   /* das Schema ist hoeher als das Panel: scrollen */
+  #schemaBox svg{flex:none;height:auto}
   body.schema #atlasZurueck{display:none}
   body.schema #rail{display:none}
   body.schema #tools{bottom:6px}

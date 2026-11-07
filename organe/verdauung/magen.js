@@ -510,10 +510,10 @@ function zwerchfellGeo(zf) {
 /* =====================================================================
    2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
    Jedes Netz der Wand (Aussenflaeche, Schleimhaut, Kappen, Gefaesse) bekommt ein Morph-Ziel: die Lage seiner Punkte bei Fuellung f = 1 (der Magen dehnt sich, die Falten
-   glaetten sich). Die Abbildung eines Punkts p (nuechtern) auf f = 1 ist form.abbilden(p, 1) (Parameter in der Mittellinie, Tiefe in der Wand, Falten gestaucht) plus eine
-   Verschiebung durch die Nachbarn und das Zwerchfell (die Aussenflaeche weicht bei Fuellung aus): sie wird auf einem groben Gitter (GS) aus einem Newton-Schritt auf dem
-   Feld der Aussenflaeche (Tiefe unter der Aussenflaeche bleibt) bestimmt und dazwischen linear gemischt, so dass alle Netze (Aussenflaeche, Schnittkappen, Schleimhaut)
-   dieselbe Abbildung nutzen und aneinander haengen bleiben. Die Gefaesse folgen ueber ihre Mittellinien (Rohre mit gleicher Aufteilung). Die Muskelwellen und der Pfoertner
+   glaetten sich). Die Abbildung eines Punkts p (nuechtern) auf f = 1 ist form.abbilden(p, 1) (Parameter in der Mittellinie, Tiefe in der Wand, Falten gestaucht), die Hoehe
+   wird weich unter der sichtbaren Zwerchfellkuppel begrenzt (den unsichtbaren Nachbarn weicht das Detailmodell nicht aus). Danach werden die neuen Lagen ueber die Kanten aller
+   Netze geglaettet und umgeklappte Dreiecke entwirrt (alle Netze nutzen dieselbe Abbildung und bleiben aneinander haengen; die Punkte der Schnittkappen bleiben beim
+   Glaetten stehen: glatte Kanten). Die Gefaesse folgen ueber ihre Mittellinien (Rohre mit gleicher Aufteilung). Die Muskelwellen und der Pfoertner
    laufen im Vertex-Shader (onBeforeCompile): je Punkt sind Lage s entlang der Mittellinie (Bogenlaenge, 0 = Magengrund, 1 = Pfoertner), Gewicht w, Vektor von der Mittellinie
    zum Punkt (nuechtern d0 und gefuellt d1) und Richtung der Mittellinie hinterlegt; die Welle schnuert die Wand um die Mittellinie ein (Gauss-Profil in s, in den
    Uniforms uWelle), der Pfoertner schliesst den Innenraum im Kanal (uKc). Wo die Zuordnung zur Mittellinie mehrdeutig ist (Innenseite der Biegung), wird sie ueber ein
@@ -522,6 +522,7 @@ function zwerchfellGeo(zf) {
 var ML = null, FA = null;                                   /* Tabellen der Mittellinie (nuechtern, gefuellt) und Abbildung */
 var GS = 0.5;                                               /* Gitterweite der Verschiebung durch die Nachbarn (cm) */
 var MG = { aussen: [], innen: [], kappe: [], rohr: [] };    /* Netze je Gruppe (mit Morph-Ziel) */
+var MORPH_ENTWIRRT = 0;
 var MORPH = [];                                             /* alle Netze mit Morph-Ziel (Fuellung) */
 var WU = { uWelle: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] }, uKc: { value: 0.85 }, uPyl: { value: new THREE.Vector2(0.9, 0.95) }, uL: { value: 20 } };
 var WELLE_B = 0.055;                                        /* halbe Breite der Welle (in s, Anteil der Bogenlaenge) */
@@ -626,68 +627,19 @@ function wellenFeld(p, o) {   /* s, c0, c1, t am Ort p (trilinear aus den Knoten
 }
 var KZ_ = new Float64Array(128), TT_ = new Float64Array(128);
 
-/* Abbildung auf f = 1 (siehe Kopf): Verschiebung durch die Nachbarn auf dem Gitter */
+/* Abbildung auf f = 1: form.abbilden (Parameter in der Mittellinie, Tiefe in der Wand, Falten gestaucht). Im Detailmodell sind Leber, Milz, Niere usw. nicht zu sehen, ihnen
+   weicht die Form hier nicht aus; nur dem sichtbaren Zwerchfell: die Hoehe waechst weich nur bis knapp unter die Kuppel (monoton in y, keine Knicke). */
 function abbildungBauen() {
-  var a0 = form.aussen(0).sdf, a1 = form.aussen(1).sdf, cache = new Map();
-  function grad(f, p, g0, e) { return [(f(p[0] + e, p[1], p[2]) - g0) / e, (f(p[0], p[1] + e, p[2]) - g0) / e, (f(p[0], p[1], p[2] + e) - g0) / e]; }
-  var eso = form.speiseroehreAnzeige();
-  function knoten(i, j, k) {
-    var key = i + 4096 * (j + 4096 * k), v = cache.get(key);
-    if (v) return v;
-    var g = [i * GS, 90 + j * GS, -12 + k * GS], a = a0(g[0], g[1], g[2]);
-    v = [0, 0, 0];
-    if (a < 1.9 && a > -3.3) {
-      var gu = g, tg = a, gr, l, d, it;
-      if (a < -0.45) {   /* tiefer als die Muskelschichten: die Verschiebung der Wand darueber gilt auch hier (Falten flachen sich ab, sie folgen nicht der Dellung) */
-        gr = grad(a0, g, a, 0.05); l = Math.sqrt(gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2]) || 1; d = -a - 0.45;
-        gu = [g[0] + d * gr[0] / l, g[1] + d * gr[1] / l, g[2] + d * gr[2] / l]; tg = -0.45;
-      }
-      var q0 = form.abbilden(gu, 1), q = q0;
-      for (it = 0; it < 3; it++) {   /* Newton auf dem Feld der gefuellten Aussenflaeche: Tiefe tg unter der Flaeche */
-        var g1 = a1(q[0], q[1], q[2]), r = g1 - tg;
-        if (Math.abs(r) < 0.02) break;
-        gr = grad(a1, q, g1, 0.05); var gg = gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2];
-        if (gg < 1e-6) break;
-        d = r / gg; l = Math.sqrt(gg) * Math.abs(d); if (l > 0.8) d *= 0.8 / l;
-        q = [q[0] - d * gr[0], q[1] - d * gr[1], q[2] - d * gr[2]];
-      }
-      var de = 1e9, e, dd;
-      for (e = 0; e < eso.length; e++) { dd = Math.sqrt(Math.pow(eso[e][0] - gu[0], 2) + Math.pow(eso[e][1] - gu[1], 2) + Math.pow(eso[e][2] - gu[2], 2)); if (dd < de) de = dd; }
-      var w = (1 - sstep(1.2, 2.2, a)) * (1 - sstep(2.6, 3.3, -a)) * sstep(1.0, 2.4, de);   /* weit weg vom Magen und am Stumpf der Speiseroehre keine Verschiebung */
-      v = [(q[0] - q0[0]) * w, (q[1] - q0[1]) * w, (q[2] - q0[2]) * w];
-    }
-    cache.set(key, v);
-    return v;
-  }
-  function newton(f, q, tg, it, tol) {   /* Punkt q auf die Flaeche f = tg ziehen (Newton-Schritte, hoechstens 0,8 cm je Schritt) */
-    var i;
-    for (i = 0; i < it; i++) {
-      var g0 = f(q[0], q[1], q[2]), r = g0 - tg;
-      if (Math.abs(r) < tol) break;
-      var gr = grad(f, q, g0, 0.05), gg = gr[0] * gr[0] + gr[1] * gr[1] + gr[2] * gr[2];
-      if (gg < 1e-6) break;
-      var d = r / gg, l = Math.sqrt(gg) * Math.abs(d); if (l > 0.8) d *= 0.8 / l;
-      q = [q[0] - d * gr[0], q[1] - d * gr[1], q[2] - d * gr[2]];
-    }
-    return q;
+  var a0 = form.aussen(0).sdf, ZA = 0.45, ZW = 1.8;
+  function entfernt(x, y, z) {   /* so viel wird von der Hoehe y abgezogen (weiche Begrenzung unter der Kuppel) */
+    var lim = lform.kuppel(x, z) - ZA - ZW, e = y - lim;
+    return e > 0 ? e - ZW * (1 - Math.exp(-e / ZW)) : 0;
   }
   FA = {
     a0: a0,
     abb: function (p) {
-      var q0 = form.abbilden(p, 1);
-      var fx = p[0] / GS, fy = (p[1] - 90) / GS, fz_ = (p[2] + 12) / GS, i = Math.floor(fx), j = Math.floor(fy), k = Math.floor(fz_), u = fx - i, v = fy - j, w = fz_ - k, dx = 0, dy = 0, dz = 0, c;
-      for (c = 0; c < 8; c++) {
-        var di = c & 1, dj = (c >> 1) & 1, dk = c >> 2, wt = (di ? u : 1 - u) * (dj ? v : 1 - v) * (dk ? w : 1 - w);
-        if (wt < 1e-6) continue;
-        var n = knoten(i + di, j + dj, k + dk); dx += wt * n[0]; dy += wt * n[1]; dz += wt * n[2];
-      }
-      var q = [q0[0] + dx, q0[1] + dy, q0[2] + dz], a = a0(p[0], p[1], p[2]), qn, wgt;
-      /* Feinabstimmung (das Gitter gibt die Verschiebung nur grob wieder): Aussenseite und Muskelschichten halten ihre Tiefe unter der gefuellten Aussenflaeche, die
-         die Schleimhaut darunter folgt ihnen ueber die Verschiebung des Gitters */
-      if (a > -0.8 && a < 1.5) {
-        wgt = a < -0.5 ? sstep(-0.8, -0.5, a) : 1;
-        if (Math.abs(a1(q[0], q[1], q[2]) - Math.max(a, -0.45)) > 0.04) { qn = newton(a1, q, Math.max(a, -0.45), 2, 0.03); q = [q[0] + (qn[0] - q[0]) * wgt, q[1] + (qn[1] - q[1]) * wgt, q[2] + (qn[2] - q[2]) * wgt]; }
-      }
+      var q = form.abbilden(p, 1), r = entfernt(q[0], q[1], q[2]) - entfernt(p[0], p[1], p[2]);
+      if (r > 0) q[1] -= r;
       return q;
     }
   };
@@ -701,16 +653,15 @@ function abbildungBauen() {
 var WF = { s: 0, c0: [0, 0, 0], c1: [0, 0, 0], t: [0, 0, 0] };
 function punktDaten(p, q, fade) {
   var o = wellenFeld(p, WF), c0 = o.c0, c1 = o.c1;
-  return { q: q, s: o.s, w: fade, d0: [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]], d1: [q[0] - c1[0], q[1] - c1[1], q[2] - c1[2]], t: [o.t[0], o.t[1], o.t[2]], n: null };
+  return { p: p, q: q, c1: [c1[0], c1[1], c1[2]], s: o.s, w: fade, d0: [p[0] - c0[0], p[1] - c0[1], p[2] - c0[2]], d1: [q[0] - c1[0], q[1] - c1[1], q[2] - c1[2]], t: [o.t[0], o.t[1], o.t[2]], n: null };
 }
 /* Netze einer Gruppe (Aussenflaeche, Schleimhaut, Kappen: Dreiecke ohne Index): Morph-Ziel, Normalen des gefuellten Netzes (gemeinsam ueber die Gruppe, damit an den Nahtstellen
    keine Spruenge entstehen) und die Attribute der Welle; async in Scheiben, damit der Ladebalken weiterlaeuft */
-async function morphGruppe(meshes, feld, von, bis, titel) {
-  var tab = new Map(), uniq = [], mi, i, k;
+async function morphAlle(gruppen, von, bis, titel) {
+  var tab = new Map(), uniq = [], mi, i, k, meshes = [];
   var key = function (x, y, z) { return Math.round(x * 400) + 8192 * (Math.round((y - 90) * 400) + 8192 * Math.round((z + 12) * 400)); };
-  var vorher = performance.now(), gesamt = 0;
-  meshes.forEach(function (m) { gesamt += m.geometry.attributes.position.count; });
-  var fertig = 0;
+  var vorher = performance.now(), gesamt = 0, fertig = 0;
+  gruppen.forEach(function (gr) { gr.meshes.forEach(function (m) { m.userData.feld = gr.feld; m.userData.fid = gr.fid; meshes.push(m); gesamt += m.geometry.attributes.position.count; }); });
   for (mi = 0; mi < meshes.length; mi++) {
     var P = meshes[mi].geometry.attributes.position.array, ids = new Int32Array(P.length / 3);
     for (i = 0; i < ids.length; i++) {
@@ -720,32 +671,82 @@ async function morphGruppe(meshes, feld, von, bis, titel) {
         id = uniq.length; uniq.push(punktDaten(p, FA.abb(p), 1)); tab.set(kk, id);
       }
       ids[i] = id;
-      if (performance.now() - vorher > 40) { await setLoad(von + (bis - von) * (fertig + i) / gesamt, titel); vorher = performance.now(); if (abgebaut) return; }
+      if (performance.now() - vorher > 40) { await setLoad(von + (bis - von) * 0.8 * (fertig + i) / gesamt, titel); vorher = performance.now(); if (abgebaut) return; }
     }
     fertig += ids.length;
     meshes[mi].userData.ids = ids;
   }
-  /* Normalen des gefuellten Netzes: aus dem Gefaelle des Abstandsfelds an der neuen Lage (glatt; Gefaelle zeigt wie bei den nuechternen Netzen nach aussen); Netze ohne Feld
-     (Schnittkappen, eben) behalten ihre Normalen */
-  if (feld) {
-    var e = 0.04, fv = [0, 0, 0, 0];
-    for (i = 0; i < uniq.length; i++) {
-      var q = uniq[i].q, g0 = feld(q[0], q[1], q[2]), gx = feld(q[0] + e, q[1], q[2]) - g0, gy = feld(q[0], q[1] + e, q[2]) - g0, gz = feld(q[0], q[1], q[2] + e) - g0, gl = Math.sqrt(gx * gx + gy * gy + gz * gz);
-      uniq[i].n = gl > 1e-9 ? [gx / gl, gy / gl, gz / gl] : null;
-    }
-  }
+  /* Glaetten: die neue Lage jedes Punkts wird ueber die Kanten aller Netze (gemeinsame Punkte) in 3 Schritten zur Haelfte mit dem Mittel der Nachbarn gemischt; so klappen keine
+     Dreiecke um (dort, wo die Falten oder die Zwerchfellkuppel das Netz stark verziehen), alle Netze bekommen dieselbe Lage an gemeinsamen Punkten */
+  var nb = uniq.map(function () { return []; });
+  gruppen.forEach(function (gr) { if (!gr.feld) gr.meshes.forEach(function (m) { var ids = m.userData.ids, t; for (t = 0; t < ids.length; t++) uniq[ids[t]].fix = true; }); });   /* Punkte der Schnittkappen bleiben, wie die Abbildung sie setzt (glatte Kanten) */
   meshes.forEach(function (m) {
-    var g = m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, ids = m.userData.ids, nv = ids.length;
+    var ids = m.userData.ids, t, a, b, c;
+    for (t = 0; t + 2 < ids.length; t += 3) {
+      a = ids[t]; b = ids[t + 1]; c = ids[t + 2];
+      nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b);
+    }
+  });
+  var it, nq = uniq.length;
+  for (it = 0; it < 3; it++) {
+    var neu = new Float64Array(nq * 3);
+    for (i = 0; i < nq; i++) {
+      var L = nb[i], q = uniq[i].q, sx = 0, sy = 0, sz = 0, nn = L.length;
+      if (!nn || uniq[i].fix) { neu[i * 3] = q[0]; neu[i * 3 + 1] = q[1]; neu[i * 3 + 2] = q[2]; continue; }
+      for (k = 0; k < nn; k++) { var r = uniq[L[k]].q; sx += r[0]; sy += r[1]; sz += r[2]; }
+      neu[i * 3] = 0.5 * q[0] + 0.5 * sx / nn; neu[i * 3 + 1] = 0.5 * q[1] + 0.5 * sy / nn; neu[i * 3 + 2] = 0.5 * q[2] + 0.5 * sz / nn;
+    }
+    for (i = 0; i < nq; i++) { uniq[i].q = [neu[i * 3], neu[i * 3 + 1], neu[i * 3 + 2]]; }
+  }
+  /* Umgeklappte Dreiecke (Normale gegenueber nuechtern um mehr als ca. 70 Grad gedreht) entwirren: ihre Ecken und deren Nachbarn werden stark geglaettet, bis keines mehr uebrig ist */
+  var bad = function (t, ids) {
+    var A = uniq[ids[t]], B = uniq[ids[t + 1]], C = uniq[ids[t + 2]], u0 = [B.p[0] - A.p[0], B.p[1] - A.p[1], B.p[2] - A.p[2]], w0 = [C.p[0] - A.p[0], C.p[1] - A.p[1], C.p[2] - A.p[2]];
+    var u1 = [B.q[0] - A.q[0], B.q[1] - A.q[1], B.q[2] - A.q[2]], w1 = [C.q[0] - A.q[0], C.q[1] - A.q[1], C.q[2] - A.q[2]];
+    var n0 = [u0[1] * w0[2] - u0[2] * w0[1], u0[2] * w0[0] - u0[0] * w0[2], u0[0] * w0[1] - u0[1] * w0[0]], n1 = [u1[1] * w1[2] - u1[2] * w1[1], u1[2] * w1[0] - u1[0] * w1[2], u1[0] * w1[1] - u1[1] * w1[0]];
+    var l0 = Math.sqrt(n0[0] * n0[0] + n0[1] * n0[1] + n0[2] * n0[2]), l1 = Math.sqrt(n1[0] * n1[0] + n1[1] * n1[1] + n1[2] * n1[2]);
+    return l0 > 1e-9 && n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2] < 0.35 * l0 * l1;
+  };
+  for (it = 0; it < 250; it++) {
+    var mark = new Uint8Array(nq), cnt = 0;
+    meshes.forEach(function (m) { var ids = m.userData.ids, t; for (t = 0; t + 2 < ids.length; t += 3) if (bad(t, ids)) { mark[ids[t]] = mark[ids[t + 1]] = mark[ids[t + 2]] = 1; cnt++; } });
+    if (!cnt) break;
+    var m2 = new Uint8Array(mark);
+    for (i = 0; i < nq; i++) if (mark[i]) nb[i].forEach(function (j) { m2[j] = 1; });
+    var neu2 = [];
+    for (i = 0; i < nq; i++) {
+      if (!m2[i] || !nb[i].length) { neu2.push(null); continue; }
+      var L2 = nb[i], q2 = uniq[i].q, tx = 0, ty = 0, tz = 0;
+      for (k = 0; k < L2.length; k++) { var r2 = uniq[L2[k]].q; tx += r2[0]; ty += r2[1]; tz += r2[2]; }
+      neu2.push([0.15 * q2[0] + 0.85 * tx / L2.length, 0.15 * q2[1] + 0.85 * ty / L2.length, 0.15 * q2[2] + 0.85 * tz / L2.length]);
+    }
+    for (i = 0; i < nq; i++) if (neu2[i]) uniq[i].q = neu2[i];
+    MORPH_ENTWIRRT = it + 1;
+  }
+  for (i = 0; i < nq; i++) { var o = uniq[i]; o.d1 = [o.q[0] - o.c1[0], o.q[1] - o.c1[1], o.q[2] - o.c1[2]]; }
+  await setLoad(von + (bis - von) * 0.85, titel); if (abgebaut) return;
+  /* Normalen des gefuellten Netzes: aus dem Gefaelle des Abstandsfelds der Gruppe an der neuen Lage (glatt; zeigt wie bei den nuechternen Netzen nach aussen); Netze ohne
+     Feld (Schnittkappen, eben) behalten ihre Normalen */
+  var e = 0.04;
+  meshes.forEach(function (m) {
+    var feld = m.userData.feld, fid = m.userData.fid, ids = m.userData.ids, g = m.geometry, P = g.attributes.position.array, N = g.attributes.normal.array, nv = ids.length, v;
     var dP = new Float32Array(nv * 3), dN = new Float32Array(nv * 3), S = new Float32Array(nv * 2), D0 = new Float32Array(nv * 3), D1 = new Float32Array(nv * 3), T = new Float32Array(nv * 3);
-    for (i = 0; i < nv; i++) {
-      var o = uniq[ids[i]], n1x = N[i * 3], n1y = N[i * 3 + 1], n1z = N[i * 3 + 2];
-      if (o.n) { n1x = o.n[0]; n1y = o.n[1]; n1z = o.n[2]; }
-      for (k = 0; k < 3; k++) { dP[i * 3 + k] = o.q[k] - P[i * 3 + k]; D0[i * 3 + k] = o.d0[k]; D1[i * 3 + k] = o.d1[k]; T[i * 3 + k] = o.t[k]; }
-      dN[i * 3] = n1x - N[i * 3]; dN[i * 3 + 1] = n1y - N[i * 3 + 1]; dN[i * 3 + 2] = n1z - N[i * 3 + 2];
-      S[i * 2] = o.s; S[i * 2 + 1] = o.w;
+    for (v = 0; v < nv; v++) {
+      var o = uniq[ids[v]], n1x = N[v * 3], n1y = N[v * 3 + 1], n1z = N[v * 3 + 2];
+      if (feld) {
+        if (o.nf === undefined) o.nf = {};
+        var nf = o.nf[fid];
+        if (nf === undefined) {
+          var q = o.q, g0 = feld(q[0], q[1], q[2]), gx = feld(q[0] + e, q[1], q[2]) - g0, gy = feld(q[0], q[1] + e, q[2]) - g0, gz = feld(q[0], q[1], q[2] + e) - g0, gl = Math.sqrt(gx * gx + gy * gy + gz * gz);
+          nf = o.nf[fid] = gl > 1e-9 ? [gx / gl, gy / gl, gz / gl] : null;
+        }
+        if (nf) { n1x = nf[0]; n1y = nf[1]; n1z = nf[2]; }
+      }
+      for (k = 0; k < 3; k++) { dP[v * 3 + k] = o.q[k] - P[v * 3 + k]; D0[v * 3 + k] = o.d0[k]; D1[v * 3 + k] = o.d1[k]; T[v * 3 + k] = o.t[k]; }
+      dN[v * 3] = n1x - N[v * 3]; dN[v * 3 + 1] = n1y - N[v * 3 + 1]; dN[v * 3 + 2] = n1z - N[v * 3 + 2];
+      S[v * 2] = o.s; S[v * 2 + 1] = o.w;
     }
     morphSetzen(m, dP, dN, S, D0, D1, T);
-    delete m.userData.ids;
+    delete m.userData.ids; delete m.userData.feld;
   });
 }
 function morphSetzen(m, dP, dN, S, D0, D1, T) {
@@ -867,9 +868,7 @@ async function bauen() {
   geoDaten = { E: E, P: P, eso: ep, duo: dp, G: G, G1: form.gefaesse(1), vorn: istVorn };
   /* Fuellung: Morph-Ziele aller Netze der Wand und der Gefaesse (Abschnitt 2b) */
   await setLoad(0.86, 'Magen dehnt sich'); if (abgebaut) return;
-  await morphGruppe(MG.aussen, form.aussen(1).sdf, 0.86, 0.89, 'Magen dehnt sich'); if (abgebaut) return;
-  await morphGruppe(MG.innen, form.lumen(1).sdf, 0.89, 0.93, 'Falten glätten sich'); if (abgebaut) return;
-  await morphGruppe(MG.kappe, null, 0.93, 0.95, 'Schnittflächen'); if (abgebaut) return;
+  await morphAlle([{ meshes: MG.aussen, feld: form.aussen(1).sdf, fid: 'a' }, { meshes: MG.innen, feld: form.lumen(1).sdf, fid: 'i' }, { meshes: MG.kappe, feld: null, fid: 'k' }], 0.86, 0.95, 'Magen dehnt sich'); if (abgebaut) return;
   rohrPaare.forEach(function (rp) {
     var lin1 = rp.lin.map(function (l) { return { pts: l.pts.map(FA.abbF), r0: l.r0, r1: l.r1 }; });
     var g1 = rohre(lin1); morphRohr(rp.m, g1); g1.dispose();
@@ -1027,7 +1026,7 @@ var AUSSCHNITTE = [
   { name: 'Übersicht', theta: UEBERSICHT.theta, phi: UEBERSICHT.phi, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb, innen: false },
   { name: 'Innenansicht', theta: 0, phi: 1.5, target: K3(3, 105.5, 1), ext: [22, 23], halb: 11, innen: true },
   { name: 'Mageneingang', theta: -0.15, phi: 1.45, target: K3(5, 108, 1), ext: [15, 14], halb: 7.5, innen: true },
-  { name: 'Pförtner', theta: 0.3, phi: 1.45, target: K3(2, 103, 2), ext: [24, 16], halb: 12, innen: true }
+  { name: 'Pförtner', theta: 0.3, phi: 1.45, target: K3(-2.2, 103.5, 3), ext: [11, 7.5], halb: 5.5, innen: true }
 ];
 var view = { theta: AUSSCHNITTE[0].theta, phi: AUSSCHNITTE[0].phi, dist: 70, target: AUSSCHNITTE[0].target.clone() };
 var orbit = Kern.orbit(canvas, view, { minDist: 4, maxDist: 160 });
@@ -1235,7 +1234,7 @@ var LISTEN = [
   ['magengrund', 'magenkoerper', 'magenvorhof', 'pfoertner', 'mageneingang', 'speiseroehre', 'zwoelffinger', 'arterien', 'venen', 'pfortader', 'vagus', 'zwerchfell'],
   ['schleimhaut', 'muskulatur', 'pfoertner', 'mageneingang', 'speiseroehre', 'zwoelffinger', 'arterien', 'venen', 'pfortader', 'vagus', 'zwerchfell'],
   ['mageneingang', 'schleimhaut', 'muskulatur', 'speiseroehre', 'vagus', 'arterien', 'venen', 'zwerchfell'],
-  ['pfoertner', 'schleimhaut', 'muskulatur', 'zwoelffinger', 'arterien', 'venen', 'pfortader']
+  ['pfoertner', 'schleimhaut', 'muskulatur', 'zwoelffinger', 'pfortader']   /* Pfoertner: nur das, was in der Naehe wichtig ist */
 ];
 /* Strukturen der Beschriftung in der aktuellen Ansicht: in der Uebersicht kommt bei Durchsicht die Schleimhaut dazu (sie ist dann durch die Wand zu sehen) */
 function beschriftet() { return aktiv === 0 && seeThrough ? LISTEN[0].concat(['schleimhaut']) : LISTEN[aktiv]; }
@@ -1631,7 +1630,7 @@ $('bEssen').onclick = function () { setMahlzeit(true); };
    Magensaft. Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall; gebaut wird es erst beim ersten Oeffnen.
    ===================================================================== */
 var SCH = (function () {
-  var NS = 'http://www.w3.org/2000/svg', W = 460, H = 722;
+  var NS = 'http://www.w3.org/2000/svg', W = 460, H = 722, BREIT = false;   /* BREIT: Desktop, Legende rechts neben dem Weg; sonst (Handy) darunter, das Panel scrollt */
   var BRASS = '#E0A94A', DIM = '#8DA7B1', INK = '#E7EFF0', DARK = '#0B171C';
   var svg = null, built = false, DOT = [], DYN = {}, seen = {}, PTH = null;
   function f1(v) { return Math.round(v * 10) / 10; }
@@ -1740,6 +1739,7 @@ var SCH = (function () {
   function build(box) {
     if (built) return;
     box.innerHTML = '';
+    BREIT = window.innerWidth > 1000; W = BREIT ? 800 : 460; H = BREIT ? 540 : 1010;
     bauePfade();
     svg = E('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'font-family': 'Inter, "Segoe UI", system-ui, sans-serif',
       'aria-label': 'Schema: der Weg der Nahrung von Mund bis After, der Magen hervorgehoben' }, box);
@@ -1810,23 +1810,24 @@ var SCH = (function () {
       ['Dickdarm', 'Wasser und Salze werden entzogen,', 'der Stuhl wird eingedickt'],
       ['Mastdarm', 'Der Stuhl wird gesammelt', 'und ausgeschieden']
     ];
-    var COL = [8, 236], ly0 = 520;
+    var LX = BREIT ? 478 : 8, LY = BREIT ? 34 : 540, PITCH = BREIT ? 49 : 46, FT = 12.5, FZ = 10.4;
     LG.forEach(function (t, q) {
-      var cx = COL[q < 4 ? 0 : 1], cy = ly0 + (q % 4) * 40.5;
-      abzeichen(ga, cx + 7, cy - 3, q + 1);
-      text(ga, cx + 20, cy, t[0], 10.5, q === 2 ? INK : BRASS, { 'font-weight': 700 });
-      text(ga, cx + 20, cy + 11.5, t[1], 8.6, DIM, { 'stroke-width': 2.2 });
-      text(ga, cx + 20, cy + 22, t[2], 8.6, DIM, { 'stroke-width': 2.2 });
+      var cy = LY + q * PITCH;
+      abzeichen(ga, LX + 8, cy - 4, q + 1);
+      text(ga, LX + 24, cy, t[0], FT, q === 2 ? INK : BRASS, { 'font-weight': 700 });
+      text(ga, LX + 24, cy + 14, t[1], FZ, DIM, { 'stroke-width': 2.2 });
+      text(ga, LX + 24, cy + 27, t[2], FZ, DIM, { 'stroke-width': 2.2 });
     });
     /* Kennzahlen */
-    var kx = COL[1], ky = ly0 + 3 * 40.5 - 13;
-    E('rect', { x: kx, y: f1(ky), width: 216, height: 66, rx: 4, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
-    text(ga, kx + 8, ky + 14, 'KENNZAHLEN · VERDAUUNG', 8.5, BRASS, { 'font-weight': 700, 'letter-spacing': 0.8, 'stroke-width': 0 });
+    var kx = LX, ky = LY + 7 * PITCH - 6, kw = BREIT ? 300 : 444;
+    E('rect', { x: kx, y: f1(ky), width: kw, height: 80, rx: 4, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+    text(ga, kx + 10, ky + 16, 'KENNZAHLEN · VERDAUUNG', 10, BRASS, { 'font-weight': 700, 'letter-spacing': 0.8, 'stroke-width': 0 });
     ['Mund und Speiseröhre: Sekunden', 'Magen: 1–5 Stunden', 'Dünndarm: 3–6 Stunden', 'Dickdarm: 1–3 Tage'].forEach(function (s, q) {
-      text(ga, kx + 8, ky + 27 + q * 11, s, 8.6, DIM, { 'stroke-width': 0 });
+      text(ga, kx + 10, ky + 32 + q * 13, s, FZ, DIM, { 'stroke-width': 0 });
     });
     /* Hinweiszeile je nach Mahlzeit, zwei Zeilen */
-    DYN.hint = [text(ga, 8, ly0 + 3 * 40.5 + 62, '', 8.8, INK, { 'stroke-width': 2.2 }), text(ga, 8, ly0 + 3 * 40.5 + 74, '', 8.8, INK, { 'stroke-width': 2.2 })];
+    var hx = BREIT ? 8 : 8, hy = BREIT ? 530 : ky + 100;
+    DYN.hint = [0, 1, 2, 3].map(function (q) { return text(ga, BREIT ? 478 : hx, (BREIT ? ky + 102 : hy) + q * 14, '', 10.4, INK, { 'stroke-width': 2.2 }); });
     seen = { mz: -1 };
     built = true;
   }
@@ -1850,8 +1851,9 @@ var SCH = (function () {
     }
     if (mahlzeit !== seen.mz) {
       seen.mz = mahlzeit;
-      var t = MAHLZEIT_TXT[mahlzeit ? 1 : 0], k = t.indexOf(', '), z1 = t.slice(0, k + 1), z2 = t.slice(k + 2);
-      DYN.hint[0].textContent = z1; DYN.hint[1].textContent = z2;
+      var wort = MAHLZEIT_TXT[mahlzeit ? 1 : 0].split(' '), zl = [''], mx = BREIT ? 48 : 82;   /* Hinweis auf Zeilen umbrechen */
+      wort.forEach(function (w) { var l = zl[zl.length - 1]; if (l && (l + ' ' + w).length > mx) zl.push(w); else zl[zl.length - 1] = l ? l + ' ' + w : w; });
+      DYN.hint.forEach(function (e, q) { e.textContent = zl[q] || ''; });
     }
   }
   function abbauen() { svg = null; built = false; DOT = []; DYN = {}; seen = {}; LN = null; }
@@ -1893,6 +1895,28 @@ var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
     return out;
   },
   stand: function (f, te) { /* fuer die Pruefung: Fuellung (roh 0..1) und Zeit sofort setzen und festhalten */ fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) { tM = clock - te; } $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
+  /* fuer die Pruefung: umgeklappte Dreiecke (Normale bei f = 1 gegenueber f = 0 um mehr als 90 Grad gedreht) und groesste Kantendehnung der Netze der Wand */
+  netz: function () {
+    var tot = 0, flip = 0, maxD = 0, je = {};
+    MORPH.forEach(function (m) {
+      var f0 = flip, d0 = maxD, t0 = tot;
+      var g = m.geometry, P = g.attributes.position.array, D = g.morphAttributes.position[0].array, n = P.length / 9, t, a, b, c;
+      if (g.index) return;
+      for (t = 0; t < n; t++) {
+        var v0 = [], v1 = [];
+        for (c = 0; c < 3; c++) { var k = (t * 3 + c) * 3; v0.push([P[k], P[k + 1], P[k + 2]]); v1.push([P[k] + D[k], P[k + 1] + D[k + 1], P[k + 2] + D[k + 2]]); }
+        var nr = function (v) { var ux = v[1][0] - v[0][0], uy = v[1][1] - v[0][1], uz = v[1][2] - v[0][2], wx = v[2][0] - v[0][0], wy = v[2][1] - v[0][1], wz = v[2][2] - v[0][2]; return [uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx]; };
+        var n0 = nr(v0), n1 = nr(v1), l0 = Math.sqrt(n0[0] * n0[0] + n0[1] * n0[1] + n0[2] * n0[2]), l1 = Math.sqrt(n1[0] * n1[0] + n1[1] * n1[1] + n1[2] * n1[2]);
+        var s2 = 0; for (a = 0; a < 3; a++) { b = (a + 1) % 3; s2 += Math.pow(v0[a][0] - v0[b][0], 2) + Math.pow(v0[a][1] - v0[b][1], 2) + Math.pow(v0[a][2] - v0[b][2], 2); }
+        if (l0 / 2 / s2 < 0.1) continue;   /* Splitterdreiecke der Schnittkanten (schlechte Form, Flaeche/Kantenquadrate unter 0,1) zaehlen nicht */
+        tot++;
+        if (n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2] < 0) flip++;
+        for (a = 0; a < 3; a++) { b = (a + 1) % 3; var e0 = Math.sqrt(Math.pow(v0[a][0] - v0[b][0], 2) + Math.pow(v0[a][1] - v0[b][1], 2) + Math.pow(v0[a][2] - v0[b][2], 2)), e1 = Math.sqrt(Math.pow(v1[a][0] - v1[b][0], 2) + Math.pow(v1[a][1] - v1[b][1], 2) + Math.pow(v1[a][2] - v1[b][2], 2)); if (e0 > 0.1 && e1 / e0 > maxD) maxD = e1 / e0; }
+      }
+      je[m.name] = (je[m.name] || 0) + (flip - f0);
+    });
+    return { dreiecke: tot, umgeklappt: flip, maxDehnung: Math.round(maxD * 100) / 100, je: je };
+  },
   form: function () { return form; }, aussenSdf: function () { return form.aussen(fe); } };
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
