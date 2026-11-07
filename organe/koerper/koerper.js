@@ -72,7 +72,7 @@ var STRUKTUREN = [
     text: 'Die kuppelförmige Muskelplatte trennt Brust- und Bauchraum. Als wichtigster Atemmuskel flacht es sich beim Einatmen ab und erweitert so den Brustraum; Speiseröhre, Aorta und untere Hohlvene treten durch Lücken hindurch.' },
   { id: 'speiseroehre', de: 'Speiseröhre', lat: 'Oesophagus', system: 'verdauung', detail: false,
     text: 'Der etwa 25 cm lange Muskelschlauch verläuft hinter der Luftröhre durch den Brustraum und das Zwerchfell zum Magen. Durch wellenförmige Bewegungen (Peristaltik) transportiert er den Speisebrei; ein Schließmuskel am Mageneingang verhindert Rückfluss.' },
-  { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', detail: false,
+  { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', oeffnen: '#magen', knopf: 'Magen öffnen',
     text: 'Der Magen liegt im linken Oberbauch unter dem Zwerchfell. Er speichert die Nahrung, durchmischt sie mit Magensaft (Salzsäure, Pepsin) und gibt sie portionsweise an den Zwölffingerdarm weiter; seine Schleimhaut schützt sich durch eine Schleimschicht selbst.' },
   { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her. Funktionseinheit ist das Leberläppchen.' },
@@ -744,6 +744,8 @@ async function bauen() {
   lungenP.then(function () { return Kern.organLaden('lunge', { ohneCss: true }); }).catch(function (e) { console.warn(e && e.message || e); });
   /* Leber-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); nur wenn die Form der Leber da ist; ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
   leberP.then(function (lf) { return lf ? Kern.organLaden('leber', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
+  /* Magen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); es laedt seine Formen selbst, ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
+  verdauungP.then(function (vf) { return vf ? Kern.organLaden('magen', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1086,10 +1088,13 @@ ZIELE.luftroehre = ZIELE.lunge;   /* gleiches Ziel: das Lungen-Modell */
 var LEBER_MIT = ['leber', 'gallenblase', 'pfortader', 'leberarterie', 'lebervenen', 'gallengang'];
 ZIELE.leber = { theta: 0, phi: PI / 2, ext: [28, 26], target: [-2.9, 107.6, 0.5], mit: LEBER_MIT };   /* Ersatz, wenn das Leber-Modul fehlt (Ganzansicht der Leber von vorn) */
 ZIELE.gallenblase = ZIELE.pfortader = ZIELE.leberarterie = ZIELE.lebervenen = ZIELE.gallengang = ZIELE.leber;   /* gleiches Ziel: das Leber-Modell */
+/* Strukturen, die das Magen-Modell mitzeigt (Magen, Ende der Speiseroehre, Zwerchfell): sie bleiben bei der Fahrt sichtbar; der Rest blendet aus */
+var MAGEN_MIT = ['magen', 'speiseroehre', 'zwerchfell'];
+ZIELE.magen = { theta: -0.3, phi: 1.75, ext: [24, 24], target: [3, 106, 1], mit: MAGEN_MIT };   /* Ersatz, wenn das Magen-Modul fehlt (Ansicht des Magens leicht von unten links) */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber, ma = Kern.Organe && Kern.Organe.magen;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1106,12 +1111,16 @@ function zielFuer(id, w, h) {
     var se = le.start(w, h), em = le.mitte;
     return { theta: se.theta, phi: se.phi, dist: se.dist, target: V(se.target[0] + em[0], se.target[1] + em[1], se.target[2] + em[2]), versatz: se.versatz };
   }
+  if (z === ZIELE.magen && ma && ma.start) {   /* Startansicht des Magens (Magen-Koordinaten, um die Mitte ma.mitte im Koerper verschoben) */
+    var sm = ma.start(w, h), mm = ma.mitte;
+    return { theta: sm.theta, phi: sm.phi, dist: sm.dist, target: V(sm.target[0] + mm[0], sm.target[1] + mm[1], sm.target[2] + mm[2]), versatz: sm.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber', magen: 'magen' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */
