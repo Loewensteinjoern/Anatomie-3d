@@ -45,7 +45,7 @@
      dickdarm(opt)          { sdf, grenzen, achse, laenge, R(s, phi), R0(s), abschnitte }: Abstandsfeld des Dickdarms vom blinden Ende des Blinddarms bis zum After (Haustren und drei
                             Taenien bis zum Sigma, Mastdarm und Analkanal glatt); abschnitte = Bogenlaenge der Grenzen (blinddarm, aufsteigend, quer, absteigend, sigma, mastdarm,
                             analkanal); opt: ohneAppendix, glatt, von/bis (Bereich der Mittellinie); wurmfortsatz() { pts, r }
-     duennSchichten(s0, s1, opt), blinddarmSchichten(), mastdarmSchichten(), zwoelffingerdarmSchichten()   Wandschichten nur fuer die aufgeschnittenen Abschnitte (Laengsmuskel, Ringmuskel, Schleimhaut
+     duennSchichten(s0, s1, opt), blinddarmSchichten(), mastdarmSchichten(opt: von = Anfang des Bereichs), zwoelffingerdarmSchichten()   Wandschichten nur fuer die aufgeschnittenen Abschnitte (Laengsmuskel, Ringmuskel, Schleimhaut
                             mit Ringfalten bzw. Analsaeulen, bauhin, wurmfortsatz, sphinkterInnen, sphinkterAussen): { schichten: [{ id, sdf, grenzen }], grenzen, mitte, schnitt }
      gekroese()             { pts, tris, nu, nv, wurzel, rand, richtung, laenge }: halbdurchsichtige Platte von der Wurzel (ca. 14 cm) zu den Schlingen (Netz-Daten)
      darmGefaesse()         { darmarterien, darmvenen, pfortader }: je Liste von { id, pts, r0, r1 }; darmKennpunkte() { PAPILLE, FLEXUR, BAUHIN, AFTER, DUENN_SCHNITT, ... }
@@ -1091,7 +1091,7 @@ function schnittEbene(a, hx, hy, hz, off) {
 }
 /* Ringfalten (Kerckring-Falten) im Duenndarm: Hoehe (cm) der Schleimhautleisten bei Bogenlaenge s und Winkel phi; schmale halbmondfoermige Leisten quer zur Achse (ca. 60 % des Umfangs, von Leiste zu Leiste versetzt) mit Taelern dazwischen; hoch und dicht im Leerdarm, flach und weiter im Krummdarm */
 function ringfalte(st, s, phi) {
-  var u = glatt(st.sLeer, 0.85 * st.L, s), hf = 0.2 - 0.12 * u, P = 0.9 + 0.3 * u;
+  var u = glatt(st.sLeer, 0.85 * st.L, s), hf = 0.27 - 0.13 * u, P = 0.9 + 0.3 * u;
   var k = Math.floor(s / P + 0.5), x = (s - k * P) / 0.17;
   var dphi = phi - k * 2.4, w = Math.abs(dphi - 6.283185307 * Math.round(dphi / 6.283185307));   /* Leiste k liegt um 2,4 rad versetzt zur vorigen: halbmondfoermig, ca. 60 % des Umfangs */
   return hf * Math.exp(-x * x) * glatt(2.0, 1.0, w);
@@ -1196,11 +1196,11 @@ function zwoelffingerdarmSchichten() {
 
 /* Mastdarm und Analkanal: von knapp oberhalb des Mastdarms bis zum After; Laengs- und Ringmuskel, innerer Schliessmuskel (verdickter Ringmuskel im
    Analkanal), aeusserer Schliessmuskel (unten aussen), Schleimhaut mit Analsaeulen; aufgeschnitten in der Mittelebene (links fehlt, x > 0 wird entfernt) */
-function mastdarmSchichten() {
+function mastdarmSchichten(opt) {
   var st = dickZustand(), A = st.A, S = st.s;
   function wc(s) { return glatt(S.kanal - 1.4, S.kanal - 0.2, s); }
   var def = {
-    s0: S.mastdarm + 6.0, s1: S.ende, rand: 2.6, R: st.R,
+    s0: opt && opt.von !== undefined ? opt.von : S.mastdarm + 6.0, s1: S.ende, rand: 2.6, R: st.R,
     schnitt: function (a) { return schnittEbene(a, 1, 0, 0, 0); }, ebene: [1, 0, 0, 0],
     schichten: [
       { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; }, bis: S.kanal + 0.5 },

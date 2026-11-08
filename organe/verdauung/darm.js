@@ -199,6 +199,7 @@ function innen(hex) { return mat(hex, { rough: 0.6, coat: 0.2, side: THREE.Doubl
 MAT.schleimhaut = innen(0xE88F8C);
 MAT.papille = innen(STRUCT.papille.col);
 MAT.bauhin = innen(STRUCT.bauhin.col);
+MAT.gangGalle = mat(0x5E9A4A, { rough: 0.4, coat: 0.3 }); MAT.gangPankreas = mat(0xC9B6E6, { rough: 0.4, coat: 0.3 });   /* Gaenge an der Papille (gehoeren zur Struktur Papille) */
 function kappeMat(hex) { return mat(hex, { rough: 0.55, side: THREE.DoubleSide }); }
 MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);                       /* Darmmuskulatur */
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
@@ -485,9 +486,9 @@ async function bauen() {
   var Aduo = form.Achse(form.BAHN.duodenum.pts, { schritt: 0.3 }), Lduo = Aduo.laenge, sP = Aduo.von(kp.PAPILLE.p);
   var DUO_R = form.BAHN.duodenum.r, DU_R = form.DUENN_R;
   /* Schichten der vier Bereiche (Funktionen der Form; das Vernetzen geschieht spaeter) */
-  var RZ = [null, form.zwoelffingerdarmSchichten(), form.duennSchichten(du.schnitt.s0, du.schnitt.s1), form.blinddarmSchichten(), form.mastdarmSchichten()];
+  var RZ = [null, form.zwoelffingerdarmSchichten(), form.duennSchichten(du.schnitt.s0, du.schnitt.s1), form.blinddarmSchichten(), form.mastdarmSchichten({ von: AB.mastdarm[0] })];
   /* Bereiche der Mittellinie (Bogenlaenge) */
-  var B1 = [Math.max(sP - 5, 0), sP + 5], B2 = [du.schnitt.s0, du.schnitt.s1], B3 = [0, AB.blinddarm[1] + 3.0], B4 = [AB.mastdarm[0] + 6.0, Adk.laenge];
+  var B1 = [Math.max(sP - 5, 0), sP + 5], B2 = [du.schnitt.s0, du.schnitt.s1], B3 = [0, AB.blinddarm[1] + 3.0], B4 = [AB.mastdarm[0], Adk.laenge];   /* der Bereich Mastdarm beginnt mit dem Mastdarm: keine Stufe zum groben Teil */
   var RDUO = function (s) { return DUO_R + (DU_R - DUO_R) * sstep(Lduo - 1.4, Lduo, s); };   /* Radius des Zwoelffingerdarms: laeuft am Ende in den des Duenndarms */
   var RDU = function () { return DU_R; };
   var RDK = function (s, phi) { return dk.R(s, phi); };
@@ -519,7 +520,6 @@ async function bauen() {
   haut('quer', Adk, AB.quer[0], AB.quer[1], RDK, { seiten: 36 });
   haut('absteigend', Adk, AB.absteigend[0], AB.absteigend[1], RDK, { seiten: 36 });
   haut('sigma', Adk, AB.sigma[0], AB.sigma[1], RDK, { seiten: 36 });
-  haut('mastdarm', Adk, AB.mastdarm[0], B4[0], RDK, { seiten: 36 });
   haut('mastdarm', Adk, B4[0], AB.mastdarm[1], RDK, { seiten: 36 }, 4);
   haut('after', Adk, AB.analkanal[0], Adk.laenge, RDK, { seiten: 36 }, 4);
   /* Schleimhaut als einfacher Schlauch unter der Wand: nur bei Durchsicht zu sehen (in den vier Bereichen sind es die feinen Schichten, solange sie geschlossen sind) */
@@ -537,7 +537,7 @@ async function bauen() {
      Papille, Klappe und Wurmfortsatz sind kleine Abstandsfelder (Gitter HC) */
   var AX = [null, Aduo, Adu, Adk, Adk], KAPPE = {
     laengsmuskel: ['muskulatur', 'kLaengs'], ringmuskel: ['muskulatur', 'kRing'], sphinkterInnen: ['after', 'kSphInnen'], sphinkterAussen: ['after', 'kSphAussen'], schleimhaut: ['schleimhaut', 'schleimhaut']
-  }, FELD = { papille: ['papille', 'papille'], bauhin: ['bauhin', 'bauhin'], wurmfortsatz: ['wurmfortsatz', 'wurmfortsatz'] };
+  }, FELD = { papille: ['papille', 'papille'], bauhin: ['bauhin', 'bauhin'] };
   var r;
   for (r = 1; r <= 4; r++) {
     var Z = RZ[r], def = Z.def, A = AX[r], k;
@@ -559,12 +559,20 @@ async function bauen() {
       var L2 = Z.schichten[k], f2 = FELD[L2.id];
       if (!f2) continue;
       var g = await netz(L2.sdf, L2.grenzen, HC, null, false); if (abgebaut) return;
-      var m = addMesh(f2[0], g, MAT[f2[1]], STRUCT[f2[0]].de, L2.id === 'wurmfortsatz' ? 3 : 2, L2.id === 'wurmfortsatz' ? 'hinten' : 'schicht', r);
-      if (L2.id === 'wurmfortsatz') m.userData.immer = true;
+      addMesh(f2[0], g, MAT[f2[1]], STRUCT[f2[0]].de, 2, 'schicht', r);
       tris.schichten += anz(g);
     }
       await setLoad(0.14 + 0.7 * r / 4, 'Schnittflächen'); if (abgebaut) return;
   }
+  /* Wurmfortsatz: glattes Rohr entlang der Kurve (Anfang in der Wand des Blinddarms), nicht aufgeschnitten */
+  var wk = form.kurve(form.wurmfortsatz().pts, 8), wA = Adk.punkt(0), wi = 0;
+  while (wi < wk.length - 2 && Math.sqrt(Math.pow(wk[wi][0] - wA[0], 2) + Math.pow(wk[wi][1] - wA[1], 2) + Math.pow(wk[wi][2] - wA[2], 2)) < 2.2) wi++;
+  var wg = rohre([{ pts: wk.slice(wi), r0: form.wurmfortsatz().r, r1: form.wurmfortsatz().r * 0.9, seiten: 14, segmente: 60 }]);
+  addMesh('wurmfortsatz', wg, MAT.wurmfortsatz, STRUCT.wurmfortsatz.de, 3, 'hinten', 3); tris.rohre += anz(wg);
+  /* Ende des Gallengangs und des Pankreasgangs: kommen von aussen an die Papille (Teil der Struktur Papille) */
+  var LF = Kern.Formen.leber.GEFAESSE, gg = LF.gallengang.filter(function (q) { return q.id === 'hauptgallengang'; })[0], pg = LF.pankreasgang[0];
+  var ga = rohre([{ pts: gg.pts.slice(-3), r0: gg.r0, r1: gg.r1, seiten: 12 }]), gb = rohre([{ pts: pg.pts, r0: pg.r0, r1: pg.r1, seiten: 10 }]);
+  addMesh('papille', ga, MAT.gangGalle, STRUCT.papille.de + ' (Gallengang)', 3, 'hinten', 1); addMesh('papille', gb, MAT.gangPankreas, STRUCT.papille.de + ' (Pankreasgang)', 3, 'hinten', 1);
   await setLoad(0.86, 'Gekröse und Gefäße'); if (abgebaut) return;
   /* Gekroese: halbdurchsichtige Platte */
   var gk = form.gekroese(), gg = new THREE.BufferGeometry(), gp = new Float32Array(gk.pts.length * 3), i;
@@ -588,7 +596,7 @@ async function bauen() {
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, lv = 0;   /* lv: Version fuer die Beschriftung */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
 /* Strukturen, die im Ausschnitt vor dem geoeffneten Bereich liegen und dann ausgeblendet werden (sobald der Deckel zur Haelfte abgehoben ist); vom Krummdarm bleibt im Ausschnitt Blinddarm das Ende */
-var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'], [], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'],
+var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'],
   ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'absteigend', 'sigma']];
 function verborgen(sid, ende, fern) {
   var r = AUSSCHNITTE[aktiv].reg;
@@ -606,7 +614,7 @@ function applyVisibility() {
   root.traverse(function (o) {
     if (!o.isMesh) return;
     var u = o.userData, r = u.reg, ok = !!enabled[u.sid];
-    if (u.kappe || (u.schicht && !u.immer)) ok = ok && OPEN[r] > 0.02;
+    if (u.kappe || u.schicht) ok = ok && OPEN[r] > 0.02;
     if (u.lumen) ok = ok && seeThrough && (!r || OPEN[r] <= 0.02);
     if (verborgen(u.sid, u.ende, u.fern)) ok = false;
     o.visible = ok;
@@ -757,8 +765,8 @@ var K3 = function (x, y, z) { return V(x - M[0], y - M[1], z - M[2]); };   /* Ko
 /* ext = Breite und Hoehe (cm), die im freien Bereich ganz sichtbar sein sollen; halb = halbe Breite (cm), die die Beschriftungsspalten freilassen; reg: geoeffneter Bereich (0 = keiner) */
 var AUSSCHNITTE = [
   { name: 'Übersicht', theta: UEBERSICHT.theta, phi: UEBERSICHT.phi, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb, reg: 0 },
-  { name: 'Zwölffingerdarm', theta: 0.5, phi: 1.5, target: K3(-6, 99.5, -0.5), ext: [10, 15], halb: 5.5, reg: 1 },
-  { name: 'Dünndarm', theta: 0, phi: 1.15, target: K3(1.2, 93.3, 10.5), ext: [13, 6.5], halb: 6.5, reg: 2 },
+  { name: 'Zwölffingerdarm', theta: -0.55, phi: 1.5, target: K3(-2, 99.5, 0), ext: [17, 15], halb: 8, reg: 1 },
+  { name: 'Dünndarm', theta: 0, phi: 1.3, target: K3(1.2, 93.5, 10.5), ext: [19, 10], halb: 9.5, reg: 2 },
   { name: 'Blinddarm', theta: -0.7, phi: 1.5, target: K3(-10.2, 90.5, 2.9), ext: [14, 16], halb: 7, reg: 3 },
   { name: 'Mastdarm', theta: 1.5708, phi: 1.5, target: K3(0, 83.5, -3), ext: [14, 16], halb: 7, reg: 4 }
 ];
@@ -984,6 +992,8 @@ function layoutLabels(w, h) {
       if (!an) return;
       pv.copy(an).project(camera);   /* ANKER liegen schon im Raum der Szene (Koerper-Koordinaten minus M) */
       if (pv.z > 1) return;
+      var psx = (pv.x * 0.5 + 0.5) * w, psy = (-pv.y * 0.5 + 0.5) * h;
+      if (psx < r.x0 || psx > r.x1 || psy < r.y0 - 20 || psy > r.y1 + 20) return;   /* Anker ausserhalb des freien Bereichs: keine Beschriftung */
       items.push({ id: id, sx: (pv.x * 0.5 + 0.5) * w, sy: (-pv.y * 0.5 + 0.5) * h });
     });
   }
