@@ -16,7 +16,7 @@
 
    Enthalten:
      BAHN                   Bahnen der Rohre im Koerper (Steuerpunkte pts, Radius r, Segmentzahl seg): speiseroehre, zwoelffingerdarm, duodenum (Zwoelffingerdarm bis zur Flexur),
-                            duenndarm (pts ist eine Funktion: die Tabelle DUENN_TAB), dickdarm (der alte Rahmen, nur noch Hindernis fuer die Magengefaesse; der Darm im
+                            duenndarm (pts ist eine Funktion: die Tabelle DUENN_TAB, r 0,9), dickdarm (der alte Rahmen, nur noch Hindernis fuer die Magengefaesse; der Darm im
                             Koerper kommt aus dickdarm())
      magen(f)               Abstandsfeld der Aussenflaeche des Magens bei Fuellung f (0 = nuechtern, 1 = nach dem Essen), magenGrenzen(f) = Gitterbox;
                             J-foermiger Schlauch um eine Mittellinie (Magengrund, Magenkoerper, Magenvorhof, Pfoertner), der Pfoertner endet
@@ -38,8 +38,8 @@
      zwerchfell()           { sdf, grenzen, hiatus, loch, rand }: Ausschnitt der Zwerchfellkuppel ueber dem linken Oberbauch mit dem Hiatus (Mitte, Abstandsfeld loch der Luecke, rand = x0, x1, z0, z1)
      Darm (ab PR B): Zwoelffingerdarm, Duenndarm, Dickdarm mit Blinddarm, Wurmfortsatz, Sigma, Mastdarm und Analkanal, Gekroese, Gefaesse
      zwoelffingerdarm()     { pts, r, flexur }: Mittellinie des Zwoelffingerdarms (r 1,0) von BAHN.zwoelffingerdarm bis zur Flexura duodenojejunalis (FLEXUR)
-     duenndarm()            { pts (Steuerpunkte), r (1,1), laenge, leerEnde (Bogenlaenge, ab hier Krummdarm), achse, punkt(s), richtung(s), schnitt { s0, s1, p }, grenzen(),
-                            sdf({ ohne: [s0, s1] }) }: ein durchgehender glatter Schlauch von der Flexur bis zur Bauhin-Klappe (BAUHIN), ca. 164 cm in dicht gepackten Schlingen;
+     duenndarm()            { pts (Steuerpunkte), r (0,9), laenge, leerEnde (Bogenlaenge, ab hier Krummdarm), achse, punkt(s), richtung(s), schnitt { s0, s1, p }, grenzen(),
+                            sdf({ ohne: [s0, s1] }) }: ein durchgehender glatter Schlauch von der Flexur bis zur Bauhin-Klappe (BAUHIN), ca. 270 cm in dicht gepackten Schlingen;
                             die ersten 40 % der Laenge sind Leerdarm (links oben), der Rest Krummdarm (rechts unten); Mittellinie aus der Tabelle DUENN_TAB (einmal berechnet,
                             ohne Zufall; Mindestabstand 0,1 cm zwischen den Schlingen und zu allen Nachbarn im Koerper)
      dickdarm(opt)          { sdf, grenzen, achse, laenge, R(s, phi), R0(s), abschnitte }: Abstandsfeld des Dickdarms vom blinden Ende des Blinddarms bis zum After (Haustren und drei
@@ -153,7 +153,7 @@ function kuppel(x, z) { return lunge().kuppel(x, z); }
 var BAHN = {
   speiseroehre: { pts: [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], r: 0.8, seg: 40 },
   zwoelffingerdarm: { pts: [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], r: 1.0, seg: 50 },
-  duenndarm: { pts: duennPts, r: 1.1, seg: 1300 },   /* Tabelle DUENN_TAB (Abschnitt Darm), r = DUENN_R */
+  duenndarm: { pts: duennPts, r: 0.9, seg: 2200 },   /* Tabelle DUENN_TAB (Abschnitt Darm), r = DUENN_R */
   dickdarm: { pts: [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
     [8.8, 97.5, 6.0], [13.3, 99.2, 2.4], [13.3, 103.6, -3.2], [11.8, 100.5, -2.8], [11.8, 95, -2.6], [11, 89.5, -2], [9.0, 86.3, -2.0], [5, 85.2, -2.4], [2, 85.8, -2.6], [0.6, 84, -2.8], [0.3, 81.5, -4.8], [0, 79.5, -6]],
     r: 1.8, seg: 260, kappe: [-11.3, 89.2, 0.5, 2.4] }
@@ -754,17 +754,17 @@ function zwerchfell() {
 
 /* ==========================================================================
    Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
-   Duenndarm und Dickdarm entstehen aus festen Tabellen von Steuerpunkten (Catmull-Rom wie im Koerper). Der Duenndarm ist ein glatter Schlauch (r 1,1)
+   Duenndarm und Dickdarm entstehen aus festen Tabellen von Steuerpunkten (Catmull-Rom wie im Koerper). Der Duenndarm ist ein glatter Schlauch (r 0,9)
    in dicht gepackten Schlingen; die Tabelle wurde einmal berechnet (Schlingen im Rahmen des Dickdarms, die Schlauchwaende halten untereinander
    und zu allen Nachbarn im Koerper mindestens 0,1 cm Abstand). Der Dickdarm ist ein Abstandsfeld um die Mittellinie mit Haustren und drei Taenien.
    ========================================================================== */
-var DUENN_R = 1.1;                                   /* Radius des Duenndarms */
+var DUENN_R = 0.9;                                   /* Radius des Duenndarms */
 var DUENN_LEER = 0.4;                                /* die ersten 40 % der Laenge sind Leerdarm (Jejunum), der Rest Krummdarm (Ileum) */
-var FLEXUR = { p: [4.83, 93.54, 1.71] };             /* Flexura duodenojejunalis: Ende des Zwoelffingerdarms, Anfang des Leerdarms (links neben der Wirbelsaeule) */
+var FLEXUR = { p: [4.9, 94.6, 1.5] };             /* Flexura duodenojejunalis: Ende des Zwoelffingerdarms, Anfang des Leerdarms (links neben der Wirbelsaeule) */
 var BAUHIN = { p: [-9.1, 92.6, 2.9] };               /* Bauhin-Klappe: Muendung des Krummdarms (Ende des Duenndarms) in die mediale Wand des Blinddarms */
 var AFTER = { p: [0, 78.9, -4.3] };                  /* Mitte der Afteroeffnung (Haut) */
-var DUENN_SCHNITT = { s0: 18, s1: 30 };              /* aufgeschnittene Duenndarmschlinge: Bereich der Mittellinie (cm ab der Flexur; vordere Schlinge im Leerdarm); p = Mitte, kommt aus duenndarm() */
-var DUODENUM_FORT = [[-1.75, 95.76, 1.01], [-1.03, 95.54, 2.85], [2.1, 94.3, 3.26], [3.16, 94.01, 3.15], [4.12, 93.81, 2.3], [4.83, 93.54, 1.71]];   /* Fortsetzung des Zwoelffingerdarms ab dem Ende von BAHN.zwoelffingerdarm (r 1,0) bis zur Flexur */
+var DUENN_SCHNITT = { s0: 42, s1: 53 };              /* aufgeschnittene Duenndarmschlinge: Bereich der Mittellinie (cm ab der Flexur; vordere Schlinge im Leerdarm); p = Mitte, kommt aus duenndarm() */
+var DUODENUM_FORT = [[-1.4, 95.2, 1.0], [-0.8, 94.2, 3.3], [1.0, 93.6, 3.9], [3.0, 93.6, 3.2], [4.4, 94.1, 2.2], [4.9, 94.6, 1.5]];   /* Fortsetzung des Zwoelffingerdarms ab dem Ende von BAHN.zwoelffingerdarm (r 1,0) bis zur Flexur */
 BAHN.duodenum = { pts: BAHN.zwoelffingerdarm.pts.concat(DUODENUM_FORT), r: 1.0, seg: 90 };
 
 /* ---- Achse: dichte Mittellinie mit Bogenlaenge, Begleitdreibein und Gitter fuer schnelle Abstandsabfragen ----
@@ -877,40 +877,76 @@ function Achse(pts, o) {
 }
 
 var DUENN_TAB = [
-  [4.83, 93.54, 1.71], [6.2, 93.8, 1.3], [7.6, 94.5, 1.15], [8.81, 95.31, 1.05],
-  [9.92, 95.7, 0.73], [11, 95.8, 1.33], [10.95, 95.42, 2.49], [10.34, 94.9, 3.38],
-  [9.49, 94.58, 4.15], [8.57, 94.43, 4.9], [7.73, 94.49, 5.74], [6.71, 94.76, 6.3],
-  [5.61, 95.19, 6.46], [4.52, 95.6, 6.76], [3.62, 95.85, 7.54], [3.54, 95.87, 8.77],
-  [4.56, 95.6, 9.39], [5.72, 95.35, 9.27], [6.85, 95.17, 8.93], [7.95, 95.04, 8.51],
-  [9.02, 94.93, 8], [10.05, 94.82, 7.41], [11.07, 94.61, 6.81], [11.84, 93.66, 6.61],
-  [11.76, 92.55, 7.12], [10.8, 92.24, 7.79], [9.73, 92.26, 8.35], [8.49, 92.27, 8.3],
-  [8.17, 92.27, 7.11], [8.98, 92.22, 6.22], [9.83, 92.27, 5.38], [10.83, 92.26, 4.74],
-  [12.01, 92.26, 4.52], [13.21, 92.3, 4.61], [14.28, 92.65, 4.1], [14.17, 93.13, 2.97],
-  [13.18, 93.27, 2.3], [12.03, 93.15, 1.98], [10.89, 92.88, 1.75], [9.75, 92.58, 1.94],
-  [8.78, 92.37, 2.6], [7.98, 92.26, 3.47], [7.19, 92.27, 4.36], [6.35, 92.34, 5.2],
-  [5.42, 92.57, 5.9], [4.45, 92.92, 6.48], [3.37, 93.31, 6.83], [2.17, 93.33, 6.9],
-  [1.13, 92.77, 6.7], [0.36, 91.92, 6.43], [-0.37, 91, 6.21], [-1.21, 90.18, 6.08],
-  [-2.22, 89.54, 6.09], [-3.36, 89.23, 6.24], [-4.53, 89.25, 6.51], [-5.64, 89.53, 6.84],
-  [-6.67, 90.02, 7.18], [-7.6, 90.69, 7.5], [-8.41, 91.52, 7.77], [-9.05, 92.55, 7.88],
-  [-7.91, 92.71, 8.28], [-6.77, 92.87, 8.59], [-5.61, 93.02, 8.83], [-4.44, 93.15, 9],
-  [-3.26, 93.27, 9.12], [-2.07, 93.34, 9.2], [-0.88, 93.33, 9.24], [0.3, 93.2, 9.28],
-  [1.45, 92.88, 9.33], [2.49, 92.28, 9.43], [3.2, 91.33, 9.64], [3.25, 90.17, 10],
-  [2.48, 89.31, 10.36], [1.31, 89.08, 10.57], [0.14, 89.27, 10.63], [-1.01, 89.57, 10.62],
-  [-2.15, 89.92, 10.55], [-3.29, 90.2, 10.41], [-4.46, 90.31, 10.22], [-5.61, 90.1, 9.96],
-  [-6.6, 89.47, 9.68], [-7.25, 88.47, 9.44], [-6.96, 87.33, 9.16], [-5.96, 86.7, 8.88],
-  [-4.76, 86.7, 8.84], [-3.59, 86.91, 8.93], [-2.43, 87.16, 8.98], [-1.3, 87.5, 8.86],
-  [-0.25, 87.92, 8.47], [0.62, 88.39, 7.79], [1.02, 88.63, 6.68], [0.77, 88.6, 5.5],
-  [0.04, 88.53, 4.55], [-0.91, 88.55, 3.84], [-2.01, 88.53, 3.38], [-3.17, 88.39, 3.16],
-  [-4.33, 88.13, 3.12], [-5.46, 87.76, 3.23], [-6.54, 87.3, 3.42], [-7.59, 86.76, 3.65],
-  [-8.37, 85.99, 4.18], [-8.21, 85.18, 5.09], [-7.15, 85, 5.64], [-5.97, 85.16, 5.79],
-  [-4.81, 85.4, 5.88], [-3.65, 85.65, 5.95], [-2.49, 85.87, 6.05], [-1.32, 86.02, 6.19],
-  [-0.14, 86.06, 6.38], [0.99, 86.06, 6.77], [1.87, 86.12, 7.6], [2.1, 86.03, 8.8],
-  [1.44, 85.71, 9.77], [0.34, 85.32, 10.04], [-0.78, 84.96, 9.82], [-1.84, 84.66, 9.37],
-  [-2.9, 84.42, 8.88], [-4.01, 84.26, 8.48], [-5.16, 84.1, 8.22], [-6.31, 83.91, 8.02],
-  [-7.47, 83.68, 7.84], [-8.63, 83.51, 7.63], [-9.81, 83.5, 7.43], [-10.96, 83.8, 7.27],
-  [-11.87, 84.63, 7.28], [-11.78, 85.82, 7.61], [-10.73, 86.28, 8.04], [-9.54, 86.3, 7.9],
-  [-8.54, 86.54, 7.28], [-7.92, 87.28, 6.57], [-7.79, 88.16, 5.78], [-7.89, 89.13, 5.1],
-  [-7.94, 90.38, 4.9], [-7.32, 91.24, 4.14], [-8.06, 92, 3.4], [-9.1, 92.6, 2.9]
+  [4.9, 94.6, 1.5], [5.73, 94.36, 2.09], [6.27, 94.24, 2.99], [7.21, 94.52, 2.86],
+  [8.14, 94.75, 2.77], [9.09, 94.93, 2.75], [10.04, 95.03, 2.85], [10.97, 95.08, 3.14],
+  [11.77, 95.09, 3.68], [12.28, 95.1, 4.51], [12.15, 95.14, 5.48], [11.52, 95, 6.21],
+  [10.64, 94.81, 6.58], [9.69, 94.62, 6.51], [8.8, 94.51, 6.17], [7.92, 94.58, 5.79],
+  [7.02, 94.74, 5.47], [6.11, 94.93, 5.24], [5.17, 95.14, 5.14], [4.24, 95.35, 5.17],
+  [3.32, 95.59, 5.36], [2.47, 95.86, 5.75], [2, 96.17, 6.57], [2.43, 96.32, 7.45],
+  [3.37, 96.22, 7.68], [4.3, 96.01, 7.53], [5.2, 95.72, 7.33], [6.1, 95.37, 7.29],
+  [7.01, 95.15, 7.59], [7.62, 95.48, 8.32], [7.1, 96.06, 8.94], [6.19, 96.13, 9.24],
+  [5.31, 95.87, 9.56], [4.46, 95.54, 9.83], [3.53, 95.3, 9.96], [2.58, 95.25, 9.9],
+  [1.64, 95.36, 9.7], [0.75, 95.58, 9.43], [-0.15, 95.81, 9.17], [-1.08, 95.97, 8.98],
+  [-2.05, 95.96, 8.93], [-2.96, 95.69, 9.09], [-3.61, 95.07, 9.5], [-3.63, 94.24, 10.03],
+  [-3.04, 93.59, 10.43], [-2.17, 93.22, 10.63], [-1.23, 93.03, 10.73], [-0.28, 92.92, 10.78],
+  [0.68, 92.88, 10.78], [1.64, 92.91, 10.72], [2.59, 93, 10.62], [3.54, 93.11, 10.47],
+  [4.47, 93.21, 10.29], [5.41, 93.24, 10.07], [6.35, 93.11, 9.83], [7.06, 92.67, 9.28],
+  [6.7, 92.09, 8.55], [5.75, 91.99, 8.36], [4.79, 92.04, 8.32], [3.86, 92.26, 8.38],
+  [2.95, 92.56, 8.48], [2.06, 92.89, 8.59], [1.16, 93.2, 8.7], [0.24, 93.46, 8.79],
+  [-0.71, 93.63, 8.79], [-1.66, 93.67, 8.65], [-2.58, 93.54, 8.35], [-3.22, 93.26, 7.66],
+  [-3.16, 92.94, 6.73], [-2.45, 92.83, 6.07], [-1.55, 92.99, 5.74], [-0.64, 93.32, 5.82],
+  [0.2, 93.66, 6.13], [1.04, 93.93, 6.51], [1.92, 94.1, 6.85], [2.85, 94.13, 7.09],
+  [3.8, 94, 7.18], [4.7, 93.71, 7.05], [5.58, 93.39, 6.82], [6.46, 93.04, 6.68],
+  [7.36, 92.69, 6.58], [8.26, 92.38, 6.5], [9.19, 92.14, 6.4], [10.13, 92, 6.25],
+  [11.06, 92, 5.95], [11.74, 92.48, 5.41], [11.36, 93.28, 4.97], [10.5, 93.74, 4.78],
+  [9.61, 93.45, 4.49], [9.44, 92.78, 3.8], [9.43, 92.33, 2.94], [9.02, 92.13, 2.08],
+  [8.18, 92.08, 1.61], [7.21, 92, 1.44], [6.48, 92, 2.08], [6.13, 92.12, 2.97],
+  [5.79, 92.38, 3.83], [5.25, 92.72, 4.55], [4.48, 92.84, 5.12], [3.65, 92.67, 5.56],
+  [2.8, 92.29, 5.84], [1.96, 91.84, 5.73], [1.18, 91.51, 5.27], [0.45, 91.34, 4.66],
+  [-0.35, 91.42, 4.13], [-1.23, 91.66, 3.82], [-2.15, 91.95, 3.83], [-3.04, 92.16, 4.14],
+  [-3.85, 92.2, 4.65], [-4.59, 92.02, 5.25], [-5.4, 91.72, 5.66], [-6.27, 91.39, 5.93],
+  [-7.18, 91.11, 6.04], [-8.12, 90.96, 6.17], [-9.04, 91.04, 6.47], [-9.77, 91.45, 6.99],
+  [-9.93, 92.15, 7.67], [-9.35, 92.76, 8.17], [-8.41, 92.98, 8.32], [-7.46, 92.86, 8.24],
+  [-6.56, 92.55, 8.09], [-5.7, 92.14, 7.97], [-4.85, 91.7, 7.9], [-3.98, 91.31, 7.79],
+  [-3.07, 91.04, 7.61], [-2.16, 90.85, 7.38], [-1.24, 90.71, 7.16], [-0.3, 90.56, 7],
+  [0.66, 90.47, 7.02], [1.59, 90.48, 7.33], [2.23, 90.58, 8.07], [2.19, 90.69, 9.04],
+  [1.49, 90.82, 9.71], [0.56, 90.92, 9.95], [-0.4, 91, 9.95], [-1.36, 91.1, 9.91],
+  [-2.3, 91.26, 9.91], [-3.24, 91.46, 9.98], [-4.18, 91.62, 10.04], [-5.14, 91.7, 10.04],
+  [-6.1, 91.65, 9.97], [-7.03, 91.42, 9.8], [-7.82, 90.89, 9.6], [-8.21, 89.98, 9.52],
+  [-7.79, 89.09, 9.64], [-6.87, 88.88, 9.87], [-5.96, 89.1, 10.12], [-5.08, 89.4, 10.35],
+  [-4.15, 89.52, 10.56], [-3.2, 89.49, 10.7], [-2.25, 89.37, 10.81], [-1.31, 89.23, 10.87],
+  [-0.35, 89.12, 10.89], [0.61, 89.04, 10.88], [1.57, 88.97, 10.79], [2.4, 88.85, 10.29],
+  [2.73, 88.69, 9.38], [2.34, 88.53, 8.5], [1.53, 88.41, 7.98], [0.56, 88.37, 7.95],
+  [-0.37, 88.4, 8.19], [-1.28, 88.52, 8.48], [-2.2, 88.72, 8.66], [-3.12, 88.99, 8.66],
+  [-4.02, 89.26, 8.48], [-4.93, 89.5, 8.27], [-5.86, 89.66, 8.08], [-6.8, 89.65, 7.87],
+  [-7.69, 89.42, 7.57], [-8.45, 88.94, 7.15], [-8.34, 88.45, 6.29], [-7.5, 88.62, 5.81],
+  [-6.61, 88.97, 5.66], [-5.69, 89.19, 5.83], [-4.78, 89.2, 6.13], [-3.87, 89.06, 6.4],
+  [-2.93, 88.91, 6.58], [-1.97, 88.88, 6.44], [-1.23, 89.05, 5.83], [-0.98, 89.28, 4.92],
+  [-1.1, 89.47, 3.98], [-1.45, 89.55, 3.08], [-2.11, 89.45, 2.38], [-2.99, 89.27, 2.02],
+  [-3.94, 89.1, 2.09], [-4.84, 88.98, 2.4], [-5.7, 88.91, 2.83], [-6.54, 88.86, 3.3],
+  [-7.42, 88.75, 3.71], [-8.17, 88.12, 3.89], [-8.06, 87.14, 3.72], [-7.28, 86.76, 3.28],
+  [-6.46, 86.76, 2.77], [-5.7, 86.75, 2.18], [-4.84, 86.82, 1.74], [-3.9, 86.96, 1.57],
+  [-2.97, 87.16, 1.72], [-2.17, 87.35, 2.22], [-1.6, 87.47, 3.01], [-1.41, 87.35, 3.95],
+  [-1.71, 87.13, 4.85], [-2.4, 86.9, 5.49], [-3.32, 86.73, 5.73], [-4.28, 86.6, 5.7],
+  [-5.21, 86.43, 5.56], [-6.16, 86.29, 5.44], [-7.12, 86.21, 5.43], [-8.06, 86.2, 5.64],
+  [-8.87, 86.31, 6.17], [-9.28, 86.56, 7.03], [-8.98, 86.92, 7.9], [-8.15, 87.22, 8.31],
+  [-7.2, 87.4, 8.3], [-6.26, 87.45, 8.12], [-5.32, 87.37, 7.95], [-4.37, 87.2, 7.89],
+  [-3.44, 87.01, 7.81], [-2.51, 86.81, 7.67], [-1.58, 86.63, 7.48], [-0.65, 86.49, 7.32],
+  [0.31, 86.39, 7.3], [1.25, 86.37, 7.54], [2.03, 86.38, 8.13], [2.35, 86.51, 9.05],
+  [2, 86.73, 9.94], [1.19, 86.88, 10.45], [0.25, 86.97, 10.63], [-0.71, 87.06, 10.63],
+  [-1.66, 87.18, 10.59], [-2.61, 87.32, 10.51], [-3.56, 87.45, 10.4], [-4.51, 87.38, 10.23],
+  [-5.34, 86.9, 10], [-5.47, 85.94, 9.79], [-4.76, 85.26, 9.81], [-3.87, 84.92, 9.92],
+  [-2.92, 84.83, 10.05], [-1.97, 84.86, 10.16], [-1.01, 84.91, 10.23], [-0.05, 84.9, 10.25],
+  [0.91, 84.81, 10.22], [1.84, 84.63, 10], [2.49, 84.42, 9.28], [2.31, 84.3, 8.31],
+  [1.49, 84.3, 7.78], [0.53, 84.33, 7.71], [-0.43, 84.23, 7.78], [-1.36, 84.02, 7.86],
+  [-2.29, 83.83, 7.96], [-3.24, 83.7, 8.06], [-4.19, 83.68, 8.2], [-5.13, 83.78, 8.38],
+  [-6.03, 84.02, 8.63], [-6.95, 84.23, 8.8], [-7.89, 84.4, 8.87], [-8.85, 84.52, 8.78],
+  [-9.77, 84.54, 8.47], [-10.31, 84.45, 7.63], [-9.83, 84.3, 6.78], [-8.9, 84.24, 6.51],
+  [-7.94, 84.26, 6.51], [-6.98, 84.32, 6.57], [-6.03, 84.4, 6.56], [-5.08, 84.46, 6.39],
+  [-4.3, 84.5, 5.81], [-3.91, 84.51, 4.92], [-3.78, 84.98, 4.07], [-3.76, 85.85, 3.65],
+  [-3.67, 86.81, 3.67], [-3.48, 87.73, 3.89], [-3.21, 88.64, 4.08], [-3.35, 89.6, 4.06],
+  [-4, 90.28, 3.82], [-4.89, 90.64, 3.7], [-5.83, 90.78, 3.79], [-6.83, 90.82, 3.99],
+  [-7.48, 91.62, 3.78], [-8.24, 92.12, 3.28], [-9.1, 92.6, 2.9]
 ];
 /* Duenndarm: Mittellinie aus der Tabelle (von der Flexur bis zur Bauhin-Klappe), Achse mit Gitter */
 function duennPts() { return DUENN_TAB.map(function (p) { return p.slice(); }); }
@@ -1051,11 +1087,12 @@ function schnittEbene(a, hx, hy, hz, off) {
   var i = a.i, tx = a.TX[i], ty = a.TY[i], tz = a.TZ[i], dp = hx * tx + hy * ty + hz * tz, nx = hx - dp * tx, ny = hy - dp * ty, nz = hz - dp * tz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
   return (a.vx * nx + a.vy * ny + a.vz * nz) / nl - off;
 }
-/* Ringfalten (Kerckring-Falten) im Duenndarm: Hoehe (cm) der Schleimhautfalten bei Bogenlaenge s und Winkel phi; hoch und dicht im Leerdarm, flach und weiter im Krummdarm */
+/* Ringfalten (Kerckring-Falten) im Duenndarm: Hoehe (cm) der Schleimhautleisten bei Bogenlaenge s und Winkel phi; schmale halbmondfoermige Leisten quer zur Achse (ca. 60 % des Umfangs, von Leiste zu Leiste versetzt) mit Taelern dazwischen; hoch und dicht im Leerdarm, flach und weiter im Krummdarm */
 function ringfalte(st, s, phi) {
-  var u = glatt(st.sLeer, 0.85 * st.L, s), hf = 0.26 - 0.17 * u, P = 0.9 + 0.25 * u;
-  var g = Math.pow(0.5 + 0.5 * Math.cos(6.283185307 * s / P), 1.5);
-  return hf * g * (0.85 + 0.15 * Math.sin(2 * phi + 0.7 * s));
+  var u = glatt(st.sLeer, 0.85 * st.L, s), hf = 0.2 - 0.12 * u, P = 0.9 + 0.3 * u;
+  var k = Math.floor(s / P + 0.5), x = (s - k * P) / 0.17;
+  var dphi = phi - k * 2.4, w = Math.abs(dphi - 6.283185307 * Math.round(dphi / 6.283185307));   /* Leiste k liegt um 2,4 rad versetzt zur vorigen: halbmondfoermig, ca. 60 % des Umfangs */
+  return hf * Math.exp(-x * x) * glatt(2.0, 1.0, w);
 }
 /* Duenndarm-Abschnitt s0 bis s1 (cm ab der Flexur) mit Laengsmuskel, Ringmuskel und Schleimhaut samt Ringfalten, vorn aufgeschnitten (cut = Abstand
    der Schnittflaeche vor der Mittellinie, Standard 0: Schnitt durch die Mittellinie, die vordere Haelfte (z grosser) fehlt) */
@@ -1066,9 +1103,9 @@ function duennSchichten(s0, s1, opt) {
     s0: s0, s1: s1, rand: DUENN_R + 0.3, R: function () { return DUENN_R; },
     schnitt: opt.ohneSchnitt ? null : function (a) { return schnittEbene(a, 0, 0, 1, cut); },
     schichten: [
-      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; } },
-      { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.42; } },
-      { id: 'schleimhaut', a: function () { return 0.42; }, b: function (s, phi) { return 0.66 + ringfalte(st, s, phi); } }
+      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.18; } },
+      { id: 'ringmuskel', a: function () { return 0.18; }, b: function () { return 0.36; } },
+      { id: 'schleimhaut', a: function () { return 0.36; }, b: function (s, phi) { return 0.52 + ringfalte(st, s, phi); } }
     ]
   };
   var r = wandSchichten(A, def);
@@ -1094,13 +1131,18 @@ function blinddarmSchichten() {
   };
   var r = wandSchichten(A, def);
   var gb = [[Math.min(p0[0], p1[0]) - 1.3, Math.min(p0[1], p1[1]) - 1.3, Math.min(p0[2], p1[2]) - 1.3], [Math.max(p0[0], p1[0]) + 1.3, Math.max(p0[1], p1[1]) + 1.3, Math.max(p0[2], p1[2]) + 1.3]];
+  /* Bauhin-Klappe: zwei Lippen (oben und unten, quer zur Mittellinie des Blinddarms ca. 2 cm lang) mit einem queren Schlitz dazwischen, innen an der medialen Wand */
+  var pm = [p0[0] + dir[0] * 0.5, p0[1] + dir[1] * 0.5, p0[2] + dir[2] * 0.5], ez = [0, 0, 1], LP = 0.72;
   r.schichten.push({
-    id: 'bauhin', grenzen: gb,
+    id: 'bauhin', grenzen: [[pm[0] - 1.8, pm[1] - 1.8, pm[2] - 2.2], [pm[0] + 1.8, pm[1] + 1.8, pm[2] + 2.2]],
     sdf: function (x, y, z) {
-      var v = S.kapsel(x, y, z, p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], 1.0, 0.62), dc = A.q(x, y, z);
-      if (A.i >= 0) v = Math.max(v, dc - st.R(A.s, A.phi()) + 0.12);   /* nur innerhalb des Blinddarms */
-      v = Math.max(v, -S.kapsel(x, y, z, p0[0] - dir[0] * 0.6, p0[1] - dir[1] * 0.6, p0[2] - dir[2] * 0.6, p1[0] + dir[0] * 0.4, p1[1] + dir[1] * 0.4, p1[2] + dir[2] * 0.4, 0.26, 0.26));
-      return A.i < 0 ? v : Math.max(v, schnittEbene(A, 0, 0, 1, 1.2));
+      var dc = A.q(x, y, z), v = Math.min(
+        S.kapsel(x, y, z, pm[0] - ez[0] * 1.0, pm[1] + LP, pm[2] - 1.0, pm[0], pm[1] + LP, pm[2] + 1.0, 0.5, 0.5),
+        S.kapsel(x, y, z, pm[0] - ez[0] * 1.0, pm[1] - LP, pm[2] - 1.0, pm[0], pm[1] - LP, pm[2] + 1.0, 0.5, 0.5));
+      v = Math.min(v, S.kapsel(x, y, z, p0[0], p0[1] + LP, p0[2] - 1.0, p0[0], p0[1] + LP, p0[2] + 1.0, 0.6, 0.6), S.kapsel(x, y, z, p0[0], p0[1] - LP, p0[2] - 1.0, p0[0], p0[1] - LP, p0[2] + 1.0, 0.6, 0.6));
+      if (A.i < 0) return v;
+      v = Math.max(v, dc - st.R(A.s, A.phi()) + 0.12);   /* nur innerhalb des Blinddarms */
+      return Math.max(v, schnittEbene(A, 0, 0, 1, 1.2));
     }
   });
   var gw = [[0, 0, 0], [0, 0, 0]], k, c;
@@ -1220,7 +1262,7 @@ function gekroese() {
    Venen laufen daneben; die obere Mesenterialvene setzt die Mesenterialvene der Leberform fort, die untere Mesenterialvene muendet in die Milzvene.
    pfortader: Stamm mit Stumpf der Milzvene und die ganze obere Mesenterialvene (wie in der Leberform, id mesenterialvene). */
 var SMA_PTS = [[2.4, 96.4, 0.9], [1.13, 96.52, 2.94], [0.43, 96.47, 3.83], [-0.41, 96.16, 4.36], [-1.58, 95.63, 4.5], [-3.26, 95.11, 4.48], [-4.83, 94.61, 4.48]];
-var SMV_PTS = [[0.4, 93.6, 1.5], [-1.95, 93.35, 1.97], [-3.79, 93.13, 2.25], [-5.6, 93.5, 2.6], [-7.4, 94.2, 3.2]];   /* ab dem Ende der Mesenterialvene der Leberform */
+var SMV_PTS = [[0.4, 93.6, 1.5], [-0.3, 92.4, 1.9], [-2.2, 92.0, 2.3], [-4.0, 92.4, 2.5], [-5.6, 93.2, 2.7], [-7.4, 94.2, 3.2]];   /* ab dem Ende der Mesenterialvene der Leberform */
 var IMA_PTS = [[3, 95.4, 0.7], [3.83, 94.05, -0.19], [3.9, 92.92, -0.85], [3.44, 90.9, -1.84], [2.86, 89.33, -2.42], [2.2, 87.8, -2.8]];
 var IMV_PTS = [[2.6, 87.8, -3.4], [3.9, 90.9, -2.5], [4.7, 92.9, -2.2], [5.2, 95.0, -2.4], [5.4, 97.5, -3.0], [5.0, 100.5, -3.4], [3.8, 103.3, -3.4]];   /* letzter Punkt: wird durch die Muendung in die Milzvene ersetzt */
 var ARTERIEN_AST = [
