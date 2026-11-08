@@ -1,7 +1,7 @@
 /* ==========================================================================
    Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
-   Dickdarm als Baustein fuer den Koerper (und spaeter die Detailmodelle von
-   Magen und Darm). Signed-Distance-Feld, Einheit cm, Innen < 0, aus den
+   Dickdarm als Baustein fuer den Koerper und die Detailmodelle von Magen und
+   Darm. Signed-Distance-Feld, Einheit cm, Innen < 0, aus den
    Bausteinen von Kern.SDF (core/sdf.js); nur Daten und Funktionen, keine
    three.js-Objekte, kein Zufall.
    Klassisches Skript (kein Modul). Beim Laden wird nur die Form mit Kern.form
@@ -15,8 +15,9 @@
    y oben, z vorn.
 
    Enthalten:
-     BAHN                   Bahnen der Rohre im Koerper (Steuerpunkte pts, Radius r, Segmentzahl seg): speiseroehre, zwoelffingerdarm,
-                            duenndarm (pts ist eine Funktion: Schlingen in vier Lagen), dickdarm (mit kappe = [x, y, z, r] der Kugel am Anfang)
+     BAHN                   Bahnen der Rohre im Koerper (Steuerpunkte pts, Radius r, Segmentzahl seg): speiseroehre, zwoelffingerdarm, duodenum (Zwoelffingerdarm bis zur Flexur),
+                            duenndarm (pts ist eine Funktion: die Tabelle DUENN_TAB), dickdarm (der alte Rahmen, nur noch Hindernis fuer die Magengefaesse; der Darm im
+                            Koerper kommt aus dickdarm())
      magen(f)               Abstandsfeld der Aussenflaeche des Magens bei Fuellung f (0 = nuechtern, 1 = nach dem Essen), magenGrenzen(f) = Gitterbox;
                             J-foermiger Schlauch um eine Mittellinie (Magengrund, Magenkoerper, Magenvorhof, Pfoertner), der Pfoertner endet
                             bei PFOERTNER.p mit dem Radius 1,0 des Zwoelffingerdarms; die Speiseroehre ist am Mageneingang weich angeschlossen
@@ -35,6 +36,20 @@
                             in Fliessrichtung, Arterien und Nerven vom Ursprung weg)
      speiseroehreAnzeige()  Teil der Speiseroehre von 2,5 cm ueber dem Hiatus bis zum Mageneingang (Punkte von oben nach unten)
      zwerchfell()           { sdf, grenzen, hiatus, loch, rand }: Ausschnitt der Zwerchfellkuppel ueber dem linken Oberbauch mit dem Hiatus (Mitte, Abstandsfeld loch der Luecke, rand = x0, x1, z0, z1)
+     Darm (ab PR B): Zwoelffingerdarm, Duenndarm, Dickdarm mit Blinddarm, Wurmfortsatz, Sigma, Mastdarm und Analkanal, Gekroese, Gefaesse
+     zwoelffingerdarm()     { pts, r, flexur }: Mittellinie des Zwoelffingerdarms (r 1,0) von BAHN.zwoelffingerdarm bis zur Flexura duodenojejunalis (FLEXUR)
+     duenndarm()            { pts (Steuerpunkte), r (1,1), laenge, leerEnde (Bogenlaenge, ab hier Krummdarm), achse, punkt(s), richtung(s), schnitt { s0, s1, p }, grenzen(),
+                            sdf({ ohne: [s0, s1] }) }: ein durchgehender glatter Schlauch von der Flexur bis zur Bauhin-Klappe (BAUHIN), ca. 164 cm in dicht gepackten Schlingen;
+                            die ersten 40 % der Laenge sind Leerdarm (links oben), der Rest Krummdarm (rechts unten); Mittellinie aus der Tabelle DUENN_TAB (einmal berechnet,
+                            ohne Zufall; Mindestabstand 0,1 cm zwischen den Schlingen und zu allen Nachbarn im Koerper)
+     dickdarm(opt)          { sdf, grenzen, achse, laenge, R(s, phi), R0(s), abschnitte }: Abstandsfeld des Dickdarms vom blinden Ende des Blinddarms bis zum After (Haustren und drei
+                            Taenien bis zum Sigma, Mastdarm und Analkanal glatt); abschnitte = Bogenlaenge der Grenzen (blinddarm, aufsteigend, quer, absteigend, sigma, mastdarm,
+                            analkanal); opt: ohneAppendix, glatt, von/bis (Bereich der Mittellinie); wurmfortsatz() { pts, r }
+     duennSchichten(s0, s1, opt), blinddarmSchichten(), mastdarmSchichten(), zwoelffingerdarmSchichten()   Wandschichten nur fuer die aufgeschnittenen Abschnitte (Laengsmuskel, Ringmuskel, Schleimhaut
+                            mit Ringfalten bzw. Analsaeulen, bauhin, wurmfortsatz, sphinkterInnen, sphinkterAussen): { schichten: [{ id, sdf, grenzen }], grenzen, mitte, schnitt }
+     gekroese()             { pts, tris, nu, nv, wurzel, rand, richtung, laenge }: halbdurchsichtige Platte von der Wurzel (ca. 14 cm) zu den Schlingen (Netz-Daten)
+     darmGefaesse()         { darmarterien, darmvenen, pfortader }: je Liste von { id, pts, r0, r1 }; darmKennpunkte() { PAPILLE, FLEXUR, BAUHIN, AFTER, DUENN_SCHNITT, ... }
+     Achse(pts, opt)        dichte Mittellinie mit Bogenlaenge, Begleitdreibein und Gitter (a.q(x, y, z) = Abstand zur Mittellinie, a.s, a.phi() ...)
      kurve(pts, n), kette(poly, r)   Catmull-Rom-Kurve wie THREE.CatmullRomCurve3 im Koerper und Abstandsfeld einer Linienfolge
    ========================================================================== */
 (function () {
@@ -135,22 +150,10 @@ function lunge() {
 function kuppel(x, z) { return lunge().kuppel(x, z); }
 
 /* ---- Bahnen der Rohre im Koerper (Zahlen und Radien wie in organe/koerper/koerper.js) ---- */
-var DUENN_DY = -1.5;   /* Die Schlingen des Duenndarms liegen um 1,5 cm tiefer als frueher (Platz fuer den Querkolon unter dem Magen) */
-function schlingen() {   /* Duenndarm: Schlingen in vier Lagen */
-  var dd = [], r, k;
-  for (r = 0; r < 4; r++) {
-    var yy = 95.5 + DUENN_DY - 2.5 * r;
-    for (k = 0; k <= 8; k++) {
-      var t = r % 2 ? 8 - k : k;
-      dd.push([-8 + 2 * t + (k % 2 ? 0.6 : -0.6), yy + (k % 2 ? 0.5 : -0.5), 3.5 + 1.8 * Math.sin(k * 1.9 + r * 1.3)]);
-    }
-  }
-  return dd;
-}
 var BAHN = {
   speiseroehre: { pts: [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], r: 0.8, seg: 40 },
   zwoelffingerdarm: { pts: [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], r: 1.0, seg: 50 },
-  duenndarm: { pts: schlingen, r: 1.2, seg: 420 },
+  duenndarm: { pts: duennPts, r: 1.1, seg: 1300 },   /* Tabelle DUENN_TAB (Abschnitt Darm), r = DUENN_R */
   dickdarm: { pts: [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
     [8.8, 97.5, 6.0], [13.3, 99.2, 2.4], [13.3, 103.6, -3.2], [11.8, 100.5, -2.8], [11.8, 95, -2.6], [11, 89.5, -2], [9.0, 86.3, -2.0], [5, 85.2, -2.4], [2, 85.8, -2.6], [0.6, 84, -2.8], [0.3, 81.5, -4.8], [0, 79.5, -6]],
     r: 1.8, seg: 260, kappe: [-11.3, 89.2, 0.5, 2.4] }
@@ -749,10 +752,541 @@ function zwerchfell() {
   };
 }
 
+/* ==========================================================================
+   Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
+   Duenndarm und Dickdarm entstehen aus festen Tabellen von Steuerpunkten (Catmull-Rom wie im Koerper). Der Duenndarm ist ein glatter Schlauch (r 1,1)
+   in dicht gepackten Schlingen; die Tabelle wurde einmal berechnet (Schlingen im Rahmen des Dickdarms, die Schlauchwaende halten untereinander
+   und zu allen Nachbarn im Koerper mindestens 0,1 cm Abstand). Der Dickdarm ist ein Abstandsfeld um die Mittellinie mit Haustren und drei Taenien.
+   ========================================================================== */
+var DUENN_R = 1.1;                                   /* Radius des Duenndarms */
+var DUENN_LEER = 0.4;                                /* die ersten 40 % der Laenge sind Leerdarm (Jejunum), der Rest Krummdarm (Ileum) */
+var FLEXUR = { p: [4.83, 93.54, 1.71] };             /* Flexura duodenojejunalis: Ende des Zwoelffingerdarms, Anfang des Leerdarms (links neben der Wirbelsaeule) */
+var BAUHIN = { p: [-9.1, 92.6, 2.9] };               /* Bauhin-Klappe: Muendung des Krummdarms (Ende des Duenndarms) in die mediale Wand des Blinddarms */
+var AFTER = { p: [0, 78.9, -4.3] };                  /* Mitte der Afteroeffnung (Haut) */
+var DUENN_SCHNITT = { s0: 18, s1: 30 };              /* aufgeschnittene Duenndarmschlinge: Bereich der Mittellinie (cm ab der Flexur; vordere Schlinge im Leerdarm); p = Mitte, kommt aus duenndarm() */
+var DUODENUM_FORT = [[-1.75, 95.76, 1.01], [-1.03, 95.54, 2.85], [2.1, 94.3, 3.26], [3.16, 94.01, 3.15], [4.12, 93.81, 2.3], [4.83, 93.54, 1.71]];   /* Fortsetzung des Zwoelffingerdarms ab dem Ende von BAHN.zwoelffingerdarm (r 1,0) bis zur Flexur */
+BAHN.duodenum = { pts: BAHN.zwoelffingerdarm.pts.concat(DUODENUM_FORT), r: 1.0, seg: 90 };
+
+/* ---- Achse: dichte Mittellinie mit Bogenlaenge, Begleitdreibein und Gitter fuer schnelle Abstandsabfragen ----
+   Achse(pts, { schritt, zelle, flachEnde, flachAnfang, bezug }): pts = Steuerpunkte (Catmull-Rom). a.q(x, y, z) liefert den Abstand zur Mittellinie
+   und setzt a.s (Bogenlaenge des naechsten Punkts), a.i (Abschnitt, -1 = weiter als a.zelle - 0,35 entfernt), a.t (Lage im Abschnitt), a.ax/ay/az
+   (naechster Punkt der Mittellinie); a.phi() = Winkel um die Achse im Begleitdreibein (Parallelverschiebung). Mit flachEnde/flachAnfang endet die Achse
+   mit einer ebenen Flaeche statt einer runden Kappe (s ausserhalb der Linie laeuft weiter). */
+function Achse(pts, o) {
+  o = o || {};
+  var c = neuAbtasten(kurve(pts, o.n || 10), o.schritt || 0.3), n = c.length, i, k;
+  var X = new Float64Array(n), Y = new Float64Array(n), Z = new Float64Array(n), S = new Float64Array(n);
+  var TX = new Float64Array(n), TY = new Float64Array(n), TZ = new Float64Array(n), NX = new Float64Array(n), NY = new Float64Array(n), NZ = new Float64Array(n);
+  var BX = new Float64Array(n), BY = new Float64Array(n), BZ = new Float64Array(n);
+  var bb = [1e9, 1e9, 1e9, -1e9, -1e9, -1e9];
+  for (i = 0; i < n; i++) {
+    X[i] = c[i][0]; Y[i] = c[i][1]; Z[i] = c[i][2];
+    S[i] = i ? S[i - 1] + Math.sqrt(Math.pow(X[i] - X[i - 1], 2) + Math.pow(Y[i] - Y[i - 1], 2) + Math.pow(Z[i] - Z[i - 1], 2)) : 0;
+    for (k = 0; k < 3; k++) { if (c[i][k] < bb[k]) bb[k] = c[i][k]; if (c[i][k] > bb[k + 3]) bb[k + 3] = c[i][k]; }
+  }
+  for (i = 0; i < n; i++) {
+    var a0 = Math.max(i - 1, 0), a1 = Math.min(i + 1, n - 1), tx = X[a1] - X[a0], ty = Y[a1] - Y[a0], tz = Z[a1] - Z[a0], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
+    TX[i] = tx / tl; TY[i] = ty / tl; TZ[i] = tz / tl;
+  }
+  /* Begleitdreibein: N ist senkrecht zur Tangente T und wird von Punkt zu Punkt parallel verschoben (kein Drehen um die Achse), B = T x N */
+  var ref = o.bezug || (Math.abs(TZ[0]) < 0.9 ? [0, 0, 1] : [1, 0, 0]);
+  for (i = 0; i < n; i++) {
+    var px = i ? NX[i - 1] : ref[0], py = i ? NY[i - 1] : ref[1], pz = i ? NZ[i - 1] : ref[2], dp = px * TX[i] + py * TY[i] + pz * TZ[i];
+    var qx = px - dp * TX[i], qy = py - dp * TY[i], qz = pz - dp * TZ[i], ql = Math.sqrt(qx * qx + qy * qy + qz * qz) || 1;
+    NX[i] = qx / ql; NY[i] = qy / ql; NZ[i] = qz / ql;
+    BX[i] = TY[i] * NZ[i] - TZ[i] * NY[i]; BY[i] = TZ[i] * NX[i] - TX[i] * NZ[i]; BZ[i] = TX[i] * NY[i] - TY[i] * NX[i];
+  }
+  /* Gitter: je Zelle die Abschnitte, deren Anfangs- oder Endpunkt in der Zelle liegt (CSR) */
+  var C = o.zelle || 3.0, gx = Math.floor((bb[3] - bb[0]) / C) + 3, gy = Math.floor((bb[4] - bb[1]) / C) + 3, gz = Math.floor((bb[5] - bb[2]) / C) + 3;
+  var ox = bb[0] - C, oy = bb[1] - C, oz = bb[2] - C, cnt = new Int32Array(gx * gy * gz + 1);
+  function zelle(x, y, z) { return Math.floor((x - ox) / C) + gx * (Math.floor((y - oy) / C) + gy * Math.floor((z - oz) / C)); }
+  for (i = 0; i < n - 1; i++) { var z0 = zelle(X[i], Y[i], Z[i]), z1 = zelle(X[i + 1], Y[i + 1], Z[i + 1]); cnt[z0 + 1]++; if (z1 !== z0) cnt[z1 + 1]++; }
+  for (i = 1; i < cnt.length; i++) cnt[i] += cnt[i - 1];
+  var fill = new Int32Array(cnt.length - 1), liste = new Int32Array(cnt[cnt.length - 1]);
+  for (i = 0; i < n - 1; i++) {
+    var y0 = zelle(X[i], Y[i], Z[i]), y1 = zelle(X[i + 1], Y[i + 1], Z[i + 1]);
+    liste[cnt[y0] + fill[y0]++] = i; if (y1 !== y0) liste[cnt[y1] + fill[y1]++] = i;
+  }
+  var a = { n: n, laenge: S[n - 1], X: X, Y: Y, Z: Z, S: S, TX: TX, TY: TY, TZ: TZ, NX: NX, NY: NY, NZ: NZ, BX: BX, BY: BY, BZ: BZ, bb: bb, zelle: C,
+    s: 0, i: -1, t: 0, ax: 0, ay: 0, az: 0, vx: 0, vy: 0, vz: 0 };
+  a.q = function (x, y, z) {
+    var ci = Math.floor((x - ox) / C), cj = Math.floor((y - oy) / C), ck = Math.floor((z - oz) / C);
+    if (ci < 0 || cj < 0 || ck < 0 || ci >= gx || cj >= gy || ck >= gz) {
+      var ex = Math.max(bb[0] - x, 0, x - bb[3]), ey = Math.max(bb[1] - y, 0, y - bb[4]), ez = Math.max(bb[2] - z, 0, z - bb[5]);
+      a.i = -1; return Math.max(Math.sqrt(ex * ex + ey * ey + ez * ez), C - 0.35);
+    }
+    var best = 1e30, bi = -1, bt = 0, ii, jj, kk, m, j, ce, px, py, pz, vx, vy, vz, l2, t, dx, dy, dz, d2;
+    for (kk = Math.max(ck - 1, 0); kk <= Math.min(ck + 1, gz - 1); kk++) for (jj = Math.max(cj - 1, 0); jj <= Math.min(cj + 1, gy - 1); jj++) for (ii = Math.max(ci - 1, 0); ii <= Math.min(ci + 1, gx - 1); ii++) {
+      ce = ii + gx * (jj + gy * kk);
+      for (m = cnt[ce]; m < cnt[ce + 1]; m++) {
+        j = liste[m];
+        vx = X[j + 1] - X[j]; vy = Y[j + 1] - Y[j]; vz = Z[j + 1] - Z[j]; l2 = vx * vx + vy * vy + vz * vz;
+        px = x - X[j]; py = y - Y[j]; pz = z - Z[j];
+        t = l2 > 0 ? (px * vx + py * vy + pz * vz) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        dx = px - vx * t; dy = py - vy * t; dz = pz - vz * t; d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < best) { best = d2; bi = j; bt = t; }
+      }
+    }
+    if (bi < 0) { a.i = -1; return C - 0.35; }
+    var s = S[bi] + (S[bi + 1] - S[bi]) * bt, d = Math.sqrt(best);
+    a.i = bi; a.t = bt;
+    a.ax = X[bi] + (X[bi + 1] - X[bi]) * bt; a.ay = Y[bi] + (Y[bi + 1] - Y[bi]) * bt; a.az = Z[bi] + (Z[bi + 1] - Z[bi]) * bt;
+    a.vx = x - a.ax; a.vy = y - a.ay; a.vz = z - a.az;
+    if (o.flachEnde && bi === n - 2 && bt >= 1) {
+      var u = a.vx * TX[n - 1] + a.vy * TY[n - 1] + a.vz * TZ[n - 1];
+      if (u > 0) { s = S[n - 1] + u; d = Math.sqrt(Math.max(0, best - u * u)); }
+    }
+    if (o.flachAnfang && bi === 0 && bt <= 0) {
+      var u0 = a.vx * TX[0] + a.vy * TY[0] + a.vz * TZ[0];
+      if (u0 < 0) { s = u0; d = Math.sqrt(Math.max(0, best - u0 * u0)); }
+    }
+    a.s = s;
+    return d;
+  };
+  a.phi = function () {
+    var i0 = a.i, t0 = a.t, nx = NX[i0] + (NX[i0 + 1] - NX[i0]) * t0, ny = NY[i0] + (NY[i0 + 1] - NY[i0]) * t0, nz = NZ[i0] + (NZ[i0 + 1] - NZ[i0]) * t0;
+    var bx = BX[i0] + (BX[i0 + 1] - BX[i0]) * t0, by = BY[i0] + (BY[i0 + 1] - BY[i0]) * t0, bz = BZ[i0] + (BZ[i0 + 1] - BZ[i0]) * t0;
+    return Math.atan2(a.vx * bx + a.vy * by + a.vz * bz, a.vx * nx + a.vy * ny + a.vz * nz);
+  };
+  a.punkt = function (s) {   /* Punkt der Mittellinie bei Bogenlaenge s (ausserhalb: Ende) */
+    if (s <= 0) return [X[0], Y[0], Z[0]];
+    if (s >= S[n - 1]) return [X[n - 1], Y[n - 1], Z[n - 1]];
+    var lo = 0, hi = n - 1, m2;
+    while (hi - lo > 1) { m2 = (lo + hi) >> 1; if (S[m2] <= s) lo = m2; else hi = m2; }
+    var f = (s - S[lo]) / (S[lo + 1] - S[lo]);
+    return [X[lo] + (X[lo + 1] - X[lo]) * f, Y[lo] + (Y[lo + 1] - Y[lo]) * f, Z[lo] + (Z[lo + 1] - Z[lo]) * f];
+  };
+  a.richtung = function (s) {   /* Einheitsvektor der Tangente bei s */
+    var p0 = a.punkt(s - 0.15), p1 = a.punkt(s + 0.15), tx = p1[0] - p0[0], ty = p1[1] - p0[1], tz = p1[2] - p0[2], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
+    return [tx / tl, ty / tl, tz / tl];
+  };
+  a.von = function (p) {   /* Bogenlaenge des naechsten Punkts der Mittellinie zu p */
+    var b = 0, bd = 1e30, j2;
+    for (j2 = 0; j2 < n; j2++) { var d3 = Math.pow(X[j2] - p[0], 2) + Math.pow(Y[j2] - p[1], 2) + Math.pow(Z[j2] - p[2], 2); if (d3 < bd) { bd = d3; b = j2; } }
+    return S[b];
+  };
+  a.grenzen = function (s0, s1, r) {   /* Gitterbox um den Abschnitt s0 bis s1 mit Rand r */
+    var g = [1e9, 1e9, 1e9, -1e9, -1e9, -1e9], j3;
+    for (j3 = 0; j3 < n; j3++) if (S[j3] >= s0 - 0.5 && S[j3] <= s1 + 0.5) {
+      if (X[j3] < g[0]) g[0] = X[j3]; if (Y[j3] < g[1]) g[1] = Y[j3]; if (Z[j3] < g[2]) g[2] = Z[j3];
+      if (X[j3] > g[3]) g[3] = X[j3]; if (Y[j3] > g[4]) g[4] = Y[j3]; if (Z[j3] > g[5]) g[5] = Z[j3];
+    }
+    return [[Math.floor((g[0] - r) * 10) / 10, Math.floor((g[1] - r) * 10) / 10, Math.floor((g[2] - r) * 10) / 10], [Math.ceil((g[3] + r) * 10) / 10, Math.ceil((g[4] + r) * 10) / 10, Math.ceil((g[5] + r) * 10) / 10]];
+  };
+  return a;
+}
+
+var DUENN_TAB = [
+  [4.83, 93.54, 1.71], [6.2, 93.8, 1.3], [7.6, 94.5, 1.15], [8.81, 95.31, 1.05],
+  [9.92, 95.7, 0.73], [11, 95.8, 1.33], [10.95, 95.42, 2.49], [10.34, 94.9, 3.38],
+  [9.49, 94.58, 4.15], [8.57, 94.43, 4.9], [7.73, 94.49, 5.74], [6.71, 94.76, 6.3],
+  [5.61, 95.19, 6.46], [4.52, 95.6, 6.76], [3.62, 95.85, 7.54], [3.54, 95.87, 8.77],
+  [4.56, 95.6, 9.39], [5.72, 95.35, 9.27], [6.85, 95.17, 8.93], [7.95, 95.04, 8.51],
+  [9.02, 94.93, 8], [10.05, 94.82, 7.41], [11.07, 94.61, 6.81], [11.84, 93.66, 6.61],
+  [11.76, 92.55, 7.12], [10.8, 92.24, 7.79], [9.73, 92.26, 8.35], [8.49, 92.27, 8.3],
+  [8.17, 92.27, 7.11], [8.98, 92.22, 6.22], [9.83, 92.27, 5.38], [10.83, 92.26, 4.74],
+  [12.01, 92.26, 4.52], [13.21, 92.3, 4.61], [14.28, 92.65, 4.1], [14.17, 93.13, 2.97],
+  [13.18, 93.27, 2.3], [12.03, 93.15, 1.98], [10.89, 92.88, 1.75], [9.75, 92.58, 1.94],
+  [8.78, 92.37, 2.6], [7.98, 92.26, 3.47], [7.19, 92.27, 4.36], [6.35, 92.34, 5.2],
+  [5.42, 92.57, 5.9], [4.45, 92.92, 6.48], [3.37, 93.31, 6.83], [2.17, 93.33, 6.9],
+  [1.13, 92.77, 6.7], [0.36, 91.92, 6.43], [-0.37, 91, 6.21], [-1.21, 90.18, 6.08],
+  [-2.22, 89.54, 6.09], [-3.36, 89.23, 6.24], [-4.53, 89.25, 6.51], [-5.64, 89.53, 6.84],
+  [-6.67, 90.02, 7.18], [-7.6, 90.69, 7.5], [-8.41, 91.52, 7.77], [-9.05, 92.55, 7.88],
+  [-7.91, 92.71, 8.28], [-6.77, 92.87, 8.59], [-5.61, 93.02, 8.83], [-4.44, 93.15, 9],
+  [-3.26, 93.27, 9.12], [-2.07, 93.34, 9.2], [-0.88, 93.33, 9.24], [0.3, 93.2, 9.28],
+  [1.45, 92.88, 9.33], [2.49, 92.28, 9.43], [3.2, 91.33, 9.64], [3.25, 90.17, 10],
+  [2.48, 89.31, 10.36], [1.31, 89.08, 10.57], [0.14, 89.27, 10.63], [-1.01, 89.57, 10.62],
+  [-2.15, 89.92, 10.55], [-3.29, 90.2, 10.41], [-4.46, 90.31, 10.22], [-5.61, 90.1, 9.96],
+  [-6.6, 89.47, 9.68], [-7.25, 88.47, 9.44], [-6.96, 87.33, 9.16], [-5.96, 86.7, 8.88],
+  [-4.76, 86.7, 8.84], [-3.59, 86.91, 8.93], [-2.43, 87.16, 8.98], [-1.3, 87.5, 8.86],
+  [-0.25, 87.92, 8.47], [0.62, 88.39, 7.79], [1.02, 88.63, 6.68], [0.77, 88.6, 5.5],
+  [0.04, 88.53, 4.55], [-0.91, 88.55, 3.84], [-2.01, 88.53, 3.38], [-3.17, 88.39, 3.16],
+  [-4.33, 88.13, 3.12], [-5.46, 87.76, 3.23], [-6.54, 87.3, 3.42], [-7.59, 86.76, 3.65],
+  [-8.37, 85.99, 4.18], [-8.21, 85.18, 5.09], [-7.15, 85, 5.64], [-5.97, 85.16, 5.79],
+  [-4.81, 85.4, 5.88], [-3.65, 85.65, 5.95], [-2.49, 85.87, 6.05], [-1.32, 86.02, 6.19],
+  [-0.14, 86.06, 6.38], [0.99, 86.06, 6.77], [1.87, 86.12, 7.6], [2.1, 86.03, 8.8],
+  [1.44, 85.71, 9.77], [0.34, 85.32, 10.04], [-0.78, 84.96, 9.82], [-1.84, 84.66, 9.37],
+  [-2.9, 84.42, 8.88], [-4.01, 84.26, 8.48], [-5.16, 84.1, 8.22], [-6.31, 83.91, 8.02],
+  [-7.47, 83.68, 7.84], [-8.63, 83.51, 7.63], [-9.81, 83.5, 7.43], [-10.96, 83.8, 7.27],
+  [-11.87, 84.63, 7.28], [-11.78, 85.82, 7.61], [-10.73, 86.28, 8.04], [-9.54, 86.3, 7.9],
+  [-8.54, 86.54, 7.28], [-7.92, 87.28, 6.57], [-7.79, 88.16, 5.78], [-7.89, 89.13, 5.1],
+  [-7.94, 90.38, 4.9], [-7.32, 91.24, 4.14], [-8.06, 92, 3.4], [-9.1, 92.6, 2.9]
+];
+/* Duenndarm: Mittellinie aus der Tabelle (von der Flexur bis zur Bauhin-Klappe), Achse mit Gitter */
+function duennPts() { return DUENN_TAB.map(function (p) { return p.slice(); }); }
+var DUENN_ZUSTAND = null;
+function duennZustand() {
+  if (!DUENN_ZUSTAND) {
+    var A = Achse(DUENN_TAB, { schritt: 0.3 });
+    DUENN_ZUSTAND = { A: A, L: A.laenge, sLeer: DUENN_LEER * A.laenge };
+    DUENN_SCHNITT.p = A.punkt((DUENN_SCHNITT.s0 + DUENN_SCHNITT.s1) / 2);
+  }
+  return DUENN_ZUSTAND;
+}
+/* Mittellinie des Zwoelffingerdarms bis zur Flexur: Steuerpunkte und Radius */
+function zwoelffingerdarm() { return { pts: BAHN.duodenum.pts.map(function (p) { return p.slice(); }), r: BAHN.duodenum.r, flexur: FLEXUR.p.slice() }; }
+/* Duenndarm: { pts (Steuerpunkte), r, laenge (cm), leerEnde (Bogenlaenge, ab hier Krummdarm), achse, punkt(s), richtung(s), sdf(opt), grenzen(opt) }
+   sdf({ ohne: [s0, s1] }) = Aussenflaeche (glatter Schlauch); ohne schneidet den Bereich mit ebenen Enden heraus */
+function duenndarm() {
+  var st = duennZustand(), A = st.A;
+  return {
+    pts: duennPts(), r: DUENN_R, laenge: st.L, leerEnde: st.sLeer, achse: A, schnitt: { s0: DUENN_SCHNITT.s0, s1: DUENN_SCHNITT.s1, p: DUENN_SCHNITT.p.slice() },
+    punkt: A.punkt, richtung: A.richtung,
+    grenzen: function () { return A.grenzen(0, st.L, DUENN_R + 0.3); },
+    sdf: function (opt) {
+      var o0 = opt && opt.ohne ? opt.ohne[0] : null, o1 = opt && opt.ohne ? opt.ohne[1] : null;
+      return function (x, y, z) {
+        var d = A.q(x, y, z);
+        if (A.i < 0) return d - DUENN_R;
+        var v = d - DUENN_R;
+        if (o0 !== null) v = Math.max(v, Math.min(A.s - o0, o1 - A.s));   /* Bereich herausgeschnitten (Differenz mit der Platte o0 < s < o1) */
+        return v;
+      };
+    }
+  };
+}
+
+/* ---- Dickdarm ----
+   Steuerpunkte der Mittellinie vom blinden Ende des Blinddarms bis zum After. Der rechte Teil (ab (-11,5; 95; 0) bis (4; 99,6; 6,8)) und der linke Teil
+   bis (11,8; 95; -2,6) wie BAHN.dickdarm; der Blinddarm liegt vor der Hueftpfanne, der absteigende Teil laeuft seitlich an ihr vorbei, das Sigma
+   haengt in einer S-Schlinge im linken Unterbauch, der Mastdarm liegt vor dem Kreuzbein und hinter der Harnblase, der Analkanal endet an der Haut. */
+var DICK_PTS = [[-11.8, 88.6, 5.0], [-11.7, 91.8, 3.0], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
+  [8.8, 97.5, 6.0], [13.3, 99.2, 2.4], [13.3, 103.6, -3.2], [11.8, 100.5, -2.8], [11.8, 95, -2.6],
+  [12.8, 92, -1.2], [13.2, 89.6, 1.6], [12.2, 88, 4.4], [9.6, 87.6, 6.4], [6.4, 88.4, 6.2], [4.4, 89.8, 4.6], [2.8, 90.2, 3], [1.6, 88.6, 1.4], [0.5, 87.6, -0.8],
+  [0, 86.6, -2.6], [0, 85, -3.4], [0, 82.8, -3.6], [0, 80.8, -3.9], [0, 78.9, -4.3]];
+var DICK_I = { blind: 0, flexurRechts: 4, flexurLinks: 11, sigma: 14, mastdarm: 20, kanal: 25 };   /* Indizes der Steuerpunkte an den Abschnittsgrenzen */
+var WURM_PTS = [[-11.6, 87.2, 4.4], [-11.0, 85.4, 4.8], [-10.04, 84.3, 4.86], [-8.03, 82.34, 5.72], [-7.31, 81.67, 6.01], [-5.8, 80.4, 6.6]];   /* Wurmfortsatz (r 0,35, frei haengend, ca. 9,5 cm) */
+var WURM_R = 0.35;
+var HAUSTRE = 3.2;      /* Abstand der Haustren (cm) */
+var DICK_ZUSTAND = null;
+function dickZustand() {
+  if (DICK_ZUSTAND) return DICK_ZUSTAND;
+  var A = Achse(DICK_PTS, { schritt: 0.3, zelle: 4.0, flachEnde: true }), st = { A: A, L: A.laenge };
+  st.s = {
+    bauhin: A.von(BAUHIN.p), flexurRechts: A.von(DICK_PTS[DICK_I.flexurRechts]), flexurLinks: A.von(DICK_PTS[DICK_I.flexurLinks]),
+    sigma: A.von(DICK_PTS[DICK_I.sigma]), mastdarm: A.von(DICK_PTS[DICK_I.mastdarm]), kanal: A.von(DICK_PTS[DICK_I.kanal]), ende: A.laenge
+  };
+  /* Taenien: der Anfangswinkel liegt so, dass eine Taenie nach vorn (+z) zeigt, wo die Mittellinie senkrecht steht (nur eine Festlegung, keine Anatomie) */
+  st.phi0 = 0.4;
+  /* Grundradius (ohne Haustren): Blinddarm weiter, Sigma enger, Analkanal enger */
+  var S = st.s;
+  st.R0 = function (s) {
+    var r = 1.8;
+    r += 0.6 * (1 - glatt(S.bauhin - 0.2, S.bauhin + 1.8, s));
+    r -= 0.25 * glatt(S.sigma - 1.5, S.sigma + 1.0, s) * (1 - glatt(S.mastdarm - 2.0, S.mastdarm, s));
+    r -= 0.35 * glatt(S.kanal - 1.2, S.kanal, s);
+    return r;
+  };
+  st.W = function (s) { return glatt(S.mastdarm - 0.5, S.mastdarm - 3.0, s); };   /* Gewicht der Haustren und Taenien: 1 bis zum Sigma, 0 im Mastdarm und Analkanal */
+  /* Aussenradius mit Haustren (Einschnuerungen alle HAUSTRE cm) und drei Taenien (Laengsmuskelstreifen, im Querschnitt um 120 Grad versetzt) */
+  st.R = function (s, phi) {
+    var R = st.R0(s), w = st.W(s);
+    if (w <= 0) return R;
+    var b = 0.5 + 0.5 * Math.cos(6.283185307 * s / HAUSTRE), m = (phi - st.phi0) * 0.477464829;   /* m = Winkel / (2 pi / 3) */
+    var da = Math.abs(m - Math.round(m)) * 2.0943951;                                              /* Winkelabstand zur naechsten Taenie, 0 bis pi/3 */
+    return R + w * (-0.34 * (1 - b) * (1 - b) + 0.14 * b * (da / 1.0471976) + 0.09 * Math.exp(-(da / 0.22) * (da / 0.22)));
+  };
+  var wp = kurve(WURM_PTS, 8);
+  st.wurm = kette(wp, WURM_R, 3);
+  DICK_ZUSTAND = st;
+  return st;
+}
+/* Wurmfortsatz: { pts, r } (Steuerpunkte, der Anfang liegt im Blinddarm) */
+function wurmfortsatz() { return { pts: WURM_PTS.map(function (p) { return p.slice(); }), r: WURM_R }; }
+/* Dickdarm als Abstandsfeld: { sdf, grenzen, achse, laenge, abschnitte, R(s, phi) }
+   opt: ohneAppendix, glatt (ohne Haustren und Taenien), von/bis (nur dieser Bereich der Mittellinie, Bogenlaenge in cm vom blinden Ende, mit ebenen Schnittflaechen)
+   abschnitte: Bogenlaenge der Grenzen: blinddarm [0, bauhin], aufsteigend [bauhin, flexurRechts], quer [flexurRechts, flexurLinks], absteigend [flexurLinks, sigma],
+   sigma [sigma, mastdarm], mastdarm [mastdarm, kanal], analkanal [kanal, ende] */
+function dickdarm(opt) {
+  opt = opt || {};
+  var st = dickZustand(), A = st.A, S = st.s, wurm = opt.ohneAppendix ? null : st.wurm, glattO = !!opt.glatt;
+  var von = opt.von === undefined ? null : opt.von, bis = opt.bis === undefined ? null : opt.bis;
+  var rmax = 2.9;
+  var sdf = function (x, y, z) {
+    var d = A.q(x, y, z), v;
+    if (A.i < 0) v = d - rmax; else {
+      var s = A.s, R = glattO ? st.R0(s) : st.R(s, A.phi());
+      v = Math.max(d - R, s - A.laenge);   /* ebene Endflaeche am After */
+      if (von !== null) v = Math.max(v, von - s);
+      if (bis !== null) v = Math.max(v, s - bis);
+    }
+    if (wurm) v = smin(v, wurm(x, y, z), 0.3);
+    return v;
+  };
+  var g = A.grenzen(von === null ? 0 : von, bis === null ? A.laenge : bis, rmax);
+  if (wurm) for (var k = 0; k < WURM_PTS.length; k++) for (var c = 0; c < 3; c++) { if (WURM_PTS[k][c] - 0.8 < g[0][c]) g[0][c] = Math.floor((WURM_PTS[k][c] - 0.8) * 10) / 10; if (WURM_PTS[k][c] + 0.8 > g[1][c]) g[1][c] = Math.ceil((WURM_PTS[k][c] + 0.8) * 10) / 10; }
+  return {
+    sdf: sdf, grenzen: g, achse: A, laenge: A.laenge, R: st.R, R0: st.R0,
+    abschnitte: { blinddarm: [0, S.bauhin], aufsteigend: [S.bauhin, S.flexurRechts], quer: [S.flexurRechts, S.flexurLinks], absteigend: [S.flexurLinks, S.sigma], sigma: [S.sigma, S.mastdarm], mastdarm: [S.mastdarm, S.kanal], analkanal: [S.kanal, S.ende] }
+  };
+}
+
+/* ---- Wandschichten (nur lokal, fuer die aufgeschnittenen Abschnitte des Detailmodells) ----
+   Jede Schicht ist ein Abstandsfeld zwischen zwei Tiefen unter der Aussenflaeche (Tiefe = Aussenradius - Abstand zur Mittellinie); die Wand ist fuer die
+   Darstellung dicker als in Wirklichkeit (ca. 0,6 bis 0,9 cm), damit ein Gitter von 0,1 cm sie aufloest. Rueckgabe: { schichten: [{ id, sdf, grenzen }],
+   grenzen, mitte, schnitt } mit schnitt(x, y, z) > 0 dort, wo die Wand zum Aufschneiden entfernt ist (schon in allen Schichten enthalten; -1 weit weg). */
+function wandSchichten(A, def) {
+  var gr = A.grenzen(def.s0, def.s1, def.rand || 2.6);
+  var liste = def.schichten.map(function (L) {
+    var von = L.von === undefined ? def.s0 : L.von, bis = L.bis === undefined ? def.s1 : L.bis, grL = (L.von === undefined && L.bis === undefined) ? gr : A.grenzen(von, bis, def.rand || 2.6);
+    return {
+      id: L.id, grenzen: grL,
+      sdf: function (x, y, z) {
+        var d = A.q(x, y, z);
+        if (A.i < 0) return d - def.rand;
+        var s = A.s, phi = A.phi(), tief = def.R(s, phi) - d;
+        var v = Math.max(L.a(s, phi) - tief, tief - L.b(s, phi), von - s, s - bis);
+        if (def.schnitt) v = Math.max(v, def.schnitt(A, x, y, z));
+        if (def.loch) v = Math.max(v, -def.loch(x, y, z));
+        if (L.zusatz) v = L.zusatz(v, x, y, z, A);
+        return v;
+      }
+    };
+  });
+  return { schichten: liste, grenzen: gr, schnitt: def.schnitt ? function (x, y, z) { A.q(x, y, z); return A.i < 0 ? -1 : def.schnitt(A); } : null };
+}
+/* Schnittebene durch die Mittellinie: Wert > 0 vor der Ebene, die von der Tangente der Achse und dem Bezugsvektor h (hx, hy, hz) aufgespannt wird, um off cm nach vorn versetzt
+   (a.q muss vorher fuer den Punkt aufgerufen sein, a.i >= 0); entfernt die vordere Haelfte der Wand und oeffnet den Schlauch */
+function schnittEbene(a, hx, hy, hz, off) {
+  var i = a.i, tx = a.TX[i], ty = a.TY[i], tz = a.TZ[i], dp = hx * tx + hy * ty + hz * tz, nx = hx - dp * tx, ny = hy - dp * ty, nz = hz - dp * tz, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+  return (a.vx * nx + a.vy * ny + a.vz * nz) / nl - off;
+}
+/* Ringfalten (Kerckring-Falten) im Duenndarm: Hoehe (cm) der Schleimhautfalten bei Bogenlaenge s und Winkel phi; hoch und dicht im Leerdarm, flach und weiter im Krummdarm */
+function ringfalte(st, s, phi) {
+  var u = glatt(st.sLeer, 0.85 * st.L, s), hf = 0.26 - 0.17 * u, P = 0.9 + 0.25 * u;
+  var g = Math.pow(0.5 + 0.5 * Math.cos(6.283185307 * s / P), 1.5);
+  return hf * g * (0.85 + 0.15 * Math.sin(2 * phi + 0.7 * s));
+}
+/* Duenndarm-Abschnitt s0 bis s1 (cm ab der Flexur) mit Laengsmuskel, Ringmuskel und Schleimhaut samt Ringfalten, vorn aufgeschnitten (cut = Abstand
+   der Schnittflaeche vor der Mittellinie, Standard 0: Schnitt durch die Mittellinie, die vordere Haelfte (z grosser) fehlt) */
+function duennSchichten(s0, s1, opt) {
+  opt = opt || {};
+  var st = duennZustand(), A = st.A, cut = opt.cut || 0;
+  var def = {
+    s0: s0, s1: s1, rand: DUENN_R + 0.3, R: function () { return DUENN_R; },
+    schnitt: opt.ohneSchnitt ? null : function (a) { return schnittEbene(a, 0, 0, 1, cut); },
+    schichten: [
+      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; } },
+      { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.42; } },
+      { id: 'schleimhaut', a: function () { return 0.42; }, b: function (s, phi) { return 0.66 + ringfalte(st, s, phi); } }
+    ]
+  };
+  var r = wandSchichten(A, def);
+  r.mitte = A.punkt((s0 + s1) / 2);
+  return r;
+}
+/* Blinddarm mit Bauhin-Klappe und Wurmfortsatz: Wand des Blinddarms (Laengs-, Ringmuskel, Schleimhaut) von der Kappe bis 3 cm ueber die Klappe, vorn
+   aufgeschnitten (1,2 cm vor der Mittellinie); 'bauhin' = Klappe als Wulst mit Schlitz an der medialen Wand (zeigt in den Blinddarm; Richtung des Krummdarms);
+   'wurmfortsatz' = Wand mit Lichtung, nicht aufgeschnitten; die Wand hat ein Loch am Abgang des Wurmfortsatzes */
+function blinddarmSchichten() {
+  var st = dickZustand(), A = st.A, SB = st.s;
+  A.q(BAUHIN.p[0], BAUHIN.p[1], BAUHIN.p[2]);
+  var dl = Math.sqrt(A.vx * A.vx + A.vy * A.vy + A.vz * A.vz) || 1, dir = [-A.vx / dl, -A.vy / dl, -A.vz / dl], p0 = [BAUHIN.p[0] + dir[0] * 0.5, BAUHIN.p[1] + dir[1] * 0.5, BAUHIN.p[2] + dir[2] * 0.5], p1 = [p0[0] + dir[0] * 1.4, p0[1] + dir[1] * 1.4, p0[2] + dir[2] * 1.4];
+  var wp = kurve(WURM_PTS, 8), wl = kurve(WURM_PTS.slice(0, 3), 8), lochW = kette(wl, 0.15, 2.5), wAussen = kette(wp, WURM_R, 3), wInnen = kette(wp, 0.14, 3);
+  var def = {
+    s0: -1, s1: SB.bauhin + 3.0, rand: 3.0, R: st.R,
+    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 1.2); }, loch: lochW,
+    schichten: [
+      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; } },
+      { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.42; } },
+      { id: 'schleimhaut', a: function () { return 0.42; }, b: function () { return 0.72; } }
+    ]
+  };
+  var r = wandSchichten(A, def);
+  var gb = [[Math.min(p0[0], p1[0]) - 1.3, Math.min(p0[1], p1[1]) - 1.3, Math.min(p0[2], p1[2]) - 1.3], [Math.max(p0[0], p1[0]) + 1.3, Math.max(p0[1], p1[1]) + 1.3, Math.max(p0[2], p1[2]) + 1.3]];
+  r.schichten.push({
+    id: 'bauhin', grenzen: gb,
+    sdf: function (x, y, z) {
+      var v = S.kapsel(x, y, z, p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], 1.0, 0.62), dc = A.q(x, y, z);
+      if (A.i >= 0) v = Math.max(v, dc - st.R(A.s, A.phi()) + 0.12);   /* nur innerhalb des Blinddarms */
+      v = Math.max(v, -S.kapsel(x, y, z, p0[0] - dir[0] * 0.6, p0[1] - dir[1] * 0.6, p0[2] - dir[2] * 0.6, p1[0] + dir[0] * 0.4, p1[1] + dir[1] * 0.4, p1[2] + dir[2] * 0.4, 0.26, 0.26));
+      return A.i < 0 ? v : Math.max(v, schnittEbene(A, 0, 0, 1, 1.2));
+    }
+  });
+  var gw = [[0, 0, 0], [0, 0, 0]], k, c;
+  for (c = 0; c < 3; c++) { gw[0][c] = 1e9; gw[1][c] = -1e9; }
+  for (k = 0; k < WURM_PTS.length; k++) for (c = 0; c < 3; c++) { gw[0][c] = Math.min(gw[0][c], WURM_PTS[k][c] - 0.7); gw[1][c] = Math.max(gw[1][c], WURM_PTS[k][c] + 0.7); }
+  r.schichten.push({
+    id: 'wurmfortsatz', grenzen: gw,
+    sdf: function (x, y, z) {
+      var d = A.q(x, y, z), v = Math.max(wAussen(x, y, z), -wInnen(x, y, z));
+      if (A.i >= 0) v = Math.max(v, -(d - st.R(A.s, A.phi())));   /* im Blinddarm selbst nicht */
+      return v;
+    }
+  });
+  r.mitte = [BAUHIN.p[0] - 1.0, BAUHIN.p[1] - 1.5, BAUHIN.p[2]];
+  r.klappe = { p0: p0, p1: p1, richtung: dir };
+  return r;
+}
+/* Zwoelffingerdarm mit der Papille: Wand (Laengsmuskel, Ringmuskel, Schleimhaut mit Ringfalten wie im Leerdarm) auf 10 cm um die Papille, vorn aufgeschnitten; 'papille' =
+   Erhebung an der medialen Wand (Lage und Richtung aus der Leberform) mit dem gemeinsamen Gang, in den Hauptgallengang und Pankreasgang muenden */
+var DUO_ZUSTAND = null;
+function zwoelffingerdarmSchichten() {
+  var LE = Kern.Formen && Kern.Formen.leber;
+  if (!LE) throw new Error('Der Zwoelffingerdarm braucht die Form der Leber (Papille), sie ist nicht geladen.');
+  if (!DUO_ZUSTAND) DUO_ZUSTAND = { A: Achse(BAHN.duodenum.pts, { schritt: 0.3 }), sLeer: 1e9, L: 1e9 };
+  var st = DUO_ZUSTAND, A = st.A, PA = LE.PAPILLE, sP = A.von(PA.p), s0 = Math.max(sP - 5, 0), s1 = sP + 5;
+  var def = {
+    s0: s0, s1: s1, rand: 1.6, R: function () { return 1.0; },
+    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 0); },
+    schichten: [
+      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.16; } },
+      { id: 'ringmuskel', a: function () { return 0.16; }, b: function () { return 0.34; } },
+      { id: 'schleimhaut', a: function () { return 0.34; }, b: function (s, phi) { return 0.56 + ringfalte(st, s, phi); } }
+    ]
+  };
+  var r = wandSchichten(A, def), q = PA.p, d = PA.richtung;
+  var p0 = [q[0] + d[0] * 0.1, q[1] + d[1] * 0.1, q[2] + d[2] * 0.1], p1 = [q[0] + d[0] * 0.75, q[1] + d[1] * 0.75, q[2] + d[2] * 0.75];
+  r.schichten.push({
+    id: 'papille', grenzen: [[q[0] - 1.2, q[1] - 1.2, q[2] - 1.2], [q[0] + 1.2, q[1] + 1.2, q[2] + 1.2]],
+    sdf: function (x, y, z) {
+      var v = S.kapsel(x, y, z, p0[0], p0[1], p0[2], p1[0], p1[1], p1[2], PA.r, PA.r * 0.7);
+      v = Math.max(v, -S.kapsel(x, y, z, q[0], q[1], q[2], p1[0] + d[0] * 0.3, p1[1] + d[1] * 0.3, p1[2] + d[2] * 0.3, 0.12, 0.12));
+      A.q(x, y, z);
+      return A.i < 0 ? v : Math.max(v, schnittEbene(A, 0, 0, 1, 0));
+    }
+  });
+  r.mitte = PA.p.slice(); r.papille = { p: q.slice(), richtung: d.slice(), r: PA.r };
+  return r;
+}
+
+/* Mastdarm und Analkanal: von knapp oberhalb des Mastdarms bis zum After; Laengs- und Ringmuskel, innerer Schliessmuskel (verdickter Ringmuskel im
+   Analkanal), aeusserer Schliessmuskel (unten aussen), Schleimhaut mit Analsaeulen; aufgeschnitten in der Mittelebene (links fehlt, x > 0 wird entfernt) */
+function mastdarmSchichten() {
+  var st = dickZustand(), A = st.A, S = st.s;
+  function wc(s) { return glatt(S.kanal - 1.4, S.kanal - 0.2, s); }
+  var def = {
+    s0: S.mastdarm + 6.0, s1: S.ende, rand: 2.6, R: st.R,
+    schnitt: function (a) { return schnittEbene(a, 1, 0, 0, 0); },
+    schichten: [
+      { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; }, bis: S.kanal + 0.5 },
+      { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.45; }, bis: S.kanal - 1.0 },
+      { id: 'sphinkterInnen', a: function (s) { return 0.2 + 0.25 * wc(s); }, b: function (s) { return 0.45 + 0.45 * wc(s); }, von: S.kanal - 1.0, bis: S.ende - 0.6 },
+      { id: 'sphinkterAussen', a: function () { return 0; }, b: function () { return 0.45; }, von: S.kanal + 0.5 },
+      { id: 'schleimhaut', a: function (s) { return 0.45 + 0.45 * wc(s); }, b: function (s, phi) { return 0.95 + 0.3 * wc(s) - wc(s) * 0.12 * (0.5 + 0.5 * Math.cos(6 * phi)); } }
+    ]
+  };
+  var r = wandSchichten(A, def);
+  r.mitte = A.punkt(S.kanal);
+  r.kanalStart = S.kanal;
+  return r;
+}
+
+/* ---- Gekroese (Mesenterium) ----
+   Halbdurchsichtige Platte von der Wurzel (ca. 17 cm; von der Flexur ueber die Gefaesse am Anfang des Duenndarms schraeg nach rechts unten zur Bauhin-Klappe,
+   an der hinteren Bauchwand) nach vorn zu den Duenndarmschlingen. Von jedem Punkt der Wurzel laeuft ein Strahl nach vorn und etwas nach unten, bis er die
+   Wand einer Schlinge (oder den Zwoelffingerdarm) beruehrt oder 7 cm lang ist; die Platte reicht bis dorthin und durchdringt keine Schlinge. */
+var GEKR_WURZEL = [[3.9, 94.4, 2.0], [3.2, 95.0, 2.1], [2.0, 96.0, 2.6], [1.13, 96.52, 2.94], [0.43, 96.47, 3.83], [-0.41, 96.16, 4.36], [-1.58, 95.63, 4.5], [-3.26, 95.11, 4.48],
+  [-4.83, 94.61, 4.48], [-6.6, 93.9, 4.0], [-8.0, 93.3, 3.5]];
+var GEKR = null;
+function gekroese() {
+  if (GEKR) return GEKR;
+  var du = duennZustand(), A = du.A, duo = kette(kurve(BAHN.duodenum.pts, 8), 1.0, 3);
+  var wurzel = neuAbtasten(kurve(GEKR_WURZEL, 8), 0.7), nu = wurzel.length, nv = 6, i, j, k, c;
+  var dir = [], len = [];
+  for (i = 0; i < nu; i++) {
+    var a = wurzel[Math.max(i - 1, 0)], b = wurzel[Math.min(i + 1, nu - 1)], tx = b[0] - a[0], ty = b[1] - a[1], tz = b[2] - a[2], tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1;
+    tx /= tl; ty /= tl; tz /= tl;
+    var dp = -0.35 * ty + tz, ux = -dp * tx, uy = -0.35 - dp * ty, uz = 1 - dp * tz, ul = Math.sqrt(ux * ux + uy * uy + uz * uz) || 1;   /* (0; -0,35; 1) senkrecht zur Wurzel */
+    ux /= ul; uy /= ul; uz /= ul;
+    dir.push([ux, uy, uz]);
+    var t = 0, p = wurzel[i];
+    while (t < 7) {
+      var x = p[0] + ux * t, y = p[1] + uy * t, z = p[2] + uz * t, dd = A.q(x, y, z);
+      if ((A.i >= 0 && dd < DUENN_R + 0.03) || duo(x, y, z) < 0.03) break;
+      t += 0.1;
+    }
+    len.push(Math.max(t - 0.1, 0.3));
+  }
+  var l2 = len.map(function (l, q) { return 0.5 * l + 0.5 * Math.min(len[Math.max(q - 1, 0)], l, len[Math.min(q + 1, nu - 1)]); });   /* nur kuerzer, nie laenger: haelt Abstand zu den Schlingen */
+  var pts = [], tris = [], rand = [];
+  for (i = 0; i < nu; i++) for (j = 0; j <= nv; j++) {
+    var f = l2[i] * j / nv, p0 = wurzel[i];
+    pts.push([p0[0] + dir[i][0] * f, p0[1] + dir[i][1] * f, p0[2] + dir[i][2] * f]);
+    if (j === nv) rand.push(pts[pts.length - 1].slice());
+  }
+  for (i = 0; i < nu - 1; i++) for (j = 0; j < nv; j++) {
+    var q0 = i * (nv + 1) + j, q1 = (i + 1) * (nv + 1) + j;
+    tris.push(q0, q1, q0 + 1, q1, q1 + 1, q0 + 1);
+  }
+  GEKR = { pts: pts, tris: tris, nu: nu, nv: nv, wurzel: wurzel, rand: rand, richtung: dir, laenge: l2, wurzelLaenge: laenge(wurzel) };
+  return GEKR;
+}
+
+/* ---- Gefaesse des Darms ----
+   darmGefaesse() -> { darmarterien, darmvenen, pfortader }: je Liste von { id, pts, r0, r1 } (Venen in Fliessrichtung, Arterien vom Ursprung weg).
+   Arterien: obere Mesenterialarterie aus der Bauchaorta (unterhalb des Truncus coeliacus, vor dem Zwoelffingerdarm) mit Aesten zum Leer- und Krummdarm (Arkaden im
+   Gekroese, vereinfacht), zur Bauhin-Klappe und zum rechten und queren Dickdarm; untere Mesenterialarterie mit Aesten zum absteigenden Dickdarm, Sigma und Mastdarm.
+   Venen laufen daneben; die obere Mesenterialvene setzt die Mesenterialvene der Leberform fort, die untere Mesenterialvene muendet in die Milzvene.
+   pfortader: Stamm mit Stumpf der Milzvene und die ganze obere Mesenterialvene (wie in der Leberform, id mesenterialvene). */
+var SMA_PTS = [[2.4, 96.4, 0.9], [1.13, 96.52, 2.94], [0.43, 96.47, 3.83], [-0.41, 96.16, 4.36], [-1.58, 95.63, 4.5], [-3.26, 95.11, 4.48], [-4.83, 94.61, 4.48]];
+var SMV_PTS = [[0.4, 93.6, 1.5], [-1.95, 93.35, 1.97], [-3.79, 93.13, 2.25], [-5.6, 93.5, 2.6], [-7.4, 94.2, 3.2]];   /* ab dem Ende der Mesenterialvene der Leberform */
+var IMA_PTS = [[3, 95.4, 0.7], [3.83, 94.05, -0.19], [3.9, 92.92, -0.85], [3.44, 90.9, -1.84], [2.86, 89.33, -2.42], [2.2, 87.8, -2.8]];
+var IMV_PTS = [[2.6, 87.8, -3.4], [3.9, 90.9, -2.5], [4.7, 92.9, -2.2], [5.2, 95.0, -2.4], [5.4, 97.5, -3.0], [5.0, 100.5, -3.4], [3.8, 103.3, -3.4]];   /* letzter Punkt: wird durch die Muendung in die Milzvene ersetzt */
+var ARTERIEN_AST = [
+  { id: 'ileocolica', pts: [[-4.83, 94.61, 4.48], [-7.6, 94.9, 4.4], [-9.2, 94.2, 3.9]], r0: 0.2, r1: 0.14 },
+  { id: 'colica-dextra', pts: [[-3.26, 95.11, 4.48], [-5.2, 96.6, 3.8], [-8.0, 98.0, 2.6], [-9.9, 98.5, 0.9]], r0: 0.17, r1: 0.12 },
+  { id: 'colica-media', pts: [[0.43, 96.47, 3.83], [-0.1, 96.7, 5.2], [-0.7, 96.9, 6.3]], r0: 0.17, r1: 0.12 },
+  { id: 'colica-sinistra', pts: [[3.83, 94.05, -0.19], [6.58, 95, -1.26], [8.91, 95.79, -2.17], [10.2, 96.2, -2.7]], r0: 0.17, r1: 0.12 },
+  { id: 'sigmoideae', pts: [[3.44, 90.9, -1.84], [4.16, 90.89, -1.12], [5.45, 90.23, 1.58], [6.5, 89.4, 5.4]], r0: 0.15, r1: 0.1 }
+];
+function darmGefaesse() {
+  var LE = Kern.Formen && Kern.Formen.leber;
+  if (!LE) throw new Error('Die Gefaesse brauchen die Form der Leber, sie ist nicht geladen.');
+  var GE = LE.GEFAESSE, g = gekroese(), k;
+  function kopie(pts) { return pts.map(function (p) { return p.slice(); }); }
+  function versatz(pts, o) { return pts.map(function (p) { return [p[0] + o[0], p[1] + o[1], p[2] + o[2]]; }); }
+  function umkehr(pts) { return kopie(pts).reverse(); }
+  function naechster(poly, p) { var b = 0, bd = 1e30, q; for (q = 0; q < poly.length; q++) { var d = Math.pow(poly[q][0] - p[0], 2) + Math.pow(poly[q][1] - p[1], 2) + Math.pow(poly[q][2] - p[2], 2); if (d < bd) { bd = d; b = q; } } return poly[b]; }
+  var sma = kurve(SMA_PTS, 8), smv = kurve([GE.pfortader[2].pts[GE.pfortader[2].pts.length - 1]].concat(SMV_PTS), 8);
+  var arterien = [{ id: 'mesenterica-superior', pts: kopie(SMA_PTS), r0: 0.3, r1: 0.2 }, { id: 'mesenterica-inferior', pts: kopie(IMA_PTS), r0: 0.25, r1: 0.14 }];
+  ARTERIEN_AST.forEach(function (a) { arterien.push({ id: a.id, pts: kopie(a.pts), r0: a.r0, r1: a.r1 }); });
+  var venen = [{ id: 'mesenterica-superior-vene', pts: umkehr(SMV_PTS), r0: 0.4, r1: 0.5 }];   /* Fliessrichtung: von der Bauhin-Klappe zur Leber */
+  var ive = IMV_PTS.map(function (p) { return p.slice(); }), milzM = amBogen(kurve(GE.pfortader[1].pts, 12), LE.STUMPF - 0.2);
+  ive[ive.length - 1] = milzM;
+  venen.push({ id: 'mesenterica-inferior-vene', pts: ive, r0: 0.25, r1: 0.32 });
+  ARTERIEN_AST.forEach(function (a) { venen.push({ id: a.id + '-vene', pts: umkehr(versatz(a.pts, [0.0, 0.45, -0.4])), r0: a.r1 * 1.2, r1: a.r0 * 1.2 }); });
+  /* Aeste des Leer- und Krummdarms: von der oberen Mesenterialarterie ueber die Wurzel und eine Arkade (60 % der Plattenbreite) zur Schlinge */
+  var N = 11, arkade = [];
+  for (k = 0; k < N; k++) {
+    var u = Math.min(g.nu - 1, Math.round((k + 0.5) * g.nu / N)), R = g.wurzel[u], d = g.richtung[u], L = g.laenge[u];
+    var M = [R[0] + d[0] * L * 0.6, R[1] + d[1] * L * 0.6, R[2] + d[2] * L * 0.6], E = [R[0] + d[0] * L * 0.97, R[1] + d[1] * L * 0.97, R[2] + d[2] * L * 0.97];
+    var S0 = naechster(sma, R), w = [R[0] + d[0] * L * 0.15, R[1] + d[1] * L * 0.15, R[2] + d[2] * L * 0.15];
+    var pk = [S0, w, M, E];
+    arterien.push({ id: 'darmast-' + (k + 1), pts: pk, r0: 0.13, r1: 0.08 });
+    arkade.push(M);
+    var V0 = naechster(smv, R);
+    venen.push({ id: 'darmvene-' + (k + 1), pts: [[E[0] + 0.4, E[1], E[2]], [M[0] + 0.4, M[1], M[2]], [w[0] + 0.4, w[1], w[2]], V0], r0: 0.1, r1: 0.14 });   /* neben der Arterie, in Fliessrichtung zur Wurzel */
+  }
+  arterien.push({ id: 'arkade', pts: kurve(arkade, 4), r0: 0.07, r1: 0.07 });
+  var pf = GE.pfortader.map(function (q) { return { id: q.id, pts: (q.id === 'pfortaderStamm' || q.id === 'mesenterialvene') ? kopie(q.pts) : LE.stumpf(q.pts, LE.STUMPF), r0: q.r0, r1: q.r1 }; });
+  return { darmarterien: arterien, darmvenen: venen, pfortader: pf };
+}
+
+/* ---- Kennpunkte des Darms ----
+   darmKennpunkte() -> { PAPILLE, FLEXUR, BAUHIN, AFTER, DUENN_SCHNITT, ... } je { p } (PAPILLE mit richtung und r wie in der Leberform, DUENN_SCHNITT mit s0, s1 = Bereich der
+   Mittellinie des Duenndarms in cm ab der Flexur); Mittellinien mit Bogenlaenge: duenndarm().achse / dickdarm().achse (punkt(s), richtung(s)),
+   Abschnittsgrenzen: duenndarm().leerEnde und dickdarm().abschnitte */
+function darmKennpunkte() {
+  var LE = Kern.Formen && Kern.Formen.leber;
+  if (!LE) throw new Error('Die Kennpunkte des Darms brauchen die Form der Leber (Papille), sie ist nicht geladen.');
+  var du = duennZustand(), dk = dickZustand();
+  return {
+    PAPILLE: { p: LE.PAPILLE.p.slice(), richtung: LE.PAPILLE.richtung.slice(), r: LE.PAPILLE.r },
+    GANGENDEN: { gallengang: LE.GEFAESSE.gallengang.filter(function (g) { return g.id === 'hauptgallengang'; })[0].pts.slice(-1)[0].slice(), pankreasgang: LE.GEFAESSE.pankreasgang[0].pts.slice(-1)[0].slice() },
+    FLEXUR: { p: FLEXUR.p.slice() }, BAUHIN: { p: BAUHIN.p.slice() }, AFTER: { p: AFTER.p.slice() },
+    DUENN_SCHNITT: { p: DUENN_SCHNITT.p.slice(), s0: DUENN_SCHNITT.s0, s1: DUENN_SCHNITT.s1 },
+    BLINDDARM: { p: dk.A.punkt(0) }, WURMFORTSATZ: { p: WURM_PTS[WURM_PTS.length - 1].slice() },
+    MASTDARM: { p: dk.A.punkt(dk.s.mastdarm) }, ANALKANAL: { p: dk.A.punkt(dk.s.kanal) }, LEERDARM: { p: du.A.punkt(du.sLeer / 2) }, KRUMMDARM: { p: du.A.punkt((du.sLeer + du.L) / 2) }
+  };
+}
+
 Kern.form('verdauung', {
   BAHN: BAHN, magen: magen, magenGrenzen: magenGrenzen, schichten: schichten, lumen: lumen, aussen: aussen, schichtFeld: schichtFeld, schnittZ: schnittZ, abbilden: abbilden,
   mittellinie: mittellinie, kurvaturen: kurvaturen, kennpunkte: kennpunkte, schnitt: schnitt,
   EINGANG: EINGANG, PFOERTNER: PFOERTNER, FUNDUS: FUNDUS, ANGULUS: ANGULUS,
-  gefaesse: gefaesse, zwerchfell: zwerchfell, speiseroehreAnzeige: speiseroehreAnzeige, kurve: kurve, kette: kette
+  gefaesse: gefaesse, zwerchfell: zwerchfell, speiseroehreAnzeige: speiseroehreAnzeige, kurve: kurve, kette: kette,
+  BAUHIN: BAUHIN, AFTER: AFTER, DUENN_R: DUENN_R, zwoelffingerdarm: zwoelffingerdarm, duenndarm: duenndarm, dickdarm: dickdarm, wurmfortsatz: wurmfortsatz, Achse: Achse,
+  duennSchichten: duennSchichten, blinddarmSchichten: blinddarmSchichten, mastdarmSchichten: mastdarmSchichten, zwoelffingerdarmSchichten: zwoelffingerdarmSchichten, gekroese: gekroese, darmGefaesse: darmGefaesse, darmKennpunkte: darmKennpunkte, FLEXUR: FLEXUR
 });
 })();
