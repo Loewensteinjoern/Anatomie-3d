@@ -1,4 +1,4 @@
-# Darm mit Dünndarmzotte, PR B – Texte, Entwurf zur Freigabe (noch NICHT freigegeben)
+# Darm mit Dünndarmzotte, PR B – Texte (von Jörn freigegeben, 8. November 2026)
 
 # Teil 1: Darm (`#darm`)
 
