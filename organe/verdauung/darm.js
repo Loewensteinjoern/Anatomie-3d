@@ -977,8 +977,8 @@ var LISTEN = [
   ['bauhin', 'schleimhaut', 'muskulatur', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'krummdarm', 'arterien', 'venen'],
   ['schleimhaut', 'muskulatur', 'mastdarm', 'after', 'sigma']
 ];
-/* Strukturen der Beschriftung in der aktuellen Ansicht: in der Uebersicht kommt bei Durchsicht die Schleimhaut dazu (sie ist dann durch die Haut zu sehen) */
-function beschriftet() { return aktiv === 0 && seeThrough ? LISTEN[0].concat(['schleimhaut']) : LISTEN[aktiv]; }
+/* Strukturen der Beschriftung in der aktuellen Ansicht: in der Uebersicht bei Durchsicht nur die Hauptabschnitte (sonst zu viele Schilder, die Linien kreuzen sich) */
+function beschriftet() { return aktiv === 0 && seeThrough ? HANDY_GROSS : LISTEN[aktiv]; }
 var labelBox = $('labels'), leaderSvg = $('leaders');
 var LAB = {};   /* Struktur-id -> { el, ln, dot, nm, de } */
 LISTEN.forEach(function (l) {
@@ -1388,9 +1388,9 @@ var SCH = (function () {
   }
 
   /* ---- Lage der Stationen (Bildpunkte) ---- */
-  var DUO = glatt([[160, 34], [146, 49], [140, 82], [152, 112], [178, 122]], 6);
-  var SI = glatt([[178, 122], [180, 186], [316, 186], [320, 219], [150, 219], [146, 252], [316, 252], [320, 285], [150, 285], [146, 318], [316, 318], [322, 338]], 4);
-  var DICK = glatt([[322, 338], [346, 350], [346, 170], [336, 138], [114, 138], [104, 170], [104, 350], [132, 382], [196, 374], [230, 400]], 5);
+  var DUO = glatt([[300, 34], [314, 49], [320, 82], [308, 112], [282, 122]], 6);   /* Blick von vorn wie im 3D-Modell: Blinddarm und aufsteigender Dickdarm links im Bild (rechte Koerperseite), absteigender Dickdarm rechts */
+  var SI = glatt([[282, 122], [280, 186], [144, 186], [140, 219], [310, 219], [314, 252], [144, 252], [140, 285], [310, 285], [314, 318], [144, 318], [138, 338]], 4);
+  var DICK = glatt([[138, 338], [114, 350], [114, 170], [124, 138], [346, 138], [356, 170], [356, 350], [328, 382], [264, 374], [230, 400]], 5);
   var REKT = [[230, 400], [230, 430]];
   var LN = null, FM = null, FMASTDARM = 0.89;
   function bauePfade() {
@@ -1465,24 +1465,24 @@ var SCH = (function () {
     }
     var AUF = { 'font-size': 8.8, 'stroke-width': 2.2 };
     /* Orte der Aufnahme: Pfeile in den Farben der Stoffe, daneben nur die Stoffe aus der Legende */
-    pfeil(132, 76, -1, 0, 16, '#C5D0D6'); pfeil(134, 88, -1, 0, 16, '#9FB4C0');
-    text(ga, 108, 94, 'Eisen, Calcium', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
-    [[262, '#F0DA6E'], [276, '#F5AE60'], [290, '#FFFFFF'], [304, '#C5D0D6']].forEach(function (a) { pfeil(a[0], 178, 0, -1, 12, a[1]); });
-    text(ga, 192, 156, 'Zucker, Aminosäuren,', AUF['font-size'], DIM, { 'stroke-width': 2.2 }); text(ga, 192, 167, 'Fette, Vitamine', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
-    pfeil(214, 326, 0, 1, 12, '#C5D0D6'); pfeil(244, 326, 0, 1, 12, '#8FDC80');
-    text(ga, 229, 353, 'Vitamin B12, Gallensäuren', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
-    pfeil(356, 244, 1, 0, 14, '#A8DEF6'); pfeil(356, 256, 1, 0, 14, '#C5D0D6');
-    text(ga, 378, 247, 'Wasser,', AUF['font-size'], DIM, { 'stroke-width': 2.2 }); text(ga, 378, 259, 'Salze', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
-    /* Stationen */
-    station('ZWÖLFFINGERDARM', 8, 40, null, 146, 44, 124, 36);
-    station('LEERDARM', 8, 226, null, 144, 224, 70, 222);
-    station('KRUMMDARM', 362, 308, null, 322, 312, 358, 306);
-    station('DICKDARM', 362, 200, null, 346, 196, 358, 196);
+    pfeil(328, 76, 1, 0, 16, '#C5D0D6'); pfeil(326, 88, 1, 0, 16, '#9FB4C0');
+    text(ga, 352, 94, 'Eisen, Calcium', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
+    [[150, '#F0DA6E'], [164, '#F5AE60'], [178, '#FFFFFF'], [192, '#C5D0D6']].forEach(function (a) { pfeil(a[0], 178, 0, -1, 12, a[1]); });
+    text(ga, 268, 156, 'Zucker, Aminosäuren,', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 }); text(ga, 268, 167, 'Fette, Vitamine', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
+    pfeil(216, 326, 0, 1, 12, '#C5D0D6'); pfeil(246, 326, 0, 1, 12, '#8FDC80');
+    text(ga, 231, 353, 'Vitamin B12, Gallensäuren', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
+    pfeil(106, 244, -1, 0, 14, '#A8DEF6'); pfeil(106, 256, -1, 0, 14, '#C5D0D6');
+    text(ga, 86, 247, 'Wasser,', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 }); text(ga, 86, 259, 'Salze', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
+    /* Stationen: die Linien enden mit einem Punkt auf dem Abschnitt (Leerdarm: obere Schlinge, Krummdarm: unterste Schlinge, Dickdarm: Rahmen) */
+    station('ZWÖLFFINGERDARM', 452, 40, 'end', 314, 44, 336, 36);
+    station('LEERDARM', 372, 226, null, 300, 219, 368, 222);
+    station('KRUMMDARM', 8, 316, null, 160, 318, 74, 312);
+    station('DICKDARM', 372, 294, null, 356, 290, 368, 290);
     station('MASTDARM', 248, 428, null, 234, 424, 244, 425);
     var pp = papilleBild({});
-    kasten(262, 52, 'Galle', pp.x + 5, pp.y); kasten(272, 78, 'Pankreassaft', pp.x + 5, pp.y + 2);
+    kasten(200, 52, 'Galle', pp.x - 5, pp.y); kasten(190, 78, 'Pankreassaft', pp.x - 5, pp.y + 2);
     /* Abzeichen an den Stationen */
-    [[168, 70], [232, 202], [232, 301], [262, 126], [210, 418]].forEach(function (p, q) { abzeichen(ga, p[0], p[1], q + 1); });
+    [[340, 62], [228, 202], [228, 301], [198, 126], [210, 418]].forEach(function (p, q) { abzeichen(ga, p[0], p[1], q + 1); });
     /* Legende */
     var LG = [
       ['Zwölffingerdarm', 'Galle und Pankreassaft spalten die Nährstoffe;', 'aufgenommen werden vor allem Eisen und Calcium'],
