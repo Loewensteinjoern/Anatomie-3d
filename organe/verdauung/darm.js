@@ -10,8 +10,8 @@
    die Schichten der Wand (Laengsmuskel, Ringmuskel, Schleimhaut mit Falten, Klappe, Papille, Schliessmuskeln) kommen aus den Abstandsfeldern der Form und werden nur dort
    fein vernetzt; von den Muskelschichten bleibt die Schnittflaeche (Kappe), die Haut der Muskelschichten ersetzt die Aussenhaut. Der Deckel gleitet nach vorn und blendet aus,
    wie beim Magen.
-   Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Stoffe, Stroemung, Schema, Hilfekarten, Ueben und die
-   Duenndarmzotte folgen in spaeteren Schritten.
+   Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Abschnitt 6: Stoffe und Stroemung (Teilchen auf dem Weg durch den
+   ganzen Darm, nuechtern / nach dem Essen), Abschnitt 7: Schema "Wo wird was aufgenommen". Hilfekarten, Ueben und die Duenndarmzotte folgen in spaeteren Schritten.
    ===================================================================== */
 (function () {
 'use strict';
@@ -79,7 +79,7 @@ var STRUKTUREN = [
     txt: 'Sie sammelt das Blut aus Magen, Darm und Milz und bringt es zur Leber. Gezeigt ist ihr Anfang.',
     fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] }
 ];
-/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; die Zeilen "Stoffe" und "Stroemung", der Mahlzeit-Schalter, "Zotte" und "Schema" kommen spaeter dazu */
+/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; der Knopf "Zotte" kommt spaeter dazu */
 var MARKUP = `<div id="title">
   <div class="kicker">Darm &middot; Intestinum</div>
   <h1>Dünndarm, Dickdarm &amp; <em>Mastdarm</em></h1>
@@ -94,15 +94,40 @@ var MARKUP = `<div id="title">
     <button id="cam2" class="gh" title="Eine Dünndarmschlinge, aufgeschnitten: Ringfalten und Zotten">Dünndarm</button>
     <button id="cam3" class="gh" title="Übergang vom Krummdarm in den Dickdarm mit Blinddarm und Wurmfortsatz">Blinddarm</button>
     <button id="cam4" class="gh" title="Mastdarm und After mit den Schließmuskeln">Mastdarm</button>
+    <span class="sep"></span>
+    <button id="bSchema" class="gh" title="Wo wird was aufgenommen – entlang des ganzen Darms">Schema</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
     <button id="bSee" class="gh" title="Darmwand durchsichtig oder undurchsichtig zeigen">Durchsicht</button>
     <button id="bLab" class="gh on">Beschriftung</button>
+    <span class="sep"></span>
+    <button id="bNuechtern" class="gh on" title="Zwischen den Mahlzeiten: Der Darm ist fast leer">nüchtern</button>
+    <button id="bEssen" class="gh" title="Nach einer Mahlzeit: Speisebrei, Galle und Pankreassaft fließen">nach dem Essen</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Stoffe</span>
+    <button id="bKh" class="gh on" title="Kohlenhydrate ein- oder ausblenden">Kohlenhydrate</button>
+    <button id="bEiw" class="gh on" title="Eiweiß ein- oder ausblenden">Eiweiß</button>
+    <button id="bFett" class="gh on" title="Fett ein- oder ausblenden">Fett</button>
+    <button id="bWasser" class="gh on" title="Wasser ein- oder ausblenden">Wasser</button>
+  </div>
+  <div class="trow">
+    <span class="cap">Strömung</span>
+    <button id="bPlay" class="gh on">Pause</button>
+    <button id="bS0" class="gh">langsam</button>
+    <button id="bS1" class="gh on">normal</button>
+    <button id="bS2" class="gh">schnell</button>
   </div>
 </div>
 
 <div class="panel" id="rail"></div>
+
+<div class="panel" id="schema" aria-label="Schema: Wo wird was aufgenommen">
+  <div class="sch-head"><span class="kick">Schema &middot; Wo wird was aufgenommen</span><span class="sch-hint">Gleiche Stoffe wie im 3D-Modell, entlang des ganzen Darms.</span>
+  <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
+  <div id="schemaBox"></div>
+</div>
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
@@ -150,7 +175,7 @@ function abstandFuer(ext, r, fov, h) {
   var pxcm = Math.min((r.y1 - r.y0) / ext[1], (r.x1 - r.x0 - 2 * r.fit) / ext[0]);
   return h / (2 * th * Math.max(pxcm, 0.5));
 }
-/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (WERKZEUG_H, zwei Zeilen; kommen Zeilen dazu, ist sie neu zu messen); aufbauen misst sie selbst, die Werte stimmen ueberein.
+/* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schaetzung ihrer Raender nach gemessener Hoehe (WERKZEUG_H, vier Zeilen; kommen Zeilen oder Knoepfe dazu, ist sie neu zu messen); aufbauen misst sie selbst, die Werte stimmen ueberein.
    Die Leiste folgt dem Handy-Layout bis einschliesslich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
@@ -159,7 +184,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 80, handy: 68, umbruch: 385 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+30) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 438 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30); mit dem Knopf Zotte (B5) neu messen */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Darms im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -197,6 +222,7 @@ WAND.forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.5, coat
 DECK.forEach(function (sid) { MAT[sid + 'D'] = mat(STRUCT[sid].col, { rough: 0.5, coat: 0.35, side: THREE.DoubleSide }); });
 function innen(hex) { return mat(hex, { rough: 0.6, coat: 0.2, side: THREE.DoubleSide }); }
 MAT.schleimhaut = innen(0xE88F8C);
+MAT.schleimhautL = mat(0xE88F8C, { rough: 0.6, coat: 0.2, side: THREE.DoubleSide, opacity: 0.3 });   /* einfache Innenflaeche (nur bei Durchsicht): durchscheinend, damit man den Inhalt sieht */
 MAT.papille = innen(STRUCT.papille.col);
 MAT.bauhin = innen(STRUCT.bauhin.col);
 MAT.gangGalle = mat(0x5E9A4A, { rough: 0.4, coat: 0.3 }); MAT.gangPankreas = mat(0xC9B6E6, { rough: 0.4, coat: 0.3 });   /* Gaenge an der Papille (gehoeren zur Struktur Papille) */
@@ -525,7 +551,7 @@ async function bauen() {
   /* Schleimhaut als einfacher Schlauch unter der Wand: nur bei Durchsicht zu sehen (in den vier Bereichen sind es die feinen Schichten, solange sie geschlossen sind) */
   function lumen(A, s0, s1, tiefe, Rf, reg, seiten) {
     var g = schlauch(A, s0, s1, function (s, phi) { return Rf(s, phi) - tiefe; }, { seiten: seiten || 16, ds: DS * 1.6 });
-    addMesh('schleimhaut', g, MAT.schleimhaut, STRUCT.schleimhaut.de + ' (innen)', 2, 'lumen', reg || undefined);
+    addMesh('schleimhaut', g, MAT.schleimhautL, STRUCT.schleimhaut.de + ' (innen)', 2, 'lumen', reg || undefined);
     tris.haut += anz(g);
   }
   lumen(Aduo, 0, B1[0], 0.45, RDUO); lumen(Aduo, B1[0], B1[1], 0.45, RDUO, 1); lumen(Aduo, B1[1], Lduo, 0.45, RDUO);
@@ -612,7 +638,7 @@ function weichMat(o) { return o.material.transparent && !o.material.userData.dic
 function irgendOffen() { return OZ.some(function (z) { return z > 0; }); }
 function applyVisibility() {
   root.traverse(function (o) {
-    if (!o.isMesh) return;
+    if (!o.isMesh || o.userData.teilchen) return;   /* Teilchen stellen sich selbst (Stoffe-Schalter) */
     var u = o.userData, r = u.reg, ok = !!enabled[u.sid];
     if (u.kappe || u.schicht) ok = ok && OPEN[r] > 0.02;
     if (u.lumen) ok = ok && seeThrough && (!r || OPEN[r] <= 0.02);
@@ -1034,22 +1060,559 @@ function layoutLabels(w, h) {
 }
 
 /* =====================================================================
+   6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankreassaft (blassviolett) und Stuhl (braun) als Teilchen,
+   dazu der Mahlzeit-Schalter. Symbolisch, nicht massstaeblich, die Zeit ist stark gerafft. Alles ist eine reine Funktion von clock (Sekunden bei "normal") und dem Index des
+   Teilchens: kein Zufall, die Zahl der Teilchen steht beim Aufbau fest. Je Art ein InstancedMesh. Der Weg aller Teilchen ist eine Folge von Messpunkten (Abstand 0,15 cm)
+   entlang der Mittellinien von Zwoelffingerdarm, Duenndarm (Leerdarm, Krummdarm) und Dickdarm (ab der Bauhin-Klappe bis zum Ende des Mastdarms); je Messpunkt stehen Lage,
+   Begleitdreibein und der freie Radius bis zur Schleimhaut in 16 Richtungen in einer Tabelle (aus den Schichten der Form, samt Ringfalten). Ein Teilchen sitzt bei der
+   Wegstelle x (cm), im Winkel phi und mit dem Abstand rho (0..1) des freien Radius - es bleibt so im Innenraum, auch an den Ringfalten.
+   Nach dem Essen (Zeit te seit dem Wechsel, Zyklus P = 170 s): der Speisebrei kommt in Portionen am Anfang des Zwoelffingerdarms an (Wasser zuerst, Fett zuletzt), Galle und
+   Pankreassaft fliessen an der Papille zu. Im Duenndarm pendeln die Teilchen hin und her (Mischbewegung) und rueckeln weiter; Kohlenhydrate, Eiweiss und Fett werden
+   gestaffelt aufgenommen (sie werden kleiner und wandern zur Wand), das meiste im Leerdarm; Wasser vor allem im Duenndarm, ein Rest im Dickdarm; Galle am Ende des Krummdarms
+   (die Gallensaeuren), Pankreassaft im Leerdarm. Im Dickdarm entsteht der Stuhl: Teilchen werden dunkler, groesser, sind langsamer und sammeln sich im Mastdarm. Am Ende des
+   Zyklus loest sich der gesammelte Stuhl auf. Nuechtern: kaum Inhalt, ein paar Reste (Wasser) werden von einer schwachen Welle weitergeschoben, wenige Tropfen Galle und
+   Pankreassaft, im Dickdarm etwas Stuhl. Pause haelt alles an; der Wechsel nuechtern <-> nach dem Essen blendet in Echtzeit ein bzw. aus.
+   ===================================================================== */
+var playing = true, speed = 1, clock = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* tM: Uhrzeit des Wechsels zu "nach dem Essen"; fzR: Uebergang roh 0..1, fe: weich */
+var SZ_ = { UEBERG: 1.5, P: 150, DS: 0.15, AW: 12, TAU: 5.5, VS: 2.6, TRICKLE: 60, TWV: 48, VW: 7, DW: 28, KW: 6 };
+var R2A = 0.7548776662466927, R2B = 0.5698402909980532;   /* Plastikzahl-Folge (R2): gleichmaessig verteilte Paare aus dem Index */
+function bruch(v) { return v - Math.floor(v); }
+/* Arten: e = Fenster der Ankunftszeiten (s nach dem Essen), xa = Bereich der Aufnahme (cm ab Anfang des Duenndarms), tsc = Tempo, nR = die ersten nR Teilchen sind die Ruhe-Teilchen (nuechtern) */
+var KINDS = [
+  { id: 'kh', name: 'Kohlenhydrate', col: 0xE6C94A, em: 0x7A5F10, n: 80, rad: 0.115, e: [2, 17], xa: [14, 100], tsc: 1.0, btn: 'bKh', nR: 0 },
+  { id: 'eiweiss', name: 'Eiweiß', col: 0xF09A3E, em: 0x7A3A08, n: 72, rad: 0.135, e: [3.5, 20], xa: [20, 125], tsc: 0.96, btn: 'bEiw', nR: 0 },
+  { id: 'fett', name: 'Fett', col: 0xF2F2EE, em: 0x66665F, n: 56, rad: 0.13, e: [8, 28], xa: [30, 185], tsc: 0.9, btn: 'bFett', nR: 0 },
+  { id: 'wasser', name: 'Wasser', col: 0x8FD0F0, em: 0x1F5A86, n: 96, rad: 0.10, e: [0.5, 12], xa: [18, 262], tsc: 1.12, btn: 'bWasser', nR: 10 },
+  { id: 'galle', name: 'Galle', col: 0x7CC66E, em: 0x2E5A28, n: 44, rad: 0.125, e: [1.5, 25], xa: [0.78, 0.97], tsc: 1.0, nR: 3 },
+  { id: 'pank', name: 'Pankreassaft', col: 0xC9B6E6, em: 0x4A3A78, n: 44, rad: 0.12, e: [1.5, 25], xa: [20, 120], tsc: 1.0, nR: 3 },
+  { id: 'stuhl', name: 'Stuhl', col: 0xFFFFFF, em: 0x2A1A0C, n: 84, rad: 0.12, nR: 34 }
+];
+var KI = { kh: 0, eiweiss: 1, fett: 2, wasser: 3, galle: 4, pank: 5, stuhl: 6 };
+var kindOn = [true, true, true, true, true, true, true];
+var STUHL_C0 = srgb(0xC9A15B), STUHL_C1 = srgb(0x6E4222);   /* hellbraun am Anfang des Dickdarms, dunkelbraun im Mastdarm */
+var ST = null, WG = null, TT = null, WGX = null, STM = new THREE.Matrix4(), SQ = { x: 0, y: 0, z: 0, rmax: 1 }, LB = { st: 0, x: 0, r: 0, rho: 0, phi: 0, tip: 0, c: 0, tl: 0 };
+
+/* ---- Weg: Messpunkte, Zeittabelle ---- */
+function wegBauen() {
+  var D = geoDaten, du = D.du, dk = D.dk, AB = dk.abschnitte, Aduo = D.Aduo, Adu = du.achse, Adk = dk.achse, RZ = D.RZ, NP = 16, TWO = 2 * PI, DSW = SZ_.DS;
+  var Lduo = Aduo.laenge, DUO_R = form.BAHN.duodenum.r, DU_R = form.DUENN_R;
+  var bDuo = RZ[1].def.schichten[2].b, bDu = RZ[2].def.schichten[2].b, bMast = RZ[4].def.schichten[4].b;
+  var sB = AB.blinddarm[1], sE = AB.analkanal[0] - 1.2, sM = AB.mastdarm[0];
+  var pa = Adu.punkt(du.laenge), pb = Adk.punkt(sB), cn = Math.max(0.6, Math.sqrt(Math.pow(pa[0] - pb[0], 2) + Math.pow(pa[1] - pb[1], 2) + Math.pow(pa[2] - pb[2], 2)));
+  var X = { d1: Lduo, u0: Lduo, u1: Lduo + du.laenge, c0: Lduo + du.laenge + cn, sB: sB, sM: sM, leer: Lduo + du.leerEnde };
+  X.e = X.c0 + (sE - sB);
+  /* Abschnitte des Weges und ihre Strukturen (wie die Haut in bauen): ist eine Struktur im Ausschnitt ausgeblendet, zeigt ihr Inhalt sich auch nicht */
+  X.seg = [{ x0: 0, sid: 'zwoelffinger' }, { x0: X.u0, sid: 'leerdarm' }, { x0: X.leer, sid: 'krummdarm' }, { x0: X.u1 - 7, sid: 'krummdarm', ende: true },
+    { x0: X.c0, sid: 'aufsteigend' }, { x0: X.c0 + 7.5, sid: 'aufsteigend', fern: true }, { x0: X.c0 + AB.aufsteigend[1] - sB, sid: 'quer' }, { x0: X.c0 + AB.absteigend[0] - sB, sid: 'absteigend' },
+    { x0: X.c0 + AB.sigma[0] - sB, sid: 'sigma' }, { x0: X.c0 + sM - sB, sid: 'mastdarm' }];
+  var n = Math.ceil(X.e / DSW) + 2, C = new Float32Array(n * 3), N = new Float32Array(n * 3), B = new Float32Array(n * 3), F = new Float32Array(n * NP), k, j, kA = -1, kB = -1;
+  function frei(sec, s, phi) {
+    if (sec === 0) return DUO_R + (DU_R - DUO_R) * sstep(Lduo - 1.4, Lduo, s) - bDuo(s, phi);
+    if (sec === 1) return DU_R - bDu(s, phi);
+    return dk.R(s, phi) - (s >= sM ? bMast(s, phi) : 0.72);
+  }
+  for (k = 0; k < n; k++) {
+    var x = k * DSW, sec, A, s;
+    if (x < X.u0) { sec = 0; A = Aduo; s = x; } else if (x <= X.u1) { sec = 1; A = Adu; s = x - X.u0; } else if (x < X.c0) { sec = -1; } else { sec = 2; A = Adk; s = sB + (x - X.c0); }
+    if (sec < 0) continue;
+    if (sec === 1) kA = k; if (sec === 2 && kB < 0) kB = k;
+    var fr = rahmen(A, s);
+    C[k * 3] = fr.x; C[k * 3 + 1] = fr.y; C[k * 3 + 2] = fr.z; N[k * 3] = fr.nx; N[k * 3 + 1] = fr.ny; N[k * 3 + 2] = fr.nz; B[k * 3] = fr.bx; B[k * 3 + 1] = fr.by; B[k * 3 + 2] = fr.bz;
+    for (j = 0; j < NP; j++) F[k * NP + j] = Math.max(0, frei(sec, s, TWO * j / NP));
+  }
+  if (kB < 0) kB = n - 1;
+  for (k = kA + 1; k < kB; k++) {   /* Verbindung Krummdarm - Dickdarm (Bauhin-Klappe): linear */
+    var t = (k - kA) / (kB - kA), q;
+    for (q = 0; q < 3; q++) { C[k * 3 + q] = C[kA * 3 + q] + (C[kB * 3 + q] - C[kA * 3 + q]) * t; N[k * 3 + q] = N[kA * 3 + q] + (N[kB * 3 + q] - N[kA * 3 + q]) * t; B[k * 3 + q] = B[kA * 3 + q] + (B[kB * 3 + q] - B[kA * 3 + q]) * t; }
+    for (j = 0; j < NP; j++) F[k * NP + j] = F[kA * NP + j] + (F[kB * NP + j] - F[kA * NP + j]) * t;
+  }
+  WG = { ds: DSW, n: n, NP: NP, C: C, N: N, B: B, F: F, kA: kA, kB: kB };
+  WGX = X;
+  /* Zeit, die ein Teilchen vom Anfang bis zur Stelle x braucht (Tempo je Abschnitt in cm/s) */
+  var V = { duo: 5.0, leer: 5.6, krumm: 6.4, conn: 2.5, kolon: 2.0 };
+  TT = new Float32Array(n);
+  for (k = 1; k < n; k++) {
+    var xm = (k - 0.5) * DSW, v = xm < X.d1 ? V.duo : xm < X.leer ? V.leer : xm < X.u1 ? V.krumm : xm < X.c0 ? V.conn : V.kolon;
+    TT[k] = TT[k - 1] + DSW / v;
+  }
+}
+function xVonT(t) {   /* Wegstelle (cm) nach der Zeit t */
+  var n = WG.n, lo = 0, hi = n - 1;
+  if (t <= 0) return 0;
+  if (t >= TT[n - 1]) return (n - 1) * WG.ds;
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (TT[m] <= t) lo = m; else hi = m; }
+  return (lo + (t - TT[lo]) / (TT[hi] - TT[lo])) * WG.ds;
+}
+function tVonX(x) { var u = Math.max(0, Math.min(WG.n - 1.001, x / WG.ds)), i = Math.floor(u); return TT[i] + (TT[i + 1] - TT[i]) * (u - i); }
+/* Punkt bei Wegstelle x, Winkel phi, Abstand rho (Bruchteil des freien Radius abzueglich Teilchenradius rad und Rand) -> SQ */
+function wegPunkt(x, phi, rho, rad, out) {
+  var NP = WG.NP, u = Math.max(0, Math.min(WG.n - 1.001, x / WG.ds)), i0 = Math.floor(u), t = u - i0, i1 = i0 + 1, C = WG.C, N = WG.N, B = WG.B, F = WG.F;
+  var jj = (phi / (2 * PI)) * NP; jj -= Math.floor(jj / NP) * NP;
+  var j0 = Math.floor(jj) % NP, j1 = (j0 + 1) % NP;
+  var fr = Math.min(F[i0 * NP + j0], F[i0 * NP + j1], F[i1 * NP + j0], F[i1 * NP + j1]);   /* der kleinste der vier Nachbarwerte: kein Ausreissen an Falten */
+  var off = rho * Math.max(0, fr - rad - 0.05), ca = Math.cos(phi) * off, sa = Math.sin(phi) * off, q;
+  var cx = C[i0 * 3] + (C[i1 * 3] - C[i0 * 3]) * t, cy = C[i0 * 3 + 1] + (C[i1 * 3 + 1] - C[i0 * 3 + 1]) * t, cz = C[i0 * 3 + 2] + (C[i1 * 3 + 2] - C[i0 * 3 + 2]) * t;
+  var nx = N[i0 * 3] + (N[i1 * 3] - N[i0 * 3]) * t, ny = N[i0 * 3 + 1] + (N[i1 * 3 + 1] - N[i0 * 3 + 1]) * t, nz = N[i0 * 3 + 2] + (N[i1 * 3 + 2] - N[i0 * 3 + 2]) * t;
+  var bx = B[i0 * 3] + (B[i1 * 3] - B[i0 * 3]) * t, by = B[i0 * 3 + 1] + (B[i1 * 3 + 1] - B[i0 * 3 + 1]) * t, bz = B[i0 * 3 + 2] + (B[i1 * 3 + 2] - B[i0 * 3 + 2]) * t;
+  out.x = cx + nx * ca + bx * sa; out.y = cy + ny * ca + by * sa; out.z = cz + nz * ca + bz * sa;
+  out.rmax = fr * 0.8;   /* groesster Teilchenradius an dieser Stelle (an hohen Ringfalten ist der Innenraum schmal) */
+  return out;
+}
+/* Mischbewegung: Hin- und Herpendeln um die Wegstelle (Amplitude in cm) */
+function pendel(x, pz) {
+  var X = WGX, amp = 0.5 * (1 - sstep(X.d1 - 1, X.d1, x)) * sstep(0, 3, x) + 2.4 * sstep(X.u0, X.u0 + 6, x) * (1 - sstep(X.u1 - 6, X.u1, x)) + 0.8 * sstep(X.c0, X.c0 + 4, x);
+  return amp * Math.sin(2 * PI * (clock / SZ_.TAU + pz));
+}
+/* Teilchen: feste Eigenschaften je Index */
+function teilchenDaten() {
+  var X = WGX, Ldu = X.u1 - X.u0, kp = geoDaten.kp, Aduo = geoDaten.Aduo, dk = geoDaten.dk, AB = dk.abschnitte;
+  var sP = Aduo.von(kp.PAPILLE.p);
+  WG.xP = sP;
+  WG.tip = [kp.PAPILLE.p[0] + kp.PAPILLE.richtung[0] * 0.75, kp.PAPILLE.p[1] + kp.PAPILLE.richtung[1] * 0.75, kp.PAPILLE.p[2] + kp.PAPILLE.richtung[2] * 0.75];
+  KINDS.forEach(function (K, ki) {
+    var n = K.n, i;
+    K.es = []; K.ts = []; K.xaa = []; K.pz = []; K.phi0 = []; K.rho = []; K.rs = []; K.xr = []; K.xt = [];
+    for (i = 0; i < n; i++) {
+      var q = bruch(0.5 + i * R2A + ki * 0.37), ph = bruch(0.1 + i * R2B + ki * 0.21), w = bruch(0.3 + i * 0.6180339887 + ki * 0.11), v = bruch(0.7 + i * R2A * 1.7 + ki * 0.29), u = bruch(0.2 + i * 0.3247 + ki * 0.17);
+      K.pz.push(ph); K.phi0.push(2 * PI * bruch(0.2 + i * R2B + ki * 0.13)); K.rho.push(Math.sqrt(w) * 0.9); K.rs.push(0.85 + 0.3 * bruch(i * 0.37 + ki));
+      K.ts.push((K.tsc || 1) * (0.94 + 0.12 * v));
+      var e = 0, xa = 1e9, xr = 0, xt = 0;
+      if (ki === KI.stuhl) {
+        if (i < K.nR) xr = X.c0 + (AB.quer[0] + 10 - X.sB) + (X.e - X.c0 - (AB.quer[0] + 10 - X.sB) - 2) * (0.25 + 0.75 * Math.pow(q, 0.7));   /* Ruhe-Stuhl: quer bis Mastdarm, mehr im Mastdarm */
+        else { e = 55 + 23 * q; xt = X.e - 0.8 - 14 * u; }
+      } else if (i >= K.nR) {
+        e = K.e[0] + (K.e[1] - K.e[0]) * (Math.floor(q * (ki >= KI.galle ? 3 : 5)) / (ki >= KI.galle ? 3 : 5) + (ki >= KI.galle ? 0.28 : 0.15) * w);
+        if (ki === KI.galle) xa = X.u0 + Ldu * (K.xa[0] + (K.xa[1] - K.xa[0]) * u);
+        else if (ki === KI.wasser && bruch(0.37 + i * R2A) < 0.15) xa = X.c0 + 6 + 60 * u;   /* ein Rest des Wassers geht in den Dickdarm */
+        else xa = X.u0 + K.xa[0] + (K.xa[1] - K.xa[0]) * u;
+      } else if (ki === KI.galle) xa = X.u0 + Ldu * (K.xa[0] + (K.xa[1] - K.xa[0]) * u);
+      else if (ki === KI.pank) xa = X.u0 + K.xa[0] + (K.xa[1] - K.xa[0]) * u;
+      else if (ki === KI.wasser) xr = X.u0 + 8 + (Ldu - 40) * u;   /* Ruhe-Wasser: verteilt im Duenndarm */
+      K.es.push(e); K.xaa.push(xa); K.xr.push(xr); K.xt.push(xt);
+    }
+    K.vis = new Float32Array(n); K.xg = new Float32Array(n); K.tip = new Float32Array(n);
+  });
+}
+function lauf(ki, i, ph, o) {
+  var K = KINDS[ki], tl, tt, xb, x, w = 1, a, r, rho = K.rho[i], X = WGX;
+  o.st = 0; o.r = 0; o.tip = 0; o.c = 0; o.phi = K.phi0[i]; o.rho = rho;
+  if (ki === KI.stuhl) {
+    if (i < K.nR) { x = K.xr[i] + 0.25 * Math.sin(0.3 * clock + K.pz[i] * 6.2832); o.x = x; o.r = K.rad * 1.4 * K.rs[i]; o.c = 1; o.st = 1; return; }
+    tl = ph - K.es[i];
+    if (tl <= 0 || fe < 0.001) return;
+    var xl = X.c0 + SZ_.VS * tl, L = 6, xt = K.xt[i];
+    x = xl > xt - L ? xt - L + L * (1 - Math.exp(-(xl - (xt - L)) / L)) : xl;
+    var fr = Math.max(0, Math.min(1, (x - X.c0) / (X.e - X.c0)));
+    o.x = x; o.c = fr; o.rho = Math.min(0.85, rho); o.r = (K.rad * 0.9 + 0.1 * fr) * K.rs[i] * sstep(0, 1, tl) * sstep(0, 0.25, fe) * (1 - sstep(SZ_.P - 5, SZ_.P, ph)); o.st = o.r > 0.001 ? 1 : 0;
+    return;
+  }
+  if (i < K.nR) {
+    if (ki === KI.wasser) {   /* nuechtern: Reste, die von einer schwachen Welle (alle TWV s) weitergeschoben werden */
+      var kw = Math.floor(clock / SZ_.TWV), c = clock - kw * SZ_.TWV, kk = ((kw % SZ_.KW) + SZ_.KW) % SZ_.KW, base = K.xr[i] + SZ_.DW * kk, ci = base / SZ_.VW, uu = sstep(ci - 1.5, ci + 1.5, c), pp = kk + uu;
+      o.x = base + SZ_.DW * uu + 0.8 * Math.sin(2 * PI * (clock / SZ_.TAU + K.pz[i]));
+      o.r = K.rad * K.rs[i] * sstep(0, 0.5, pp) * (1 - sstep(SZ_.KW - 0.6, SZ_.KW, pp)) * (1 - sstep(0, 0.4, fe)); o.st = o.r > 0.001 ? 1 : 0;
+      return;
+    }
+    tl = (clock + K.pz[i] * SZ_.TRICKLE * 7) % SZ_.TRICKLE;   /* wenige Tropfen Galle und Pankreassaft auch nuechtern */
+  } else {
+    tl = ph - K.es[i];
+    if (tl <= 0 || fe < 0.001) return;
+    w = sstep(0, 0.25, fe);
+  }
+  tt = (ki >= KI.galle ? tVonX(WG.xP) : 0) + tl * K.ts[i];
+  xb = xVonT(tt);
+  x = Math.max(ki >= KI.galle ? WG.xP : 0, Math.min(X.e, xb + pendel(xb, K.pz[i])));
+  var xa = K.xaa[i];
+  a = sstep(xa - SZ_.AW, xa, xb);
+  r = K.rad * K.rs[i] * sstep(0, 0.8, tl) * (1 - a) * (1 - 0.3 * sstep(X.u0, xa, xb)) * w;
+  if (ki === KI.wasser) r *= 1 + 0.5 * sstep(X.c0, X.c0 + 10, xb);
+  o.x = x; o.r = r; o.rho = rho + (1 - rho) * a; o.st = r > 0.001 ? 1 : 0; o.tl = tl;
+  if (ki >= KI.galle) o.tip = 1 - sstep(0, 1.2, tl);   /* Galle und Pankreassaft treten an der Papille aus */
+}
+function tmat(col, em) {
+  var m = mat(col, { rough: 0.35 });
+  m.emissive.copy(srgb(em)).multiplyScalar(0.6);
+  return m;
+}
+/* Aufbau: Weg, Tabellen, Teilchen (immer gleich viele Objekte, unabhaengig von der Auswahl) */
+function stroemungBauen() {
+  wegBauen(); teilchenDaten();
+  ST = { gruppen: [], letzt: '' };
+  KINDS.forEach(function (K, ki) {
+    var m = tmat(K.col, K.em), geo = new THREE.SphereGeometry(1, 10, 7), im = new THREE.InstancedMesh(geo, m, K.n);
+    m.name = 'teilchen-' + K.id;
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    if (ki === KI.stuhl) { im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(K.n * 3), 3); im.instanceColor.setUsage(THREE.DynamicDrawUsage); }
+    im.frustumCulled = false;
+    im.name = K.name; im.userData.teilchen = K.id; im.userData.noexport = true;
+    im.raycast = function () {};   /* Teilchen sind nicht anklickbar */
+    root.add(im); K.im = im; ST.gruppen.push(im);
+  });
+  stroemungBild();
+}
+/* je Bild: Teilchen setzen (nur wenn sich Zeit, Uebergang, Auswahl oder Ausschnitt aendern) */
+function stroemungBild() {
+  if (!ST || !WG) return;
+  var key = clock + '|' + fe + '|' + lv + '|' + tM + '|' + kindOn.join('');
+  if (key === ST.letzt) return;
+  ST.letzt = key;
+  var te = clock - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P, ki, i, tp = WG.tip, seg = WGX.seg, sv = seg.map(function (g) { return !enabled[g.sid] || verborgen(g.sid, g.ende, g.fern); });
+  for (ki = 0; ki < KINDS.length; ki++) {
+    var K = KINDS[ki], im = K.im, col = ki === KI.stuhl ? im.instanceColor.array : null;
+    im.visible = kindOn[ki];
+    for (i = 0; i < K.n; i++) {
+      lauf(ki, i, ph, LB);
+      var r = LB.st ? LB.r : 0;
+      if (r > 0) { var sg = seg.length - 1; while (sg > 0 && seg[sg].x0 > LB.x) sg--; if (sv[sg]) r = 0; }   /* Inhalt einer ausgeblendeten Struktur */
+      if (r > 0) {
+        var phi = LB.phi + (ki === KI.stuhl ? 0 : 0.5 * Math.sin(0.25 * clock + K.pz[i] * 6.2832));
+        wegPunkt(LB.x, phi, LB.rho, r, SQ);
+        if (r > SQ.rmax) r = SQ.rmax;
+        if (LB.tip > 0) {   /* Spitze der Papille -> in den Innenraum */
+          var m = LB.tip * LB.tip * (3 - 2 * LB.tip);
+          SQ.x += (tp[0] - SQ.x) * m; SQ.y += (tp[1] - SQ.y) * m; SQ.z += (tp[2] - SQ.z) * m;
+        }
+      }
+      K.vis[i] = r; K.xg[i] = LB.x; K.tip[i] = LB.tip;
+      if (col) { var c = LB.c; col[i * 3] = STUHL_C0.r + (STUHL_C1.r - STUHL_C0.r) * c; col[i * 3 + 1] = STUHL_C0.g + (STUHL_C1.g - STUHL_C0.g) * c; col[i * 3 + 2] = STUHL_C0.b + (STUHL_C1.b - STUHL_C0.b) * c; }
+      STM.makeScale(r, r, r); STM.setPosition(SQ.x, SQ.y, SQ.z);
+      im.setMatrixAt(i, STM);
+    }
+    im.instanceMatrix.needsUpdate = true;
+    if (col) im.instanceColor.needsUpdate = true;
+  }
+}
+/* je Bild: Uhr und Uebergang fortschreiben (Pause haelt die Stroemung an, der Uebergang laeuft in Echtzeit) */
+function stroemungSchritt(dt) {
+  var ziel = mahlzeit ? 1 : 0;
+  if (!fzFest && fzR !== ziel) fzR = ziel > fzR ? Math.min(ziel, fzR + dt / SZ_.UEBERG) : Math.max(ziel, fzR - dt / SZ_.UEBERG);
+  fe = sstep(0, 1, fzR);
+  if (playing) clock += dt * speed;
+}
+$('bPlay').onclick = function () {
+  playing = !playing;
+  this.textContent = playing ? 'Pause' : 'Abspielen';
+  this.classList.toggle('on', playing);
+};
+[['bS0', 0.35], ['bS1', 1], ['bS2', 2.0]].forEach(function (b) {
+  $(b[0]).onclick = function () {
+    speed = b[1];
+    ['bS0', 'bS1', 'bS2'].forEach(function (id) { $(id).classList.remove('on'); });
+    this.classList.add('on');
+  };
+});
+KINDS.forEach(function (K, ki) {
+  if (!K.btn) return;
+  $(K.btn).onclick = function () { stoffSetzen(ki, !kindOn[ki]); };
+});
+function stoffSetzen(ki, an) {
+  kindOn[ki] = an; $(KINDS[ki].btn).classList.toggle('on', an);
+  if (ST) ST.letzt = ''; lv++;
+}
+/* Mahlzeit-Schalter: nuechtern (fast leer) oder nach dem Essen (Speisebrei, Galle und Pankreassaft fliessen) */
+var MAHLZEIT_TXT = ['Nüchtern: Der Darm ist fast leer, schwache Muskelwellen räumen ihn auf.',
+  'Nach dem Essen: Speisebrei kommt aus dem Magen, Galle und Pankreassaft fließen zu, Mischbewegungen bringen die Nährstoffe an die Schleimhaut.'];
+function setMahlzeit(an, still) {
+  if (an === mahlzeit) return;
+  mahlzeit = an; fzFest = false;
+  if (an) tM = clock;
+  $('bNuechtern').classList.toggle('on', !an);
+  $('bEssen').classList.toggle('on', an);
+  if (!still) Kern.toast(MAHLZEIT_TXT[an ? 1 : 0]);
+  lv++;
+}
+$('bNuechtern').onclick = function () { setMahlzeit(false); };
+$('bEssen').onclick = function () { setMahlzeit(true); };
+
+/* =====================================================================
+   7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+   Der Darm als gestreckter Weg (Bildkoordinaten 460 breit): Zwoelffingerdarm, Leerdarm, Krummdarm in Schlingen, Dickdarm als Rahmen darum, Mastdarm; dazu die Kaestchen der
+   Zufluesse (Galle, Pankreassaft), Pfeile an den Orten der Aufnahme, nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit. Die Punkte sind dieselben
+   Teilchen wie im 3D-Modell (gleiche Farben, gleiche Zeitfunktion lauf aus Abschnitt 6, Wegstelle x -> Lage im Schema; Tempo, Pause, Mahlzeit und Stoffe-Schalter gelten mit).
+   Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall; gebaut wird es erst beim ersten Oeffnen.
+   ===================================================================== */
+var SCH = (function () {
+  var NS = 'http://www.w3.org/2000/svg', W = 460, H = 470, BREIT = false;   /* BREIT: Desktop, Legende rechts neben dem Weg; sonst (Handy) darunter, das Panel scrollt */
+  var BRASS = '#E0A94A', DIM = '#8DA7B1', INK = '#E7EFF0', DARK = '#0B171C';
+  var svg = null, built = false, DOT = [], DYN = {}, seen = {};
+  function f1(v) { return Math.round(v * 10) / 10; }
+  function E(tag, attrs, parent, text) {
+    var e = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text !== undefined) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function text(g, x, y, s, size, fill, o) {
+    var a = { x: f1(x), y: f1(y), fill: fill, 'font-size': size, 'font-weight': 500, stroke: '#122229', 'stroke-width': 2.6, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+    if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+    return E('text', a, g, s);
+  }
+  function abzeichen(g, x, y, n) {
+    E('circle', { cx: f1(x), cy: f1(y), r: 6.6, fill: DARK, stroke: BRASS, 'stroke-width': 1.3 }, g);
+    E('text', { x: f1(x), y: f1(y + 3.3), 'text-anchor': 'middle', fill: BRASS, 'font-size': 9.5, 'font-weight': 700 }, g, String(n));
+  }
+  /* Catmull-Rom durch Punkte [x, y] (Spannung 0,5), n Punkte je Abschnitt */
+  function glatt(pts, n) {
+    var out = [], i, k, m = pts.length;
+    for (i = 0; i < m - 1; i++) {
+      var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(m - 1, i + 2)];
+      for (k = 0; k < n; k++) {
+        var t = k / n, t2 = t * t, t3 = t2 * t, o = [];
+        for (var c = 0; c < p1.length; c++) o.push(0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+        out.push(o);
+      }
+    }
+    out.push(pts[m - 1].slice());
+    return out;
+  }
+  function laenge(poly) {
+    var cum = [0], i;
+    for (i = 1; i < poly.length; i++) cum.push(cum[i - 1] + Math.sqrt(Math.pow(poly[i][0] - poly[i - 1][0], 2) + Math.pow(poly[i][1] - poly[i - 1][1], 2)));
+    return { p: poly, cum: cum, L: cum[cum.length - 1] };
+  }
+  function bei(ln, s, o) {   /* Punkt und Richtung (o.tx, o.ty) bei Bogenlaenge s */
+    s = Math.max(0, Math.min(ln.L, s));
+    var lo = 0, hi = ln.p.length - 1;
+    while (hi - lo > 1) { var m = (lo + hi) >> 1; if (ln.cum[m] <= s) lo = m; else hi = m; }
+    var d = ln.cum[hi] - ln.cum[lo], t = d > 1e-9 ? (s - ln.cum[lo]) / d : 0, a = ln.p[lo], b = ln.p[hi], l;
+    o.x = a[0] + (b[0] - a[0]) * t; o.y = a[1] + (b[1] - a[1]) * t;
+    o.tx = b[0] - a[0]; o.ty = b[1] - a[1]; l = Math.sqrt(o.tx * o.tx + o.ty * o.ty) || 1; o.tx /= l; o.ty /= l;
+    return o;
+  }
+  function linienPfad(pts) { var d = ''; pts.forEach(function (p, i) { d += (i ? 'L' : 'M') + f1(p[0]) + ' ' + f1(p[1]); }); return d; }
+  function rohr(g, pts, w, fill, rand) {   /* Schlauch als dicke Linie mit dunklem Rand */
+    var d = linienPfad(pts);
+    E('path', { d: d, fill: 'none', stroke: rand || DARK, 'stroke-width': w + 2.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    E('path', { d: d, fill: 'none', stroke: fill, 'stroke-width': w, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  }
+
+  /* ---- Lage der Stationen (Bildpunkte) ---- */
+  var DUO = glatt([[160, 34], [146, 49], [140, 82], [152, 112], [178, 122]], 6);
+  var SI = glatt([[178, 122], [180, 186], [316, 186], [320, 219], [150, 219], [146, 252], [316, 252], [320, 285], [150, 285], [146, 318], [316, 318], [322, 338]], 4);
+  var DICK = glatt([[322, 338], [346, 350], [346, 170], [336, 138], [114, 138], [104, 170], [104, 350], [132, 382], [196, 374], [230, 400]], 5);
+  var REKT = [[230, 400], [230, 430]];
+  var LN = null, FM = null, FMASTDARM = 0.89;
+  function bauePfade() {
+    LN = { duo: laenge(DUO), si: laenge(SI), dick: laenge(DICK), rekt: laenge(REKT) };
+    FMASTDARM = (WGX.sM - WGX.sB) / (WGX.e - WGX.c0);   /* ab hier der Mastdarm (Bruchteil des Weges im Dickdarm) */
+  }
+  /* Lage eines Teilchens im Schema: Wegstelle x (cm), Index i; schreibt o.x, o.y */
+  var P = { x: 0, y: 0, tx: 0, ty: 0 };
+  function lage(K, ki, i, o) {
+    var X = WGX, x = K.xg[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, breite;
+    if (x < X.u0) { bei(LN.duo, x / X.d1 * LN.duo.L, P); breite = 2.8; }
+    else if (x <= X.u1) { bei(LN.si, (x - X.u0) / (X.u1 - X.u0) * LN.si.L, P); breite = 2.6; }
+    else {
+      var fc = Math.max(0, Math.min(1, (x - X.c0) / (X.e - X.c0)));
+      if (fc <= FMASTDARM) bei(LN.dick, fc / FMASTDARM * LN.dick.L, P); else bei(LN.rekt, (fc - FMASTDARM) / (1 - FMASTDARM) * LN.rekt.L, P);
+      breite = 3.6;
+    }
+    o.x = P.x - P.ty * seitl * breite; o.y = P.y + P.tx * seitl * breite;
+  }
+  /* Stelle der Papille im Schema (Bruchteil des Zwoelffingerdarms) */
+  function papilleBild(o) { return bei(LN.duo, WG.xP / WGX.d1 * LN.duo.L, o); }
+
+  function build(box) {
+    if (built) return;
+    box.innerHTML = '';
+    BREIT = window.innerWidth > 1000;
+    var PITCH = BREIT ? 49 : 46, LX = BREIT ? 478 : 8, LY = BREIT ? 34 : 462, ky = LY + 5 * PITCH - 6;
+    W = BREIT ? 800 : 460; H = BREIT ? 470 : Math.round(ky + 100 + 4 * 14 + 14);
+    bauePfade();
+    svg = E('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'font-family': 'Inter, "Segoe UI", system-ui, sans-serif',
+      'aria-label': 'Schema: der Darm als gestreckter Weg, an welchen Stellen welche Stoffe aufgenommen werden' }, box);
+    var i;
+    /* ---- Darm: Dickdarm hinten, dann Duenndarm (Leerdarm, Krummdarm), Zwoelffingerdarm; Mastdarm ---- */
+    var gd = E('g', null, svg), sk = 0;
+    while (sk < LN.si.cum.length - 1 && LN.si.cum[sk] < 0.4 * LN.si.L) sk++;
+    rohr(gd, DICK.map(function (q) { return [q[0], q[1]]; }), 15, '#B87868');
+    rohr(gd, REKT, 14, '#B87868');
+    rohr(gd, SI.slice(sk).map(function (q) { return [q[0], q[1]]; }), 11, '#DDA088');
+    rohr(gd, SI.slice(0, sk + 1).map(function (q) { return [q[0], q[1]]; }), 11, '#E8A98F');
+    rohr(gd, DUO.map(function (q) { return [q[0], q[1]]; }), 13, '#E3A58C');
+    E('circle', { cx: 230, cy: 435, r: 5, fill: DARK, stroke: '#B87868', 'stroke-width': 1.4 }, gd);
+    /* ---- Teilchen: je Art ein Pool von Kreisen ---- */
+    var gt = E('g', { 'pointer-events': 'none' }, svg);
+    FM = [['#F0DA6E', '#6A560A'], ['#F5AE60', '#6A3206'], ['#FFFFFF', '#55554F'], ['#A8DEF6', '#1A4E74'], ['#8FDC80', '#2E5A28'], ['#D9CAF0', '#4A3A78'], ['#9A6A3A', '#3A2412']];
+    DOT = KINDS.map(function (K, ki) {
+      var gg = E('g', null, gt), arr = [];
+      for (i = 0; i < K.n; i++) arr.push({ el: E('circle', { r: 2, fill: FM[ki][0], stroke: FM[ki][1], 'stroke-width': 0.7, display: 'none' }, gg), on: false, x: -1, y: -1, r: -1 });
+      return arr;
+    });
+    /* ---- Beschriftung ---- */
+    var ga = E('g', { 'pointer-events': 'none' }, svg);
+    function leiter(x0, y0, x1, y1) {
+      E('line', { x1: f1(x0), y1: f1(y0), x2: f1(x1), y2: f1(y1), stroke: BRASS, 'stroke-width': 0.8, 'stroke-dasharray': '2 2' }, ga);
+      E('circle', { cx: f1(x0), cy: f1(y0), r: 1.8, fill: BRASS }, ga);
+    }
+    function station(s, tx, ty, anker, px, py, lx, ly, o) {
+      if (px !== undefined) leiter(px, py, lx, ly);
+      var a = { 'letter-spacing': 1.2, 'font-weight': 600 }; if (anker) a['text-anchor'] = anker; if (o) Object.keys(o).forEach(function (k) { a[k] = o[k]; });
+      text(ga, tx, ty, s, 9.5, DIM, a);
+    }
+    function kasten(cx, cy, s, px, py) {
+      var w = Math.round(s.length * 5.5 + 12);
+      if (px !== undefined) E('line', { x1: f1(cx), y1: f1(cy), x2: f1(px), y2: f1(py), stroke: '#9C7530', 'stroke-width': 1, 'stroke-dasharray': '2 2' }, ga);
+      E('rect', { x: f1(cx - w / 2), y: f1(cy - 8), width: w, height: 16, rx: 3, fill: DARK, 'fill-opacity': 0.9, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+      text(ga, cx, cy + 3.3, s, 9.5, INK, { 'text-anchor': 'middle', 'stroke-width': 0, 'font-weight': 600 });
+    }
+    /* Pfeil von (x, y) in Richtung (dx, dy), Laenge len: der Stoff verlaesst den Darm (Ort der Aufnahme) */
+    function pfeil(x, y, dx, dy, len, fill) {
+      var tx = x + dx * len, ty = y + dy * len, nx = -dy, ny = dx, k = 4.4, b = 3.4;
+      E('line', { x1: f1(x), y1: f1(y), x2: f1(tx - dx * k), y2: f1(ty - dy * k), stroke: fill, 'stroke-width': 1.8, 'stroke-linecap': 'round' }, ga);
+      E('polygon', { points: f1(tx) + ',' + f1(ty) + ' ' + f1(tx - dx * k + nx * b) + ',' + f1(ty - dy * k + ny * b) + ' ' + f1(tx - dx * k - nx * b) + ',' + f1(ty - dy * k - ny * b), fill: fill, stroke: DARK, 'stroke-width': 0.6, 'stroke-linejoin': 'round' }, ga);
+    }
+    var AUF = { 'font-size': 8.8, 'stroke-width': 2.2 };
+    /* Orte der Aufnahme: Pfeile in den Farben der Stoffe, daneben nur die Stoffe aus der Legende */
+    pfeil(132, 76, -1, 0, 16, '#C5D0D6'); pfeil(134, 88, -1, 0, 16, '#9FB4C0');
+    text(ga, 108, 94, 'Eisen, Calcium', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
+    [[262, '#F0DA6E'], [276, '#F5AE60'], [290, '#FFFFFF'], [304, '#C5D0D6']].forEach(function (a) { pfeil(a[0], 178, 0, -1, 12, a[1]); });
+    text(ga, 192, 156, 'Zucker, Aminosäuren,', AUF['font-size'], DIM, { 'stroke-width': 2.2 }); text(ga, 192, 167, 'Fette, Vitamine', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
+    pfeil(214, 326, 0, 1, 12, '#C5D0D6'); pfeil(244, 326, 0, 1, 12, '#8FDC80');
+    text(ga, 229, 353, 'Vitamin B12, Gallensäuren', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
+    pfeil(356, 244, 1, 0, 14, '#A8DEF6'); pfeil(356, 256, 1, 0, 14, '#C5D0D6');
+    text(ga, 378, 247, 'Wasser,', AUF['font-size'], DIM, { 'stroke-width': 2.2 }); text(ga, 378, 259, 'Salze', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
+    /* Stationen */
+    station('ZWÖLFFINGERDARM', 8, 40, null, 146, 44, 124, 36);
+    station('LEERDARM', 8, 226, null, 144, 224, 70, 222);
+    station('KRUMMDARM', 362, 308, null, 322, 312, 358, 306);
+    station('DICKDARM', 362, 200, null, 346, 196, 358, 196);
+    station('MASTDARM', 248, 428, null, 234, 424, 244, 425);
+    var pp = papilleBild({});
+    kasten(262, 52, 'Galle', pp.x + 5, pp.y); kasten(272, 78, 'Pankreassaft', pp.x + 5, pp.y + 2);
+    /* Abzeichen an den Stationen */
+    [[168, 70], [232, 202], [232, 301], [262, 126], [210, 418]].forEach(function (p, q) { abzeichen(ga, p[0], p[1], q + 1); });
+    /* Legende */
+    var LG = [
+      ['Zwölffingerdarm', 'Galle und Pankreassaft spalten die Nährstoffe;', 'aufgenommen werden vor allem Eisen und Calcium'],
+      ['Leerdarm', 'Hier wird das meiste aufgenommen:', 'Zucker, Aminosäuren, Fette und Vitamine'],
+      ['Krummdarm', 'Am Ende werden Vitamin B12', 'und die Gallensäuren zurückgeholt'],
+      ['Dickdarm', 'Wasser und Salze werden entzogen,', 'Bakterien bauen Reste ab'],
+      ['Mastdarm', 'Der Stuhl wird gesammelt', 'und ausgeschieden']
+    ];
+    var FT = 12.5, FZ = 10.4;
+    LG.forEach(function (t, q) {
+      var cy = LY + q * PITCH;
+      abzeichen(ga, LX + 8, cy - 4, q + 1);
+      text(ga, LX + 24, cy, t[0], FT, BRASS, { 'font-weight': 700 });
+      text(ga, LX + 24, cy + 14, t[1], FZ, DIM, { 'stroke-width': 2.2 });
+      text(ga, LX + 24, cy + 27, t[2], FZ, DIM, { 'stroke-width': 2.2 });
+    });
+    /* Kennzahlen */
+    var kx = LX, kw = BREIT ? 312 : 444;
+    E('rect', { x: kx, y: f1(ky), width: kw, height: 80, rx: 4, fill: DARK, 'fill-opacity': 0.88, stroke: '#9C7530', 'stroke-width': 0.9 }, ga);
+    text(ga, kx + 10, ky + 16, 'KENNZAHLEN · FLÜSSIGKEIT', 10, BRASS, { 'font-weight': 700, 'letter-spacing': 0.8, 'stroke-width': 0 });
+    ['In den Darm: ca. 9 l pro Tag (Getränke und Verdauungssäfte)', 'Dünndarm holt zurück: ca. 7–8 l', 'Dickdarm holt zurück: ca. 1–1,5 l', 'Im Stuhl: ca. 0,1–0,2 l'].forEach(function (s, q) {
+      text(ga, kx + 10, ky + 32 + q * 13, s, q === 0 && BREIT ? 9.8 : FZ, DIM, { 'stroke-width': 0 });
+    });
+    /* Hinweiszeile je nach Mahlzeit, bis zu vier Zeilen */
+    DYN.hint = [0, 1, 2, 3].map(function (q) { return text(ga, LX, ky + 102 + q * 14, '', 10.4, INK, { 'stroke-width': 2.2 }); });
+    seen = { mz: -1 };
+    built = true;
+  }
+
+  function update() {
+    if (!built) return;
+    var ki, i, o = { x: 0, y: 0 };
+    for (ki = 0; ki < KINDS.length; ki++) {
+      var K = KINDS[ki], pool = DOT[ki], show = K.im.visible;
+      for (i = 0; i < K.n; i++) {
+        var q = pool[i], v = show && K.vis[i] > 0.001;
+        if (v) {
+          lage(K, ki, i, o);
+          var rr = Math.round(Math.max(1.7, Math.min(4.2, K.vis[i] * 19)) * 10) / 10, x = f1(o.x), y = f1(o.y);
+          if (x !== q.x) { q.el.setAttribute('cx', x); q.x = x; }
+          if (y !== q.y) { q.el.setAttribute('cy', y); q.y = y; }
+          if (rr !== q.r) { q.el.setAttribute('r', rr); q.r = rr; }
+          if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+        } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+      }
+    }
+    if (mahlzeit !== seen.mz) {
+      seen.mz = mahlzeit;
+      var wort = MAHLZEIT_TXT[mahlzeit ? 1 : 0].split(' '), zl = [''], mx = BREIT ? 56 : 82;   /* Hinweis auf Zeilen umbrechen */
+      wort.forEach(function (w) { var l = zl[zl.length - 1]; if (l && (l + ' ' + w).length > mx) zl.push(w); else zl[zl.length - 1] = l ? l + ' ' + w : w; });
+      DYN.hint.forEach(function (e, q) { e.textContent = zl[q] || ''; });
+    }
+  }
+  function abbauen() { svg = null; built = false; DOT = []; DYN = {}; seen = {}; LN = null; }
+  return { build: build, update: update, abbauen: abbauen, get svg() { return svg; } };
+})();
+
+var schemaOn = false;
+function setSchema(on) {
+  if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
+  schemaOn = on;
+  $('bSchema').classList.toggle('on', on);
+  if (on) { SCH.build($('schemaBox')); SCH.update(); }
+  $('schema').classList.toggle('show', on);
+  document.body.classList.toggle('schema', on);
+  canvas.style.visibility = on ? 'hidden' : '';
+  lv++;
+}
+/* Das Schema weicht anderen Ansichten: hier ergaenzen spaetere Schritte ihre Gruende (Hilfekarten, Ueben, Lupe, AR) */
+function schemaWeicht() { if (schemaOn) setSchema(false); }
+$('bSchema').onclick = function () { setSchema(!schemaOn); };
+$('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
 var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris, offen: function () { return OPEN.slice(); },
+  mahlzeit: function (an) { setMahlzeit(!!an); },
+  schema: function (an) { setSchema(!!an); },
+  stoffe: function (id, an) { if (id in KI && KINDS[KI[id]].btn) stoffSetzen(KI[id], !!an); },
+  /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art, Uebergang, Uhr) und Lage der Teilchen (Koerper-Koordinaten, Wegstelle x in cm) */
+  stroemung: function () {
+    var n = {}; KINDS.forEach(function (K) { var c = 0; for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) c++; n[K.id] = K.im && K.im.visible ? c : 0; });
+    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, uebergang: fe, te: clock - tM, sichtbar: n };
+  },
+  teilchen: function () {
+    var out = [];
+    KINDS.forEach(function (K, ki) { for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) { K.im.getMatrixAt(i, STM); out.push({ art: K.id, x: K.xg[i], r: K.vis[i], tip: K.tip[i], p: [STM.elements[12], STM.elements[13], STM.elements[14]] }); } });
+    return out;
+  },
+  /* fuer die Pruefung: Teilchen ausserhalb des Innenraums (Abstand zur Mittellinie + Radius groesser als der freie Radius bis zur Schleimhaut, gemessen an den Feldern der Form,
+     nicht an der Tabelle der Stroemung); ohne die Verbindung zur Bauhin-Klappe und ohne den Austritt an der Papille */
+  innen: function () {
+    var D = geoDaten, X = WGX, AB = D.dk.abschnitte, bDuo = D.RZ[1].def.schichten[2].b, bDu = D.RZ[2].def.schichten[2].b, bMast = D.RZ[4].def.schichten[4].b, DUO_R = form.BAHN.duodenum.r, DU_R = form.DUENN_R;
+    var n = 0, aus = 0, schlimm = 0, bsp = null;
+    KINDS.forEach(function (K, ki) {
+      for (var i = 0; i < K.n; i++) {
+        if (!(K.vis[i] > 0.001) || K.tip[i] > 0) continue;
+        var x = K.xg[i]; if (x > X.u1 && x < X.c0) continue;
+        K.im.getMatrixAt(i, STM);
+        var px = STM.elements[12] + M[0], py = STM.elements[13] + M[1], pz = STM.elements[14] + M[2], A, fr, d, s;
+        if (x < X.u0) { A = D.Aduo; d = A.q(px, py, pz); s = A.s; fr = DUO_R + (DU_R - DUO_R) * sstep(A.laenge - 1.4, A.laenge, s) - bDuo(s, A.phi()); }
+        else if (x <= X.u1) { A = D.du.achse; d = A.q(px, py, pz); s = A.s; fr = DU_R - bDu(s, A.phi()); }
+        else { A = D.dk.achse; d = A.q(px, py, pz); s = A.s; fr = D.dk.R(s, A.phi()) - (s >= X.sM ? bMast(s, A.phi()) : 0.72); }
+        n++;
+        var ueber = d + K.vis[i] - fr;
+        if (ueber > 0.02) { aus++; if (ueber > schlimm) { schlimm = ueber; bsp = { art: K.id, i: i, x: x, d: d, r: K.vis[i], frei: fr, s: s }; } }
+      }
+    });
+    return { geprueft: n, ausserhalb: aus, schlimmster: schlimm, beispiel: bsp };
+  },
+  /* fuer die Pruefung: Uebergang (roh 0..1) und Zeit sofort setzen und festhalten */
+  stand: function (f, te) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
   form: function () { return form; } };
+var bereitMerker = false;
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  var k, bewegt = false;
+  var k, bewegt = false, neuBereit = false;
+  if (bereitMerker && !App.ready) { bereitMerker = false; neuBereit = true; clock = 0; root.visible = true; App.aufbauMs = Math.round(performance.now() - t0); App.ready = true; }   /* die Uhr beginnt in diesem Bild bei 0 */
   for (k = 1; k <= 4; k++) if (OPEN[k] !== OZ[k]) {   /* Deckel gleitet weich (ca. 600 ms) */
     OPEN[k] = Math.max(0, Math.min(1, OPEN[k] + Math.sign(OZ[k] - OPEN[k]) * dt / 0.6));
     if (Math.abs(OPEN[k] - OZ[k]) < 1e-6) OPEN[k] = OZ[k];
     bewegt = true;
   }
   if (bewegt) { applyVisibility(); applyLook(); lv++; }
+  if (ST) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
+  if (schemaOn) return;                                   /* Schema offen: das Bild des Darms ist ausgeblendet und wird nicht gezeichnet */
   renderer.render(scene, camera);
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
@@ -1063,6 +1626,7 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
+  schemaWeicht(); SCH.abbauen();
   clearTimeout(Kern.toast._t);
   canvas.removeEventListener('click', canvasKlick);
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
@@ -1085,9 +1649,8 @@ return bauen().then(function () {
   applyVisibility();
   applyLook();
   setSelected(selected);
-  root.visible = true;
-  App.aufbauMs = Math.round(performance.now() - t0);
-  App.ready = true;
+  stroemungBauen();
+  bereitMerker = true;   /* sichtbar und bereit wird das Organ im naechsten Bild (loop), damit die Uhr der Stroemung immer im selben Bild beginnt (unabhaengig von der Ladezeit) */
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
 Kern.organ('darm', organ);
