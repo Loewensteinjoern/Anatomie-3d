@@ -29,6 +29,7 @@ var Kern = window.Kern = window.Kern || {};
     alveole: { titel: 'Alveole', seitentitel: 'Alveole \u2013 Lungenbl\u00e4schen und Gasaustausch', skript: 'organe/lunge/alveole.js', css: 'organe/lunge/alveole.css', adresse: 'lunge/alveole' },
     leber: { titel: 'Leber', seitentitel: 'Leber \u2013 Lappen, Pfortader und Gallenwege', skript: 'organe/leber/leber.js', css: 'organe/leber/leber.css' },
     magen: { titel: 'Magen', seitentitel: 'Magen \u2013 Mageneingang, Magensaft und Pf\u00f6rtner', skript: 'organe/verdauung/magen.js', css: 'organe/verdauung/magen.css' },
+    darm: { titel: 'Darm', seitentitel: 'Darm \u2013 D\u00fcnndarm, Dickdarm und Mastdarm', skript: 'organe/verdauung/darm.js', css: 'organe/verdauung/darm.css' },
     laeppchen: { titel: 'Leberl\u00e4ppchen', seitentitel: 'Leberl\u00e4ppchen \u2013 Sinusoide, Leberzellen und Galle', skript: 'organe/leber/laeppchen.js', css: 'organe/leber/laeppchen.css', adresse: 'leber/laeppchen' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };

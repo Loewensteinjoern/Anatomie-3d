@@ -8,7 +8,7 @@
    ========================================================================== */
 'use strict';
 
-var VERSION = 'a9ee3aad2152';
+var VERSION = 'de86507348ab';
 var SPEICHER = 'anatomie-' + VERSION;
 
 /* Dateien der App (relativ zum Ordner von sw.js) */
@@ -21,7 +21,7 @@ var DATEIEN = [
   'organe/koerper/koerper.js', 'organe/koerper/koerper.css',
   'organe/herz/herz.js', 'organe/herz/herz.css',
   'organe/leber/leber-form.js', 'organe/leber/leber.js', 'organe/leber/leber.css', 'organe/leber/laeppchen.js', 'organe/leber/laeppchen.css',
-  'organe/verdauung/verdauung-form.js', 'organe/verdauung/magen.js', 'organe/verdauung/magen.css',
+  'organe/verdauung/verdauung-form.js', 'organe/verdauung/magen.js', 'organe/verdauung/magen.css', 'organe/verdauung/darm.js', 'organe/verdauung/darm.css',
   'organe/lunge/lunge-form.js', 'organe/lunge/lunge.js', 'organe/lunge/lunge.css', 'organe/lunge/alveole.js', 'organe/lunge/alveole.css', 'organe/niere/niere-form.js', 'organe/niere/niere.js', 'organe/niere/niere.css', 'organe/niere/nephron.js', 'organe/niere/nephron.css'
 ];
 

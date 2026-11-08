@@ -1060,7 +1060,9 @@ function dickdarm(opt) {
 /* ---- Wandschichten (nur lokal, fuer die aufgeschnittenen Abschnitte des Detailmodells) ----
    Jede Schicht ist ein Abstandsfeld zwischen zwei Tiefen unter der Aussenflaeche (Tiefe = Aussenradius - Abstand zur Mittellinie); die Wand ist fuer die
    Darstellung dicker als in Wirklichkeit (ca. 0,6 bis 0,9 cm), damit ein Gitter von 0,1 cm sie aufloest. Rueckgabe: { schichten: [{ id, sdf, grenzen }],
-   grenzen, mitte, schnitt } mit schnitt(x, y, z) > 0 dort, wo die Wand zum Aufschneiden entfernt ist (schon in allen Schichten enthalten; -1 weit weg). */
+   grenzen, mitte, schnitt, def } mit schnitt(x, y, z) > 0 dort, wo die Wand zum Aufschneiden entfernt ist (schon in allen Schichten enthalten; -1 weit weg); def = die Beschreibung
+   (s0, s1, rand, R(s, phi), ebene = [hx, hy, hz, off] der Schnittebene, schichten mit id, a(s, phi), b(s, phi), von, bis: die Wand liegt zwischen den Tiefen a und b), damit sich die Schnittflaeche
+   und die Innenflaeche auch ohne Gitter aufbauen lassen. */
 function wandSchichten(A, def) {
   var gr = A.grenzen(def.s0, def.s1, def.rand || 2.6);
   var liste = def.schichten.map(function (L) {
@@ -1079,7 +1081,7 @@ function wandSchichten(A, def) {
       }
     };
   });
-  return { schichten: liste, grenzen: gr, schnitt: def.schnitt ? function (x, y, z) { A.q(x, y, z); return A.i < 0 ? -1 : def.schnitt(A); } : null };
+  return { schichten: liste, grenzen: gr, schnitt: def.schnitt ? function (x, y, z) { A.q(x, y, z); return A.i < 0 ? -1 : def.schnitt(A); } : null, def: def };
 }
 /* Schnittebene durch die Mittellinie: Wert > 0 vor der Ebene, die von der Tangente der Achse und dem Bezugsvektor h (hx, hy, hz) aufgespannt wird, um off cm nach vorn versetzt
    (a.q muss vorher fuer den Punkt aufgerufen sein, a.i >= 0); entfernt die vordere Haelfte der Wand und oeffnet den Schlauch */
@@ -1101,7 +1103,7 @@ function duennSchichten(s0, s1, opt) {
   var st = duennZustand(), A = st.A, cut = opt.cut || 0;
   var def = {
     s0: s0, s1: s1, rand: DUENN_R + 0.3, R: function () { return DUENN_R; },
-    schnitt: opt.ohneSchnitt ? null : function (a) { return schnittEbene(a, 0, 0, 1, cut); },
+    schnitt: opt.ohneSchnitt ? null : function (a) { return schnittEbene(a, 0, 0, 1, cut); }, ebene: [0, 0, 1, cut],
     schichten: [
       { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.18; } },
       { id: 'ringmuskel', a: function () { return 0.18; }, b: function () { return 0.36; } },
@@ -1122,7 +1124,7 @@ function blinddarmSchichten() {
   var wp = kurve(WURM_PTS, 8), wl = kurve(WURM_PTS.slice(0, 3), 8), lochW = kette(wl, 0.15, 2.5), wAussen = kette(wp, WURM_R, 3), wInnen = kette(wp, 0.14, 3);
   var def = {
     s0: -1, s1: SB.bauhin + 3.0, rand: 3.0, R: st.R,
-    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 1.2); }, loch: lochW,
+    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 1.2); }, ebene: [0, 0, 1, 1.2], loch: lochW,
     schichten: [
       { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; } },
       { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.42; } },
@@ -1170,7 +1172,7 @@ function zwoelffingerdarmSchichten() {
   var st = DUO_ZUSTAND, A = st.A, PA = LE.PAPILLE, sP = A.von(PA.p), s0 = Math.max(sP - 5, 0), s1 = sP + 5;
   var def = {
     s0: s0, s1: s1, rand: 1.6, R: function () { return 1.0; },
-    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 0); },
+    schnitt: function (a) { return schnittEbene(a, 0, 0, 1, 0); }, ebene: [0, 0, 1, 0],
     schichten: [
       { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.16; } },
       { id: 'ringmuskel', a: function () { return 0.16; }, b: function () { return 0.34; } },
@@ -1199,7 +1201,7 @@ function mastdarmSchichten() {
   function wc(s) { return glatt(S.kanal - 1.4, S.kanal - 0.2, s); }
   var def = {
     s0: S.mastdarm + 6.0, s1: S.ende, rand: 2.6, R: st.R,
-    schnitt: function (a) { return schnittEbene(a, 1, 0, 0, 0); },
+    schnitt: function (a) { return schnittEbene(a, 1, 0, 0, 0); }, ebene: [1, 0, 0, 0],
     schichten: [
       { id: 'laengsmuskel', a: function () { return 0; }, b: function () { return 0.2; }, bis: S.kanal + 0.5 },
       { id: 'ringmuskel', a: function () { return 0.2; }, b: function () { return 0.45; }, bis: S.kanal - 1.0 },
