@@ -72,7 +72,7 @@ var STRUKTUREN = [
     text: 'Die kuppelförmige Muskelplatte trennt Brust- und Bauchraum. Als wichtigster Atemmuskel flacht es sich beim Einatmen ab und erweitert so den Brustraum; Speiseröhre, Aorta und untere Hohlvene treten durch Lücken hindurch.' },
   { id: 'speiseroehre', de: 'Speiseröhre', lat: 'Oesophagus', system: 'verdauung', detail: false,
     text: 'Der etwa 25 cm lange Muskelschlauch verläuft hinter der Luftröhre durch den Brustraum und das Zwerchfell zum Magen. Durch wellenförmige Bewegungen (Peristaltik) transportiert er den Speisebrei; ein Schließmuskel am Mageneingang verhindert Rückfluss.' },
-  { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', detail: false,
+  { id: 'magen', de: 'Magen', lat: 'Gaster', system: 'verdauung', oeffnen: '#magen', knopf: 'Magen öffnen',
     text: 'Der Magen liegt im linken Oberbauch unter dem Zwerchfell. Er speichert die Nahrung, durchmischt sie mit Magensaft (Salzsäure, Pepsin) und gibt sie portionsweise an den Zwölffingerdarm weiter; seine Schleimhaut schützt sich durch eine Schleimschicht selbst.' },
   { id: 'leber', de: 'Leber', lat: 'Hepar', system: 'verdauung', oeffnen: '#leber', knopf: 'Leber öffnen',
     text: 'Die Leber ist die größte Stoffwechseldrüse und liegt im rechten Oberbauch unter dem Zwerchfell. Sie bildet Galle, verwertet Nährstoffe, baut Medikamente und Giftstoffe ab und stellt Eiweiße wie Gerinnungsfaktoren und Albumin her. Funktionseinheit ist das Leberläppchen.' },
@@ -453,7 +453,7 @@ function sdfMagen(x, y, z) {
 }
 /* Nieren aus dem Form-Baustein der Niere (organe/niere/niere-form.js; er wird mit dem Niere-Modul nachgeladen): Promise der Form, Wert null = einfacher Ersatz.
    Die Form liegt in anatomischen Achsen um die Mitte der linken Niere; die rechte Niere ist die gespiegelte linke (x -> -x), damit der Hilus zur Mitte zeigt. */
-var nierenP = null, lungenP = null, leberP = null;
+var nierenP = null, lungenP = null, leberP = null, verdauungP = null;
 /* Mitte der Niere s (1 = links, -1 = rechts) */
 function nierenMitte(s) { return [s * 7.5, s > 0 ? 105 : 102.5, -6.2]; }
 function sdfNiere(s, form) {
@@ -628,8 +628,11 @@ async function organe() {
   dazu('atmung', new THREE.Mesh(zwerchfellGeo(), zw));
   await weiter('Zwerchfell');
   /* Verdauung */
+  var vform = await verdauungP;   // null: Form der Verdauung nicht geladen, dann die Platzhalter
+  if (abgebaut) return;
+  var vb = vform ? vform.BAHN : null;
   als('speiseroehre');
-  rohr('verdauung', mat('verdauung', 0xD99A8A, { rough: 0.5, coat: 0.3 }), [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], 0.8, 40);
+  rohr('verdauung', mat('verdauung', 0xD99A8A, { rough: 0.5, coat: 0.3 }), vb ? vb.speiseroehre.pts : [[0, 148, -3.0], [0, 140, -3.6], [0.3, 130, -3.6], [0.9, 122, -3.4], [1.6, 115, -2.8], [2.4, 110.5, -1.5], [3.8, 107.6, 1.0]], vb ? vb.speiseroehre.r : 0.8, vb ? vb.speiseroehre.seg : 40);
   var lform = await leberP;   // null: Form der Leber nicht geladen, dann die Platzhalter
   if (abgebaut) return;
   als('leber');
@@ -637,7 +640,7 @@ async function organe() {
   await sdfMesh('verdauung', le, lform ? lform.leber : sdfLeber, lform ? lform.grenzen : b(-15, 97, -10, 14, 119, 11), h);
   if (abgebaut) return; await weiter('Leber');
   als('magen');
-  await sdfMesh('verdauung', mat('verdauung', 0xE8B48E, { rough: 0.5, coat: 0.4 }), sdfMagen, b(-6, 94, -7, 14, 115, 8), h);
+  await sdfMesh('verdauung', mat('verdauung', 0xE8B48E, { rough: 0.5, coat: 0.4 }), vform ? vform.magen(0) : sdfMagen, vform ? vform.magenGrenzen(0) : b(-6, 94, -7, 14, 115, 8), h);
   if (abgebaut) return; await weiter('Magen');
   als('gallenblase');
   await sdfMesh('verdauung', mat('verdauung', 0x5E9A4A, { rough: 0.4, coat: 0.5 }), lform ? lform.gallenblase : sdfGalle, lform ? lform.GALLENBLASE.grenzen : b(-10, 92, 0, -1, 106, 9), 0.4);
@@ -671,26 +674,28 @@ async function organe() {
   await sdfMesh('verdauung', mat('verdauung', 0xE8C27A, { rough: 0.6 }), sdfPankreas, b(-8, 96, -8, 12, 109, 2), 0.45);
   if (abgebaut) return; await weiter('Bauchspeicheldrüse');
   als('duenndarm');
-  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], 1.0, 50);
+  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), vb ? vb.zwoelffingerdarm.pts : [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], vb ? vb.zwoelffingerdarm.r : 1.0, vb ? vb.zwoelffingerdarm.seg : 50);
   als('milz');
   ellM('kreislauf', mat('kreislauf', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
   /* Duenndarm: Schlingen in vier Lagen */
   als('duenndarm');
   var dd = [], r, k;
-  for (r = 0; r < 4; r++) {
+  if (vb) dd = vb.duenndarm.pts();   // Schlingen aus der Form (dieselben Punkte wie unten)
+  else for (r = 0; r < 4; r++) {
     var yy = 95.5 - 2.5 * r;
     for (k = 0; k <= 8; k++) {
       var t = r % 2 ? 8 - k : k;
       dd.push([-8 + 2 * t + (k % 2 ? 0.6 : -0.6), yy + (k % 2 ? 0.5 : -0.5), 3.5 + 1.8 * Math.sin(k * 1.9 + r * 1.3)]);
     }
   }
-  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), dd, 1.2, 420);
+  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), dd, vb ? vb.duenndarm.r : 1.2, vb ? vb.duenndarm.seg : 420);
   /* Dickdarm: Rahmen um den Duenndarm */
   als('dickdarm');
   var dk = mat('verdauung', 0xB8775A, { rough: 0.55, coat: 0.3 });
-  rohr('verdauung', dk, [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
-    [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], 1.8, 260);
-  kugelM('verdauung', dk, -11.3, 89.2, 0.5, 2.4);
+  rohr('verdauung', dk, vb ? vb.dickdarm.pts : [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
+    [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], vb ? vb.dickdarm.r : 1.8, vb ? vb.dickdarm.seg : 260);
+  var kp = vb ? vb.dickdarm.kappe : [-11.3, 89.2, 0.5, 2.4];
+  kugelM('verdauung', dk, kp[0], kp[1], kp[2], kp[3]);
   /* Harn */
   var nform = await nierenP;   // null: Form nicht geladen, dann einfache Nieren als Ersatz
   if (abgebaut) return;
@@ -733,10 +738,14 @@ async function bauen() {
   lungenP = Kern.formLaden('lunge'); lungenP.catch(function () {});
   /* Form der Leber (Leber, Gallenblase, Gefaesse und Gaenge): nicht zwingend, ohne sie gelten die Platzhalter; sie greift erst beim Auswerten auf die Kuppel der Lungenform zu, die vorher geladen ist */
   leberP = lungenP.then(function () { return Kern.formLaden('leber'); }).then(null, function (e) { console.warn(e && e.message || e); return null; });
+  /* Form der Verdauung (Speiseroehre, Magen, Duenndarm, Dickdarm): nicht zwingend, ohne sie gelten die Platzhalter; sie greift erst beim Auswerten auf die Kuppel der Lungenform zu */
+  verdauungP = leberP.then(function () { return Kern.formLaden('verdauung'); }).then(null, function (e) { console.warn(e && e.message || e); return null; });
   /* Lungen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start); ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
   lungenP.then(function () { return Kern.organLaden('lunge', { ohneCss: true }); }).catch(function (e) { console.warn(e && e.message || e); });
   /* Leber-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); nur wenn die Form der Leber da ist; ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
   leberP.then(function (lf) { return lf ? Kern.organLaden('leber', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
+  /* Magen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); es laedt seine Formen selbst, ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
+  verdauungP.then(function (vf) { return vf ? Kern.organLaden('magen', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1079,10 +1088,13 @@ ZIELE.luftroehre = ZIELE.lunge;   /* gleiches Ziel: das Lungen-Modell */
 var LEBER_MIT = ['leber', 'gallenblase', 'pfortader', 'leberarterie', 'lebervenen', 'gallengang'];
 ZIELE.leber = { theta: 0, phi: PI / 2, ext: [28, 26], target: [-2.9, 107.6, 0.5], mit: LEBER_MIT };   /* Ersatz, wenn das Leber-Modul fehlt (Ganzansicht der Leber von vorn) */
 ZIELE.gallenblase = ZIELE.pfortader = ZIELE.leberarterie = ZIELE.lebervenen = ZIELE.gallengang = ZIELE.leber;   /* gleiches Ziel: das Leber-Modell */
+/* Strukturen, die das Magen-Modell mitzeigt (Magen, Ende der Speiseroehre, Zwerchfell): sie bleiben bei der Fahrt sichtbar; der Rest blendet aus */
+var MAGEN_MIT = ['magen', 'speiseroehre', 'zwerchfell'];
+ZIELE.magen = { theta: -0.3, phi: 1.75, ext: [24, 26], target: [3, 106, 1], mit: MAGEN_MIT };   /* Ersatz, wenn das Magen-Modul fehlt (Ansicht des Magens leicht von unten links) */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber, ma = Kern.Organe && Kern.Organe.magen;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1099,12 +1111,16 @@ function zielFuer(id, w, h) {
     var se = le.start(w, h), em = le.mitte;
     return { theta: se.theta, phi: se.phi, dist: se.dist, target: V(se.target[0] + em[0], se.target[1] + em[1], se.target[2] + em[2]), versatz: se.versatz };
   }
+  if (z === ZIELE.magen && ma && ma.start) {   /* Startansicht des Magens (Magen-Koordinaten, um die Mitte ma.mitte im Koerper verschoben) */
+    var sm = ma.start(w, h), mm = ma.mitte;
+    return { theta: sm.theta, phi: sm.phi, dist: sm.dist, target: V(sm.target[0] + mm[0], sm.target[1] + mm[1], sm.target[2] + mm[2]), versatz: sm.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber', magen: 'magen' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */

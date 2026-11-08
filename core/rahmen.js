@@ -28,6 +28,7 @@ var Kern = window.Kern = window.Kern || {};
     lunge: { titel: 'Lunge', seitentitel: 'Lunge \u2013 Lappen, Atemwege und Atemmechanik', skript: 'organe/lunge/lunge.js', css: 'organe/lunge/lunge.css' },
     alveole: { titel: 'Alveole', seitentitel: 'Alveole \u2013 Lungenbl\u00e4schen und Gasaustausch', skript: 'organe/lunge/alveole.js', css: 'organe/lunge/alveole.css', adresse: 'lunge/alveole' },
     leber: { titel: 'Leber', seitentitel: 'Leber \u2013 Lappen, Pfortader und Gallenwege', skript: 'organe/leber/leber.js', css: 'organe/leber/leber.css' },
+    magen: { titel: 'Magen', seitentitel: 'Magen \u2013 Mageneingang, Magensaft und Pf\u00f6rtner', skript: 'organe/verdauung/magen.js', css: 'organe/verdauung/magen.css' },
     laeppchen: { titel: 'Leberl\u00e4ppchen', seitentitel: 'Leberl\u00e4ppchen \u2013 Sinusoide, Leberzellen und Galle', skript: 'organe/leber/laeppchen.js', css: 'organe/leber/laeppchen.css', adresse: 'leber/laeppchen' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };
@@ -76,7 +77,8 @@ var Kern = window.Kern = window.Kern || {};
   K.FORMEN = {
     niere: { titel: 'Niere', form: 'organe/niere/niere-form.js' },
     lunge: { titel: 'Lunge', form: 'organe/lunge/lunge-form.js' },
-    leber: { titel: 'Leber', form: 'organe/leber/leber-form.js' }
+    leber: { titel: 'Leber', form: 'organe/leber/leber-form.js' },
+    verdauung: { titel: 'Verdauung', form: 'organe/verdauung/verdauung-form.js' }
   };
 
   /* Formbaustein anmelden (die Form-Datei ruft das beim Laden auf; def: Funktionen und Daten der Form, je Organ eigen) */
