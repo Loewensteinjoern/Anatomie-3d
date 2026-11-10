@@ -11,7 +11,8 @@
    fein vernetzt; von den Muskelschichten bleibt die Schnittflaeche (Kappe), die Haut der Muskelschichten ersetzt die Aussenhaut. Der Deckel gleitet nach vorn und blendet aus,
    wie beim Magen.
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Abschnitt 6: Stoffe und Stroemung (Teilchen auf dem Weg durch den
-   ganzen Darm, nuechtern / nach dem Essen), Abschnitt 7: Schema "Wo wird was aufgenommen". Hilfekarten, Ueben und die Duenndarmzotte folgen in spaeteren Schritten.
+   ganzen Darm, nuechtern / nach dem Essen), Abschnitt 7: Schema "Wo wird was aufgenommen". Reiter Hilfekarten und Ueben (Strukturen finden, Wege verfolgen) wie beim Magen;
+   die Duenndarmzotte folgt in einem spaeteren Schritt.
    ===================================================================== */
 (function () {
 'use strict';
@@ -152,7 +153,50 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
+</div>
+
+<div class="panel" id="scard">
+  <button class="gh hbtn" id="sClose" aria-label="Schließen">&times;</button>
+  <div class="kick" id="sKick"></div>
+  <h3 id="sTitle"></h3>
+  <div class="lead" id="sLead"></div>
+  <div class="after" id="sAfter"></div>
+  <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">Nächste</button><button class="gh" id="qStop">Beenden</button></div>
 </div>`;
+/* Hilfekarten: [Schluessel, Titel, Text, Merke] (Texte von Joern freigegeben, darm-b-texte.md Abschnitt F) */
+var HILFE = [
+  ['aufgaben', 'Aufgaben des Darms', 'Im Zwölffingerdarm mischen sich Galle und Pankreassaft unter den Speisebrei und spalten Kohlenhydrate, Eiweiße und Fette in ihre Bausteine. Leerdarm und Krummdarm nehmen diese Bausteine über die Zotten auf, dazu Vitamine, Salze und den größten Teil des Wassers. Im Dickdarm wird dem Rest weiter Wasser entzogen; Bakterien der Darmflora bauen unverdauliche Reste ab. Der Mastdarm sammelt den Stuhl bis zur Entleerung.',
+    'Der Dünndarm nimmt die Nährstoffe auf, der Dickdarm vor allem Wasser und Salze.'],
+  ['saefte', 'Galle und Pankreassaft', 'Die Bauchspeicheldrüse gibt täglich etwa 1–1,5 Liter Pankreassaft ab. Er enthält Bicarbonat, das die Magensäure neutralisiert, und Enzyme für Kohlenhydrate, Eiweiße und Fette. Die Galle aus Leber und Gallenblase (ca. 0,5–1 Liter am Tag) zerlegt Fette in feine Tröpfchen, damit die Enzyme sie angreifen können. Beide münden an der Papille in den Zwölffingerdarm. Die Gallensäuren werden am Ende des Krummdarms zurückgeholt und kehren über die Pfortader zur Leber zurück.',
+    'Fehlt die Galle, wird Fett schlecht aufgenommen – der Stuhl wird hell, fettig und glänzend.'],
+  ['bewegung', 'Wie der Darm den Inhalt bewegt', 'Im Dünndarm schnüren Mischbewegungen den Speisebrei immer wieder ein und bringen ihn an die Schleimhaut; Muskelwellen schieben ihn langsam weiter. Nüchtern laufen in Abständen kräftigere Wellen durch den Darm und räumen ihn auf. Im Dickdarm bewegt sich der Inhalt nur langsam, wenige kräftige Massenbewegungen am Tag treiben den Stuhl voran – oft kurz nach dem Frühstück. Gesteuert wird das vom Nervengeflecht der Darmwand, verstärkt vom Vagusnerv, gebremst vom Sympathikus.',
+    'Bewegung, ausreichend Trinken und Ballaststoffe regen die Darmbewegung an – Bettruhe und Opioide bremsen sie.'],
+  ['pflege', 'Pflege: Stuhlbeobachtung und Obstipation', 'Pflegende beobachten Häufigkeit, Menge, Farbe, Geruch und Form des Stuhls sowie Beimengungen. Die Bristol-Stuhlformen-Skala beschreibt die Form von Typ 1 (harte Kugeln) bis Typ 7 (flüssig); Typ 3 und 4 gelten als normal. Schwarzer Teerstuhl kann auf eine Blutung im oberen Verdauungstrakt hinweisen, frisches Blut auf eine Blutung im Dickdarm oder am After, heller Stuhl auf einen Gallenstau. Zur Obstipationsprophylaxe gehören Bewegung, ausreichend Flüssigkeit (sofern nicht beschränkt), ballaststoffreiche Kost, feste Toilettenzeiten mit Ruhe und Privatsphäre und eine Kolonmassage im Uhrzeigersinn.',
+    'Eisenpräparate färben den Stuhl ebenfalls schwarz – bei schwarzem Stuhl immer nach Medikamenten fragen und die Beobachtung weitergeben.'],
+  ['modell', 'So liest du das Modell', 'Der Darm ist von vorn dargestellt, so wie er im Körper liegt: vom Zwölffingerdarm über die Dünndarmschlingen bis zum After. Die Teilchen stehen für Stoffe: gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, grün Galle, blassviolett Pankreassaft, braun Stuhl. Mit den Schaltern unter „Stoffe“ kannst du jeden Stoff einzeln verfolgen. „Durchsicht“ macht die Darmwand gläsern, der Ausschnitt „Dünndarm“ zeigt eine aufgeschnittene Schlinge mit Ringfalten. Über „Zotte“ oder durch Antippen von Leerdarm und Krummdarm kommst du zur Dünndarmzotte. Die Zeit läuft stark gerafft.',
+    'Je weiter der Inhalt im Darm wandert, desto weniger Nährstoffe und desto weniger Wasser enthält er.']
+];
+/* Ueben "Strukturen finden": in welchen Ausschnitten (Nummer wie AUSSCHNITTE) eine Struktur im Bild liegt und sich antippen laesst. Die Waende der vier Bereiche sind in einem geoeffneten
+   Ausschnitt von der Schleimhaut verdeckt, darum werden sie nur in der Uebersicht gesucht; Schleimhaut, Muskulatur, Papille, Bauhin-Klappe und After nur dort, wo sie zu sehen sind.
+   Reihenfolge: der erste Eintrag ist der Ausschnitt, in den das Ueben wechselt. */
+var NUR_INNEN = { schleimhaut: [2, 1, 3, 4], muskulatur: [2, 1, 3, 4], papille: [1], bauhin: [3], after: [4] };
+/* Ueben "Wege verfolgen": feste Reihenfolge der drei Wege (Texte von Joern freigegeben, darm-b-texte.md Abschnitt G). Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name
+   der ersten Struktur); an = Ausschnitt, in den der Weg fuer diese Station wechselt (sonst die Uebersicht; Papille und Bauhin-Klappe liegen innen); mahlzeit = false (nuechtern) oder
+   true (nach dem Essen) schaltet das Modell, fehlt sie, bleibt es wie es ist. Nur Daten: die Abfolge im Code kennt keine Darm-Besonderheiten. */
+var DICKDARM_TEIL = ['leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'];   /* "Leerdarm" gilt bei Weg 3 auch fuer Krummdarm und die Dickdarmabschnitte */
+var WEGE = [
+  { titel: 'Weg der Nahrung', aufgabe: 'Der Speisebrei verlässt den Magen. Tippe seine Stationen der Reihe nach an, bis er den Körper verlässt.',
+    hinweis: 'Das Modell zeigt jetzt „nach dem Essen“.', mahlzeit: true,
+    stationen: [{ ids: ['zwoelffinger'] }, { ids: ['leerdarm'] }, { ids: ['krummdarm'] }, { ids: ['bauhin'], an: 3 }, { ids: ['aufsteigend'] }, { ids: ['quer'] }, { ids: ['absteigend'] }, { ids: ['sigma'] }, { ids: ['mastdarm'] }, { ids: ['after'] }],
+    abschluss: 'Geschafft: Im Dünndarm werden die Nährstoffe aufgenommen, im Dickdarm wird der Rest eingedickt, der Mastdarm sammelt den Stuhl.' },
+  { titel: 'Weg der Verdauungssäfte', aufgabe: 'Nach dem Essen fließen Galle und Pankreassaft. Tippe der Reihe nach an, wo sie in den Darm gelangen und wohin sie wandern.',
+    hinweis: 'Das Modell zeigt jetzt „nach dem Essen“.', mahlzeit: true,
+    stationen: [{ ids: ['papille'], an: 1 }, { ids: ['zwoelffinger'] }, { ids: ['leerdarm'] }, { ids: ['krummdarm'] }],
+    abschluss: 'Geschafft: Galle und Pankreassaft wirken vor allem im Zwölffingerdarm und Leerdarm; die Gallensäuren werden am Ende des Krummdarms zurückgeholt.' },
+  { titel: 'Weg des Blutes', aufgabe: 'Das Blut kommt aus der Bauchaorta. Tippe seine Stationen der Reihe nach an, bis es den Darm verlässt.',
+    stationen: [{ ids: ['arterien'] }, { ids: DICKDARM_TEIL, de: 'Leerdarm' }, { ids: ['venen'] }, { ids: ['pfortader'] }],
+    abschluss: 'Geschafft: Das nährstoffreiche Blut aus dem Darm fließt über die Pfortader zuerst zur Leber.' }
+];
 /* Notiz der Lesehilfe: nur ohne Durchsicht und ohne geoeffneten Bereich */
 var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.';
 var organ = { renderer: {}, aufbauen: aufbauen };
@@ -165,7 +209,8 @@ var UEBERSICHT = { theta: 0, phi: 1.5708, ext: [32, 33], halb: 15.5, ziel: [ZIEL
 var KAMERA_FOV = 38;                               /* wie die Kamera des Rahmens */
 var DECKEL_WEG = 7;                                /* so weit gleitet die vordere Haelfte nach vorn bzw. zur Seite (cm) */
 /* Freier Bereich fuer den Darm und die Beschriftung (Pixel); toolsOben/toolsUnten = Ober- und Unterkante der Werkzeugleiste */
-function bereichFuer(w, h, toolsOben, toolsUnten) {
+function bereichFuer(w, h, toolsOben, toolsUnten, ueben) {
+  if (w < 1000 && ueben) return { x0: 0, x1: w, y0: 54, y1: Math.max(150, toolsOben - 14 - 0.20 * h), labW: 104, fit: 70 };   /* Handy beim Ueben: die Karte (20 % der Hoehe) liegt direkt ueber der Werkzeugleiste, der Darm steht darueber */
   if (w < 1000) return { x0: 0, x1: w, y0: 78, y1: Math.max(260, (toolsOben > 100 ? toolsOben : h * 0.6) - 6), labW: 104, fit: 70 };   /* Handy: links und rechts bleibt je eine Namensspalte (labW) frei, der Darm steht dazwischen */
   return { x0: 290, x1: w - 22, y0: Math.max(76, Math.ceil(toolsUnten) + 6), y1: h - 30, labW: 142, fit: 100 };
 }
@@ -184,7 +229,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 438 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30); mit dem Knopf Zotte (B5) neu messen */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 478 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30; zweizeilig ist erlaubt, Joern). 478 gemessen mit einem Platzhalter fuer den Knopf Zotte (B5: sieben Knoepfe); ohne ihn bricht die Reihe schon ab 438 nicht mehr um, in den 40 px dazwischen weicht die Schaetzung bis B5 um 30 px ab */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Darms im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -621,6 +666,9 @@ async function bauen() {
    ===================================================================== */
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, lv = 0;   /* lv: Version fuer die Beschriftung */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
+var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait, vor, auto } */
+var wege = null, wegeT = null;   /* Ueben "Wege verfolgen" (siehe Abschnitt vor dem Antippen) */
+var autoGehe = false;            /* gehe wird vom Ueben selbst gerufen: keine neue Aufgabe */
 /* Strukturen, die im Ausschnitt vor dem geoeffneten Bereich liegen und dann ausgeblendet werden (sobald der Deckel zur Haelfte abgehoben ist); vom Krummdarm bleibt im Ausschnitt Blinddarm das Ende */
 var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'],
   ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'absteigend', 'sigma']];
@@ -675,6 +723,7 @@ function applyLook() {
   stelleMat(MAT.gekroese, true, seeThrough ? 0.3 : 0.4);
 }
 function setSelected(id) {
+  if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
   selected = id;
   var brass = srgb(0xE0A94A);
   ORDER.forEach(function (s) {
@@ -689,6 +738,7 @@ function setSelected(id) {
   lv++;
   var box = $('info');
   if (!id) { box.classList.remove('show'); return; }
+  if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
   $('iDe').textContent = s.de;
@@ -711,13 +761,48 @@ function ebene(sid, an) {
 /* Schleimhaut, Muskulatur, Papille und Klappe sind nur in einem geoeffneten Bereich oder bei Durchsicht zu sehen: wer sie in der Liste waehlt, bekommt den passenden Ausschnitt */
 var IM_AUSSCHNITT = { schleimhaut: 2, muskulatur: 2, papille: 1, bauhin: 3 };
 function waehleListe(id) {
+  if (quiz || wege) return;
   if (id in IM_AUSSCHNITT && !irgendOffen() && !seeThrough) gehe(IM_AUSSCHNITT[id]);
   setSelected(id);
 }
 
 (function leiste() {
   /* Strukturen: nach Gruppen, Farbpunkt blendet die Struktur ein und aus */
-  var rail = $('rail');
+  /* Reiter: Strukturen, Hilfekarten, Ueben */
+  var tabs = document.createElement('div'); tabs.className = 'tabs';
+  var rail = document.createElement('div'); rail.id = 'paneStruct';
+  var paneH = document.createElement('div'); paneH.id = 'paneHelp';
+  var paneU = document.createElement('div'); paneU.id = 'paneUeben';
+  var panes = [rail, paneH, paneU];
+  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+    var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); panes.forEach(function (pn, pk) { pn.style.display = pk === k ? '' : 'none'; });
+      $('legend').classList.toggle('zu', k !== 0);   /* Hilfekarten und Ueben zeigen ihren Inhalt ganz: die Lesehilfe ist dann zugeklappt (Klick auf die Ueberschrift klappt sie auf) */
+      railHoehe(window.innerWidth);
+    });
+    tabs.appendChild(b);
+  });
+  $('rail').appendChild(tabs);
+  panes.forEach(function (pn, k) { if (k) pn.style.display = 'none'; $('rail').appendChild(pn); });
+  /* Hilfekarten */
+  var ih = document.createElement('p'); ih.className = 'dis-intro'; ih.textContent = 'Kurz erklärt – tippe eine Karte an, sie erscheint unten.'; paneH.appendChild(ih);
+  HILFE.forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'dis'; d.tabIndex = 0; d.dataset.card = c[0];
+    d.innerHTML = '<span><b></b></span>'; d.querySelector('b').textContent = c[1];
+    d.addEventListener('click', function () { openHelp(c[0]); });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
+    paneH.appendChild(d);
+  });
+  /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
+  var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Darm und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge einen Weg: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
+  var pb = document.createElement('div'); pb.className = 'pane-btn';
+  var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
+  bq.addEventListener('click', function () { quiz ? quizEnd() : quizStart(); });
+  var bw = document.createElement('button'); bw.className = 'gh'; bw.id = 'bWege'; bw.textContent = 'Wege verfolgen';
+  bw.addEventListener('click', function () { wege ? wegeEnd() : wegeStart(); });
+  pb.appendChild(bq); pb.appendChild(bw); paneU.appendChild(pb);
   var gruppen = [];
   ORDER.forEach(function (s) { if (gruppen.indexOf(s.grp) < 0) gruppen.push(s.grp); });
   var hex = function (c) { return c.toString(16).padStart(6, '0'); };
@@ -756,6 +841,7 @@ function durchsicht(an) {
   legNoteSetzen();
   applyVisibility(); applyLook();
   lv++;
+  if (quiz) quizNeu(true);                               /* andere Ansicht: neue Aufgabe aus den jetzt sichtbaren Strukturen */
 }
 $('bSee').onclick = function () { durchsicht(!seeThrough); };
 $('bCls').onclick = function () { setSelected(null); };
@@ -802,7 +888,7 @@ var aktiv = 0, fitDist = 0;
 /* Freier Bereich fuer den Darm und die Beschriftung (Pixel): Desktop rechts der Leiste, Handy zwischen Titel und Werkzeugleiste */
 function bereich(w, h) {
   var tr = $('tools').getBoundingClientRect();
-  return bereichFuer(w, h, tr.top, tr.bottom);
+  return bereichFuer(w, h, tr.top, tr.bottom, document.body.classList.contains('ueben'));
 }
 function distFuer(a, w, h) {
   return abstandFuer(a.ext, bereich(w, h), camera.fov, h);
@@ -819,6 +905,7 @@ function gehe(i) {
   orbit.anim = Kern.fahrt(view, { theta: view.theta + dth, phi: a.phi, dist: d, target: a.target }, 700);
   fitDist = d;
   lv++;
+  if (quiz && !autoGehe) quizNeu(true);
 }
 for (var ci = 0; ci < AUSSCHNITTE.length; ci++) (function (i) { $('cam' + i).onclick = function () { gehe(i); }; })(ci);
 
@@ -848,22 +935,214 @@ function ansicht(theta, phi, dist, target) {
   orbit.anim = null;
 }
 
+/* =====================================================================
+   Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (Handy: oben, endet ueber der Werkzeugleiste)
+   ===================================================================== */
+function showCard(kick, title, lead, after, istQuiz) {
+  schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  $('sKick').textContent = kick; $('sTitle').textContent = title;
+  $('sLead').textContent = lead;
+  var A = $('sAfter'); A.innerHTML = '';
+  if (after) { var h5 = document.createElement('h5'); h5.textContent = after.h; var p = document.createElement('p'); p.textContent = after.t; A.appendChild(h5); A.appendChild(p); }
+  $('sQa').style.display = istQuiz ? 'flex' : 'none';
+  if (selected && !istQuiz) setSelected(null);
+  $('scard').classList.add('show');
+  $('info').classList.remove('show');
+  lv++;
+}
+function closeCard() {
+  $('scard').classList.remove('show');
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  lv++;
+}
+function openHelp(key) {
+  var c = HILFE.filter(function (x) { return x[0] === key; })[0]; if (!c) return;
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.toggle('on', d.dataset.card === key); });
+  showCard('Hilfekarte', c[1], c[2], c[3] ? { h: 'Merke', t: c[3] } : null, false);
+}
+/* Eine Struktur kurz hervorheben (Antwort beim Ueben), ohne Infokarte; jede Struktur hat ihr eigenes Material, es leuchtet nur sie */
+function leuchte(id, an) {
+  if (!STRUCT[id]) return;
+  var brass = srgb(0xE0A94A);
+  STRUCT[id].meshes.forEach(function (m) {
+    var mt = m.material;
+    if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)).add(brass.clone().multiplyScalar(an ? 0.28 : 0));
+  });
+}
+/* Ueben "Strukturen finden": "Tippe auf: ..." - alle Strukturen. Schleimhaut, Muskulatur, Papille, Bauhin-Klappe und After sind nur in bestimmten Ausschnitten zu sehen und anzutippen
+   (NUR_INNEN), alle anderen nur in der Uebersicht (in einem geoeffneten Ausschnitt liegt die Schleimhaut vor den Waenden, Gekroese und Gefaesse sind dort ausgeblendet): wer sie
+   wuerfelt, bekommt den passenden Ausschnitt (autoGehe); beim Beenden kehrt die Ansicht zurueck. Wechselt man den Ausschnitt selbst, gilt nur der Teil, der dort passt (bleibe).
+   Math.random nur hier, bei der Auswahl der gesuchten Struktur (wie beim Magen). */
+function quizAusschnitte(id) { return NUR_INNEN[id] || [0]; }
+function quizPool(bleibe) {
+  return ORDER.filter(function (s) {
+    if (!s.meshes.length || !enabled[s.id]) return false;
+    if (bleibe && quizAusschnitte(s.id).indexOf(aktiv) < 0) return false;
+    return true;
+  }).map(function (s) { return s.id; });
+}
+function quizNext(bleibe) {
+  var pool = quizPool(bleibe); if (!pool.length) return quizEnd();
+  var id; do { id = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && id === quiz.last);
+  quiz.target = id; quiz.last = id; quiz.wait = false;
+  var ziele = quizAusschnitte(id);
+  if (ziele.indexOf(aktiv) < 0) { autoGehe = true; quiz.auto = true; gehe(ziele[0]); autoGehe = false; }
+  showCard('Üben', 'Tippe auf: ' + STRUCT[id].de, 'Drehe den Darm, wenn du die Struktur nicht gleich siehst.', null, true);
+  $('sScore').textContent = quiz.ok + ' von ' + quiz.n + ' richtig';
+}
+function quizNeu(bleibe) { if (quiz.target) leuchte(quiz.target, false); clearTimeout(quizT); quizNext(bleibe); }
+function uebenKlasse() { document.body.classList.toggle('ueben', !!(quiz || wege)); groesse(window.innerWidth, window.innerHeight); }   /* Handy: Karte unten, Bildbereich des Darms darueber */
+function quizStart() {
+  if (wege) wegeEnd();
+  setSelected(null); quiz = { n: 0, ok: 0, target: null, last: null, wait: false, vor: aktiv, auto: false };
+  $('bQuiz').classList.add('on'); $('bQuiz').textContent = 'Üben beenden';
+  $('qNext').textContent = 'Nächste'; $('qNext').style.display = '';
+  uebenKlasse(); lv++; quizNext();
+}
+function quizEnd() {
+  clearTimeout(quizT);
+  if (quiz && quiz.target) leuchte(quiz.target, false);
+  var vor = quiz && quiz.auto ? quiz.vor : -1;
+  quiz = null; closeCard(); $('bQuiz').classList.remove('on'); $('bQuiz').textContent = 'Strukturen finden';
+  uebenKlasse();
+  if (vor >= 0 && vor !== aktiv) gehe(vor);              /* Ansicht wie vor dem Ueben */
+}
+function quizAntwort(sid, durch) {   /* durch: Strukturen, durch die man hindurchsieht (durchscheinende Treffer vor dem ersten undurchsichtigen) */
+  var Q = quiz; if (!Q || !Q.target || Q.wait) return;
+  Q.n++; Q.wait = true;
+  var ok = sid === Q.target || durch.indexOf(Q.target) >= 0; if (ok) { Q.ok++; sid = Q.target; }
+  var L = $('sLead'); L.innerHTML = '';
+  var sp = document.createElement('span'); sp.className = ok ? 'ok' : 'no';
+  sp.textContent = ok ? 'Richtig.' : (sid && STRUCT[sid] ? 'Das war: ' + STRUCT[sid].de + '. Die gesuchte Struktur leuchtet jetzt.' : 'Daneben – die gesuchte Struktur leuchtet jetzt.');
+  L.appendChild(sp);
+  $('sScore').textContent = Q.ok + ' von ' + Q.n + ' richtig';
+  leuchte(Q.target, true);
+  var tg = Q.target;
+  quizT = setTimeout(function () { leuchte(tg, false); if (quiz) quizNext(); }, ok ? 1200 : 2400);
+}
+/* Ueben "Wege verfolgen": die Stationen eines Weges (WEGE, Daten oben) der Reihe nach antippen. Die Abfolge kennt nur Stationen (Listen von Struktur-ids),
+   Karte und Leuchten. Zustand wege: nr = Weg, st = naechste Station, n = erledigte Stationen, ok = davon auf Anhieb richtig, fehl = Fehler in Folge bei der gesuchten Station,
+   liste = Namen der erledigten Stationen, fertig = Weg abgeschlossen. Waehrend der Wege ist die Wand durchsichtig (Wandbereiche, Gekroese und Schleimhaut liegen im selben Strahl:
+   der Treffer zaehlt, was davor steht, steht in durch) und die Uebersicht gewaehlt; nur Papille und Bauhin-Klappe liegen innen: fuer sie wechselt der Weg in den Ausschnitt
+   Zwoelffingerdarm bzw. Blinddarm (Station an) und danach zurueck in die Uebersicht. Beim Beenden kehrt alles zurueck. */
+function wegeName(s) { return s.de || STRUCT[s.ids[0]].de; }
+function wegeLeuchtAus() {
+  clearTimeout(wegeT);
+  if (wege && wege.leucht) wege.leucht.forEach(function (id) { leuchte(id, false); });
+  if (wege) wege.leucht = [];
+}
+function wegeLeuchte(ids, ms) {
+  wegeLeuchtAus();
+  ids.forEach(function (id) { leuchte(id, true); });
+  wege.leucht = ids.slice();
+  wegeT = setTimeout(wegeLeuchtAus, ms);
+}
+function wegeAnsicht() {                                 /* Ausschnitt der naechsten Station */
+  var s = WEGE[wege.nr].stationen[wege.st]; if (!s) return;
+  var ziel = s.an || 0;
+  if (ziel !== aktiv) { autoGehe = true; gehe(ziel); autoGehe = false; }
+}
+function wegeZeigen() {
+  var w = WEGE[wege.nr], last = wege.nr === WEGE.length - 1;
+  showCard('Üben · Wege verfolgen', 'Weg ' + (wege.nr + 1) + ' von ' + WEGE.length + ': ' + w.titel, '', null, true);
+  var L = $('sLead');
+  var kasten = function (kl) { var d = document.createElement('div'); d.className = kl; L.appendChild(d); return d; };
+  var zeile = function (kl, t, in_) { var d = document.createElement('div'); d.className = kl; d.textContent = t; (in_ || L).appendChild(d); return d; };
+  var txt = kasten('wg-text' + (wege.fertig ? ' fertig' : ''));   /* Aufgabe und Hinweis: scrollen auf dem Handy */
+  zeile('wg-auf', w.aufgabe, txt);
+  if (w.hinweis) zeile('wg-hint', w.hinweis, txt);
+  zeile('wg-liste', wege.liste.length || wege.fertig ? wege.liste.join(' → ') + (wege.fertig ? '' : ' → …') : '…');
+  if (wege.text) zeile('wg-rueck ' + (wege.text.ok ? 'ok' : 'no'), wege.text.t);
+  if (wege.fertig) {
+    var ab = kasten('wg-abw');
+    zeile('wg-ab', w.abschluss, ab);
+    if (last) zeile('wg-ab', 'Alle drei Wege geschafft.', ab);
+  }
+  $('sScore').textContent = wege.ok + ' von ' + wege.n + ' Stationen auf Anhieb richtig';
+  $('qNext').style.display = last ? 'none' : '';
+}
+function wegeSetzen(nr) {
+  wegeLeuchtAus();
+  wege.nr = nr; wege.st = 0; wege.fehl = 0; wege.liste = []; wege.fertig = false; wege.text = null;
+  var w = WEGE[nr];
+  if (w.mahlzeit !== undefined) setMahlzeit(w.mahlzeit, true);   /* dieselbe Funktion wie die Knoepfe, ohne die Einblendung */
+  wegeAnsicht();
+  wegeZeigen();
+}
+function wegeStart() {
+  if (quiz) quizEnd();
+  setSelected(null);
+  wege = { nr: 0, st: 0, n: 0, ok: 0, fehl: 0, liste: [], fertig: false, text: null, leucht: [], vorher: { mahlzeit: mahlzeit, durch: seeThrough, aktiv: aktiv } };
+  durchsicht(true);                                      /* die Wand glaesern: die Stationen liegen im selben Strahl */
+  $('bWege').classList.add('on'); $('bWege').textContent = 'Wege beenden';
+  $('qNext').textContent = 'Nächster Weg';
+  uebenKlasse();
+  wegeSetzen(0);
+}
+function wegeEnd() {
+  var v = wege && wege.vorher;
+  wegeLeuchtAus();
+  wege = null; closeCard(); uebenKlasse();
+  $('bWege').classList.remove('on'); $('bWege').textContent = 'Wege verfolgen';
+  if (v) { setMahlzeit(v.mahlzeit, true); durchsicht(v.durch); if (v.aktiv !== aktiv) gehe(v.aktiv); }   /* Mahlzeit, Durchsicht und Ausschnitt wie vorher */
+}
+function wegeAntwort(sid, durch) {
+  var W = wege; if (!W || W.fertig || !sid) return;    /* ins Leere getippt: keine Wertung */
+  var w = WEGE[W.nr], s = w.stationen[W.st], name = wegeName(s);
+  var ok = s.ids.some(function (id) { return id === sid || durch.indexOf(id) >= 0; });
+  if (ok) {
+    if (!W.fehl) W.ok++;
+    W.n++; W.liste.push(name); W.st++; W.fehl = 0;
+    W.text = { ok: true, t: 'Richtig: ' + name + '.' };
+    wegeLeuchte(s.ids, 1200);
+  } else {
+    W.fehl++;
+    var das = 'Das war: ' + (STRUCT[sid] ? STRUCT[sid].de : '?') + '. ';
+    if (W.fehl < 2) W.text = { ok: false, t: das + 'Gesucht ist die ' + (W.st === 0 ? 'erste' : 'nächste') + ' Station.' };
+    else {                                               /* zweiter Fehler in Folge: die Station leuchtet, gilt als erledigt, zaehlt nicht als "auf Anhieb" */
+      W.text = { ok: false, t: das + 'Die gesuchte Station leuchtet jetzt.' };
+      W.n++; W.liste.push(name); W.st++; W.fehl = 0;
+      wegeLeuchte(s.ids, 2400);
+    }
+  }
+  if (W.st >= w.stationen.length) W.fertig = true; else wegeAnsicht();
+  wegeZeigen();
+}
+$('sClose').onclick = function () { if (quiz) quizEnd(); else if (wege) wegeEnd(); else closeCard(); };
+$('qNext').onclick = function () {
+  if (quiz) quizNeu();
+  else if (wege && wege.nr < WEGE.length - 1) wegeSetzen(wege.nr + 1);
+};
+$('qStop').onclick = function () { if (quiz) quizEnd(); else if (wege) wegeEnd(); };
+
 /* Antippen: sichtbare Strukturen; durchscheinende Huellen (Gekroese, Haut bei Durchsicht) zaehlen nur, wenn dahinter nichts Dichteres getroffen wird */
 var ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-function canvasKlick(e) {
-  if (orbit.dragged) return;
+function trefferAn(cx, cy) {   /* Bildschirmpunkt -> { treffer, weich, durch } (durch: Strukturen bis zum ersten undurchsichtigen Treffer, fuer das Ueben) */
   var r = canvas.getBoundingClientRect();
-  ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-  ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ndc.x = ((cx - r.left) / r.width) * 2 - 1;
+  ndc.y = -((cy - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null;
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [];
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
+    durch.push(sid);
     if (weichMat(o)) { if (!weich) weich = sid; }
     else treffer = sid;
   }
-  setSelected(treffer || weich || null);
+  return { treffer: treffer, weich: weich, durch: durch };
+}
+function canvasKlick(e) {
+  if (orbit.dragged) return;
+  var t = trefferAn(e.clientX, e.clientY), durch = t.durch;
+  /* Beim Ueben nennt die Rueckmeldung bei Durchsicht den Bereich der Wand statt der Schleimhaut dahinter (die Schleimhaut zaehlt trotzdem, sie steht in durch) */
+  var name = t.treffer || t.weich || null;
+  if (name === 'schleimhaut') for (var k = 0; k < durch.length; k++) if (WAND.indexOf(durch[k]) >= 0) { name = durch[k]; break; }
+  if (wege) { wegeAntwort(name, durch); return; }
+  if (quiz) { quizAntwort(name, durch); return; }
+  setSelected(t.treffer || t.weich || null);
 }
 canvas.addEventListener('click', canvasKlick);
 
@@ -1010,7 +1289,7 @@ function layoutLabels(w, h) {
   if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt den Darm, ohne Beschriftung bleibt sie frei */
+  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt den Darm, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte und beim Ueben keine Beschriftung */
     beschriftet().forEach(function (id) {
       if (!enabled[id] || verborgen(id)) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
@@ -1545,7 +1824,7 @@ function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
-  if (on) { SCH.build($('schemaBox')); SCH.update(); }
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
   $('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
   canvas.style.visibility = on ? 'hidden' : '';
@@ -1563,6 +1842,11 @@ var t0 = performance.now(), last = t0;
 var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris, offen: function () { return OPEN.slice(); },
   mahlzeit: function (an) { setMahlzeit(!!an); },
   schema: function (an) { setSchema(!!an); },
+  tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
+  wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice(), ausschnitt: aktiv }; },
+  quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
+  /* fuer die Pruefung (Strahltest): was liegt unter dem Bildschirmpunkt - { treffer, weich, durch } wie beim Antippen */
+  treffer: trefferAn,
   stoffe: function (id, an) { if (id in KI && KINDS[KI[id]].btn) stoffSetzen(KI[id], !!an); },
   /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art, Uebergang, Uhr) und Lage der Teilchen (Koerper-Koordinaten, Wegstelle x in cm) */
   stroemung: function () {
@@ -1627,6 +1911,8 @@ organ.abbauen = function () {
   orbit.loesen();
   wzEnde();
   schemaWeicht(); SCH.abbauen();
+  clearTimeout(quizT); clearTimeout(wegeT);
+  document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
   canvas.removeEventListener('click', canvasKlick);
   /* three.js: alles bis auf die Lichter des Rahmens freigeben */
