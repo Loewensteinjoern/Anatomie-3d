@@ -30,6 +30,7 @@ var Kern = window.Kern = window.Kern || {};
     leber: { titel: 'Leber', seitentitel: 'Leber \u2013 Lappen, Pfortader und Gallenwege', skript: 'organe/leber/leber.js', css: 'organe/leber/leber.css' },
     magen: { titel: 'Magen', seitentitel: 'Magen \u2013 Mageneingang, Magensaft und Pf\u00f6rtner', skript: 'organe/verdauung/magen.js', css: 'organe/verdauung/magen.css' },
     darm: { titel: 'Darm', seitentitel: 'Darm \u2013 D\u00fcnndarm, Dickdarm und Mastdarm', skript: 'organe/verdauung/darm.js', css: 'organe/verdauung/darm.css' },
+    zotte: { titel: 'D\u00fcnndarmzotte', seitentitel: 'D\u00fcnndarmzotte \u2013 Saumzellen, Kapillaren und Lymphgef\u00e4\u00df', skript: 'organe/verdauung/zotte.js', css: 'organe/verdauung/zotte.css', adresse: 'darm/zotte' },
     laeppchen: { titel: 'Leberl\u00e4ppchen', seitentitel: 'Leberl\u00e4ppchen \u2013 Sinusoide, Leberzellen und Galle', skript: 'organe/leber/laeppchen.js', css: 'organe/leber/laeppchen.css', adresse: 'leber/laeppchen' },
     koerper: { titel: 'K\u00f6rper', seitentitel: 'K\u00f6rper \u2013 Organe und Organsysteme', skript: 'organe/koerper/koerper.js', css: 'organe/koerper/koerper.css' }
   };

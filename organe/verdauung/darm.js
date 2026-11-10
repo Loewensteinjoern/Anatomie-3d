@@ -12,7 +12,8 @@
    wie beim Magen.
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Abschnitt 6: Stoffe und Stroemung (Teilchen auf dem Weg durch den
    ganzen Darm, nuechtern / nach dem Essen), Abschnitt 7: Schema "Wo wird was aufgenommen". Reiter Hilfekarten und Ueben (Strukturen finden, Wege verfolgen) wie beim Magen;
-   die Duenndarmzotte folgt in einem spaeteren Schritt.
+   die Duenndarmzotte (Abschnitt 7b: Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und Krummdarm, Kamerafahrt in die Darmwand) ist ein eigenes
+   Modell (organe/verdauung/zotte.js, #darm/zotte).
    ===================================================================== */
 (function () {
 'use strict';
@@ -80,7 +81,7 @@ var STRUKTUREN = [
     txt: 'Sie sammelt das Blut aus Magen, Darm und Milz und bringt es zur Leber. Gezeigt ist ihr Anfang.',
     fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] }
 ];
-/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; der Knopf "Zotte" kommt spaeter dazu */
+/* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; B5: Knopf "Zotte" */
 var MARKUP = `<div id="title">
   <div class="kicker">Darm &middot; Intestinum</div>
   <h1>Dünndarm, Dickdarm &amp; <em>Mastdarm</em></h1>
@@ -95,6 +96,7 @@ var MARKUP = `<div id="title">
     <button id="cam2" class="gh" title="Eine Dünndarmschlinge, aufgeschnitten: Ringfalten und Zotten">Dünndarm</button>
     <button id="cam3" class="gh" title="Übergang vom Krummdarm in den Dickdarm mit Blinddarm und Wurmfortsatz">Blinddarm</button>
     <button id="cam4" class="gh" title="Mastdarm und After mit den Schließmuskeln">Mastdarm</button>
+    <button id="bZotte" class="gh" title="Zur Dünndarmzotte – ein kleines Stück Schleimhaut, stark vergrößert">Zotte</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Wo wird was aufgenommen – entlang des ganzen Darms">Schema</button>
   </div>
@@ -153,6 +155,7 @@ var MARKUP = `<div id="title">
   <h3 id="iDe"></h3>
   <p id="iTx"></p>
   <dl id="iDl"></dl>
+  <button class="gh" id="iOpen" style="display:none">Dünndarmzotte hier ansehen</button>
 </div>
 
 <div class="panel" id="scard">
@@ -200,6 +203,7 @@ var WEGE = [
 /* Notiz der Lesehilfe: nur ohne Durchsicht und ohne geoeffneten Bereich */
 var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.';
 var organ = { renderer: {}, aufbauen: aufbauen };
+var zoLetzte = null;   /* zuletzt gewaehlte Stelle fuer die Duenndarmzotte (Bogenlaenge s der Mittellinie in cm, fuer die Rueckfahrt; nur im Speicher der Seite, ueberdauert den Abbau des Darms) */
 /* Mitte des Darms im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, der Darm steht im Modell mittig (Ziel der Kamerafahrt aus dem Koerper) */
 var M = [0, 91, 3];
 /* Ausschnitt 'Uebersicht' (Breite und Hoehe im freien Bereich, cm) und Kamera: gemeinsam fuer das Modell und fuer die Fahrt aus dem Koerper;
@@ -229,7 +233,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 478 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30; zweizeilig ist erlaubt, Joern). 478 gemessen mit einem Platzhalter fuer den Knopf Zotte (B5: sieben Knoepfe); ohne ihn bricht die Reihe schon ab 438 nicht mehr um, in den 40 px dazwischen weicht die Schaetzung bis B5 um 30 px ab */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 478 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30; zweizeilig ist erlaubt, Joern). 478 gemessen mit dem Knopf Zotte (sieben Knoepfe in der Reihe Ausschnitt) */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Darms im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -666,6 +670,7 @@ async function bauen() {
    ===================================================================== */
 var enabled = {}, selected = null, showLabels = true, seeThrough = false, lv = 0;   /* lv: Version fuer die Beschriftung */
 ORDER.forEach(function (s) { enabled[s.id] = true; });
+var zoWahl = null;               /* Stelle (Bogenlaenge s) fuer die Duenndarmzotte zur gewaehlten Struktur (Leerdarm, Krummdarm), sonst null */
 var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, last, wait, vor, auto } */
 var wege = null, wegeT = null;   /* Ueben "Wege verfolgen" (siehe Abschnitt vor dem Antippen) */
 var autoGehe = false;            /* gehe wird vom Ueben selbst gerufen: keine neue Aufgabe */
@@ -722,7 +727,7 @@ function applyLook() {
   });
   stelleMat(MAT.gekroese, true, seeThrough ? 0.3 : 0.4);
 }
-function setSelected(id) {
+function setSelected(id, punkt) {
   if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
   selected = id;
   var brass = srgb(0xE0A94A);
@@ -737,6 +742,8 @@ function setSelected(id) {
   });
   lv++;
   var box = $('info');
+  zoWahl = id === 'leerdarm' || id === 'krummdarm' ? zoStelle(id, punkt) : null;
+  $('iOpen').style.display = zoWahl !== null ? '' : 'none';   /* Knopf "Duenndarmzotte hier ansehen" nur bei Leerdarm und Krummdarm */
   if (!id) { box.classList.remove('show'); return; }
   if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
@@ -1124,15 +1131,15 @@ function trefferAn(cx, cy) {   /* Bildschirmpunkt -> { treffer, weich, durch } (
   ndc.x = ((cx - r.left) / r.width) * 2 - 1;
   ndc.y = -((cy - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(ndc, camera);
-  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [];
+  var hits = ray.intersectObjects(root.children, true), treffer = null, weich = null, durch = [], punkt = null, pw = null;
   for (var i = 0; i < hits.length && !treffer; i++) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || !sichtbar(o) || !enabled[sid]) continue;
     durch.push(sid);
-    if (weichMat(o)) { if (!weich) weich = sid; }
-    else treffer = sid;
+    if (weichMat(o)) { if (!weich) { weich = sid; pw = hits[i].point; } }
+    else { treffer = sid; punkt = hits[i].point; }
   }
-  return { treffer: treffer, weich: weich, durch: durch };
+  return { treffer: treffer, weich: weich, durch: durch, punkt: treffer ? punkt : pw };   /* punkt: Trefferpunkt (Welt) des gewaehlten Netzes, fuer die Duenndarmzotte */
 }
 function canvasKlick(e) {
   if (orbit.dragged) return;
@@ -1142,7 +1149,7 @@ function canvasKlick(e) {
   if (name === 'schleimhaut') for (var k = 0; k < durch.length; k++) if (WAND.indexOf(durch[k]) >= 0) { name = durch[k]; break; }
   if (wege) { wegeAntwort(name, durch); return; }
   if (quiz) { quizAntwort(name, durch); return; }
-  setSelected(t.treffer || t.weich || null);
+  setSelected(t.treffer || t.weich || null, t.punkt);
 }
 canvas.addEventListener('click', canvasKlick);
 
@@ -1836,6 +1843,189 @@ $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
 
 /* =====================================================================
+   7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und Krummdarm): Der Darm blendet aus, an der hinteren Wand des
+   Duenndarms (bei einer aufgeschnittenen Schlinge: die Innenseite, in die man hineinsieht) waechst in der zweiten Haelfte das Stueck Ringfalte mit den Zotten aus der Form des
+   Zotten-Moduls (organ.form) ein, stark vergroessert (ZO_S). Der Darm dreht sich dabei (alle Achsen, um den Fusspunkt der mittleren Zotte), bis die Zotte aufrecht steht: dann gilt
+   in Weltachsen dieselbe Lage wie im Zotten-Modell, und die Kamera landet in dessen Startansicht (umgerechnet in Welt-Koordinaten); dann wird die Adresse gesetzt. Beim
+   Zurueckkommen (umg.von === 'zotte') steht der Darm gedreht im Nahbild und faehrt nach 450 ms zur Uebersicht zurueck. Die Stroemung steht waehrend der Fahrt. Neue
+   three.js-Objekte (die Zotte) entstehen erst bei der Fahrt.
+   ===================================================================== */
+var ZO_S = 0.08;                           /* Massstab: cm im Darm je Einheit (0,1 mm) des Zotten-Modells (stark vergroessert; in Wirklichkeit waeren es 0,01 cm) */
+var ZO_RW = 0.72;                          /* Abstand der Schleimhautoberflaeche von der Mittellinie des Duenndarms (cm) */
+var ZO_START = { theta: 0, phi: 1.2, dist: 20, target: [0, 2, -1.6] };   /* Ersatz fuer die Startansicht des Zotten-Moduls, falls dessen Skript fehlt */
+var zoStandard = 0;                        /* Standardstelle (Knopf "Zotte"): Mitte der aufgeschnittenen Duenndarmschlinge (Bogenlaenge s in cm); wird beim ersten Gebrauch gesetzt */
+var zoGruppe = null, zoM = [];             /* Gruppe der Zotte (Kind von root) und ihre Materialien [{ m, op }] */
+var ZO = null;                             /* Lage der aktuellen Fahrt: { s, pc (Fusspunkt, Koerper-Koordinaten), qa (Zotte -> Darm), qEnd (Darm -> Welt am Ende) } */
+var zoP = null, zoWartet = false, zoFehl = false;   /* Laden des Zotten-Moduls im Hintergrund, Wartezeit nach dem Klick */
+var fz = null;                             /* laufende Fahrt */
+var zoStep = function (a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+var ROOT0 = V(-M[0], -M[1], -M[2]), Q_ID = new THREE.Quaternion();
+function zoModul() { return Kern.Organe && Kern.Organe.zotte; }
+/* Stelle (Bogenlaenge s auf der Mittellinie des Duenndarms) zum angetippten Punkt (Welt) in Leerdarm bzw. Krummdarm; ohne Punkt oder ausserhalb des Abschnitts die Mitte des Abschnitts */
+function zoStelle(id, punkt) {
+  var du = geoDaten && geoDaten.du; if (!du) return null;
+  zoStandard = (du.schnitt.s0 + du.schnitt.s1) / 2;
+  var leer = id === 'leerdarm';
+  if (punkt) {
+    var q = root.worldToLocal(punkt.clone());
+    du.achse.q(q.x, q.y, q.z);
+    var s = du.achse.s;
+    if (du.achse.i >= 0 && (leer ? s < du.leerEnde : s >= du.leerEnde)) return Math.max(2, Math.min(du.laenge - 2, s));
+  }
+  return leer ? zoStandard : (du.leerEnde + du.laenge) / 2;
+}
+/* Lage der Zotte an der Stelle s: Fusspunkt an der hinteren Wand, Achse (Modell +y) in den Darm hinein (zum Betrachter), Vorderseite (Modell +z) nach unten; zoLage.qEnd dreht das zurueck */
+function zoLage(s) {
+  var du = geoDaten.du, c = du.punkt(s), t = du.richtung(s), C = V(c[0], c[1], c[2]), T = V(t[0], t[1], t[2]);
+  var u = V(0, 0, 1).sub(T.clone().multiplyScalar(T.z));
+  if (u.length() < 0.2) u = V(1, 0, 0).sub(T.clone().multiplyScalar(T.x));
+  u.normalize();
+  var ay = u.clone(), az = V(0, -1, 0).sub(ay.clone().multiplyScalar(-ay.y));
+  if (az.length() < 0.2) az = T.clone().sub(ay.clone().multiplyScalar(T.dot(ay)));
+  az.normalize();
+  var ax = new THREE.Vector3().crossVectors(ay, az);
+  var qa = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(ax, ay, az));
+  return { s: s, pc: C.addScaledVector(u, -ZO_RW), qa: qa, qEnd: qa.clone().invert() };
+}
+/* Startansicht des Zotten-Moduls in Welt-Koordinaten: gleiche Blickrichtung, Abstand und Ziel mit dem Massstab und der Lage der Zotte umgerechnet, Versatz des Bildbereichs wie im Modell */
+function zoZiel(w, h) {
+  var zm = zoModul(), st = zm && zm.start ? zm.start(w, h) : null, r = bereich(w, h);
+  if (!st) st = Object.assign({ versatz: [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2] }, ZO_START);
+  return { theta: st.theta, phi: st.phi, dist: ZO_S * st.dist, target: ROOT0.clone().add(ZO.pc).addScaledVector(V(st.target[0], st.target[1], st.target[2]), ZO_S), versatz: st.versatz };
+}
+/* Den ganzen Darm um den Fusspunkt der Zotte drehen: f = 0 ohne Drehung, 1 mit aufrechter Zotte (der Fusspunkt bleibt an seinem Platz) */
+function zoDrehung(f) {
+  root.quaternion.copy(Q_ID).slerp(ZO.qEnd, f);
+  root.position.copy(ROOT0).add(ZO.pc).sub(V(ZO.pc.x, ZO.pc.y, ZO.pc.z).applyQuaternion(root.quaternion));
+}
+/* Die Zotte im Darm (unsichtbar bis zum Einblenden): Teile und Materialien aus organ.form; ohne Modul bleibt die Gruppe leer. Die Materialien sind durchscheinend (Deckkraft 0),
+   undurchsichtige schreiben weiter in den Tiefenpuffer, damit das Endbild dem Zotten-Modell gleicht. */
+function zoBauen() {
+  zoGruppe = new THREE.Group(); zoGruppe.name = 'Dünndarmzotte'; zoGruppe.visible = false;
+  zoGruppe.position.copy(ZO.pc); zoGruppe.quaternion.copy(ZO.qa); zoGruppe.scale.setScalar(ZO_S); root.add(zoGruppe);
+  zoM = [];
+  var zm = zoModul(); if (!zm || !zm.form) return;
+  var def = zm.form.matDef();
+  zm.form.teile().forEach(function (t) {
+    var d = def[t.sid], o = {}, k, mt, op;
+    for (k in d[1]) o[k] = d[1][k];
+    mt = mat(d[0], o); op = o.opacity === undefined ? 1 : o.opacity;
+    mt.transparent = true; mt.opacity = 0; mt.depthWrite = op >= 1;
+    zoM.push({ m: mt, op: op });
+    zoGruppe.add(zm.form.teilMesh(t, mt, d[2] + 10));
+  });
+}
+function zoDeckkraft(f) {   /* Deckkraft der Zotte 0..1 */
+  zoM.forEach(function (e) { e.m.opacity = e.op * f; });
+  zoGruppe.visible = f > 0.002;
+}
+function zoAbbau() {   /* Zotte entsorgen, Darm in die Ausgangslage */
+  if (zoGruppe) Kern.entsorgen(zoGruppe, envTex);
+  zoGruppe = null; zoM = [];
+  root.quaternion.copy(Q_ID); root.position.copy(ROOT0);
+}
+/* Alles ausser der Zotte zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte. Ausblendende Materialien werden durchscheinend und schreiben nicht mehr in den Tiefenpuffer. */
+function zoAusblenden() {
+  var ausMat = new Map(), altT = new Map(), altD = new Map(), ausObj = [];
+  root.traverse(function (o) {
+    if (!o.material || !o.visible || o === zoGruppe || o.parent === zoGruppe) return;
+    ausObj.push(o);
+    [].concat(o.material).forEach(function (x) {
+      if (!ausMat.has(x)) { ausMat.set(x, x.opacity); altT.set(x, x.transparent); altD.set(x, x.depthWrite); x.transparent = true; x.depthWrite = false; x.needsUpdate = true; }
+    });
+  });
+  var ui = Array.prototype.slice.call(umg.bereich.children);
+  var altUi = ui.map(function (e) { return { op: e.style.opacity, pe: e.style.pointerEvents }; });
+  ui.forEach(function (e) { e.style.pointerEvents = 'none'; });
+  canvas.style.pointerEvents = 'none';
+  labelBox.style.display = 'none'; leaderSvg.style.display = 'none';
+  return { mats: ausMat, altT: altT, altD: altD, obj: ausObj, ui: ui, altUi: altUi, fertig: false };
+}
+/* Fahrt zur Zotte an der Stelle s (null: die Standardstelle); wartet, falls das Modul noch im Hintergrund geladen wird */
+function zoOeffnen(s) {
+  if (fz || abgebaut || zoWartet || !App.ready) return;
+  if (zoP && !zoModul() && !zoFehl) { zoWartet = true; zoP.then(function () { zoWartet = false; if (!abgebaut) zoOeffnen(s); }); return; }
+  schemaWeicht();
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard();
+  zoStandard = (geoDaten.du.schnitt.s0 + geoDaten.du.schnitt.s1) / 2;
+  zoLetzte = s = (s === null || s === undefined) ? zoStandard : s;
+  ZO = zoLage(s);
+  var w = window.innerWidth, h = window.innerHeight, ziel = zoZiel(w, h), r = bereich(w, h);
+  var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
+  ORDER.forEach(function (d) { d.meshes.forEach(function (m) { var mt = m.material; if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)); }); });   /* Hervorhebung weg */
+  zoBauen();
+  var f = zoAusblenden();
+  orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);
+  f.hin = true; f.adresse = Kern.organAdresse('zotte'); f.a = orbit.anim;
+  f.von = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2]; f.nach = ziel.versatz;
+  fz = f;
+}
+$('iOpen').onclick = function () { zoOeffnen(zoWahl); };
+$('bZotte').onclick = function () { zoOeffnen(null); };
+/* Rueckkehr aus dem Zotten-Modell: der Darm steht gedreht im Nahbild (an der zuletzt gewaehlten Stelle), die Zotte ist sichtbar, alles andere ausgeblendet; die Fahrt zur Uebersicht beginnt nach 450 ms */
+function zoRueckkehr() {
+  zoStandard = (geoDaten.du.schnitt.s0 + geoDaten.du.schnitt.s1) / 2;
+  ZO = zoLage(zoLetzte !== null ? zoLetzte : zoStandard);
+  var w = window.innerWidth, h = window.innerHeight, ziel = zoZiel(w, h), r = bereich(w, h);
+  zoBauen();
+  var f = zoAusblenden();
+  f.mats.forEach(function (op, m) { m.opacity = 0; });
+  f.ui.forEach(function (e) { e.style.opacity = '0'; });
+  f.obj.forEach(function (o) { o.visible = false; });
+  zoDrehung(1); zoDeckkraft(1);
+  view.theta = ziel.theta; view.phi = ziel.phi; view.dist = ziel.dist; view.target.copy(ziel.target);
+  orbit.anim = null;
+  f.hin = false; f.a = null; f.warte = performance.now() + 450;
+  f.von = ziel.versatz; f.nach = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
+  camera.setViewOffset(w, h, f.von[0], f.von[1], w, h);
+  camera.updateProjectionMatrix();
+  fz = f;
+}
+function zoRueckEnde() {   /* Ursprungszustand wie nach einem normalen Aufbau */
+  var w = window.innerWidth, h = window.innerHeight, r = bereich(w, h), a0 = AUSSCHNITTE[0], d = distFuer(a0, w, h);
+  fz.mats.forEach(function (op, m) {
+    m.opacity = op;
+    if (m.transparent !== fz.altT.get(m) || m.depthWrite !== fz.altD.get(m)) { m.transparent = fz.altT.get(m); m.depthWrite = fz.altD.get(m); m.needsUpdate = true; }
+  });
+  fz.obj.forEach(function (o) { o.visible = true; });
+  fz.ui.forEach(function (e, i) { e.style.opacity = fz.altUi[i].op; e.style.pointerEvents = fz.altUi[i].pe; });
+  canvas.style.pointerEvents = '';
+  labelBox.style.display = showLabels ? '' : 'none'; leaderSvg.style.display = showLabels ? '' : 'none';
+  zoAbbau();
+  view.theta = a0.theta; view.phi = a0.phi; view.dist = d; view.target.copy(a0.target);
+  orbit.anim = null;
+  camera.setViewOffset(w, h, w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2, w, h);
+  camera.updateProjectionMatrix();
+  aktiv = 0; fitDist = d; VIS = {};
+  for (var k = 0; k < AUSSCHNITTE.length; k++) $('cam' + k).classList.toggle('on', k === 0);
+  lv++;
+  fz = null;
+}
+/* je Bild waehrend der Fahrt: Bildbereich, Deckkraft und Drehung mit derselben Glaettung wie die Kamera; u: 0 = Ausgangslage (Uebersicht), 1 = Nahbild */
+function zoFahrtBild(now) {
+  if (!fz.a && now >= fz.warte) {   /* Rueckfahrt beginnt: zur Uebersicht, kuerzester Weg beim Drehen */
+    var w0 = window.innerWidth, h0 = window.innerHeight, a0 = AUSSCHNITTE[0];
+    var dth = a0.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI;
+    orbit.anim = fz.a = Kern.fahrt(view, { theta: view.theta + dth, phi: a0.phi, dist: distFuer(a0, w0, h0), target: a0.target.clone() }, 1200);
+    fz.obj.forEach(function (o) { o.visible = true; });
+  }
+  var t = fz.a ? Math.min(1, Math.max(0, (now - fz.a.t0) / fz.a.d)) : 0, s = t * t * (3 - 2 * t), u = fz.hin ? s : 1 - s;
+  var w = window.innerWidth, h = window.innerHeight;
+  camera.setViewOffset(w, h, fz.von[0] + (fz.nach[0] - fz.von[0]) * s, fz.von[1] + (fz.nach[1] - fz.von[1]) * s, w, h);
+  camera.updateProjectionMatrix();
+  fz.mats.forEach(function (op, m) { m.opacity = op * (1 - u); });
+  fz.ui.forEach(function (e) { e.style.opacity = String(1 - u); });
+  if (!fz.hin && t >= 1) { zoRueckEnde(); return false; }
+  zoDrehung(u);
+  zoDeckkraft(zoStep(0.5, 1, u));                                     /* erscheint in der zweiten Haelfte der Hinfahrt, geht in der ersten der Rueckfahrt */
+  if (!fz.hin) return false;
+  if (t >= 1 && !fz.fertig) { fz.fertig = true; fz.obj.forEach(function (o) { o.visible = false; }); return false; }
+  return fz.fertig;   /* true erst ab dem Bild nach dem Endbild */
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
@@ -1881,7 +2071,8 @@ var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, geh
   },
   /* fuer die Pruefung: Uebergang (roh 0..1) und Zeit sofort setzen und festhalten */
   stand: function (f, te) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
-  form: function () { return form; } };
+  form: function () { return form; },
+  zotte: function (s) { zoOeffnen(s === undefined ? null : s); }, stelle: function () { return { wahl: zoWahl, letzte: zoLetzte, standard: zoStandard }; } };   /* Fahrt zur Duenndarmzotte (fuer die Pruefung), gewaehlte Stelle */
 var bereitMerker = false;
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -1892,12 +2083,17 @@ function loop(now) {
     if (Math.abs(OPEN[k] - OZ[k]) < 1e-6) OPEN[k] = OZ[k];
     bewegt = true;
   }
-  if (bewegt) { applyVisibility(); applyLook(); lv++; }
-  if (ST) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
+  if (bewegt && !fz) { applyVisibility(); applyLook(); lv++; }
+  if (ST && !fz) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
+  var weiter = fz ? zoFahrtBild(now) : false;
   Kern.kamera(camera, view);
   if (schemaOn) return;                                   /* Schema offen: das Bild des Darms ist ausgeblendet und wird nicht gezeichnet */
   renderer.render(scene, camera);
+  if (fz) {
+    if (weiter && fz.hin && !fz.gesetzt) { fz.gesetzt = true; location.hash = fz.adresse; }   /* Endbild ist gezeichnet */
+    return;
+  }
   sichtPruefen(now, window.innerWidth, window.innerHeight);
   layoutLabels(window.innerWidth, window.innerHeight);
 }
@@ -1907,6 +2103,7 @@ organ.bild = loop; organ.groesse = groesse;
 var kamAlt = { near: camera.near, far: camera.far };
 organ.abbauen = function () {
   abgebaut = true;
+  fz = null;
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
@@ -1936,6 +2133,8 @@ return bauen().then(function () {
   applyLook();
   setSelected(selected);
   stroemungBauen();
+  zoP = Kern.organLaden('zotte', { ohneCss: true }).then(function (o) { return o; }, function (e) { zoFehl = true; console.warn(e && e.message || e); return null; });   /* nur das Skript, im Hintergrund: liefert organ.form und organ.start fuer die Fahrt (erzeugt keine three.js-Objekte) */
+  if (umg.von === 'zotte') { zoP.then(function () { if (!abgebaut) { zoRueckkehr(); bereitMerker = true; } }); return; }   /* Rueckweg aus dem Zotten-Modell */
   bereitMerker = true;   /* sichtbar und bereit wird das Organ im naechsten Bild (loop), damit die Uhr der Stroemung immer im selben Bild beginnt (unabhaengig von der Ladezeit) */
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }

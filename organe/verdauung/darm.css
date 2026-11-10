@@ -29,6 +29,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #info{bottom:22px;left:286px;width:326px;padding:16px 18px 17px;display:none}
 #info dl:empty{display:none}
 #info dd.voll{grid-column:1 / -1}                 /* Fakt ohne Bezeichnung: ueber die ganze Breite */
+#info #iOpen{margin-top:12px;border-color:var(--brass-dim);color:var(--ink)}   /* Dünndarmzotte hier ansehen (Leerdarm, Krummdarm) */
+#info #iOpen:hover{background:var(--panel-hi);border-color:var(--brass)}
 
 /* Erklaerkarte (Hilfekarten, Ueben): unten links wie die Infokarte */
 #scard{bottom:22px;left:286px;width:340px;max-height:calc(100vh - 170px);overflow-y:auto;padding:14px 16px;display:none;
