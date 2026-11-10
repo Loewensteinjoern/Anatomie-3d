@@ -1907,7 +1907,7 @@ function zoBauen() {
   var zm = zoModul(); if (!zm || !zm.form) return;
   var def = zm.form.matDef();
   zm.form.teile().forEach(function (t) {
-    var d = def[t.sid], o = {}, k, mt, op;
+    var d = def[t.mat || t.sid], o = {}, k, mt, op;
     for (k in d[1]) o[k] = d[1][k];
     mt = mat(d[0], o); op = o.opacity === undefined ? 1 : o.opacity;
     mt.transparent = true; mt.opacity = 0; mt.depthWrite = op >= 1;
@@ -1954,7 +1954,7 @@ function zoOeffnen(s) {
   ZO = zoLage(s);
   var w = window.innerWidth, h = window.innerHeight, ziel = zoZiel(w, h), r = bereich(w, h);
   var dth = ziel.theta - view.theta; dth -= Math.round(dth / (2 * PI)) * 2 * PI; ziel.theta = view.theta + dth;
-  ORDER.forEach(function (d) { d.meshes.forEach(function (m) { var mt = m.material; if (mt.emissive) mt.emissive.copy(mt.userData.baseEmissive || new THREE.Color(0, 0, 0)); }); });   /* Hervorhebung weg */
+  setSelected(null);                                     /* Infokarte schliessen, Hervorhebung weg */
   zoBauen();
   var f = zoAusblenden();
   orbit.anim = Kern.fahrt(view, { theta: ziel.theta, phi: ziel.phi, dist: ziel.dist, target: ziel.target }, 1200);

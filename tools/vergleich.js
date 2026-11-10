@@ -6,7 +6,7 @@
    funktionieren wie vorher. Es gibt keine Einzelseiten mehr: Körper, Herz, Niere und
    Nephron werden im Atlas aufgenommen (index.html ohne Adresse, #herz, #niere, #niere/nephron).
 
-     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|magen|darm|atlas[:kontext]]
+     node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|magen|darm|zotte|atlas[:kontext]]
      node tools/vergleich.js vergleichen <vorher> <nachher>
 
    Die Seiten laufen in headless Chromium (Playwright) mit virtueller Zeit:
@@ -119,6 +119,9 @@
    „wege-beendet“)), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
    uebergaenge-darm (Körper, Dünndarm wählen, Infokarte „Darm öffnen“, Kamerafahrt „fahrt-darm“, Darm, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann die Adresse #darm direkt, Zurück-Knopf
    „← Körper“; Endzustand in erg.uebergaengeDarm) und uebergaenge-darm-handy („fahrt-darm“, „darm“).
+   Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info), handy, datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
+   Kamerafahrt „fahrt-zotte“, Zotte, Zurück-Knopf „← Darm“, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann den Leerdarm antippen, „Dünndarmzotte hier ansehen“ „fahrt-zotte-punkt“, Zurück-Knopf des Atlas;
+   Endzustand in erg.uebergaengeZotte) und uebergaenge-zotte-handy („fahrt-zotte“, „zotte“).
 
    Modell laeppchen (index.html#leber/laeppchen): ein Leberläppchen mit Zentralvene, Zellbalken, Sinusoiden, Gallenkanälchen, Kupffer-Zellen, Ästen an den Ecken, Sammelvene und den Nachbarläppchen als
    Glas. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 „periportalfeld“, „zentralvene“, „sinusoid“, Durchsicht, ohne Beschriftung, Info; dann die Strömung: „stroemung“ nach
@@ -367,6 +370,7 @@ async function abbauAblauf(t, name, bedienung) {
     if (n === 'laeppchen') m.laeppchenApp = typeof window.LaeppchenApp !== 'undefined';   /* nur beim Modell laeppchen */
     if (n === 'magen') m.magenApp = typeof window.MagenApp !== 'undefined';   /* nur beim Modell magen */
     if (n === 'darm') m.darmApp = typeof window.DarmApp !== 'undefined';   /* nur beim Modell darm */
+    if (n === 'zotte') m.zotteApp = typeof window.ZotteApp !== 'undefined';   /* nur beim Modell zotte */
     return m;
   }, name);
   const beenden = () => t.js(() => Kern.organBeenden());
@@ -1221,11 +1225,38 @@ const MODELLE = {
         await t.klick('#cam0'); await t.klick('#rail .row >> nth=0'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
       }) }
     }
+  },
+  zotte: {
+    datei: 'index.html',
+    bereit: () => !!(window.ZotteApp && window.ZotteApp.ready),
+    kontexte: {
+      desktop: { opt: DESKTOP, timeout: 90000, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht'); await t.text();
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('zotte-innen');
+        await t.klick('#cam2'); await t.weiter(900); await t.bild('oberflaeche');
+        await t.klick('#cam3'); await t.weiter(900); await t.bild('krypten');
+        await t.klick('#cam1'); await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
+        await t.klick('#bSee'); await t.klick('#cam0'); await t.klick('#bLab'); await t.weiter(900); await t.bild('ohne-beschriftung');
+        await t.klick('#bLab'); await t.klick('#rail .row >> nth=6'); await t.weiter(600); await t.bild('info');   /* Zentrales Lymphgefäß */
+      } },
+      handy: { opt: HANDY, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('zotte-innen');
+        await t.klick('#rail .row >> nth=6'); await t.weiter(600); await t.bild('info');
+      } },
+      datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
+        await t.weiter(1500); await t.bild('uebersicht');
+      } },
+      abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'zotte', async (t) => {
+        await t.klick('#cam1'); await t.weiter(900); await t.bild('zotte-innen');
+        await t.klick('#cam0'); await t.klick('#rail .row >> nth=6'); await t.weiter(600); await t.bild('info');   /* Infokarte bleibt offen: der Abbau muss sie wegräumen */
+      }) }
+    }
   }
 };
 
 /* Adresse je Modell im Atlas (Teil von index.html ab #): koerper ohne Adresse, nephron gestuft unter der Niere */
-const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole', leber: '#leber', laeppchen: '#leber/laeppchen', magen: '#magen', darm: '#darm' };
+const ATLAS_ADRESSE = { koerper: '', herz: '#herz', niere: '#niere', nephron: '#niere/nephron', lunge: '#lunge', alveole: '#lunge/alveole', leber: '#leber', laeppchen: '#leber/laeppchen', magen: '#magen', darm: '#darm', zotte: '#darm/zotte' };
 /* Bereitschaft im Atlas; koerper läuft auf index.html (leere Adresse), herz, niere und nephron auf #herz / #niere / #niere/nephron */
 const ATLAS_BEREIT = (organ) => ({
   koerper: () => !!(window.KoerperApp && window.KoerperApp.ready) && document.getElementById('boot').classList.contains('gone'),
@@ -1237,11 +1268,12 @@ const ATLAS_BEREIT = (organ) => ({
   laeppchen: () => !!(window.LaeppchenApp && window.LaeppchenApp.ready) && document.getElementById('boot').classList.contains('gone'),
   magen: () => !!(window.MagenApp && window.MagenApp.ready) && document.getElementById('boot').classList.contains('gone'),
   darm: () => !!(window.DarmApp && window.DarmApp.ready) && document.getElementById('boot').classList.contains('gone'),
+  zotte: () => !!(window.ZotteApp && window.ZotteApp.ready) && document.getElementById('boot').classList.contains('gone'),
   nephron: () => document.getElementById('boot').classList.contains('gone') && !!Kern.Organe.nephron && document.getElementById('organ').childElementCount > 0
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
-for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber', 'laeppchen', 'magen', 'darm']) {
+for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber', 'laeppchen', 'magen', 'darm', 'zotte']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
 }
@@ -1465,6 +1497,36 @@ MODELLE.atlas.kontexte['uebergaenge-darm-handy'] = { opt: HANDY, init: [initList
   await t.weiter(500);
   await t.js(() => window.KoerperApp.waehle('duenndarm')); await t.weiter(300); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-darm'); await t.bisAdresse('#darm');
   await organ('darm'); await t.weiter(1500); await t.bild('darm');
+} };
+/* Kontext uebergaenge-zotte: der Darm (Adresse #darm, das Zotten-Modul ist im Hintergrund geladen), Knopf „Zotte“ (Kamerafahrt, Bild mitten in der Fahrt; die Infokarte ist dabei zu), Zotte (Adresse
+   #darm/zotte, Zurück-Knopf „← Darm“), Browser-Zurück (Rückfahrt zum Darm); dann den Leerdarm an einem festen Punkt antippen (Mitte der Dünndarm-Mittellinie), Infokarte „Dünndarmzotte hier ansehen“ (Fahrt),
+   Zotte, Zurück-Knopf des Atlas zurück zum Darm; Endzustand prüfen. uebergaenge-zotte-handy: Knopf „Zotte“ auf dem Handy (Bilder fahrt-zotte und zotte) */
+const ATLAS_DARM_ZOTTE_BEREIT = () => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-darm' && !!(window.DarmApp && window.DarmApp.ready) && !!Kern.Organe.zotte;
+MODELLE.atlas.kontexte['uebergaenge-zotte'] = { opt: DESKTOP, adresse: '#darm', init: [initListener], bereit: ATLAS_DARM_ZOTTE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500); await t.bild('darm');
+  await t.klick('#bZotte'); await t.weiter(600); await t.bild('fahrt-zotte'); await t.bisAdresse('#darm/zotte');
+  await organ('zotte'); await t.bild('standbild');
+  await t.weiter(1500); await t.bild('zotte');
+  const knopf = await t.js(() => document.getElementById('atlasZurueck').textContent.trim());   /* „← Darm“ */
+  await t.zurueck(); await organ('darm'); await t.weiter(1000); await t.bild('rueckfahrt-darm'); await t.weiter(1200); await t.bild('darm-zurueck');
+  const z1 = await t.js(ATLAS_ENDZUSTAND);
+  await t.warteAuf(ATLAS_DARM_ZOTTE_BEREIT);
+  /* Zoomstufe: Leerdarm an einem festen Punkt antippen (Punkt im Raum der Szene = Körper-Koordinaten minus Mitte des Darms), „Dünndarmzotte hier ansehen“, Zotte, Zurück-Knopf des Atlas */
+  await t.js(() => { const p = window.DarmApp.form().duenndarm().punkt(30), M = Kern.Organe.darm.mitte; window.DarmApp.waehle('leerdarm', new THREE.Vector3(p[0] - M[0], p[1] - M[1], p[2] - M[2])); });
+  await t.weiter(300); await t.bild('info-leerdarm'); await t.klick('#iOpen'); await t.weiter(600); await t.bild('fahrt-zotte-punkt'); await t.bisAdresse('#darm/zotte');
+  await organ('zotte'); await t.weiter(1500); await t.bild('zotte-von-darm');
+  await t.klick('#atlasZurueck'); await organ('darm'); await t.weiter(1000); await t.bild('rueckfahrt-darm-punkt'); await t.weiter(1200); await t.bild('darm-von-zotte');
+  const z2 = await t.js(ATLAS_ENDZUSTAND);
+  const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Darm/.test(knopf);
+  t.erg.uebergaengeZotte = { endzustand: [z1, z2], knopf, ok };
+  process.stdout.write('  uebergaenge-zotte: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
+} };
+MODELLE.atlas.kontexte['uebergaenge-zotte-handy'] = { opt: HANDY, adresse: '#darm', init: [initListener], bereit: ATLAS_DARM_ZOTTE_BEREIT, async ablauf(t) {
+  const organ = async (n) => { await t.echt(100); await t.warteAuf(ATLAS_ORGAN_FERTIG, n, n); };
+  await t.weiter(500);
+  await t.klick('#bZotte'); await t.weiter(600); await t.bild('fahrt-zotte'); await t.bisAdresse('#darm/zotte');
+  await organ('zotte'); await t.weiter(1500); await t.bild('zotte');
 } };
 /* Kontext fehler: unbekannte Adresse, Ladefehler (Skript abgebrochen), Neuversuch; erwartete Meldungen werden gesondert gezählt */
 MODELLE.atlas.kontexte.fehler = { opt: DESKTOP, adresse: '#gibtsnicht', bereit: ATLAS_FEHLER,
@@ -1876,7 +1938,7 @@ async function vergleichen(va, vb) {
       else ok.push(m + ' Übergänge: Messwerte gleich (kein Gegenstück)');
       if (b.uebergaenge.endzustandOk === false) probleme.push(m + ' Übergänge: Endzustand falsch (Standbild sichtbar oder inline-Styles)\n    ' + JSON.stringify([b.uebergaenge.m1.endzustand, b.uebergaenge.m2.endzustand]));
     }
-    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['uebergaengeLeber', 'Übergänge Leber'], ['uebergaengeLaeppchen', 'Übergänge Läppchen'], ['uebergaengeMagen', 'Übergänge Magen'], ['uebergaengeDarm', 'Übergänge Darm'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
+    for (const [k, tx] of [['uebergaengeNiere', 'Übergänge Niere'], ['uebergaengeAlveole', 'Übergänge Alveole'], ['uebergaengeLeber', 'Übergänge Leber'], ['uebergaengeLaeppchen', 'Übergänge Läppchen'], ['uebergaengeMagen', 'Übergänge Magen'], ['uebergaengeDarm', 'Übergänge Darm'], ['uebergaengeZotte', 'Übergänge Zotte'], ['fehlerNachFahrt', 'Fehler nach Fahrt']]) {
       if (!b[k]) continue;
       if (!b[k].ok) probleme.push(m + ' ' + tx + ': Endzustand falsch\n    ' + JSON.stringify(b[k].endzustand));
       else ok.push(m + ' ' + tx + ': Endzustand stimmt');
@@ -1967,7 +2029,7 @@ if (require.main === module) (async () => {
   if (cmd === 'aufnehmen' && rest[0]) process.exitCode = await aufnehmen(path.resolve(rest[0]), quelle, nur);
   else if (cmd === 'vergleichen' && rest[1]) process.exitCode = await vergleichen(path.resolve(rest[0]), path.resolve(rest[1]));
   else {
-    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|magen|darm|atlas[:kontext]]');
+    console.log('node tools/vergleich.js aufnehmen <ziel> [--quelle <ordner>] [--nur koerper|herz|niere|nephron|lunge|alveole|leber|laeppchen|magen|darm|zotte|atlas[:kontext]]');
     console.log('node tools/vergleich.js vergleichen <vorher> <nachher>');
     process.exitCode = 2;
   }

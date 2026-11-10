@@ -100,18 +100,19 @@ var organ = { renderer: {}, aufbauen: aufbauen };
    dieselben Teile bei der Kamerafahrt (darm.js, Zoomstufe Zotte). Ursprung: Fuß der mittleren Zotte auf der Ringfalte; y zeigt in den Darm hinein.
    Winkel a um die mittlere Zotte: a = 0 nach hinten (-z), x = r*sin a, z = -r*cos a; die aufgeschnittene Zotte behält -90° bis 90° (die hintere Hälfte).
    ===================================================================== */
-var CELL_TH = 0.22, CELL_PW = 0.26, CELL_HC = 0.24;      /* Zellschicht: Dicke, Breite und Höhe einer Saumzelle */
-var HAAR_L = 0.085, HAAR_R = 0.014;                      /* Mikrovilli: Länge und Radius (symbolisch, in Wirklichkeit ca. 1 µm lang) */
+var CELL_TH = 0.26, CELL_PW = 0.17, CELL_HC = 0.17;      /* Zellschicht: hochprismatische Saumzellen (Dicke größer als Breite und Höhe) */
+var HAAR_L = 0.04;                                       /* Bürstensaum: Dicke des Samtsaums (symbolisch, in Wirklichkeit ca. 1 µm) */
 var CAP_R = 0.042;                                       /* Radius der Kapillaren */
-/* Zotten: Lage des Fußes (x, z), Höhe, Fußradius, Neigung der Spitze (lx, lz), Streckung in z; die erste ist die aufgeschnittene */
+/* Zotten: Lage des Fußes (x, z), Höhe, Fußradius, Neigung der Spitze (lx, lz), S-Schwung sx, Streckung ex und ez (abgeflacht, blattartig) und Drehung rot des Querschnitts, Verjüngung tp
+   (je Zotte etwas anders); die erste ist die aufgeschnittene (gerade, rund, damit der Schnitt eben bleibt) */
 var ZOTTEN = [
-  { x: 0, z: 0, h: 7.2, r: 1.0, lx: 0, lz: 0, ez: 1 },
-  { x: -3.5, z: -0.7, h: 6.5, r: 0.87, lx: -0.25, lz: 0.1, ez: 0.92 },
-  { x: 3.4, z: -0.5, h: 7.0, r: 0.92, lx: 0.2, lz: -0.1, ez: 1.05 },
-  { x: -5.0, z: -2.3, h: 6.7, r: 0.9, lx: 0.3, lz: -0.15, ez: 0.95 },
-  { x: -2.4, z: -2.5, h: 7.4, r: 0.93, lx: -0.15, lz: 0.2, ez: 1.0 },
-  { x: 2.5, z: -2.4, h: 6.4, r: 0.85, lx: 0.2, lz: 0.15, ez: 0.9 },
-  { x: 5.0, z: -2.2, h: 6.9, r: 0.9, lx: -0.3, lz: -0.1, ez: 1.04 }
+  { x: 0, z: 0, h: 7.2, r: 1.0, lx: 0, lz: 0, sx: 0, ex: 1, ez: 1, rot: 0, tp: 0.2 },
+  { x: -3.5, z: -0.7, h: 6.5, r: 0.87, lx: -0.45, lz: 0.15, sx: 0.12, ex: 1.15, ez: 0.72, rot: 0.3, tp: 0.3 },
+  { x: 3.4, z: -0.5, h: 7.0, r: 0.92, lx: 0.4, lz: -0.2, sx: -0.15, ex: 1.1, ez: 0.8, rot: -0.5, tp: 0.26 },
+  { x: -5.0, z: -2.3, h: 6.7, r: 0.9, lx: 0.5, lz: -0.2, sx: 0.1, ex: 1.2, ez: 0.7, rot: 0.9, tp: 0.32 },
+  { x: -2.4, z: -2.5, h: 7.4, r: 0.93, lx: -0.25, lz: 0.3, sx: -0.1, ex: 1.0, ez: 0.85, rot: -0.2, tp: 0.24 },
+  { x: 2.5, z: -2.4, h: 6.4, r: 0.85, lx: 0.35, lz: 0.25, sx: 0.14, ex: 1.15, ez: 0.75, rot: 0.6, tp: 0.3 },
+  { x: 5.0, z: -2.2, h: 6.9, r: 0.9, lx: -0.5, lz: -0.15, sx: -0.12, ex: 1.05, ez: 0.8, rot: -0.8, tp: 0.28 }
 ];
 var KRYPTEN = [[-1.75, -0.35], [1.7, -0.25], [0, -1.4], [-1.2, -3.3], [1.3, -3.4], [-3.8, -3.4], [3.8, -3.2], [-2.1, 1.6], [1.8, 1.6], [-4.8, 0.4], [5.2, 0.3]];
 var KR_R = 0.34, KR_T = 1.7;                             /* Krypten: Radius und Tiefe */
@@ -134,15 +135,16 @@ function kryptaW(x, z) {   /* 1 im Schlauch, 0 außerhalb (weicher Rand) */
 }
 function sockelY(x, z) { return Math.max(SY0, basisY(x, z) - KR_T * kryptaW(x, z)); }
 /* Radius einer Zotte (Höhe h, Fußradius R) in der Höhe y über dem Fuß: aufgeweiteter Fuß, leicht verjüngt, oben abgerundet */
-function zr(h, R, y) {
-  var rc = 0.9 * R, yc = h - rc;
-  function koerper(yy) { yy = Math.max(yy, 0); return R * (1 + 0.28 * Math.exp(-yy / 0.6)) * (1 - 0.10 * yy / h); }
+function zr(h, R, y, tp) {
+  if (tp === undefined) tp = 0.2;
+  var rc = 1.1 * R, yc = h - rc;
+  function koerper(yy) { yy = Math.max(yy, 0); return R * (1 + 0.28 * Math.exp(-yy / 0.6)) * (1 - tp * yy / h); }
   if (y <= yc) return koerper(y);
   var q = (y - yc) / rc;
   return koerper(yc) * Math.sqrt(Math.max(0, 1 - q * q));
 }
 function zhoehen(h, R, y0) {   /* Höhen der Ringe von y0 bis zur Spitze (oben dichter) */
-  var rc = 0.9 * R, yc = h - rc, ys = [], y = y0, k;
+  var rc = 1.1 * R, yc = h - rc, ys = [], y = y0, k;
   for (; y < yc; y += 0.25) ys.push(y);
   for (k = 0; k <= 8; k++) ys.push(yc + rc * Math.sin(k / 8 * PI / 2));
   return ys;
@@ -270,13 +272,17 @@ function kryptenGeo() {
   return g;
 }
 /* Zotte als Drehkörper um ihre (leicht geneigte) Achse; Winkel von a0 bis a1 (voll: -PI bis PI mit Naht) */
+function zachse(Z, y) {   /* Mittelpunkt der Zotte Z in der Höhe y über dem Fuß (Neigung und S-Schwung) */
+  var f = Math.max(0, y) / Z.h;
+  return [Z.x + Z.lx * f * f + Z.sx * Math.sin(f * PI * 1.4), basisY(Z.x, Z.z) - 0.1 + y, Z.z + Z.lz * f * f - 0.6 * Z.sx * Math.sin(f * PI * 1.1)];
+}
 function zotteGeo(Z) {
-  var by = basisY(Z.x, Z.z) - 0.1, ys = zhoehen(Z.h, Z.r, -0.4), NA = 26, pos = [], idx = [], i, k;
+  var ys = zhoehen(Z.h, Z.r, -0.4), NA = 26, pos = [], idx = [], i, k, cr = Math.cos(Z.rot), sr = Math.sin(Z.rot);
   for (i = 0; i < ys.length; i++) {
-    var y = ys[i], r = zr(Z.h, Z.r, y), f = Math.max(0, y) / Z.h, ox = Z.lx * f * f, oz = Z.lz * f * f;
+    var y = ys[i], r = zr(Z.h, Z.r, y, Z.tp), c = zachse(Z, y);
     for (k = 0; k < NA; k++) {
-      var a = k / NA * 2 * PI - PI;
-      pos.push(Z.x + ox + r * Math.sin(a), by + y, Z.z + oz - Z.ez * r * Math.cos(a));
+      var a = k / NA * 2 * PI - PI, dx = r * Z.ex * Math.sin(a), dz = -r * Z.ez * Math.cos(a);
+      pos.push(c[0] + dx * cr - dz * sr, c[1], c[2] + dx * sr + dz * cr);
     }
   }
   for (i = 0; i < ys.length - 1; i++) for (k = 0; k < NA; k++) {
@@ -294,14 +300,25 @@ function nachbarnGeo() {
   ZOTTEN.forEach(function (Z, i) { if (i) t.push({ g: zotteGeo(Z), m: ID }); });
   return fuegen(t);
 }
-/* Zellen der Zellschicht um die aufgeschnittene Zotte: Raster entlang der Oberfläche (Bogenlänge) und um die Achse (hintere Hälfte). Liefert Instanzen der Saumzellen,
-   der Mikrovilli und die Lage der Becherzellen */
+/* Quader mit abgerundeten Kanten und Ecken (Radius r, Einheitsgröße): weich schattierte Zellen statt eckiger Fliesen */
+function rundBox(r) {
+  var g = new THREE.BoxGeometry(1, 1, 1, 3, 3, 3), p = g.attributes.position, n = g.attributes.normal, h = 0.5 - r, v = new THREE.Vector3(), q = new THREE.Vector3(), i;
+  for (i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    q.set(Math.max(-h, Math.min(h, v.x)), Math.max(-h, Math.min(h, v.y)), Math.max(-h, Math.min(h, v.z)));
+    v.sub(q); var l = v.length(); if (l < 1e-9) continue;
+    v.divideScalar(l); n.setXYZ(i, v.x, v.y, v.z); p.setXYZ(i, q.x + v.x * r, q.y + v.y * r, q.z + v.z * r);
+  }
+  return g;
+}
+/* Zellen der Zellschicht um die aufgeschnittene Zotte: Raster entlang der Oberfläche (Bogenlänge) und um die Achse (hintere Hälfte; an der Schnittebene halbe Zellen).
+   Liefert Instanzen der Saumzellen, des Samtsaums (eine feine Platte auf jeder Zelloberseite), der Zellkerne der angeschnittenen Zellen und die Lage der Becherzellen */
 var ZELL = null;
 function zellDaten() {
   if (ZELL) return ZELL;
   var Z = ZR0, ys = [], y, i, prof = [], L = 0;
-  for (y = 0; y < Z.h - 0.9 * Z.r; y += 0.02) ys.push(y);
-  for (i = 0; i <= 60; i++) ys.push(Z.h - 0.9 * Z.r + 0.9 * Z.r * Math.sin(i / 60 * PI / 2));
+  for (y = 0; y < Z.h - 1.1 * Z.r; y += 0.02) ys.push(y);
+  for (i = 0; i <= 60; i++) ys.push(Z.h - 1.1 * Z.r + 1.1 * Z.r * Math.sin(i / 60 * PI / 2));
   ys.forEach(function (yy, k) {
     var r = zr(Z.h, Z.r, yy);
     if (k) { var dr = r - prof[k - 1].r, dy = yy - prof[k - 1].y; L += Math.sqrt(dr * dr + dy * dy); }
@@ -312,60 +329,76 @@ function zellDaten() {
     var a = prof[k - 1], b = prof[k], f = (s - a.s) / Math.max(1e-9, b.s - a.s), dr = b.r - a.r, dy = b.y - a.y, l = Math.sqrt(dr * dr + dy * dy) || 1;
     return { r: a.r + (b.r - a.r) * f, y: a.y + (b.y - a.y) * f, tr: dr / l, ty: dy / l };
   }
-  var mat = [], col = [], hmat = [], becher = [], nZ = 0, nH = 0, base = new THREE.Color(0xE6B49A).convertSRGBToLinear();
+  function sp(sl, a, off) {   /* Punkt und Normale der Oberfläche bei Bogenlänge sl und Winkel a, um off nach außen */
+    var Q = bei(sl), rho = [Math.sin(a), -Math.cos(a)], nr = Q.ty, ny = -Q.tr, r = Q.r + nr * off;
+    return { p: [r * rho[0], Q.y + ny * off, r * rho[1]], n: [nr * rho[0], ny, nr * rho[1]] };
+  }
+  var mat = [], col = [], kmat = [], becher = [], nZ = 0, nK = 0, spos = [], snor = [], scol = [], saumC = new THREE.Color(0xF1DCCB).convertSRGBToLinear(), becherC = new THREE.Color(0xD6E4EC).convertSRGBToLinear(), base = new THREE.Color(0xE6B49A).convertSRGBToLinear();
   var m = new THREE.Matrix4(), ex = new THREE.Vector3(), ey = new THREE.Vector3(), en = new THREE.Vector3(), c = new THREE.Vector3(), pp = new THREE.Vector3();
   var rows = Math.floor((L - 0.2) / CELL_HC), j, k;
   for (j = 0; j < rows; j++) {
     var P = bei(0.05 + (j + 0.5) * CELL_HC), n = Math.max(1, Math.round(PI * P.r / CELL_PW));
     if (P.r < 0.28) continue;
-    for (k = 0; k < n; k++) {
-      var a = -PI / 2 + (k + 0.5) * PI / n, sa = Math.sin(a), ca = Math.cos(a);
+    P.s = 0.05 + (j + 0.5) * CELL_HC;
+    var dA = PI / n;
+    for (k = 0; k <= n; k++) {
+      var halb = k === 0 || k === n, a = -PI / 2 + k * dA + (k === 0 ? dA / 4 : k === n ? -dA / 4 : 0), sa = Math.sin(a), ca = Math.cos(a);
       var rho = [sa, 0, -ca], nr = P.ty, ny = -P.tr;   /* Normale (nr, ny) in der (Radial, y)-Ebene: nach außen */
-      var w = P.r * PI / n * 0.94;
+      var w = P.r * dA * (halb ? 0.5 : 1) * 0.99;
       en.set(nr * rho[0], ny, nr * rho[2]);
       ey.set(P.tr * rho[0], P.ty, P.tr * rho[2]);
       ex.set(-ca, 0, -sa);
-      var istBecher = j >= 2 && j < rows - 4 && n >= 4 && hash(j * 31 + k * 7 + 3) < 0.085;
       c.set(P.r * rho[0], P.y, P.r * rho[2]);
-      if (istBecher) { becher.push({ p: c.toArray(), ex: ex.toArray(), ey: ey.toArray(), en: en.toArray(), a: a, y: P.y, r: P.r }); continue; }
+      var istB = false;
+      if (!halb && j >= 2 && j < rows - 4 && n >= 4 && hash(j * 31 + k * 7 + 3) < 0.085) { istB = true; becher.push({ p: c.clone().addScaledVector(en, HAAR_L).toArray(), ex: ex.toArray(), ey: ey.toArray(), en: en.toArray(), a: a, y: P.y, r: P.r }); }
       pp.copy(c).addScaledVector(en, -CELL_TH / 2);
-      m.makeBasis(ex.clone().multiplyScalar(w), ey.clone().multiplyScalar(CELL_HC * 0.94), en.clone().multiplyScalar(CELL_TH)); m.setPosition(pp);
+      m.makeBasis(ex.clone().multiplyScalar(w), ey.clone().multiplyScalar(CELL_HC * 0.99), en.clone().multiplyScalar(CELL_TH)); m.setPosition(pp);
       m.toArray(mat, nZ * 16);
-      var f = 0.9 + 0.2 * hash(j * 53 + k * 11 + 1);
+      var f = 0.93 + 0.14 * hash(j * 53 + k * 11 + 1);
       col.push(base.r * f, base.g * f, base.b * f);
       nZ++;
-      /* Mikrovilli: 3 x 3 auf der Außenfläche der Zelle */
-      var u, v;
-      for (u = -1; u <= 1; u++) for (v = -1; v <= 1; v++) {
-        var hl = HAAR_L * (0.8 + 0.4 * hash(nH * 3 + 7));
-        pp.copy(c).addScaledVector(ex, u * w * 0.3).addScaledVector(ey, v * CELL_HC * 0.3);
-        m.makeBasis(ey.clone(), en.clone().multiplyScalar(hl / HAAR_L), ex.clone()); m.setPosition(pp);
-        m.toArray(hmat, nH * 16); nH++;
+      /* Samtsaum: glatte Haut knapp über den Zelloberseiten, je Zelle weich getönt (Mitte hell, Ecken dunkler: feine Zellgrenzen); an der Schnittebene eine helle Kante */
+      var sc = 0.94 + 0.12 * hash(j * 17 + k * 5 + 9), as = dA * (halb ? 0.5 : 1) / 2, hh = CELL_HC * 0.5 * 0.995, ctr = sp(P.s, a, HAAR_L), cn = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(function (q) { return sp(P.s + q[1] * hh, a - q[0] * as, HAAR_L); });
+      var sCol = istB ? becherC : saumC, vv = function (o, f) { spos.push(o.p[0], o.p[1], o.p[2]); snor.push(o.n[0], o.n[1], o.n[2]); scol.push(sCol.r * f, sCol.g * f, sCol.b * f); };
+      for (var q4 = 0; q4 < 4; q4++) { vv(ctr, sc); vv(cn[q4], sc * 0.86); vv(cn[(q4 + 1) % 4], sc * 0.86); }
+      if (halb) {   /* Kante an der Schnittebene (z = 0) */
+        var sg2 = k === 0 ? -1 : 1, e0 = sp(P.s - hh, sg2 * PI / 2, 0), e1 = sp(P.s + hh, sg2 * PI / 2, 0), f0 = sp(P.s - hh, sg2 * PI / 2, HAAR_L), f1 = sp(P.s + hh, sg2 * PI / 2, HAAR_L);
+        [e0, e1, f1, e0, f1, f0].forEach(function (o) { spos.push(o.p[0], o.p[1], 0); snor.push(0, 0, 1); scol.push(saumC.r, saumC.g, saumC.b); });
+      }
+      if (halb) {   /* Zellkern: Halbkugel in der Schnittfläche, im inneren Drittel der Zelle */
+        var sg = k === 0 ? -1 : 1, kc = new THREE.Vector3(sg * P.r, P.y, 0), ke = new THREE.Vector3(sg * nr, ny, 0);
+        kc.addScaledVector(ke, -CELL_TH * 0.7);
+        m.makeBasis(new THREE.Vector3(0, 0, 0.1), ey.clone().multiplyScalar(0.11), ke.clone().multiplyScalar(0.13)); m.setPosition(kc);
+        m.toArray(kmat, nK * 16); nK++;
       }
     }
   }
   /* die Spitze: eine einzelne Zelle (hintere Hälfte) schließt die Zellschicht oben */
   ex.set(1, 0, 0); ey.set(0, 0, -1); en.set(0, 1, 0);
-  m.makeBasis(ex.clone().multiplyScalar(0.5), ey.clone().multiplyScalar(0.25), en.clone().multiplyScalar(CELL_TH)); m.setPosition(0, Z.h - CELL_TH / 2, -0.125);
+  m.makeBasis(ex.clone().multiplyScalar(0.4), ey.clone().multiplyScalar(0.2), en.clone().multiplyScalar(CELL_TH)); m.setPosition(0, Z.h - CELL_TH / 2, -0.1);
   m.toArray(mat, nZ * 16); col.push(base.r, base.g, base.b); nZ++;
-  ZELL = { zellen: { n: nZ, mat: new Float32Array(mat), col: new Float32Array(col) }, haare: { n: nH, mat: new Float32Array(hmat) }, becher: becher, hoehe: L };
+  ZELL = { zellen: { n: nZ, mat: new Float32Array(mat), col: new Float32Array(col) }, saum: { pos: spos, nor: snor, col: scol }, kerne: { n: nK, mat: new Float32Array(kmat) }, becher: becher, hoehe: L };
   return ZELL;
 }
-function haarGeo() {
-  var g = new THREE.CylinderGeometry(HAAR_R * 0.7, HAAR_R, HAAR_L, 5, 1, false);
-  g.translate(0, HAAR_L / 2, 0);
+function saumGeo(sd) {   /* glatte Haut des Samtsaums (Dreiecke einzeln, Farbe und Normalen je Ecke) */
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(sd.pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(sd.nor, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(sd.col, 3));
   return g;
 }
-/* Becherzellen: kelchförmige Drehkörper in der Zellschicht, Öffnung an der Oberfläche, dazu ein Tropfen Schleim */
+function kernGeo() { return new THREE.SphereGeometry(0.5, 10, 8); }
+/* Becherzellen: kelchförmige Zellen IN der Zellschicht (sie ersetzen eine Saumzelle): breiter Kelch unter der Oberfläche, dünner Stiel nach innen, nach außen eine kleine Öffnung
+   mit einem Tropfen Schleim */
 function becherGeo(liste) {
-  var prof = [[0.0, -0.28], [0.03, -0.26], [0.045, -0.21], [0.07, -0.16], [0.105, -0.11], [0.125, -0.06], [0.12, -0.02], [0.09, 0.004], [0.055, 0.016]], t = [], m = new THREE.Matrix4(), ex = new THREE.Vector3(), ey = new THREE.Vector3(), en = new THREE.Vector3();
+  var prof = [[0.0, -0.26], [0.02, -0.25], [0.035, -0.2], [0.065, -0.15], [0.083, -0.09], [0.085, -0.04], [0.078, -0.008], [0.05, 0.0], [0.03, -0.004], [0.026, -0.03]], t = [], m = new THREE.Matrix4(), ex = new THREE.Vector3(), ey = new THREE.Vector3(), en = new THREE.Vector3();
   var pts = prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); });
   liste.forEach(function (b) {
     ex.fromArray(b.ex); ey.fromArray(b.ey); en.fromArray(b.en);
     m.makeBasis(ey.clone(), en.clone(), ex.clone()); m.setPosition(b.p[0], b.p[1], b.p[2]);   /* Achse y des Drehkörpers = Normale der Oberfläche */
     t.push({ g: new THREE.LatheGeometry(pts, 14), m: m.clone() });
-    var tr = new THREE.Matrix4().makeTranslation(0, 0.035, 0).premultiply(m);
-    t.push({ g: new THREE.SphereGeometry(0.05, 8, 6), m: tr });
+    var tr = new THREE.Matrix4().makeScale(1, 0.55, 1).premultiply(new THREE.Matrix4().makeTranslation(0, 0.004, 0)).premultiply(m);
+    t.push({ g: new THREE.SphereGeometry(0.042, 8, 6), m: tr });
   });
   return fuegen(t);
 }
@@ -373,7 +406,7 @@ function becherGeo(liste) {
 var NETZ_Y = [], NETZ_N = 14;
 (function () { for (var k = 0; k < 9; k++) NETZ_Y.push(0.55 + k * (0.82 * 7.2 - 0.55) / 8); })();
 function netzPunkt(k, i) {   /* Punkt i (0..NETZ_N) auf dem Ring k */
-  var y = NETZ_Y[k], a = -PI / 2 + PI * i / NETZ_N, rr = zr(ZR0.h, ZR0.r, y) - CELL_TH - 0.075 + 0.02 * Math.sin(3 * a + k * 1.7), yy = y + 0.05 * Math.sin(5 * a + k);
+  var y = NETZ_Y[k], a = -PI / 2 + PI * i / NETZ_N, rr = zr(ZR0.h, ZR0.r, y) - CELL_TH - 0.06 + 0.02 * Math.sin(3 * a + k * 1.7), yy = y + 0.05 * Math.sin(5 * a + k);
   return [rr * Math.sin(a), yy, -rr * Math.cos(a)];
 }
 function kapillarGeo() {
@@ -390,15 +423,19 @@ function kapillarGeo() {
   return fuegen(t);
 }
 var AR_P = [-0.36, -0.15], VE_P = [0.39, -0.2], LY_P = [0, -0.24];   /* Lage (x, z) von Arteriole, Venole und Lymphgefäß in der Zotte */
+function gk(y) { return Math.min(1, zr(ZR0.h, ZR0.r, Math.max(0, y)) / ZR0.r); }   /* Verkleinerung der Lage im Inneren in der Höhe y */
 function senkrecht(p, y0, y1, n, wob) {   /* nahezu senkrechte Linie mit leichter Schlängelung */
   var o = [], i;
-  for (i = 0; i <= n; i++) { var f = i / n; o.push([p[0] + wob * Math.sin(f * 9 + p[0] * 5), y0 + (y1 - y0) * f, p[1] + wob * Math.cos(f * 7 + p[1] * 5)]); }
+  for (i = 0; i <= n; i++) {
+    var f = i / n, y = y0 + (y1 - y0) * f, k = gk(y);   /* die Gefäße rücken mit der Verjüngung der Zotte zur Achse */
+    o.push([p[0] * k + wob * Math.sin(f * 9 + p[0] * 5), y, p[1] * k + wob * Math.cos(f * 7 + p[1] * 5)]);
+  }
   return o;
 }
 function arterioleGeo() {
   var t = [{ g: rohr(senkrecht(AR_P, -0.8, 0.9 * ZR0.h, 30, 0.012), function (f) { return 0.095 - 0.025 * f; }, 8, 1), m: ID }];
   [4, 6].forEach(function (i) {   /* Äste zum obersten Ring des Netzes */
-    var A = netzPunkt(8, i), S = [AR_P[0] + 0.02, 0.9 * ZR0.h - 0.1 - (i - 4) * 0.05, AR_P[1]];
+    var k8 = gk(0.9 * ZR0.h), A = netzPunkt(8, i), S = [AR_P[0] * k8 + 0.02, 0.9 * ZR0.h - 0.1 - (i - 4) * 0.05, AR_P[1] * k8];
     t.push({ g: rohr([S, [(S[0] + A[0]) / 2, (S[1] + A[1]) / 2 + 0.05, (S[2] + A[2]) / 2], A], function () { return 0.04; }, 6, 2), m: ID });
   });
   return fuegen(t);
@@ -406,7 +443,7 @@ function arterioleGeo() {
 function venoleGeo() {
   var t = [{ g: rohr(senkrecht(VE_P, -0.8, 0.84 * ZR0.h, 30, 0.012), function (f) { return 0.125 - 0.035 * f; }, 8, 1), m: ID }];
   [[1, 9], [4, 9], [7, 9]].forEach(function (q) {   /* Äste vom Netz zur Venole */
-    var A = netzPunkt(q[0], q[1]), y = A[1], S = [VE_P[0] - 0.03, y - 0.04, VE_P[1]];
+    var A = netzPunkt(q[0], q[1]), y = A[1], S = [VE_P[0] * gk(y) - 0.03, y - 0.04, VE_P[1] * gk(y)];
     t.push({ g: rohr([A, [(S[0] + A[0]) / 2, (S[1] + A[1]) / 2 - 0.03, (S[2] + A[2]) / 2], S], function () { return 0.045; }, 6, 1), m: ID });
   });
   return fuegen(t);
@@ -416,9 +453,9 @@ function lymphGeo() {
 }
 function muskelGeo() {
   var t = [], i;
-  for (i = 0; i < 9; i++) {
-    var a = (-72 + 18 * i) * DEG, rr = 0.625, pts = [], n = 20, j;
-    for (j = 0; j <= n; j++) { var f = j / n, w = 0.012 * Math.sin(f * 8 + i * 1.3); pts.push([(rr + w) * Math.sin(a), -0.8 + (0.84 * ZR0.h + 0.8) * f, -(rr + w) * Math.cos(a)]); }
+  for (i = 0; i < 7; i++) {
+    var a = (-45 + 15 * i) * DEG, rr = 0.55, pts = [], n = 20, j;
+    for (j = 0; j <= n; j++) { var f = j / n, yy = -0.8 + (0.84 * ZR0.h + 0.8) * f, w = 0.012 * Math.sin(f * 8 + i * 1.3), q = (rr + w) * gk(yy); pts.push([q * Math.sin(a), yy, -q * Math.cos(a)]); }
     t.push({ g: rohr(pts, function () { return 0.024; }, 4, 1), m: ID });
   }
   return fuegen(t);
@@ -427,9 +464,10 @@ function muskelGeo() {
 function matDef() {
   var D = THREE.DoubleSide;
   return {
-    saumzellen: [0xFFFFFF, { rough: 0.55, coat: 0.2, side: D }, 1],
-    buerstensaum: [0xF4DFD0, { rough: 0.6 }, 2],
-    becherzellen: [0x59B3C4, { rough: 0.35, coat: 0.4, side: D, dicht: true }, 2],
+    saumzellen: [0xFFFFFF, { rough: 0.75 }, 1],
+    saumkerne: [0x8A5C78, { rough: 0.6 }, 1],
+    buerstensaum: [0xFFFFFF, { rough: 1.0, vc: true, side: D }, 2],
+    becherzellen: [0xCFE0EA, { rough: 0.3, coat: 0.3, side: D, dicht: true }, 2],
     kapillarnetz: [0xE0707A, { rough: 0.4, coat: 0.3, dicht: true }, 2],
     arteriole: [0xC8372D, { rough: 0.4, coat: 0.3, dicht: true }, 2],
     venole: [0x7A5CB0, { rough: 0.4, coat: 0.3, dicht: true }, 2],
@@ -447,8 +485,9 @@ function teile() {
     { sid: 'ringfalte', name: 'Ringfalte', geo: sockelDaten(), inst: null },
     { sid: 'krypten', name: 'Krypten', geo: kryptenGeo(), inst: null },
     { sid: 'nachbarn', name: 'Nachbarzotten', geo: nachbarnGeo(), inst: null },
-    { sid: 'saumzellen', name: 'Saumzellen', geo: new THREE.BoxGeometry(1, 1, 1), inst: z.zellen },
-    { sid: 'buerstensaum', name: 'Bürstensaum', geo: haarGeo(), inst: z.haare },
+    { sid: 'saumzellen', name: 'Saumzellen', geo: rundBox(0.22), inst: z.zellen },
+    { sid: 'saumzellen', mat: 'saumkerne', name: 'Zellkerne', geo: kernGeo(), inst: z.kerne },
+    { sid: 'buerstensaum', name: 'Bürstensaum', geo: saumGeo(z.saum), inst: null },
     { sid: 'becherzellen', name: 'Becherzellen', geo: becherGeo(z.becher), inst: null },
     { sid: 'kapillarnetz', name: 'Kapillarnetz', geo: kapillarGeo(), inst: null },
     { sid: 'arteriole', name: 'Arteriole', geo: arterioleGeo(), inst: null },
@@ -515,7 +554,7 @@ var STRUCT = {}, ORDER = [];
 STRUKTUREN.forEach(function (d) { d.meshes = []; STRUCT[d.id] = d; ORDER.push(d); });
 var srgb = Kern.srgb;
 var GLAS = 0.22, GLAS_HAAR = 0.35;                         /* Deckkraft der Saumzellen und des Bürstensaums bei "Durchsicht" */
-var MAT = {}, DEF = matDef();
+var MAT = {}, DEF = matDef();   /* Materialien je Schlüssel von matDef (meist = Struktur; saumkerne gehört zur Struktur saumzellen) */
 Object.keys(DEF).forEach(function (sid) {
   var d = DEF[sid], o = {}, k;
   for (k in d[1]) o[k] = d[1][k];
@@ -531,7 +570,7 @@ async function bauen() {
   await setLoad(0.2, 'Dünndarmzotte'); if (abgebaut) return;
   var liste = teile(), i;
   for (i = 0; i < liste.length; i++) {
-    var t = liste[i], m = teilMesh(t, MAT[t.sid], DEF[t.sid][2]);
+    var t = liste[i], m = teilMesh(t, MAT[t.mat || t.sid], DEF[t.mat || t.sid][2]);
     STRUCT[t.sid].meshes.push(m); root.add(m);
     tris.gesamt += anz(t.geo) * (t.inst ? t.inst.n : 1);
     await setLoad(0.2 + 0.7 * (i + 1) / liste.length); if (abgebaut) return;
@@ -560,6 +599,7 @@ function stelleMat(m, transparent, opacity) {
 function applyLook() {
   stelleMat(MAT.saumzellen, seeThrough, seeThrough ? GLAS : 1);
   stelleMat(MAT.buerstensaum, seeThrough, seeThrough ? GLAS_HAAR : 1);
+  stelleMat(MAT.saumkerne, seeThrough, seeThrough ? 0.6 : 1);
 }
 function setSelected(id) {
   selected = id;
@@ -751,12 +791,14 @@ function ankerBerechnen() {
   var rim = function (dr) { var o = []; hs.forEach(function (y, i) { var s = i % 2 ? -1 : 1; o.push([s * (rz(y) + dr), y, 0]); o.push([-s * (rz(y) + dr), y, 0]); }); return o; };
   var innen = function (grad, y) { return pol(rz(y) - CELL_TH - 0.02, grad, y); };
   var aussen = function (grad, y) { return pol(rz(y) + HAAR_L * 0.9, grad, y); };
+  var gkk = function (y) { return gk(y); };
   var Z = zellDaten();
   var bech = Z.becher.map(function (b) { return { b: b, d: Math.abs(b.a) }; }).sort(function (p, q) { return p.d - q.d; });
   var becherInnen = bech.map(function (e) { var b = e.b; return [b.p[0] - b.en[0] * (CELL_TH + 0.03), b.p[1] - b.en[1] * (CELL_TH + 0.03), b.p[2] - b.en[2] * (CELL_TH + 0.03)]; });
   var becherAussen = bech.map(function (e) { var b = e.b; return [b.p[0] + b.en[0] * 0.05, b.p[1] + b.en[1] * 0.05, b.p[2] + b.en[2] * 0.05]; });
   var netz = function (k, i) { return netzPunkt(k, i); };
-  var entlang = function (p, ys, versatz) { return ys.map(function (y) { return [p[0] + versatz[0], y, p[1] + versatz[1]]; }); };
+  var entlang = function (p, ys, versatz) { return ys.map(function (y) { return [p[0] * gk(y) + versatz[0], y, p[1] * gk(y) + versatz[1]]; }); };
+  var nb = function (i, y) { return zachse(ZOTTEN[i], y); };   /* Punkt auf der Achse der Nachbarzotte i */
   var Zr = [{
     saumzellen: rim(0.0).concat([innen(-60, 3.4), innen(60, 4.6)]),
     buerstensaum: rim(0.06),
@@ -765,10 +807,10 @@ function ankerBerechnen() {
     arteriole: entlang(AR_P, [4.0, 5.0, 2.5, 5.8, 1.5], [-0.09, 0.0]),
     venole: entlang(VE_P, [3.0, 2.0, 4.2, 1.2, 5.0], [0.12, 0.0]),
     lymphgefaess: entlang(LY_P, [3.4, 2.4, 4.4, 5.4, 1.2], [0, 0.2]),
-    muskelfasern: [pol(0.625, 72, 4.2), pol(0.625, -54, 3.0), pol(0.625, 36, 5.0), pol(0.625, -18, 2.2), pol(0.625, 0, 4.6)],
+    muskelfasern: [pol(0.55, 45, 4.2), pol(0.55, -30, 3.0), pol(0.55, 30, 5.0), pol(0.55, -15, 2.2), pol(0.55, 0, 4.6)],
     krypten: KRYPTEN.slice(0, 9).map(function (k) { return [k[0], sockelY(k[0], k[1]) - 0.15, k[1]]; }),
     ringfalte: [[-5.2, -0.1, 1.6], [4.2, -0.2, 1.6], [0.8, -0.6, 1.6], [-3.2, -1.0, 1.6], [1.0, 0.0, 1.0], [-1.0, 0.0, 0.8], [-6.4, -2.2, 0.5], [6.4, -2.2, 0.5]],
-    nachbarn: [[-3.5, 4.4, -0.7], [3.4, 4.4, -0.5], [-5.0, 4.8, -2.3], [5.0, 4.8, -2.2], [-2.4, 5.4, -2.5], [2.5, 4.6, -2.4]]
+    nachbarn: [nb(1, 4.4), nb(2, 4.4), nb(3, 4.8), nb(6, 4.8), nb(4, 5.4), nb(5, 4.6)]
   }];
   Zr.push({   /* Zotte innen */
     saumzellen: rim(0.0).concat([innen(-60, 3.4), innen(60, 4.6), innen(-20, 2.6)]),
@@ -778,14 +820,14 @@ function ankerBerechnen() {
     arteriole: entlang(AR_P, [4.0, 5.0, 2.5, 5.8, 1.5, 3.2], [-0.09, 0.0]),
     venole: entlang(VE_P, [3.0, 2.0, 4.2, 1.2, 5.0, 3.6], [0.12, 0.0]),
     lymphgefaess: entlang(LY_P, [3.4, 2.4, 4.4, 5.4, 1.2, 6.0], [0, 0.2]),
-    muskelfasern: [pol(0.625, 72, 4.2), pol(0.625, -54, 3.0), pol(0.625, 36, 5.0), pol(0.625, -18, 2.2), pol(0.625, 0, 4.6), pol(0.625, -72, 2.0)],
+    muskelfasern: [pol(0.55, 45, 4.2), pol(0.55, -30, 3.0), pol(0.55, 30, 5.0), pol(0.55, -15, 2.2), pol(0.55, 0, 4.6), pol(0.55, -45, 2.0)],
     ringfalte: [[-1.5, -0.1, 1.6], [1.5, -0.1, 1.6], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.8]]
   });
   Zr.push({   /* Oberfläche (von hinten) */
     saumzellen: [pol(rz(3.4), -40, 3.4), pol(rz(2.6), 30, 2.6), pol(rz(4.4), -30, 4.4), pol(rz(3.4), 10, 3.4)],
     buerstensaum: [aussen(-40, 3.4), aussen(30, 4.4), aussen(0, 2.4), aussen(50, 5.2)],
     becherzellen: becherAussen,
-    nachbarn: [[-2.4, 5.4, -2.5], [2.5, 4.6, -2.4], [-5.0, 4.8, -2.3], [5.0, 4.8, -2.2]],
+    nachbarn: [nb(4, 5.4), nb(5, 4.6), nb(3, 4.8), nb(6, 4.8)],
     ringfalte: [[-2.0, -0.2, -3.5], [2.0, -0.2, -3.5], [0.0, -0.8, -4.5]],
     krypten: [[0, sockelY(0, -1.4) - 0.1, -1.4], [-1.2, sockelY(-1.2, -3.3) - 0.1, -3.3], [1.3, sockelY(1.3, -3.4) - 0.1, -3.4]]
   });
@@ -793,7 +835,7 @@ function ankerBerechnen() {
     krypten: KRYPTEN.map(function (k) { return [k[0], sockelY(k[0], k[1]) - 0.2, k[1]]; }),
     ringfalte: [[-0.9, 0.0, -0.9], [0.9, 0.0, -0.9], [-2.5, -0.1, 0.6], [2.5, -0.1, 0.5], [0.0, -0.1, 1.6], [-4.0, -0.3, -0.4]],
     saumzellen: rim(0.0).slice(0, 4),
-    nachbarn: [[-3.5, 3.2, -0.7], [3.4, 3.2, -0.5], [-2.4, 3.2, -2.5], [2.5, 3.2, -2.4]]
+    nachbarn: [nb(1, 3.2), nb(2, 3.2), nb(4, 3.2), nb(5, 3.2)]
   });
   AUSSCHNITTE.forEach(function (a, i) { Object.keys(Zr[i]).forEach(function (id) { KAND[i][id] = Zr[i][id].map(function (q) { return P(Array.isArray(q) ? q : [0, 0, 0]); }); }); });
 }
