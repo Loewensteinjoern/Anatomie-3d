@@ -9,6 +9,13 @@ Jörn möchte, dass der Darm mehr einer anatomischen Vorlage ähnelt, die er im 
 - Magen (#45) und Darm mit Dünndarmzotte (#46) sind gemergt. PR C (Krankheitsbilder usw., `pr-c.md`) wartet bis nach diesem Schritt.
 - Die Texte sind freigegeben (`docs/freigaben/darm-b-texte.md`) und bleiben unverändert. Ändert sich ein Name oder eine Lage, nur mit Jörns Zustimmung.
 
+## Entscheidungen (Runde 1, 11. November 2026)
+
+- Dünndarm als dichtes Knäuel vieler kürzerer Schlingen, eng aneinander, ganz innerhalb des Dickdarmrahmens (heute: wenige lange, waagrechte Schlingen mit Lücken, ragen rechts und unten über den Dickdarm).
+- Dünndarm etwas dicker (r 0,9 → ca. 1,1 cm), Dickdarm bleibt.
+- Haustren flacher und etwas unregelmäßig statt Perlenkette, Tänien deutlich sichtbar.
+- Farbe wie Vorlage: Dünndarm blassrosa mit dunkleren Furchen, Dickdarm heller graurosa statt braun-lachs.
+
 ## Vorgehen
 
 1. Vorlage ansehen und den Unterschied zum heutigen Darm beschreiben. Dafür Bilder aufnehmen, zum Beispiel `darm-desktop-01-uebersicht`, sowie Körper/Bauch (`tools/vergleich.js --nur darm`). Dabei Lage, Schlingen, Dicke, Haustren, Farbe und Gekröse betrachten.
