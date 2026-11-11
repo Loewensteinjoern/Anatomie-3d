@@ -2,207 +2,24 @@
 
 Ziel ist eine Anatomie-App, in der der ganze Körper existiert und alle Organe mit ihren Funktionen darstellbar sind. Jedes Organ wird nach demselben Bauplan aufgebaut wie die beiden vorhandenen Modelle Herz (`index.html#herz`) und Nephron (`index.html#nephron`).
 
-## Bauplan je Organ
+Erledigtes, Bauplan-Tabelle, Ebenen und Architektur: `docs/plan-archiv.md` (nur bei Bedarf). Arbeitsweise und Sparregeln: `CLAUDE.md`.
 
-✓ = vorhanden, – = fehlt, (✓) = teilweise
+## Stand je Organ
 
-| Baustein | Herz | Nephron | Niere | Lunge (mit Alveole) | Leber (mit Leberläppchen) |
-|---|---|---|---|---|---|
-| Strukturliste mit deutschem und lateinischem Namen, farbcodiert | ✓ | ✓ | ✓ | ✓ | ✓ (17 Strukturen; Läppchen 10) |
-| Beschriftung in Spalten mit Führungslinien | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Feste Ansichten („Ausschnitt“) mit Kamerafahrt | ✓ | ✓ | ✓ | ✓ | ✓ (Übersicht, Unterseite, Leberpforte, Gallenwege) |
-| Durchsicht, Tempo (Pause/langsam/normal/schnell) | ✓ | ✓ | ✓ | ✓ (Tempo normal/langsam/Zeitlupe wie im Original, dazu Pause) | ✓ |
-| Funktion als Simulation | Herzzyklus mit Windkessel-Physik | Teilchenströmung (Wasser, Salz, Zucker) | Durchblutung und Harnabfluss mit Peristaltik | Atemmechanik aus dem Thorax-Modell (Zwerchfell, Rippen, Pleuradruck, Luftstrom), 3D folgt derselben Simulation | Blut aus Pfortader und Leberarterie zu den Lebervenen, Galle zur Gallenblase bzw. in den Zwölffingerdarm (Schalter nüchtern / nach dem Essen) |
-| Lupe (Nahansicht, was in einer Struktur passiert) | ✓ | ✓ | ✓ (Papille, mit/ohne ADH) | ✓ (Pleuraspalt; Alveole: Blut-Luft-Schranke) | ✓ (Papille mit Schließmuskel, nüchtern/nach dem Essen; Läppchen: Sinusoid mit Disse-Raum, gesund/Zirrhose) |
-| Hilfekarten und Üben (Quiz) | ✓ | ✓ | ✓ | ✓ | ✓ (dazu „Wege verfolgen“) |
-| Krankheitsbilder und Medikamente | ✓ (z. B. Vorhofflimmern, Metoprolol) | ✓ (z. B. Torasemid, Hyperglykämie) | ✓ (Harnstau, Nierenarterienstenose, Ramipril, Ibuprofen) | ✓ (Asthma, COPD, Hyper-/Hypoventilation, Azidose, Cheyne-Stokes; Salbutamol, Sauerstoff, Naloxon) | ✓ (Zirrhose, Fettleber, Virushepatitis, Gallenstein; Paracetamol, Lactulose, Spironolacton; in Leber und Läppchen sichtbar) |
-| Schema (2D-Bild) | ✓ (Kreislauf) | ✓ (Nephron von vorn, live mit denselben Teilchen) | ✓ (Frontalschnitt, live mit denselben Teilchen, Kennzahlen) | ✓ (Thorax-Modell, unverändert übernommen) | ✓ (Pfortaderkreislauf von vorn, live mit denselben Teilchen, Kennzahlen) |
-| Export GLB/STL mit Signatur | ✓ | ✓ | ✓ | ✓ | ✓ (Leber reale Größe, Läppchen 100-fach) |
-| AR (WebXR und AR Quick Look), ohne Beschriftung | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Einheitliches Design und Handy-Layout | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Form als eigener Baustein für den Körper-Atlas | (✓) über `organ.form` in `herz.js` (dazu `organ.start`: Startansicht des Herz-Modells für die Kamerafahrt) | `organ.form` (Bahnen) und `organ.start` für die Zoomstufe aus der Niere | ✓ `niere-form.js` (Körper nutzt die Außenform), `organ.start` für die Fahrt aus dem Körper | ✓ `lunge-form.js` (Brustkorb, Rippen, Zwerchfellkuppel, Lappen, Bronchien; Körper nutzt sie), `organ.start` für die Fahrt aus dem Körper | ✓ `leber-form.js` (Körper nutzt sie, dazu Pfortader, Leberarterie, Lebervenen und Gallengang im Körper), `organ.start`/`organ.mitte` für die Fahrt aus dem Körper |
+| Organ | Adresse | Stand |
+|---|---|---|
+| Körper | `index.html` | Atlas mit Organsystemen, Kamerafahrten, AR, offline |
+| Herz | `#herz` | Bauplan komplett; Form noch über `organ.form` in `herz.js` |
+| Niere mit Nephron | `#niere`, `#niere/nephron` | Bauplan komplett |
+| Lunge mit Alveole | `#lunge`, `#lunge/alveole` | Bauplan komplett |
+| Leber mit Leberläppchen | `#leber`, `#leber/laeppchen` | Bauplan komplett |
+| Magen | `#magen` | PR A fertig (#45); Krankheitsbilder, Lupe, Export, AR folgen in PR C |
+| Darm mit Dünndarmzotte | `#darm`, `#darm/zotte` | PR B fertig (#46); Krankheitsbilder, Lupe, Export, AR folgen in PR C |
 
-Alle Modelle bestehen aus einem HTML-Gerüst, je einer CSS- und JS-Datei unter `organe/`, dem gemeinsamen Kern (`kern.css`, `kern.js`, `rahmen.js`, `export.js`, `ar.js`, `szenarien.js`) in `core/` und dem gemeinsam genutzten three.js (r128) in `vendor/`; die Geometrie wird per Code erzeugt.
+Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem Merge nach `docs/plan-archiv.md`.
 
-Eine Form je Organ: Jedes Organ-Modul liefert seine Form als eigenen Baustein (`organe/<organ>/<organ>-form.js`). Körper-Atlas und Detailmodell nutzen dieselbe Form (im Körper gröber gerastert); so passen Körper und Organ zusammen, und jede Verbesserung am Organ zeigt sich auch im Körper. Der Körper lädt nur die Form-Bausteine, nicht den übrigen Organ-Code. Organe ohne Detailmodell erscheinen im Körper vorerst als vereinfachte Platzhalter und werden ersetzt, sobald ihr Modul fertig ist. Das Herz stellt seine Form vorerst über `organ.form` in `herz.js` bereit; die Auslagerung nach `herz-form.js` folgt, wenn sie sich lohnt.
+## Aktuell und als Nächstes
 
-## Ebenen
-
-```
-Körper  →  Organsystem  →  Organ  →  Funktionseinheit  →  Lupe
-Mensch     Harnsystem      Niere     Nephron              Wand des Tubulus
-Mensch     Kreislauf       Herz      (Herzklappe)         Klappe/Erregung
-Mensch     Atmung          Lunge     Alveole              Gasaustausch
-Mensch     Verdauung       Leber     Leberläppchen        Sinusoid mit Disse-Raum (Lupe)
-```
-
-## Architektur
-
-- Gemeinsamer Kern für alle Organe: Szene, Licht, Design, Beschriftung, Leiste, Lupe, Quiz, Szenarien, Export, AR.
-- Ein Modul pro Organ: Geometrie, Strukturliste, Simulation, Lupen-Inhalte, Hilfetexte, Krankheitsbilder.
-- Inhalte (Namen, Texte, Quizfragen) als Daten getrennt vom Code.
-- Organe werden erst beim Öffnen geladen.
-- Eine einzige Seite: Körper und Organe teilen sich eine 3D-Szene (Renderer, Licht, Kamera, Kern). Beim Antippen eines Organs fliegt die Kamera im Körper in die Startansicht des Detailmodells (`organ.start`), die Organdatei wird per eingefügtem `<script>` nachgeladen (funktioniert auch per `file://`), der Körper wird abgebaut und das Detailmodell darunter aufgebaut; ein Standbild des letzten Bildes verdeckt den Wechsel und wird weich ausgeblendet. Das Detailmodell liegt nicht gleichzeitig mit dem Körper in der Szene; „Zurück“ baut es ab und fährt im Körper aus dem Nahbild zur Ganzkörperansicht. Ebenso eine Ebene tiefer (Niere → Nephron).
-- Jedes Organ-Modul hat feste Andockpunkte, z. B. `aufbauen(szene, bereich)`, `abbauen()`, Bedienelemente, Beschriftung, Kamera-Ansichten; der Rahmen ruft sie auf.
-- Jede Ansicht hat eine eigene Adresse (`#herz`, `#niere/nephron`): Zurück-Knopf des Browsers, Lesezeichen und Links direkt auf ein Organ funktionieren.
-- Regeln gegen die Nachteile einer einzigen Seite:
-  - Speicher: `abbauen()` räumt das Organ vollständig weg (Geometrien, Materialien, Texturen, Bedienelemente); es ist immer nur ein Detail-Organ geladen.
-  - Keine gegenseitige Störung: jedes Organ in eigenem Namensraum im Code; sein CSS gilt nur in seinem Bereich (z. B. unter einer Organ-Klasse am Rahmen).
-  - Fehler abfangen: scheitert das Laden oder Aufbauen eines Organs, erscheint „Organ konnte nicht geladen werden“, Körper und Rahmen bleiben bedienbar.
-  - Wartezeit: das Organ-Skript wird schon im Körper geladen (beim Herz), CSS und Aufbau starten nach der Kamerafahrt unter dem Standbild, mit leiser Ladeanzeige (`#boot.leise`); erneutes Öffnen in derselben Sitzung nutzt die bereits geladene Datei.
-  - Umbau in kleinen Schritten mit Vergleichsbildern (`tools/vergleich.js`), wie in Phase 0.
-  - Prüfung der Übergänge: `tools/vergleich.js` bekommt Abläufe wie Körper → Organ → zurück.
-- Offline: Die App läuft weiterhin ohne Server und ohne Build-Schritt (Ordner/ZIP, `index.html` doppelklicken). Zusätzlich wird sie eine installierbare Web-App (PWA: Manifest mit Name und Symbol, Service Worker als Offline-Speicher): einmal über GitHub Pages öffnen, „Zum Startbildschirm hinzufügen“, danach ohne Internet nutzbar – auch mit AR. Der Service Worker speichert alle Organdateien vorab, damit auch noch nicht geöffnete Organe offline funktionieren (umgesetzt in `sw.js`, `core/offline.js`).
-- Dateistruktur (Ziel):
-
-```
-index.html                Körper-Atlas (Start); nephron.html und atlas.html leiten weiter
-sw.js, app.webmanifest    Service Worker (Offline-Speicher) und Web-App-Manifest
-icons/                    App-Symbol (symbol.svg, PNGs)
-core/                     gemeinsamer Kern (JS, CSS)
-vendor/three.min.js       three.js, unverändert
-organe/herz/              Herz-Modul + Inhalte
-organe/niere/             Niere + Nephron
-organe/lunge/             Lunge + Alveole
-organe/leber/             Leber (+ Leberläppchen)
-```
-
-## Phasen
-
-### Phase 0 – Fundament
-
-- [x] Nephron-Modell ins Repository aufnehmen (`nephron.html`)
-- [x] Auf mehrere Dateien umstellen (CSS, App-Code, three.js getrennt)
-- [x] Gemeinsamen Kern aus Herz und Nephron herauslösen (`core/kern.css`, `core/kern.js`)
-  - `vendor/RoomEnvironment.js` war unbenutzt und ist entfernt
-  - Export ist vereinheitlicht (`core/export.js`, `Kern.Export`): eine Signatur (`Kern.WM`), ein GLB-Weg über GLTFExporter, gleiche Dateinamen (`<organ>_statisch.glb`, `<organ>_animiert_<zusatz>.glb`, `<organ>_stl_3d-druck.zip`); das Organ liefert nur die Konfiguration
-  - noch je Organ, kann später in den Kern wandern: Lupe, Üben, Beschriftungs-Layout
-- [x] Prüfen: beide Modelle sehen aus und funktionieren wie vorher (Vergleichsbilder vorher/nachher mit `tools/vergleich.js`; für die Aufteilung und den Kern erledigt)
-- [x] Nephron bekommt AR, Herz bekommt Krankheitsbilder
-  - [x] AR im gemeinsamen Kern (`core/ar.js`, `Kern.AR`): WebXR-Sitzung, AR-Schilder, USDZ für AR Quick Look; Herz umgestellt (bytegleich), Nephron mit AR (Durchsicht, Beschriftung, Größe, Pause; Quick Look ohne Teilchen); `tools/vergleich.js` nimmt AR bei beiden Modellen auf
-  - [x] Herz: Krankheitsbilder (Links-, Rechts- und Globalinsuffizienz, Aortenklappenstenose, Vorhofflimmern, Herzinfarkt Vorderwand) und Medikamente (Metoprolol, Glyceroltrinitrat) in zwei Reitern wie beim Nephron; gemeinsamer Szenario-Baustein `core/szenarien.js` (`Kern.Szenarien`: Reiterliste, Erklärkarte, Überblenden), Wirkung über Faktoren in der Herzzyklus-Physik (Kammerkraft, Frequenz, Klappenöffnung, Vorhofschub, Rhythmus, Vorlast, Infarkt); `tools/vergleich.js` nimmt sie im Herz-Kontext `szenarien` auf
-- [x] `.claude/agents/executor.md` an die Mehrdatei-Struktur anpassen
-
-### Phase 1 – Körper-Atlas
-
-- [x] Herz und Nephron bekommen die Andockpunkte (`aufbauen`/`abbauen`, Bedienelemente), bleiben aber zunächst eigene Seiten (Prüfung: bytegleich)
-  - `core/rahmen.js`: `Kern.organ(name, def)` meldet ein Organ an (`Kern.Organe`); der Rahmen legt Renderer, Szene, Kamera, Umgebung und Licht einmal an, `Kern.organStarten(name)`/`Kern.organBeenden()` bauen Organe darin auf und ab; (`Kern.einzelseite(name)` für Einzelseiten entfiel mit dem Atlas als `index.html`)
-  - Organ-Modul `def`: `renderer` (Optionen, z. B. `alpha`), `aufbauen(umg)` → Promise (`umg`: `bereich` = `#organ`, `canvas`, `renderer`, `szene`, `kamera`, `envTex`), setzt `bild(now, frame)`, `groesse(w, h)`, `abbauen()`
-  - Organ-Dateien lösen beim Laden nichts aus und haben keine globalen Namen (vorerst außer `window.HerzApp` für `tools/vergleich.js`); die Bedienelemente liegen als `MARKUP` in der Organ-Datei, im HTML stehen nur die Rahmen-Elemente
-  - `abbauen()` beendet AR und Audio, meldet Listener ab, stoppt Timer (auch mitten im Aufbau), gibt alle three.js-Objekte frei und leert das DOM; `tools/vergleich.js` prüft das im Kontext `abbau` (Speicher, Szene, DOM, Listener nach dem Abbauen jedes Mal gleich)
-  - noch offen für die Rahmenseite: Organ-CSS nur im eigenen Bereich (`.organ-herz`), Renderer-Optionen je Organ (Herz `alpha`) beim Wechsel, Ladeanzeige `#boot` im Rahmen
-- [x] Rahmenseite, die Organe per Adresse lädt (`#herz`, `#nephron`) und wieder abbaut
-  - Rahmenseite (zuerst `atlas.html`, jetzt `index.html`) enthält nur den Rahmen; `core/atlas.js` steuert per Adresse (leer = Startansicht, `#herz`, `#nephron`), Browser-Zurück und Lesezeichen funktionieren; Knopf „← Atlas“ (`core/atlas.css`)
-  - `Kern.ORGANE` (Titel, Seitentitel, Skript, CSS je Organ), `Kern.organLaden` fügt Skript und CSS per `<script>`/`<link>` ein (auch per `file://`), lädt in einer Sitzung nur einmal; die Organ-CSS wird beim Wechsel wieder entfernt (immer nur ein Organ, daher noch keine Beschränkung auf `.organ-herz`)
-  - Fehler (unbekannte Adresse, Ladefehler, Fehler beim Aufbau) zeigen „Organ konnte nicht geladen werden“, der Rahmen bleibt bedienbar; veraltete Ladevorgänge bei schnellem Wechsel werden verworfen
-  - Renderer-Optionen je Organ: unterscheiden sie sich beim Wechsel (Herz `alpha`), legt der Rahmen Canvas und Renderer neu an; so sind Herz und Nephron im Atlas bytegleich zu den Einzelseiten
-  - `tools/vergleich.js`, Modell `atlas`: Herz und Nephron im Atlas laufen dieselben Abläufe wie die Einzelseiten und müssen bytegleich zu deren Bildern und Exporten sein; dazu Übergänge (Messung vor/nach gleich), Fehlerfälle und Startauswahl
-- [x] `index.html` wird der Atlas; das Herz zieht um, die bisherigen Adressen (`index.html` als Herz, `nephron.html`) leiten weiter
-  - `index.html` ohne Adresse zeigte zunächst eine Startauswahl, jetzt den Körper, Herz unter `#herz`, Nephron unter `#nephron`; eigene Organ-Seiten gibt es nicht mehr (`Kern.einzelseite` entfällt)
-  - `nephron.html` leitet auf `index.html#nephron`, `atlas.html` auf `index.html` weiter (Adresse nach `#` bleibt), per `location.replace` mit meta-refresh als Rückfall, auch per `file://`
-  - `tools/vergleich.js`: Modelle `herz` und `nephron` laufen im Atlas und sind bytegleich zu den Aufnahmen der früheren Einzelseiten; `atlas` prüft zusätzlich die Weiterleitungen
-- [x] Ganzer Körper mit allen Organen in einfacher Form
-  - Organ-Modul `koerper` (`organe/koerper/`), Startansicht von `index.html` (auch `#koerper`); stilisiertes Lehrmodell: glasartige Körperhülle, vereinfachtes Skelett, Organe in anatomischer Lage, farbig nach Organsystem; Geometrie per Signed-Distance-Field (`core/sdf.js`, `Kern.SDF`)
-  - Das Herz kommt aus dem Herz-Modell (`organ.form` in `herz.js`, geschlossen und gröber gerastert, Herz-Modell bleibt bytegleich); die übrigen Organe sind Platzhalter bis zu ihrem Detailmodell
-  - Strukturliste (29 Strukturen, Texte als Daten), Auswahl per Tippen mit Infokarte, „Herz öffnen“ bzw. „Nephron ansehen“; Ausschnitte Ganzkörper, Kopf/Hals, Brustkorb, Bauch, Becken, Rücken; Beschriftung mit Führungslinien; Handy-Layout
-  - `tools/vergleich.js`: Modell `koerper` (Desktop, Handy, Datei, Abbau); Übergänge starten im Körper
-- [x] Organsysteme ein-/ausblendbar (Skelett, Kreislauf, Verdauung …)
-  - je System „an / glas / aus“ (Haut, Skelett, Nerven, Sinnesorgane, Hormone, Kreislauf, Atmung, Verdauung, Harnsystem), „Alle sichtbar“; Muskeln und weitere Systeme kommen mit ihren Modulen dazu
-- [x] Klick auf Organ: Kamerafahrt ins Organ, Detailmodell in derselben Szene, weicher Übergang; fehlende Organe als „in Arbeit“
-  - Standbild beim Wechsel (`Kern.standbild` in `core/rahmen.js`, `core/atlas.js`, `<canvas id="uebergang">`, `#boot.leise`): das letzte Bild bleibt stehen, das neue Organ baut sich darunter mit leiser Ladeanzeige auf, danach blendet das Standbild in ca. 400 ms per `requestAnimationFrame` aus (keine CSS-Transition, wegen der virtuellen Zeit in `vergleich.js`); Direktaufruf ohne vorheriges Organ zeigt wie bisher das Vollbild-`#boot`, bei Fehler verschwindet das Standbild sofort
-  - `Kern.organStarten(name, opt)`: `opt.von` kommt als `umg.von` (voriges Organ) beim Organ an
-  - Herz: neuer Andockpunkt `organ.start(w, h)` (Startansicht: Kamera in Herz-Koordinaten und View-Offset bei geschlossener Karte; Hilfsfunktionen `fokusVersatz`, `handyAbstand`, Konstante `START`); Herz-Modell bleibt bytegleich
-  - Körper: der Knopf der Infokarte startet eine Kamerafahrt (1200 ms): Herz genau in die Startansicht des Herz-Modells (`organ.start` + `HERZ_V`), Nieren in die Startansicht der Niere (`organ.start` + Mitte der linken Niere; zuerst eine Nahansicht von hinten); alle anderen Strukturen und die Bedienelemente blenden dabei aus, danach wird die Adresse gesetzt
-  - Rückweg (`umg.von`): der Körper startet im Nahbild und fährt nach 450 ms zur Ganzkörperansicht zurück; danach pixelgleich zum frisch geladenen Körper
-  - Organe ohne Detailmodell: ausgegrauter Knopf „Detailmodell in Arbeit“ in der Infokarte; Organe mit Detailmodell tragen in der Strukturliste das Zeichen „3D“
-  - Verworfen: Körper-Renderer mit `alpha` (wie das Herz), damit beim Wechsel kein neuer WebGL-Kontext nötig wäre; die Handy-Aufnahmen des Körpers waren damit nicht bytegleich (Skalierung des Canvas mit Alphakanal, bis 15/255). Beim Wechsel Körper ↔ Herz legt der Rahmen weiter Canvas und Renderer neu an, das Standbild verdeckt das
-  - `tools/vergleich.js`: `atlas:uebergaenge` mit Bildern `fahrt-herz` und `rueckfahrt` und Prüfung des Endzustands (Standbild weg, keine inline-Styles an `#organ`-Kindern); neuer Kontext `atlas:uebergaenge-niere` (Körper → Niere → zurück, dann Nephron und zurück zur Niere); `atlas:fehler` mit Fall „Ladefehler nach der Fahrt“ (`herz.css` blockiert)
-  - Kamerafahrt zum Herz: die Anschluss-Stummel der rechten Lungenarterie/-venen (Struktur `herz`, Markierung `userData.anschluss`) blenden bei der Fahrt mit aus; vorher standen sie am Übergang als Geisterbild neben dem Detail-Herz (der scheinbare „Versatz auf dem Handy“, die Kamera traf auf < 1 px)
-- [x] AR für den ganzen Körper
-  - WebXR über `Kern.AR.xr`, `root` = `wurzel`, Füße auf der Fläche (`fuss` aus der Bounding Box)
-  - Größenstufen 27/45/72/108/180 cm, Start als Tischfigur mit 45 cm, bei lebensgroß ein Hinweis
-  - Die Einstellungen der Organsysteme (an, glas, aus) gelten in AR; in AR zusätzlich „Haut an/aus“ (bleibt nach dem Ende) und „Beschriftung an/aus“ (die AR-Beschriftung ist später entfallen, siehe Phase 2)
-  - Kamera in AR mit near/far in Metern (0.01/100), danach wieder 2/1200
-  - AR-Schilder über `Kern.AR.schilder` mit den Strukturen der Ganzkörperansicht (entfallen, siehe Phase 2)
-  - AR Quick Look: USDZ-Momentaufnahme (ca. 17–19 MB; die Beschriftung darin ist später entfallen, siehe Phase 2); Glas, das nur im Shader durchsichtig ist (Haut, Schädel), bekommt über die neue Kern-Option `userData.usdzOp` 30 % Deckkraft (im Modus „glas“ 15 %); Herz- und Nephron-USDZ bleiben bytegleich
-  - `tools/vergleich.js`: Kontexte `koerper:webxr` und `koerper:quicklook`
-  - Mit dem Nutzer abgestimmt: Tischfigur bis lebensgroß, Einstellungen übernehmen, iPhone gleich mit
-  - Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet
-- [x] Offline als installierbare Web-App (Manifest, Symbol, Service Worker mit allen Organdateien); Ordner/ZIP per `file://` funktioniert weiterhin
-  - Manifest und Symbol: `app.webmanifest` (Name „Anatomie-Atlas für Pflegeberufe“, Kurzname „Anatomie“, standalone, Farben #0B171C); Symbol `icons/symbol.svg` (Körpersilhouette in Messing mit rotem Herz) → PNGs 180/192/512/maskable per `node tools/symbole.js`; Kopf von `index.html` mit manifest, apple-touch-icon, theme-color, apple-mobile-web-app-* (Statusleiste `black`)
-  - Service Worker `sw.js`: speichert genau die Dateien der Liste `DATEIEN` vorab (am HTTP-Cache vorbei), beantwortet nur diese aus dem Speicher, schreibt zur Laufzeit nichts und speichert keine Nutzerdaten; Speichername `anatomie-<VERSION>`; neue Version wartet (kein `skipWaiting`/`clients.claim`), Nachricht `'aktivieren'`; alte `anatomie-*`-Speicher werden beim Aktivieren gelöscht; `core/offline.js` meldet ihn nur über http(s) an, per `file://` ändert sich nichts
-  - Update-Hinweis (`#atlasUpdateBox`, `core/offline.js`, `core/atlas.css`): „Neue Version verfügbar – neu laden“ mit Kreuz „Später“; Desktop unten mittig, Handy oben links neben dem Zurück-Knopf; Klick aktiviert und lädt neu, ohne Klick gilt die neue Version beim nächsten Start; beim Wiedersichtbarwerden höchstens alle 10 Min. Suche nach Updates (`Kern.Offline`)
-  - `tools/version.js`: VERSION = SHA-256 (12 Hex) über alle Dateien in `DATEIEN`; `node tools/version.js` schreibt sie, `--pruefen` prüft sie und die Vollständigkeit der Liste (index.html, Manifest, `Kern.ORGANE`, Weiterleitungen); nach jeder Änderung an einer App-Datei ausführen
-  - `tools/vergleich.js`: Atlas-Kontexte `offline`, `update`, `update-handy`, `offline-datei` und Versionsprüfung (`erg.version`); der Testserver liefert für Ordneradressen `index.html`
-  - Mit dem Nutzer abgestimmt: Name „Anatomie-Atlas für Pflegeberufe“ (Kurzname „Anatomie“), Symbol Körper mit Herz, Update-Hinweis mit Knopf
-  - Auf dem iPhone getestet: Installation als Startbildschirm-App und Offline-Betrieb funktionieren
-  - Noch auf echten Geräten zu testen: AR Quick Look und Export-Downloads in der Startbildschirm-App (iPhone) sowie Android
-- [x] Repository in „Anatomie-3d“ umbenennen (GitHub-Pages-Adresse ändert sich mit)
-  - Neue Adresse: https://loewensteinjoern.github.io/Anatomie-3d/; Verweise im Repository (README.md, executor.md) angepasst, an der App selbst ändert sich nichts
-  - Die alte Adresse https://loewensteinjoern.github.io/Herz-3d/ leitet GitHub nicht weiter (alte Lesezeichen und geteilte Links funktionieren nicht mehr); eine Weiterleitung (eigenes Repository „Herz-3d“ nur mit Weiterleitungsseite) entfällt, weil die App noch nicht weitergegeben wurde – eigene Lesezeichen und Startbildschirm-Symbole neu anlegen
-  - Bewusst nicht geändert: `creator: 'Herz 3D - …'` in der USDZ des Herzens (`organe/herz/herz.js`), das ist der Name des Herz-Modells; eine Änderung würde die Herz-USDZ verändern
-
-### Phase 2 – Niere komplett
-
-Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des Nephrons, Adressen, Form-Baustein der Niere, Niere (Grundgerüst), Körper → Niere, Niere → Nephron, Funktion, Lupe und Hilfe, Krankheitsbilder und Medikamente, Nephron-Schema. Jeder Schritt ist ein eigener Pull Request und wird mit `tools/vergleich.js` gegen die Referenz von `main` geprüft; Abweichungen nur, wo vereinbart.
-
-- [x] Nephron in AR weniger durchsichtig (Rückmeldung von Jörn: wirkt in AR zu durchsichtig)
-  - nur in AR (WebXR und AR Quick Look): Tubulus bei Durchsicht 60 % statt 32 % deckend; Glomerulus, Arteriolen, peritubuläre Kapillaren und Vasa recta 80 % statt 46–60 %; am Bildschirm unverändert
-- [x] AR-Beschriftung entfällt in allen Modellen (Körper, Herz, Niere, Nephron) – Rückmeldung von Jörn nach dem Test auf dem iPhone (Oktober 2026): In AR sieht man nicht, welches Schild zu welchem Teil gehört, die Verbindungslinien und Pfeile sind kaum zu erkennen
-  - weder in WebXR noch in der USDZ für AR Quick Look; die Knöpfe „Beschriftung aus/an“ in der AR-Leiste entfallen; `Kern.AR.schilder` und die Option `beschriftung` von `Kern.AR.usdz` sind aus `core/ar.js` entfernt; am Bildschirm bleibt die Beschriftung unverändert
-  - die AR-Bilder in `tools/vergleich.js` heißen jetzt `ohne-haut` (Körper), `geschlossen` (Herz, Niere) und `undurchsichtig` (Nephron); die AR-Referenzen sind daher neu aufzunehmen
-- [x] Adressen gestuft: `#niere` (Niere), `#niere/nephron` (Nephron); alte Links `#nephron` und `nephron.html` führen auf `#niere/nephron`; der Zurück-Knopf geht eine Ebene hoch (Nephron → Niere → Körper)
-- [x] Form-Baustein `organe/niere/niere-form.js`; der Körper zeigt beide Nieren daraus statt der Platzhalter und lädt nur die Form
-- [x] Ganze Niere (Rinde, Mark, Nierenbecken, Gefäße) als Detailmodell nach dem Bauplan
-  - Frontalschnitt wie im Lehrbuch (aufgeschnitten oder geschlossen), ca. 11 cm groß
-  - Strukturen: Nierenkapsel, Rinde, Mark mit Pyramiden, Nierensäulen, Papillen, kleine und große Kelche, Nierenbecken, Anfang des Harnleiters, Nierenarterie und -vene mit Segment-, Interlobär-, Bogen- und Interlobulargefäßen, Nebenniere; ohne Fettkapsel
-  - Funktion als Simulation: Durchblutung (Arterie → Rinde → Vene) und Harnabfluss (Papille → Kelche → Becken → Harnleiter) als Teilchen, Tempo wie beim Nephron, Kennzahlen (ca. 1,2 l Blut/min, 180 l Primärharn → 1,5 l Harn am Tag)
-  - Lupe: Papille (Sammelrohre münden, Harn tropft in den Kelch); Hilfekarten
-  - Krankheitsbilder: Harnstau durch Nierenstein, Nierenarterienstenose (Renin, Bluthochdruck); Medikamente: Ramipril (ACE-Hemmer), Ibuprofen (NSAR, drosselt die Nierendurchblutung); Reiter und Erklärkarte über `Kern.Szenarien` wie beim Herz, Wirkung über weich überblendete Größen (Blut, Harn, Stau, Stein, Stenose, Renin) in der Strömung und an der Geometrie (erweitertes Hohlsystem, Stein im Harnleiter, Taille in der Nierenarterie, Renin-Markierungen); `tools/vergleich.js`: Kontexte `szenarien` und `szenarien-handy`
-  - Körper → Niere: Kamerafahrt wie zum Herz (`organ.start` der Niere, Rückfahrt aus Niere und Nephron ins Nahbild der linken Niere; die rechte Niere blendet mit aus); die Infokarte der Nieren im Körper zeigt „Niere öffnen“ statt „Nephron ansehen“
-- [x] Nephron als Zoomstufe innerhalb der Niere
-  - zuerst ein dauerhaft markiertes (goldenes) Nephron in der oberen Pyramide; Rückmeldung von Jörn: wirkt zu groß und vermittelt einen falschen Eindruck
-  - neu (Oktober 2026): Die Niere zeigt im Normalzustand kein Nephron. Rinde, Säulen, Pyramiden oder Papillen antippen → Infokarte mit „Nephron hier ansehen“; der Punkt bestimmt die Pyramide (nächste Achse Papille–Basis) und die seitliche Lage (so verschoben, dass die Rohre im Nierengewebe bleiben); in den schmalen seitlichen Pyramiden (1, 2 und 4) passt das breite Nephron nicht ins Gewebe, dann weicht die Lage auf die nächste passende Pyramide aus (`NE_GRENZE` 0,05 cm); der Knopf „Nephron“ in der Werkzeugleiste fährt an die Standardstelle (obere Polpyramide). Das Nephron entsteht erst bei der Fahrt (Farben wie im Nephron-Modell, Maßstab: Kapsel bis Papille der Pyramide) und blendet in der zweiten Hälfte ein; die Niere dreht sich um die Schnittnormale, bis die Pyramidenachse senkrecht steht; die Kamerafahrt endet in der Startansicht des Nephrons (`organ.start`), der Rückweg mit Rückfahrt (Drehung zurück, Nephron blendet aus) wie beim Körper; die zuletzt gewählte Stelle merkt sich die Seite nur im Speicher
-- [x] Nephron: Schema (2D-Bild wie beim Herz) – Bauplan-Lücke, Wunsch von Jörn
-  - Form des 3D-Modells in 2D beibehalten (kein gestrecktes Längsbild), live mit denselben Teilchen wie im 3D-Modell (auch bei Torasemid und Hyperglykämie); Pfeile für Filtration, Rückresorption und Sekretion, Osmolarität an den Stationen (300 → 1200 → 100 → bis 1200 mosmol/l)
-- [x] Nephron: Hilfekarten und Üben – Bauplan-Lücke, mit Jörn abgestimmt (Oktober 2026)
-  - Reiter „Hilfekarten“ und „Üben“ wie bei der Niere (Reihenfolge Strukturen, Krankheiten, Medikamente, Hilfekarten, Üben); sechs Hilfekarten mit Merke, Texte von Jörn freigegeben: Filtration im Nierenkörperchen, Zurückholen und Ausscheiden, Gegenstromprinzip der Henle-Schleife, Feinabstimmung: Aldosteron und ADH, Pflege: Nierenwerte verstehen, So liest du das Modell
-  - Üben „Strukturen finden“ mit den 14 Bauteilen (ohne Teilchen, gelöste Teilchen und die Tafel „Rinde und Mark“), durchscheinende Treffer zählen mit; nur die gesuchte Tubulus-Struktur leuchtet (Klon-Material, solange sie leuchtet)
-  - Eigene Karte `#hcard` unten links (die Szenario-Karte rechts ist `#scard` und klappt solange ein); auf dem Handy endet die Karte über der Werkzeugleiste (`--wz`), der Zurück-Knopf des Atlas ist solange ausgeblendet
-  - Aufteilung mit Jörn: zwei Pull Requests, zuerst das Nephron, dann das Schema der Niere
-- [x] Niere: Schema (2D-Bild) – Bauplan-Lücke, mit Jörn abgestimmt (Oktober 2026)
-  - Frontalschnitt in der Form des 3D-Modells (immer aufgeschnitten, Blick wie die Übersicht): Umrisse per Marching Squares aus den Feldern der Form, Gefäße aus denselben Gefäßlinien, Harnleiter mit der Welle (gemeinsame Formel `welleLage`/`welleFaktor`), Teilchen aus den Instanzmatrizen der 3D-Teilchen (Tempo, Pause, Wirkgrößen gelten mit)
-  - Krankheitsbilder und Medikamente weich überblendet wie in 3D (Stau, Stein, Engstelle, Renin-Markierungen, weniger Teilchen), Marken „Stein“, „Engstelle“, „Renin“
-  - Legende der Wege (1–7) mit Abzeichen, Kasten mit den Kennzahlen (Normwerte, immer gleich) und Hinweiszeile bei aktivem Zustand; Texte von Jörn freigegeben
-  - Antippen öffnet die Infokarte, „Nephron hier ansehen“ funktioniert aus dem Schema; Schema schließt bei Lupe, Hilfekarte/Üben, AR, Nephron-Fahrt
-  - Knopf „Schema“ in der ersten Zeile der Werkzeugleiste; Handy wie beim Nephron; auf 390 px keine zusätzliche Zeile, zwischen 479 und 539 px bricht Reihe 1 jetzt um (Schätzer `werkzeugRand` angepasst)
-- Umsetzung: Schritte 1–4 als #23–#26, Schritt 5 als #27, Schritte 6–10 zusammen in einem Pull Request (Wunsch von Jörn); nach einem Container-Neustart zeichnete Chromium minimal anders (ca. 110 Pixel), ab Schritt 9 wurde daher gegen eine neu aufgenommene Referenz verglichen
-- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema von Nephron und Niere: Leiste ausgeblendet, Werkzeugleiste unten, Schema darüber; die Kennzahlen der Niere stehen im Schema auch auf dem Handy)
-
-### Phase 3 und weiter – Organ für Organ
-
-- [x] Lunge mit Alveole – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Lunge, B Alveole, C Krankheitsbilder, Medikamente, Lupe, Export/AR
-  - Vorlage sind zwei fertige Modelle von Jörn (`tools/originale/lunge-ebene1-thorax.html`, `lunge-ebene3-alveole.html`): Krankheitsbilder, Einstellfunktionen und Schemata werden mit Texten, Werten, Formeln und Abläufen unverändert übernommen; jede Anpassung für die Einbindung wird einzeln genannt; `tools/nachweis.js` vergleicht Original und App (Bilder nebeneinander, Werte und SVG)
-  - [x] A: Form-Baustein `organe/lunge/lunge-form.js` (Rippenparameter, Brustkorb-Innenraum, Zwerchfellkuppel, Lungenflügel aus dem Körper, bytegleich umgezogen; dazu Lappen, Bronchialbaum, `rippeStuetz`); Detailmodell `#lunge` mit fünf Lappen, Atemwegen, Rippenfell/Pleuraspalt, Zwerchfell, Rippen, Brustbein, Zwischenrippenmuskeln, Lungengefäßen und Herz zur Orientierung; Ausschnitte Übersicht, Bronchialbaum, Hilus und Gefäße, Zwerchfell und Pleura
-  - [x] A: Atemmechanik aus dem Thorax-Modell (Reiter „Atmung“ im App-Stil, Schema-Panel mit Original-SVG und Kette im hellen Originalaussehen, Pause); abgestimmte Abweichung: doppelte ID `rippen` im Original aufgelöst, die weißen Rippen sind sichtbar; 3D-Lunge atmet mit (Zwerchfell flacht im selben Anteil ab wie im Schema, seitliche Weitung, Rippen drehen, Pleura-Deckkraft gedämpft, 14 Luftteilchen); Hilfekarten und „Probier das aus“ wörtlich, Üben; Kopfzeile „Ebene 1 von 4“ entfällt
-  - [x] A: Kamerafahrt Körper → Lunge und zurück („Lunge öffnen“; Lunge, Atemwege, Zwerchfell, Brustkorb und Herz bleiben bei der Fahrt sichtbar)
-  - [x] B: Alveole (`#lunge/alveole`, `organe/lunge/alveole.js`): Alveolarsäckchen (Bronchiolus respiratorius, Alveolargang, 22 Bläschen, eine aufgeschnitten), Kapillarnetz von blau nach rot, Äste von Lungenarterie und -vene; Strukturliste, Ausschnitte, aufgeschnitten/geschlossen, Durchsicht, Beschriftung
-  - [x] B: Gasaustausch aus dem Alveolen-Modell unverändert übernommen (Reiter „Gasaustausch“, Schema-Panel mit Original-SVG und Kette, Pause, Hilfekarten mit „Probier das aus“, Üben); 3D folgt der Simulation (Blutkörperchen färben sich, O₂/CO₂-Teilchen in der aufgeschnittenen Alveole, Gefäßfarben, leichte Atembewegung); Nachweis `node tools/nachweis.js alveole` mit 11 Fällen gleich (beide Seiten mit demselben Zufallsstrom); die Liste der Krankheitsbilder folgt in C
-  - [x] B: Zoomstufe Lunge → Alveole: Lappen antippen („Alveole hier ansehen“, nächster Endast des Bronchialbaums im Lappen) oder Knopf „Alveole“ (Endast im rechten Unterlappen); das Säckchen entsteht aus `organ.form` der Alveole am Endast, die Lunge dreht sich, bis der Endast senkrecht steht, die Fahrt endet in der Startansicht der Alveole; Rückfahrt dreht zurück; die zuletzt gewählte Stelle merkt sich die Seite nur im Speicher
-  - [x] B (Nachtrag, Wunsch von Jörn): 3D der Alveole ohne Blutkörperchen – O₂- und CO₂-Punkte in einer Größe fließen im ganzen Kapillarnetz und in den Gefäßen (Mischung aus der Simulation), an der aufgeschnittenen Alveole zeigen die Flüge der Simulation den Austausch
-  - [x] C: Krankheitsbilder (Hyperventilation, Hypoventilation, Asthmaanfall, COPD, respiratorische Azidose, Cheyne-Stokes) und Medikamente (Salbutamol beim Asthmaanfall, Sauerstoffgabe bei COPD, Naloxon bei Opiat-Hypoventilation) über `Kern.Szenarien` mit von Jörn freigegebenen Erklärkarten (`Kern.Szenarien.daten.atmung` in `core/szenarien.js`); Alveole: Werte über den unveränderten Original-Handler, Medikamente mit freigegebener Wirkung (Obstruktion 0,25; Frischluft-O₂ 1,00; Naloxon nach 4 s Ruhewerte), Statushinweise; Lunge: bei Obstruktion verengte Segmentbronchien und Überblähung nur in 3D; Nachweis jedes Krankheitsbilds gleich
-  - [x] C: Lupen mit freigegebenen Texten – Lunge „Pleuraspalt“ (Druck aus der Simulation, Schalter Pneumothorax), Alveole „Blut-Luft-Schranke“ (O₂/CO₂ nach dem Unterschied, Schalter Lungenödem); die Schalter wirken nur in der Lupe; Schema und Lupe schließen sich gegenseitig
-  - [x] C: Export (GLB statisch, GLB animiert, STL) und AR (WebXR mit Pause, AR Quick Look ohne Teilchen, ohne Beschriftung) für Lunge und Alveole (Alveole im Export 1 Einheit = 1 cm, USDZ ca. 23 MB)
-  - [x] Herz und Lunge verbunden (mit Jörn abgestimmt, Oktober 2026): Im Lungenmodell schlägt das Herz mit der Herzzyklus-Physik des Herz-Modells (`organ.form.zyklus`, eigene Engine, 3,2 s je Schlag, folgt Tempo und Pause der Atmung); Lungenarterien und -venen sind an Lungenstamm und Venenmündungen des Herz-Modells angeschlossen und durchscheinend; Blutportionen (immer an) fließen blau aus der rechten Kammer in die Lappen, werden dort rot und kehren über die Lungenvenen zurück (Zahl wie `imLu` der Physik); WebXR mit Herzschlag, GLB animiert mit Herzschlag (ein Schlag je Atemzug), STL, GLB statisch und USDZ unverändert; Strukturtext „Herz (Lage)“ und Hilfekarte „Kleiner Kreislauf“ von Jörn freigegeben; keine Wechselwirkung mit den Krankheitsbildern
-  - Später: Wechselwirkung Herz und Lunge (z. B. Linksinsuffizienz → Lungenstauung, COPD → Rechtsherzbelastung), direkter Wechsel Herz ↔ Lunge, gemeinsames Schema; Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert
-- [x] Leber mit Leberläppchen – mit Jörn abgestimmt (Oktober 2026), drei Pull Requests: A Leber, B Leberläppchen, C Krankheitsbilder, Medikamente, Lupen, Export/AR; keine Vorlage, alle Texte von Jörn freigegeben
-  - [x] A: Form-Baustein `organe/leber/leber-form.js` (Leber als Ausguss unter der rechten Zwerchfellkuppel mit Mulden der Nachbarorgane und H-Furchen der Unterseite; vier Lappen, Gallenblase, Gefäße und Gänge, Bäume von Pfortader, Leberarterie, Gallengängen und Lebervenen, Bänder, Zwölffingerdarm-Abschnitt); der Körper zeigt Leber und Gallenblase daraus (Platzhalter bleiben als Ersatz) und bekommt die neuen Strukturen Pfortader, Leberarterie, Lebervenen und Gallengang (Wunsch von Jörn: auch im Körper verbunden)
-  - [x] A: Detailmodell `#leber` mit 17 Strukturen (Lappen, Bänder, Gefäße, Gallenwege, Umgebung: Zwölffingerdarm, Papille, Pankreasgang, Zwerchfell), Ausschnitte Übersicht, Unterseite, Leberpforte, Gallenwege, Durchsicht, Beschriftung, Lesehilfe; Kamerafahrt Körper → Leber und zurück („Leber öffnen“ bei Leber, Gallenblase und den vier neuen Strukturen)
-  - [x] A: Strömung (Pfortader violett, Leberarterie rot, Lebervenen und Hohlvene blau, Galle grün; Teilchen ohne Zufall) mit Schalter „nüchtern / nach dem Essen“ in der Zeile „Ansicht“ (Gallenblase füllt sich bzw. zieht sich zusammen); Schema als Pfortaderkreislauf von vorn mit denselben Teilchen, Legende, Kennzahlen; Hilfekarten (Aufgaben, Pfortader und Leberarterie, Galle, Pflege: Leberwerte, So liest du das Modell) und Üben: „Strukturen finden“ und neu „Wege verfolgen“ (vier Wege von Blut und Galle, Hilfe nach zwei Fehlern; schaltet Durchsicht und bei den Gallenwegen die Mahlzeit, beim Beenden zurück)
-  - [x] B: Leberläppchen (`#leber/laeppchen`, `organe/leber/laeppchen.js`): sechseckige Säule mit aufgeschnittenem Keil, Zellbalken als Reihen einzelner Zellen, Sinusoide, Gallenkanälchen, Kupffer-Zellen, Glisson-Trias an allen Ecken, Zentralvene, Sammelvene, Nachbarläppchen angedeutet (10 Strukturen); Zoomstufe wie Lunge → Alveole (Lappen antippen „Leberläppchen hier ansehen“ oder Knopf „Läppchen“, am Endast des Pfortaderbaums, Leber dreht sich, Rückfahrt); Blut von den Ecken zur Zentralvene, Galle entgegen; Stoffe Zucker (Glykogen in den Zellen nach dem Essen), Ammoniak → Harnstoff, Bilirubin → Galle mit eigener Schalterzeile „Stoffe“ (Wunsch von Jörn; auf dem Handy eine Zeile mehr); Mahlzeit-Schalter; Schema als Querschnitt von oben mit Zonen 1–3; Hilfekarten (Aufbau, Blut innen/Galle außen, Leberzelle als Fabrik, Zonen, So liest du das Modell), Üben (Strukturen finden, drei Wege); Körpertext der Leber endet mit „Funktionseinheit ist das Leberläppchen.“
-  - [x] C: Krankheitsbilder (Leberzirrhose mit Pfortaderhochdruck und Bauchwasser, Fettleber, Virushepatitis, Gallenstein mit Gelbsucht) und Medikamente (Paracetamol-Überdosis, Lactulose, Spironolacton) mit gemeinsamen Daten, sichtbar in Leber (Größe, Knoten, Farbe, Aszites, Stein, Galle staut) und Läppchen (Narben, Fetttropfen, Abwehrzellen, abgestorbene Zellen, Bilirubin ins Blut, weniger Ammoniak); Lupen in der Zeile „Ausschnitt“ (Leber: Papille mit Schließmuskel, nüchtern/nach dem Essen, Stein; Läppchen: Sinusoid mit Disse-Raum und Ito-Zelle, gesund/Zirrhose); Export (GLB statisch und animiert, STL) und AR für Leber und Läppchen; nebenbei Nachbarläppchen einheitlich benannt und mit sichtbaren Kanten (aus PR B nachgezogen)
-  - Offen (späterer Durchgang, Wunsch von Jörn, November 2026): Wirkung aller Medikamente in Leber und Läppchen fachlich kontrollieren – bei der Paracetamol-Überdosis zeigt die Leber keine Veränderung, bei Lactulose (Bifiteral) schrumpft sie dagegen; prüfen, ob das so richtig ist (Wirkgrößen in `Kern.Szenarien.daten.leber`, Abschnitt 7c in leber.js, 6b in laeppchen.js), dann mit Jörn abstimmen
-  - Offen (eigener Pull Request): Nephron – bei Auswahl eines Tubulusabschnitts (Strukturliste oder Antippen) leuchten die Abschnitte vom proximalen bis zum distalen Tubulus gar nicht und beim Sammelrohr das ganze Rohr: die sechs Abschnitte teilen sich `MAT.tubule`, `setSelected` setzt `emissive` nacheinander, der letzte gewinnt. Beim Üben ist es über ein Klon-Material schon gelöst (`leuchte` in nephron.js).
 - [ ] Magen und Darm mit Dünndarmzotte
   - Mit Jörn abgestimmt (November 2026): zwei Modelle – Magen (`#magen`) und Darm (`#darm`), die Dünndarmzotte als Zoomstufe des Darms (`#darm/zotte`, wie Lunge → Alveole und Leber → Läppchen); keine Vorlage, alle Texte entwirft Claude und Jörn gibt sie frei; Dateien unter `organe/verdauung/` (Form-Baustein `verdauung-form.js` für den ganzen Trakt, `magen.js`, `darm.js`, `zotte.js`)
   - Drei Pull Requests: A Form-Baustein für den ganzen Verdauungstrakt, Körper (Magen, Dünndarm und Dickdarm aus der Form statt der Platzhalter, angeschlossen an Speiseröhre, Leber, Zwölffingerdarm und Pfortader; „Magen öffnen“ mit Kamerafahrt) und das Magenmodell komplett; B Darm mit Dünndarmzotte und Zoomstufe („Darm öffnen“ im Körper); C Krankheitsbilder, Medikamente, Lupen, Export und AR für Magen, Darm und Zotte
@@ -212,19 +29,28 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] A2: Detailmodell `#magen` mit 14 Strukturen, Ausschnitten Übersicht, Innenansicht (vordere Wand gleitet ab), Mageneingang, Pförtner, Durchsicht, Beschriftung, Lesehilfe; Wand für die Darstellung ca. 0,8 cm dick (Ladezeit); „Magen öffnen“ mit Kamerafahrt aus dem Körper und zurück
   - [x] A3: Stoffe und Magensaft als Teilchen, Zeilen „Stoffe“ und „Strömung“ (Handy eine Zeile mehr), nüchtern / nach dem Essen mit Dehnung, glatteren Falten, Muskelwellen und Pförtner; Schema „Weg der Nahrung“; Blutteilchen in den Magengefäßen entfallen
   - [x] A4: Hilfekarten, Üben (Strukturen finden; drei Wege mit Durchsicht statt Innenansicht, damit alle Stationen antippbar sind); `tools/vergleich.js` mit Modell `magen` und Übergängen Körper–Magen
-  - Texte für PR A: von Jörn freigegeben in `.claude/uebergabe/magen-a-texte.md` (Stofffarben gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, türkis Magensaft; Nüchternzeiten ohne Stundenangabe; Magensonde: Abhören oder pH-Test nach Hausstandard; der Körper bekommt keine Magengefäße); Übergabe für den neuen Chat in `.claude/uebergabe/magen-darm.md`
-  - B mit Jörn abgestimmt (November 2026, alles wie empfohlen): ein Darmmodell vom Zwölffingerdarm bis zum After (Ausschnitte Übersicht, Zwölffingerdarm mit Papille, Dünndarm aufgeschnitten, Blinddarm mit Wurmfortsatz, Mastdarm und After, Knopf „Zotte“); 19 Strukturen (Zwölffingerdarm, Papille, Leerdarm, Krummdarm, Bauhin-Klappe, Blinddarm, Wurmfortsatz, die vier Dickdarmabschnitte, Mastdarm, After mit Schließmuskeln, Darmschleimhaut mit Ringfalten, Darmmuskulatur, Gekröse, Darmarterien, Darmvenen, Pfortader; keine eigenen Karten für Magen, Leber, Bauchspeicheldrüse); Zotte als Stück einer Ringfalte mit ca. 7 Zotten, die mittlere aufgeschnitten (Saumzellen, Bürstensaum, Becherzellen, Kapillarnetz, Arteriole, Venole, zentrales Lymphgefäß, glatte Muskelfasern, Krypten, Ringfalte, Nachbarzotten); Funktion wie beim Magen (nüchtern / nach dem Essen, Zeile „Stoffe“, Galle grün, Pankreassaft blassviolett, Stuhl braun; Zotte: Zucker und Aminosäuren ins Blut, Fett ins Lymphgefäß, Zottenpumpe); Schemata: Darm „Wo wird was aufgenommen“, Zotte Oberflächenvergrößerung und Wege der Stoffe; Pflege: Stuhlbeobachtung (Bristol-Skala) und Obstipationsprophylaxe, Zotte: Zöliakie und Durchfall; Texte von Jörn freigegeben in `.claude/uebergabe/darm-b-texte.md`; Handy: die Reihe „Ausschnitt“ des Darms (7 Knöpfe mit Zotte und Schema) darf zweizeilig umbrechen (Jörn, November 2026)
-  - [x] B1: Form des ganzen Darms in `verdauung-form.js` (Zwölffingerdarm bis zur Flexur, Dünndarm als dichtes Paket ca. 271 cm, Dickdarm mit Haustren und Tänien, Blinddarm, Wurmfortsatz, Sigma, Mastdarm, Analkanal mit Schließmuskeln, Ringfalten, Bauhin-Klappe, Papille, Gekröse, Mesenterialgefäße); der Körper zeigt den neuen Darm mit gleicher Objektzahl; Mesenterialvene aus Platzgründen hinter dem Zwölffingerdarm, Mastdarm ca. 11 cm
-  - [x] B2: Detailmodell `#darm` mit 19 Strukturen, Ausschnitten Übersicht, Zwölffingerdarm, Dünndarm, Blinddarm, Mastdarm (Deckel gleitet ab), Durchsicht, Beschriftung, Lesehilfe; „Darm öffnen“ bei Dünn- und Dickdarm
-  - [x] B3: Stoffe, Galle, Pankreassaft und Stuhl als Teilchen, nüchtern / nach dem Essen, Schema „Wo wird was aufgenommen“ (von vorn gelesen); ohne Muskelwellen der Wand
-  - [x] B4: Hilfekarten und Üben im Darm (Papille und Bauhin-Klappe in ihren Ausschnitten)
-  - [x] B5: Dünndarmzotte `#darm/zotte` (11 Strukturen, mittlere Zotte aufgeschnitten) und Zoomstufe Darm → Zotte (Knopf „Zotte“, „Dünndarmzotte hier ansehen“ bei Leer- und Krummdarm)
-  - [x] B6: Zotte mit Stoffen, Mahlzeit, Zottenpumpe, Schema, Hilfekarten und Üben; `tools/vergleich.js` mit Modellen `darm` und `zotte` und den Übergängen Körper–Darm und Darm–Zotte
+  - Texte für PR A: von Jörn freigegeben in `docs/freigaben/magen-a-texte.md` (Stofffarben gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, türkis Magensaft; Nüchternzeiten ohne Stundenangabe; Magensonde: Abhören oder pH-Test nach Hausstandard; der Körper bekommt keine Magengefäße)
+  - [x] B1–B6: Darm und Dünndarmzotte (PR #46; Abstimmung und Schritte in `docs/plan-archiv.md`, Texte in `docs/freigaben/darm-b-texte.md`)
+  - [ ] C: Krankheitsbilder, Medikamente, Lupen, Export und AR für Magen, Darm und Zotte – zuerst Einzelheiten und Texte mit Jörn abstimmen
 - [ ] Gehirn mit Neuron und Synapse
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
 - [ ] Auge, Ohr, Haut, Hormondrüsen
 
-### Meilenstein: Version 1.0 für die Kollegen
+## Offene Punkte
+
+Wörtlich aus den erledigten Phasen übernommen (Quelle in Klammern):
+
+- Herz: Die Auslagerung der Form nach `herz-form.js` folgt, wenn sie sich lohnt. (Bauplan)
+- Kern: noch je Organ, kann später in den Kern wandern: Lupe, Üben, Beschriftungs-Layout (Phase 0)
+- noch offen für die Rahmenseite: Organ-CSS nur im eigenen Bereich (`.organ-herz`), Renderer-Optionen je Organ (Herz `alpha`) beim Wechsel, Ladeanzeige `#boot` im Rahmen (Phase 1)
+- Getestet auf dem iPhone (AR Quick Look): funktioniert gut; Android (WebXR, Chrome) auf einem echten Gerät noch nicht getestet (Phase 1, AR Körper)
+- Noch auf echten Geräten zu testen: AR Quick Look und Export-Downloads in der Startbildschirm-App (iPhone) sowie Android (Phase 1, Offline)
+- Noch auf echten Geräten zu testen: Nephron in AR (Deckkraft), Niere in AR Quick Look (USDZ ca. 9,7 MB), Fahrt Körper → Niere → Nephron und Handy-Layout (Schema von Nephron und Niere: Leiste ausgeblendet, Werkzeugleiste unten, Schema darüber; die Kennzahlen der Niere stehen im Schema auch auf dem Handy) (Phase 2)
+- Später: Wechselwirkung Herz und Lunge (z. B. Linksinsuffizienz → Lungenstauung, COPD → Rechtsherzbelastung), direkter Wechsel Herz ↔ Lunge, gemeinsames Schema; Ebenen 2 und 4 der Vorlagen, wenn Jörn sie liefert (Lunge)
+- Offen (späterer Durchgang, Wunsch von Jörn, November 2026): Wirkung aller Medikamente in Leber und Läppchen fachlich kontrollieren – bei der Paracetamol-Überdosis zeigt die Leber keine Veränderung, bei Lactulose (Bifiteral) schrumpft sie dagegen; prüfen, ob das so richtig ist (Wirkgrößen in `Kern.Szenarien.daten.leber`, Abschnitt 7c in leber.js, 6b in laeppchen.js), dann mit Jörn abstimmen
+- Offen (eigener Pull Request): Nephron – bei Auswahl eines Tubulusabschnitts (Strukturliste oder Antippen) leuchten die Abschnitte vom proximalen bis zum distalen Tubulus gar nicht und beim Sammelrohr das ganze Rohr: die sechs Abschnitte teilen sich `MAT.tubule`, `setSelected` setzt `emissive` nacheinander, der letzte gewinnt. Beim Üben ist es über ein Klon-Material schon gelöst (`leuchte` in nephron.js).
+
+## Meilenstein: Version 1.0 für die Kollegen
 
 Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann je für ihren Fachbereich.
 
@@ -234,7 +60,7 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 - [ ] Vor der Weitergabe: fachliche Durchsicht der Texte, Test auf echten Geräten (Android, iPhone/iPad, Laptop)
 - Rückmeldungen danach: Die Kollegen sagen oder schreiben sie Jörn, er gibt sie gesammelt an Claude weiter (Organ und Stelle, was fehlt oder falsch ist, Fachbereich); Claude sortiert sie (fachlicher Fehler, Verständlichkeit, Bedienung, Wunsch) und schlägt die Reihenfolge vor; keine Rückmeldefunktion in der App.
 
-### Laufend
+## Laufend
 
 - [ ] Schema wächst mit (Herz, Lunge, Niere, Leber im Kreislauf verbunden; Simulationen beeinflussen sich, z. B. Blutdruck und Nierenfunktion)
 - [ ] Krankheitsbilder und Medikamente pro Organ
@@ -255,4 +81,4 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 
 - Planung und Prüfung im Hauptgespräch; Umsetzung einzelner Schritte durch den Executor-Subagenten (`.claude/agents/executor.md`, Sonnet). Commit und Push nur durch den Aufrufer. Der Executor ändert `executor.md` und `PLAN.md` nicht selbst, sondern schlägt Doku-Änderungen vor; der Aufrufer übernimmt sie und führt `PLAN.md`.
 - Änderungen über Pull Requests nach `main`; veröffentlicht über GitHub Pages.
-- Prüfen mit `tools/vergleich.js`: Während der Arbeit an einem Pull Request genügt es, die betroffenen Modelle zu prüfen (`--nur <modell>`); sobald gemeinsamer Code (`core/`, `sw.js`, `index.html`, `tools/`) geändert ist, werden alle Modelle geprüft. **Vor jedem Pull Request immer ein vollständiger Lauf gegen die Referenz von `main`** – ohne ihn kein Pull Request. Abweichungen werden mit dem gemeldeten Bereich (umschließendes Rechteck der geänderten Pixel) eingeordnet: Liegt er im erwarteten Bereich, z. B. nur in der Werkzeugleiste? Vergleichsläufe und andere Browserprüfungen nie gleichzeitig laufen lassen. Nach einem Neustart der Umgebung die Referenz neu aufnehmen. Ein vollständiger Lauf dauert ca. 45–60 Minuten, Hintergrundbefehle enden nach 2 Stunden; beim Warten `pgrep -f "^node tools/(vergleich|nachweis)"`.
+- Prüfen mit `tools/vergleich.js`: Während der Arbeit an einem Pull Request genügt es, die betroffenen Modelle zu prüfen (`--nur <modell>`); sobald gemeinsamer Code (`core/`, `sw.js`, `index.html`, `tools/`) geändert ist, werden alle Modelle geprüft. **Vor jedem Pull Request immer ein vollständiger Lauf gegen die Referenz von `main`** – ohne ihn kein Pull Request. Ausnahme: reine Doku-Änderungen – `node tools/kontext.js --doku-pr` endet mit 0 (nur `*.md` im Hauptordner, `docs/`, `.claude/`, `tools/kontext.js` geändert) und `node tools/version.js --pruefen` ebenso; dann entfällt der Vergleichslauf, im PR-Text die Ausgabe beider Befehle nennen. Abweichungen werden mit dem gemeldeten Bereich (umschließendes Rechteck der geänderten Pixel) eingeordnet: Liegt er im erwarteten Bereich, z. B. nur in der Werkzeugleiste? Vergleichsläufe und andere Browserprüfungen nie gleichzeitig laufen lassen. Nach einem Neustart der Umgebung die Referenz neu aufnehmen. Ein vollständiger Lauf dauert ca. 45–60 Minuten, Hintergrundbefehle enden nach 2 Stunden; beim Warten `pgrep -f "^node tools/(vergleich|nachweis)"`.
