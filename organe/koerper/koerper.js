@@ -82,9 +82,9 @@ var STRUKTUREN = [
     text: 'Der Gallengang leitet die Galle aus Leber und Gallenblase hinter dem Zwölffingerdarm und durch den Kopf der Bauchspeicheldrüse zur Papille im Zwölffingerdarm; dort mündet er meist gemeinsam mit dem Gang der Bauchspeicheldrüse. Verschließt ihn ein Stein, staut sich die Galle zurück, und es kommt zur Gelbsucht.' },
   { id: 'pankreas', de: 'Bauchspeicheldrüse', lat: 'Pancreas', system: 'verdauung', detail: false,
     text: 'Die Bauchspeicheldrüse liegt quer im Oberbauch hinter dem Magen, ihr Kopf in der Schlinge des Zwölffingerdarms. Sie gibt Verdauungsenzyme in den Darm ab und bildet in den Langerhans-Inseln Insulin und Glukagon, die den Blutzucker regeln.' },
-  { id: 'duenndarm', de: 'Dünndarm', lat: 'Intestinum tenue', system: 'verdauung', detail: false,
+  { id: 'duenndarm', de: 'Dünndarm', lat: 'Intestinum tenue', system: 'verdauung', oeffnen: '#darm', knopf: 'Darm öffnen',
     text: 'Der Dünndarm ist etwa 3–5 m lang und gliedert sich in Zwölffingerdarm, Leerdarm und Krummdarm. Hier wird die Nahrung fertig verdaut; über die Darmzotten gelangen Nährstoffe, Wasser und Elektrolyte ins Blut und in die Lymphe.' },
-  { id: 'dickdarm', de: 'Dickdarm', lat: 'Intestinum crassum', system: 'verdauung', detail: false,
+  { id: 'dickdarm', de: 'Dickdarm', lat: 'Intestinum crassum', system: 'verdauung', oeffnen: '#darm', knopf: 'Darm öffnen',
     text: 'Der etwa 1,5 m lange Dickdarm rahmt den Dünndarm ein: Blinddarm mit Wurmfortsatz, aufsteigender, querer und absteigender Teil, S-förmiges Sigma und Mastdarm. Er entzieht dem Darminhalt Wasser und Salze, dickt den Stuhl ein und beherbergt die Darmflora.' },
   { id: 'nieren', de: 'Nieren', lat: 'Renes', system: 'harn', oeffnen: '#niere', knopf: 'Niere öffnen',
     text: 'Die beiden bohnenförmigen Nieren liegen hinter dem Bauchfell beiderseits der Wirbelsäule auf H\u00f6he der untersten Rippen. Sie filtern das Blut, bilden den Harn und regeln Wasser-, Salz- und Säure-Basen-Haushalt sowie den Blutdruck. Funktionseinheit ist das Nephron.' },
@@ -674,7 +674,7 @@ async function organe() {
   await sdfMesh('verdauung', mat('verdauung', 0xE8C27A, { rough: 0.6 }), sdfPankreas, b(-8, 96, -8, 12, 109, 2), 0.45);
   if (abgebaut) return; await weiter('Bauchspeicheldrüse');
   als('duenndarm');
-  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), vb ? vb.zwoelffingerdarm.pts : [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], vb ? vb.zwoelffingerdarm.r : 1.0, vb ? vb.zwoelffingerdarm.seg : 50);
+  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), vb ? vb.duodenum.pts : [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], vb ? vb.duodenum.r : 1.0, vb ? vb.duodenum.seg : 50);   // Zwoelffingerdarm bis zur Flexur (Form der Verdauung)
   als('milz');
   ellM('kreislauf', mat('kreislauf', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
   /* Duenndarm: Schlingen in vier Lagen */
@@ -689,13 +689,21 @@ async function organe() {
     }
   }
   rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), dd, vb ? vb.duenndarm.r : 1.2, vb ? vb.duenndarm.seg : 420);
-  /* Dickdarm: Rahmen um den Duenndarm */
+  /* Dickdarm: Rahmen um den Duenndarm. Mit der Form der Verdauung ein Abstandsfeld (Blinddarm, Sigma, Mastdarm bis zum After, Haustren), der Wurmfortsatz ein Rohr mit
+     Kugel am Ende; Zahl der three.js-Objekte wie beim frueheren Rohr samt Kugeln (Zufallszahlen der Kennungen: spaeter geladene Organe bleiben gleich) */
   als('dickdarm');
   var dk = mat('verdauung', 0xB8775A, { rough: 0.55, coat: 0.3 });
-  rohr('verdauung', dk, vb ? vb.dickdarm.pts : [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
-    [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], vb ? vb.dickdarm.r : 1.8, vb ? vb.dickdarm.seg : 260);
-  var kp = vb ? vb.dickdarm.kappe : [-11.3, 89.2, 0.5, 2.4];
-  kugelM('verdauung', dk, kp[0], kp[1], kp[2], kp[3]);
+  if (vform && vform.dickdarm) {
+    var dkf = vform.dickdarm({ ohneAppendix: true }), wf = vform.wurmfortsatz(), wl = wf.pts[wf.pts.length - 1];
+    await sdfMesh('verdauung', dk, dkf.sdf, dkf.grenzen, 0.5);
+    if (abgebaut) return;
+    rohr('verdauung', dk, wf.pts, wf.r, 24, false);
+    kugelM('verdauung', dk, wl[0], wl[1], wl[2], wf.r);
+  } else {
+    rohr('verdauung', dk, [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
+      [8, 103, 4], [10.8, 106.5, -2.5], [11.8, 102, -2.6], [11.8, 95, -2.6], [11, 89.5, -2], [8.5, 86.3, 0], [5, 85.2, 1.6], [2, 86.2, 0.2], [0.6, 84, -2.4], [0.3, 81.5, -4.8], [0, 79.5, -6]], 1.8, 260);
+    kugelM('verdauung', dk, -11.3, 89.2, 0.5, 2.4);
+  }
   /* Harn */
   var nform = await nierenP;   // null: Form nicht geladen, dann einfache Nieren als Ersatz
   if (abgebaut) return;
@@ -745,7 +753,10 @@ async function bauen() {
   /* Leber-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); nur wenn die Form der Leber da ist; ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
   leberP.then(function (lf) { return lf ? Kern.organLaden('leber', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
   /* Magen-Modell danach nur als Skript nachladen (ohne Gestaltung; fuer die Kamerafahrt: organ.start und organ.mitte); es laedt seine Formen selbst, ein Fehler hier laesst den Koerper unberuehrt, die Fahrt nimmt dann den Ersatz */
-  verdauungP.then(function (vf) { return vf ? Kern.organLaden('magen', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); });
+  verdauungP.then(function (vf) { return vf ? Kern.organLaden('magen', { ohneCss: true }) : null; }).catch(function (e) { console.warn(e && e.message || e); }).then(function () {
+    /* Darm-Modell danach ebenso nachladen (fuer die Kamerafahrt: organ.start und organ.mitte), erst nach dem Magen */
+    return verdauungP.then(function (vf) { return vf ? Kern.organLaden('darm', { ohneCss: true }) : null; });
+  }).catch(function (e) { console.warn(e && e.message || e); });
   t0 = performance.now();   /* Aufbauzeit ohne das Warten des Browsers vor dem ersten Schritt */
   als('haut');
   var hm = glasMat('haut', 0xE0C3A8, 0.2, 0.85, 1.7);
@@ -1091,10 +1102,14 @@ ZIELE.gallenblase = ZIELE.pfortader = ZIELE.leberarterie = ZIELE.lebervenen = ZI
 /* Strukturen, die das Magen-Modell mitzeigt (Magen, Ende der Speiseroehre, Zwerchfell): sie bleiben bei der Fahrt sichtbar; der Rest blendet aus */
 var MAGEN_MIT = ['magen', 'speiseroehre', 'zwerchfell'];
 ZIELE.magen = { theta: -0.3, phi: 1.75, ext: [24, 26], target: [3, 106, 1], mit: MAGEN_MIT };   /* Ersatz, wenn das Magen-Modul fehlt (Ansicht des Magens leicht von unten links) */
+/* Strukturen, die das Darm-Modell zeigt (Duenndarm und Dickdarm): sie bleiben bei der Fahrt sichtbar; der Rest blendet aus */
+var DARM_MIT = ['duenndarm', 'dickdarm'];
+ZIELE.darm = { theta: 0, phi: PI / 2, ext: [32, 33], target: [0, 91.5, 3], mit: DARM_MIT };   /* Ersatz, wenn das Darm-Modul fehlt (Ganzansicht des Darms von vorn) */
+ZIELE.duenndarm = ZIELE.dickdarm = ZIELE.darm;   /* gleiches Ziel: das Darm-Modell */
 var fz = null;   /* laufende Fahrt */
 function zielFuer(id, w, h) {
   var z = ZIELE[id], r = bereich(w, h), versatz = [w / 2 - (r.x0 + r.x1) / 2, h / 2 - (r.y0 + r.y1) / 2];
-  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber, ma = Kern.Organe && Kern.Organe.magen;
+  var hz = Kern.Organe && Kern.Organe.herz, ni = Kern.Organe && Kern.Organe.niere, lu = Kern.Organe && Kern.Organe.lunge, le = Kern.Organe && Kern.Organe.leber, ma = Kern.Organe && Kern.Organe.magen, da = Kern.Organe && Kern.Organe.darm;
   if (id === 'herz' && hz && hz.start) {
     var st = hz.start(w, h);
     return { theta: st.theta, phi: st.phi, dist: st.dist, target: V(st.target[0] + HERZ_V[0], st.target[1] + HERZ_V[1], st.target[2] + HERZ_V[2]), versatz: st.versatz };
@@ -1115,12 +1130,16 @@ function zielFuer(id, w, h) {
     var sm = ma.start(w, h), mm = ma.mitte;
     return { theta: sm.theta, phi: sm.phi, dist: sm.dist, target: V(sm.target[0] + mm[0], sm.target[1] + mm[1], sm.target[2] + mm[2]), versatz: sm.versatz };
   }
+  if (z === ZIELE.darm && da && da.start) {   /* Startansicht des Darms (Darm-Koordinaten, um die Mitte da.mitte im Koerper verschoben) */
+    var sd = da.start(w, h), dm = da.mitte;
+    return { theta: sd.theta, phi: sd.phi, dist: sd.dist, target: V(sd.target[0] + dm[0], sd.target[1] + dm[1], sd.target[2] + dm[2]), versatz: sd.versatz };
+  }
   var nf = Kern.Formen && Kern.Formen.niere;
   if (id === 'nieren') return { theta: (nf ? nf.LAGE.dreh : 25) * PI / 180, phi: z.phi, dist: distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
   return { theta: z.theta, phi: z.phi, dist: z.dist || distFuer(z, w, h), target: V(z.target[0], z.target[1], z.target[2]), versatz: versatz };
 }
 /* Vorheriges Detailmodell (umg.von) -> Struktur, in deren Nahbild der Koerper beim Zurueckkommen startet */
-var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber', magen: 'magen' };
+var VON = { herz: 'herz', niere: 'nieren', nephron: 'nieren', lunge: 'lunge', alveole: 'lunge', leber: 'leber', laeppchen: 'leber', magen: 'magen', darm: 'duenndarm' };
 /* Alles ausser der Zielstruktur zum Ausblenden vorbereiten (Hin- und Rueckfahrt); merkt die Ursprungswerte */
 function ausblendVorbereiten(id) {
   /* Material der Zielstruktur (samt Kindern) bleibt; alles andere blendet aus (Materialien sind zwischen Strukturen geteilt) */

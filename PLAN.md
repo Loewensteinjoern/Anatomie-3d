@@ -13,8 +13,8 @@ Erledigtes, Bauplan-Tabelle, Ebenen und Architektur: `docs/plan-archiv.md` (nur 
 | Niere mit Nephron | `#niere`, `#niere/nephron` | Bauplan komplett |
 | Lunge mit Alveole | `#lunge`, `#lunge/alveole` | Bauplan komplett |
 | Leber mit Leberläppchen | `#leber`, `#leber/laeppchen` | Bauplan komplett |
-| Magen | `#magen` | PR A fertig; Krankheitsbilder, Lupe, Export, AR folgen in PR C |
-| Darm mit Dünndarmzotte | `#darm`, `#darm/zotte` | als Nächstes (PR B) |
+| Magen | `#magen` | PR A fertig (#45); Krankheitsbilder, Lupe, Export, AR folgen in PR C |
+| Darm mit Dünndarmzotte | `#darm`, `#darm/zotte` | PR B fertig (#46); Krankheitsbilder, Lupe, Export, AR folgen in PR C |
 
 Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem Merge nach `docs/plan-archiv.md`.
 
@@ -30,6 +30,8 @@ Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem M
   - [x] A3: Stoffe und Magensaft als Teilchen, Zeilen „Stoffe“ und „Strömung“ (Handy eine Zeile mehr), nüchtern / nach dem Essen mit Dehnung, glatteren Falten, Muskelwellen und Pförtner; Schema „Weg der Nahrung“; Blutteilchen in den Magengefäßen entfallen
   - [x] A4: Hilfekarten, Üben (Strukturen finden; drei Wege mit Durchsicht statt Innenansicht, damit alle Stationen antippbar sind); `tools/vergleich.js` mit Modell `magen` und Übergängen Körper–Magen
   - Texte für PR A: von Jörn freigegeben in `docs/freigaben/magen-a-texte.md` (Stofffarben gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, türkis Magensaft; Nüchternzeiten ohne Stundenangabe; Magensonde: Abhören oder pH-Test nach Hausstandard; der Körper bekommt keine Magengefäße)
+  - [x] B1–B6: Darm und Dünndarmzotte (PR #46; Abstimmung und Schritte in `docs/plan-archiv.md`, Texte in `docs/freigaben/darm-b-texte.md`)
+  - [ ] C: Krankheitsbilder, Medikamente, Lupen, Export und AR für Magen, Darm und Zotte – zuerst Einzelheiten und Texte mit Jörn abstimmen
 - [ ] Gehirn mit Neuron und Synapse
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
 - [ ] Auge, Ohr, Haut, Hormondrüsen

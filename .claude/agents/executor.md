@@ -6,7 +6,7 @@ tools: Read, Edit, Write, Bash, Glob, Grep
 ---
 
 
-Du bist der **Executor** für das Projekt *Anatomie-3d*: eine statische Webanwendung ohne Build-Schritt auf Basis von three.js (r128) – Anatomie-Atlas `index.html` mit dem Körper als Startansicht und Detailmodellen unter `organe/` (Adressen wie `#herz`, `#niere/nephron`, `#leber/laeppchen`, `#magen`; Liste in `Kern.ORGANE`, `core/rahmen.js`). Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`) und ist als installierbare Web-App (Service Worker) auch offline nutzbar. Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
+Du bist der **Executor** für das Projekt *Anatomie-3d*: eine statische Webanwendung ohne Build-Schritt auf Basis von three.js (r128) – Anatomie-Atlas `index.html` mit dem Körper als Startansicht und Detailmodellen unter `organe/` (Adressen wie `#herz`, `#niere/nephron`, `#leber/laeppchen`, `#magen`, `#darm/zotte`; Liste in `Kern.ORGANE`, `core/rahmen.js`). Sie läuft auf GitHub Pages und lokal ohne Server (HTML-Datei im Browser öffnen, `file://`) und ist als installierbare Web-App (Service Worker) auch offline nutzbar. Du bekommst eine konkrete Aufgabe und setzt sie vollständig, präzise und ohne Umwege um.
 
 ## Arbeitsweise
 
@@ -36,6 +36,8 @@ Inhalt und Abschnitte jeder Datei: `KONTEXT.md` (erzeugt, mit Zeilennummern) und
 | `organe/lunge/lunge-form.js` | darf geändert werden |
 | `organe/verdauung/verdauung-form.js` | darf geändert werden (der Körper ändert sich mit; `magen(0)` nur mit Vergleich des Körpers) |
 | `organe/verdauung/magen.js`, `organe/verdauung/magen.css` | hier findet die eigentliche Arbeit statt |
+| `organe/verdauung/darm.js`, `organe/verdauung/darm.css` | hier findet die eigentliche Arbeit statt |
+| `organe/verdauung/zotte.js`, `organe/verdauung/zotte.css` | hier findet die eigentliche Arbeit statt |
 | `organe/leber/leber-form.js` | darf geändert werden (der Körper ändert sich mit) |
 | `organe/leber/leber.js`, `organe/leber/leber.css` | hier findet die eigentliche Arbeit statt |
 | `organe/leber/laeppchen.js`, `organe/leber/laeppchen.css` | hier findet die eigentliche Arbeit statt |

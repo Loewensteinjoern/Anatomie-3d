@@ -20,7 +20,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## core/offline.js (83 Zeilen) – Gemeinsamer Kern - Offline: meldet den Service Worker (sw.js) an
 
-## core/rahmen.js (254 Zeilen) – Gemeinsamer Kern - Rahmen: Andockpunkte der Organ-Module
+## core/rahmen.js (256 Zeilen) – Gemeinsamer Kern - Rahmen: Andockpunkte der Organ-Module
 
 ## core/sdf.js (188 Zeilen) – Gemeinsamer Kern - SDF: Gitter, Auswertung und Surface Nets fuer
 
@@ -56,19 +56,19 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/koerper/koerper.css (50 Zeilen)
 
-## organe/koerper/koerper.js (1324 Zeilen) – Koerper - stilisiertes Lehrmodell eines ganzen Menschen
+## organe/koerper/koerper.js (1343 Zeilen) – Koerper - stilisiertes Lehrmodell eines ganzen Menschen
 - 10: Inhalte (Daten, getrennt vom Code)
 - 154: 1. Systeme, Materialien, Steuerung
 - 219: 2. Geometrie-Bausteine (three.js-Koerper)
 - 280: 3. Koerperhuelle (Abstandsfeld)
 - 322: 4. Skelett
 - 426: 5. Organe
-- 724: 6. Aufbau
-- 763: 6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
-- 907: 7. Kamera: Ausschnitte, freier Bildbereich, Renderschleife
-- 973: 8. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt,
-- 1074: 9. Kamerafahrt zum Organ (Knopf der Infokarte): alles ausser dem Organ blendet aus,
-- 1210: 9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
+- 732: 6. Aufbau
+- 774: 6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
+- 918: 7. Kamera: Ausschnitte, freier Bildbereich, Renderschleife
+- 984: 8. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt,
+- 1085: 9. Kamerafahrt zum Organ (Knopf der Infokarte): alles ausser dem Organ blendet aus,
+- 1229: 9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
 
 ## organe/leber/laeppchen.css (133 Zeilen)
 
@@ -187,6 +187,21 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 2468: 7b. Kamerafahrt zum Nephron (Infokarte "Nephron hier ansehen" bei Rinde, Saeulen, Pyramiden und Papillen, K…
 - 2640: 8. Renderschleife, Aufbau, Abbau
 
+## organe/verdauung/darm.css (111 Zeilen)
+
+## organe/verdauung/darm.js (2143 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+- 20: Inhalte (Daten, getrennt vom Code)
+- 256: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
+- 308: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
+- 668: 3. Zustand, Bedienung
+- 880: 4. Kamera: Ausschnitte, freier Bildbereich
+- 945: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1156: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1348: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
+- 1613: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+- 1845: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
+- 2028: 8. Renderschleife, Aufbau, Abbau
+
 ## organe/verdauung/magen.css (109 Zeilen)
 
 ## organe/verdauung/magen.js (2245 Zeilen) – Magen - Mageneingang, Magensaft und Pförtner
@@ -202,7 +217,23 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1889: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
 - 2144: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/verdauung-form.js (759 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
+## organe/verdauung/verdauung-form.js (1337 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
+- 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
+
+## organe/verdauung/zotte.css (110 Zeilen)
+
+## organe/verdauung/zotte.js (1865 Zeilen) – Dünndarmzotte - Saumzellen, Kapillaren und Lymphgefäß
+- 16: Inhalte (Daten, getrennt vom Code): Texte von Joern freigegeben (darm-b-texte.md, Teil 2)
+- 166: Form (feste Größen, Modelleinheit 0,1 mm): reine Funktionen, die Geometrie als Daten liefern (organ.form). …
+- 531: Strömung: Wege der Teilchen (nur Daten und Formeln, kein three.js, kein Zufall) und Zottenpumpe
+- 696: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie)
+- 742: 2. Zustand, Bedienung
+- 905: 3. Kamera: Ausschnitte, freier Bildbereich
+- 963: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1169: 4. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1349: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
+- 1554: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
+- 1747: 8. Renderschleife, Aufbau, Abbau
 
 ## tools/kontext.js (141 Zeilen) – Kontext-Karte und Doku-Budget
 
@@ -213,11 +244,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (1874 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
-- 152: 1. Im Browser (vor allen Skripten der Seite)
-- 330: 2. Abläufe je Modell
-- 1519: 3. Aufnehmen
-- 1696: 4. Vergleichen
-- 1858: 5. Aufruf
+## tools/vergleich.js (2067 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+- 165: 1. Im Browser (vor allen Skripten der Seite)
+- 343: 2. Abläufe je Modell
+- 1712: 3. Aufnehmen
+- 1889: 4. Vergleichen
+- 2051: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)
