@@ -1,4 +1,4 @@
-# Übergabe: Magen und Darm mit Dünndarmzotte (Stand 6. November 2026)
+# Übergabe: Magen und Darm mit Dünndarmzotte (Stand 11. November 2026)
 
 Für einen neuen Chat. Zuerst lesen: `PLAN.md` (Phase 3, Abschnitt „Magen und Darm mit Dünndarmzotte“ – dort stehen alle mit Jörn abgestimmten Entscheidungen), `.claude/agents/executor.md`, dann diese Datei und `.claude/uebergabe/magen-a-texte.md`.
 
@@ -7,7 +7,10 @@ Für einen neuen Chat. Zuerst lesen: `PLAN.md` (Phase 3, Abschnitt „Magen und 
 - Leber mit Leberläppchen ist fertig (PR #42, #43, #44 gemergt).
 - Magen und Darm: Grundsatzfragen und Einzelheiten für PR A sind abgestimmt (siehe PLAN.md).
 - Die Texte für PR A hat Jörn am 6. November 2026 freigegeben (mit Änderungen, siehe Kopf von `magen-a-texte.md`). Jörn möchte geduzt werden.
-- PR A ist als PR #45 offen (Zweig `claude/magen-darm-a-y9fvgi`): Form des Verdauungstrakts, Körper, Magenmodell mit Stoffen, Mahlzeit, Schema, Hilfekarten und Üben. Nächster Schritt nach dem Merge: PR B (Darm mit Dünndarmzotte) – zuerst Einzelheiten und Texte mit Jörn abstimmen.
+- PR A (Magen) ist als PR #45 gemergt.
+- PR B (Darm mit Dünndarmzotte, Schritte B1 bis B6) ist geprüft und als PR nach `main` gestellt (Zweig `claude/magen-darm-a-y9fvgi`). Texte freigegeben am 8. November 2026 (`darm-b-texte.md`).
+- Nächster Schritt nach dem Merge: PR C (Krankheitsbilder, Medikamente, Lupen, Export und AR für Magen, Darm und Zotte) – zuerst Einzelheiten und Texte mit Jörn abstimmen.
+- Später: bei der Leber prüfen, ob alle Medikamente die richtige Wirkung zeigen (siehe PLAN.md).
 
 ## Vorgehen (wie bei der Leber, von Jörn so gewünscht)
 
@@ -28,6 +31,7 @@ Für einen neuen Chat. Zuerst lesen: `PLAN.md` (Phase 3, Abschnitt „Magen und 
 - Vollständiger Vergleichslauf mit `tools/vergleich.js` gegen die Referenz von `main`: `git archive origin/main` in den Scratchpad entpacken und mit `--quelle <ordner>` aufnehmen. Jede Abweichung einem Bereich zuordnen; nur vereinbarte Bereiche dürfen abweichen. Herz, Niere, Nephron, Lunge, Alveole (und alles, was der PR nicht berührt, z. B. Leber und Läppchen in PR A nur, wenn der Körper sie nicht verändert) müssen bytegleich sein. `vergleich.js` um neue Bilder erweitern (am Ende eines Kontexts oder als neuer Kontext).
 - Ein vollständiger Lauf dauert über eine Stunde, Hintergrundbefehle werden nach 2 Stunden beendet: Referenz und neuen Stand je in zwei Teilen aufnehmen, z. B. `--nur` nacheinander für `koerper herz niere lunge` und für `alveole nephron leber laeppchen atlas` (Skript, das `--nur <modell>` je Modell in dasselbe Ziel aufruft). Nie zwei Läufe gleichzeitig, auch keinen Lauf neben einer Browserprüfung. Warten mit `pgrep -f "^node tools/(vergleich|nachweis)"` – nie ohne `^`, sonst findet die Warteschleife sich selbst.
 - Nach einem Neustart der Umgebung die Referenz neu aufnehmen. In der Referenz sind „version.js: ABWEICHUNG … git ls-files nicht möglich“ und Abbrüche bei Knöpfen, die `main` noch nicht hat, harmlos. Bei einem Abbruch mit Zeitüberschreitung den Kontext mit `--nur modell:kontext` für beide Stände wiederholen und nur Teilaufnahmen miteinander vergleichen. Eine einzelne kleine Abweichung an einer Schriftkante oder bei der Deckkraft einer Beschriftung (CSS-Übergang in Echtzeit) zuerst mit `--nur` wiederholen.
+- Erfahrungen aus PR B: Teile mit vielen Modellen überschreiten die 2 Stunden – lieber je Modell einen Hintergrundbefehl (Zeitlimit 7200000 ms angeben, sonst endet er nach 30 Minuten). Wird ein Lauf beim Atlas abgebrochen, sind dessen Ergebnisse nicht gespeichert: die fehlenden Atlas-Kontexte mit `--nur atlas:<kontext>` nachholen. Eine längere Liste `DATEIEN` in `sw.js` verschiebt die Phase der Leberteilchen (Leber-Modell, alle Bilder mit Teilchen und die animierten GLB); geprüft mit `main` plus nur dem neuen `sw.js` – harmlos, im PR erklären.
 - Selbst im Browser ansehen: Desktop 1280×800 und Handy 390×844.
 - Danach PLAN.md (Spalte und Schritte) und executor.md (Dateien, `vergleich.js`-Kontexte) nachtragen.
 
