@@ -15,6 +15,7 @@ Jörn möchte, dass der Darm mehr einer anatomischen Vorlage ähnelt, die er im 
 - Dünndarm etwas dicker (r 0,9 → ca. 1,1 cm), Dickdarm bleibt.
 - Haustren flacher und etwas unregelmäßig statt Perlenkette, Tänien deutlich sichtbar.
 - Farbe wie Vorlage: Dünndarm blassrosa mit dunkleren Furchen, Dickdarm heller graurosa statt braun-lachs.
+- Runde 2: zuerst Schritt 1 (Farbe, Dicke, Haustren), dann Schritt 2 (Knäuel mit Teilchenwegen, Beschriftung, Fahrten); Gekröse und Gefäße von vorn verdeckt, sichtbar über Durchsicht und Auswahl; der Körper zieht mit.
 
 ## Vorgehen
 
