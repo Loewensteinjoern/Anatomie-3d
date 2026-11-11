@@ -1014,13 +1014,14 @@ function dickZustand() {
     return r;
   };
   st.W = function (s) { return glatt(S.mastdarm - 0.5, S.mastdarm - 3.0, s); };   /* Gewicht der Haustren und Taenien: 1 bis zum Sigma, 0 im Mastdarm und Analkanal */
-  /* Aussenradius mit Haustren (Einschnuerungen alle HAUSTRE cm) und drei Taenien (Laengsmuskelstreifen, im Querschnitt um 120 Grad versetzt) */
+  /* Aussenradius mit Haustren (flache, leicht unregelmaessige Einschnuerungen alle HAUSTRE cm) und drei deutliche Taenien (Laengsmuskelstreifen, im Querschnitt um 120 Grad versetzt) */
   st.R = function (s, phi) {
     var R = st.R0(s), w = st.W(s);
     if (w <= 0) return R;
     var b = 0.5 + 0.5 * Math.cos(6.283185307 * s / HAUSTRE), m = (phi - st.phi0) * 0.477464829;   /* m = Winkel / (2 pi / 3) */
     var da = Math.abs(m - Math.round(m)) * 2.0943951;                                              /* Winkelabstand zur naechsten Taenie, 0 bis pi/3 */
-    return R + w * (-0.34 * (1 - b) * (1 - b) + 0.14 * b * (da / 1.0471976) + 0.09 * Math.exp(-(da / 0.22) * (da / 0.22)));
+    var f = 1 + 0.25 * Math.sin(1.7 * Math.floor(s / HAUSTRE) + 0.6);                          /* feste, je Haustrum leicht verschiedene Tiefe (kein Zufall); wechselt bei b = 1, wo die Einschnuerung 0 ist */
+    return R + w * (-0.22 * f * (1 - b) * (1 - b) + 0.10 * b * (da / 1.0471976) + 0.13 * Math.exp(-(da / 0.26) * (da / 0.26)));
   };
   var wp = kurve(WURM_PTS, 8);
   st.wurm = kette(wp, WURM_R, 3);

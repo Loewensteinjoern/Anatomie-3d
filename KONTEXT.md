@@ -217,7 +217,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1889: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
 - 2144: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/verdauung-form.js (1337 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
+## organe/verdauung/verdauung-form.js (1338 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
 
 ## organe/verdauung/zotte.css (110 Zeilen)
