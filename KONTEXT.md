@@ -204,7 +204,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/verdauung/verdauung-form.js (759 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 
-## tools/kontext.js (116 Zeilen) – Kontext-Karte und Doku-Budget
+## tools/kontext.js (141 Zeilen) – Kontext-Karte und Doku-Budget
 
 ## tools/live.js (188 Zeilen) – Prüfung der veröffentlichten Seite (GitHub Pages) gegen den lokalen Stand
 

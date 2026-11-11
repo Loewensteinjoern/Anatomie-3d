@@ -14,6 +14,10 @@
      node tools/kontext.js             schreibt KONTEXT.md
      node tools/kontext.js --pruefen   ändert nichts; Exit 1, wenn KONTEXT.md
                                        veraltet ist oder ein Budget überschritten
+     node tools/kontext.js --doku-pr [basis]
+                                       Exit 0 nur, wenn sich gegenüber basis
+                                       (Standard origin/main) ausschließlich
+                                       Doku geändert hat (NUR_DOKU)
    Keine App-Datei (nicht in DATEIEN von sw.js).
    ===================================================================== */
 'use strict';
@@ -92,7 +96,28 @@ function groesse(rel) {
   return fs.readdirSync(voll).reduce((s, n) => s + groesse(rel + n), 0);
 }
 
+/* Reine Doku-Änderung? Nur dann entfällt der Vergleichslauf vor dem PR.
+   Erlaubt sind ausschließlich diese Pfade; alles andere (App-Dateien, sw.js,
+   vendor/, index.html, die übrigen Werkzeuge in tools/) verlangt den Lauf. */
+const NUR_DOKU = [/^[^/]+\.md$/, /^docs\//, /^\.claude\//, /^tools\/kontext\.js$/];
+
+function dokuPr(basis) {
+  const { execFileSync } = require('child_process');
+  const liste = execFileSync('git', ['diff', '--name-only', basis + '...HEAD'], { cwd: WURZEL, encoding: 'utf8' })
+    .split('\n').filter(Boolean);
+  const andere = liste.filter(d => !NUR_DOKU.some(m => m.test(d)));
+  if (!liste.length) { console.log('Keine Änderung gegenüber ' + basis); return; }
+  if (andere.length) {
+    console.log('KEINE reine Doku-Änderung – vollständiger Vergleichslauf nötig. Betroffen:');
+    andere.forEach(d => console.log('  ' + d));
+    process.exit(1);
+  }
+  console.log('Reine Doku-Änderung (' + liste.length + ' Dateien gegenüber ' + basis + ') – Vergleichslauf entfällt.');
+}
+
 function main() {
+  const i = process.argv.indexOf('--doku-pr');
+  if (i >= 0) return dokuPr(process.argv[i + 1] || 'origin/main');
   const pruefen = process.argv.indexOf('--pruefen') >= 0;
   const neu = erzeugen();
   let ok = true;
