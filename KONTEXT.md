@@ -56,19 +56,19 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/koerper/koerper.css (50 Zeilen)
 
-## organe/koerper/koerper.js (1343 Zeilen) – Koerper - stilisiertes Lehrmodell eines ganzen Menschen
+## organe/koerper/koerper.js (1357 Zeilen) – Koerper - stilisiertes Lehrmodell eines ganzen Menschen
 - 10: Inhalte (Daten, getrennt vom Code)
 - 154: 1. Systeme, Materialien, Steuerung
 - 219: 2. Geometrie-Bausteine (three.js-Koerper)
 - 280: 3. Koerperhuelle (Abstandsfeld)
 - 322: 4. Skelett
 - 426: 5. Organe
-- 732: 6. Aufbau
-- 774: 6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
-- 918: 7. Kamera: Ausschnitte, freier Bildbereich, Renderschleife
-- 984: 8. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt,
-- 1085: 9. Kamerafahrt zum Organ (Knopf der Infokarte): alles ausser dem Organ blendet aus,
-- 1229: 9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
+- 746: 6. Aufbau
+- 788: 6b. Bedienung: Leiste (Organsysteme, Strukturen), Auswahl, Infokarte
+- 932: 7. Kamera: Ausschnitte, freier Bildbereich, Renderschleife
+- 998: 8. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt,
+- 1099: 9. Kamerafahrt zum Organ (Knopf der Infokarte): alles ausser dem Organ blendet aus,
+- 1243: 9b. AR - WebXR im Browser (Android, Chrome mit ARCore) ueber Kern.AR.xr.
 
 ## organe/leber/laeppchen.css (133 Zeilen)
 
@@ -189,18 +189,18 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/verdauung/darm.css (111 Zeilen)
 
-## organe/verdauung/darm.js (2143 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+## organe/verdauung/darm.js (2156 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
 - 20: Inhalte (Daten, getrennt vom Code)
 - 256: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
-- 308: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
-- 668: 3. Zustand, Bedienung
-- 880: 4. Kamera: Ausschnitte, freier Bildbereich
-- 945: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1156: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1348: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
-- 1613: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
-- 1845: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
-- 2028: 8. Renderschleife, Aufbau, Abbau
+- 318: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
+- 681: 3. Zustand, Bedienung
+- 893: 4. Kamera: Ausschnitte, freier Bildbereich
+- 958: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1169: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1361: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
+- 1626: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+- 1858: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
+- 2041: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/magen.css (109 Zeilen)
 
@@ -217,7 +217,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1889: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
 - 2144: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/verdauung-form.js (1338 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
+## organe/verdauung/verdauung-form.js (1343 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
 
 ## organe/verdauung/zotte.css (110 Zeilen)

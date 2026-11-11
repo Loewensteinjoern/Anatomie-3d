@@ -38,28 +38,28 @@ var STRUKTUREN = [
   { id: 'bauhin', de: 'Bauhin-Klappe', lat: 'Valva ileocaecalis', grp: 'Dickdarm', col: 0xD9798F,
     txt: 'Hier mündet der Krummdarm seitlich in den Dickdarm. Die Klappe lässt den Darminhalt portionsweise in den Dickdarm und verhindert, dass er mit seinen vielen Bakterien in den Dünndarm zurückfließt.',
     fakten: [['Lage', 'rechter Unterbauch'], ['Aufgabe', 'Rückfluss verhindern'], ['Übergang', 'Krummdarm → Dickdarm']] },
-  { id: 'blinddarm', de: 'Blinddarm', lat: 'Caecum', grp: 'Dickdarm', col: 0xD3A194,
+  { id: 'blinddarm', de: 'Blinddarm', lat: 'Caecum', grp: 'Dickdarm', col: 0xC38D80,
     txt: 'Der Anfang des Dickdarms unterhalb der Bauhin-Klappe, ein kurzer, blind endender Sack. An ihm hängt der Wurmfortsatz.',
     fakten: [['Länge', 'ca. 7 cm'], ['Lage', 'rechter Unterbauch'], ['Trägt', 'den Wurmfortsatz']] },
-  { id: 'wurmfortsatz', de: 'Wurmfortsatz', lat: 'Appendix vermiformis', grp: 'Dickdarm', col: 0xD8A699,
+  { id: 'wurmfortsatz', de: 'Wurmfortsatz', lat: 'Appendix vermiformis', grp: 'Dickdarm', col: 0xC99385,
     txt: 'Ein dünner, etwa fingerlanger Anhang des Blinddarms mit viel lymphatischem Gewebe. Entzündet er sich, spricht man umgangssprachlich von einer „Blinddarmentzündung“ (Appendizitis).',
     fakten: [['Länge', 'ca. 8–10 cm'], ['Gewebe', 'viel Abwehrgewebe'], ['Entzündung', 'Schmerz wandert in den rechten Unterbauch']] },
-  { id: 'aufsteigend', de: 'Aufsteigender Dickdarm', lat: 'Colon ascendens', grp: 'Dickdarm', col: 0xD09C8E,
+  { id: 'aufsteigend', de: 'Aufsteigender Dickdarm', lat: 'Colon ascendens', grp: 'Dickdarm', col: 0xC08A7C,
     txt: 'Er steigt auf der rechten Seite bis unter die Leber auf und biegt dort in den queren Dickdarm um. Typisch für den Dickdarm sind drei Längsmuskelstreifen (Tänien) und Ausbuchtungen (Haustren).',
     fakten: [['Lage', 'rechte Bauchseite'], ['Biegung', 'unter der Leber'], ['Kennzeichen', 'Tänien und Haustren']] },
-  { id: 'quer', de: 'Querer Dickdarm', lat: 'Colon transversum', grp: 'Dickdarm', col: 0xCD998C,
+  { id: 'quer', de: 'Querer Dickdarm', lat: 'Colon transversum', grp: 'Dickdarm', col: 0xBD8779,
     txt: 'Er hängt quer durch den Oberbauch unter dem Magen durch und ist am Gekröse beweglich aufgehängt. Hier wird dem Darminhalt weiter Wasser entzogen.',
     fakten: [['Lage', 'quer unter Magen und Leber'], ['Aufhängung', 'beweglich am Gekröse'], ['Biegung links', 'unter der Milz']] },
-  { id: 'absteigend', de: 'Absteigender Dickdarm', lat: 'Colon descendens', grp: 'Dickdarm', col: 0xD2A093,
+  { id: 'absteigend', de: 'Absteigender Dickdarm', lat: 'Colon descendens', grp: 'Dickdarm', col: 0xC28C7E,
     txt: 'Er zieht auf der linken Seite nach unten. Der Darminhalt ist hier schon weitgehend eingedickt.',
     fakten: [['Lage', 'linke Bauchseite'], ['Inhalt', 'schon fester Stuhl'], ['Weiter', 'ins Sigma']] },
-  { id: 'sigma', de: 'Sigma', lat: 'Colon sigmoideum', grp: 'Dickdarm', col: 0xCC978A,
+  { id: 'sigma', de: 'Sigma', lat: 'Colon sigmoideum', grp: 'Dickdarm', col: 0xBC8677,
     txt: 'Die S-förmige Schlinge im linken Unterbauch verbindet den absteigenden Dickdarm mit dem Mastdarm. Hier sammelt sich der Stuhl vor der Entleerung.',
     fakten: [['Lage', 'linker Unterbauch'], ['Form', 'S-förmig'], ['Häufig betroffen', 'Divertikel']] },
-  { id: 'mastdarm', de: 'Mastdarm', lat: 'Rectum', grp: 'Dickdarm', col: 0xC48A7E,
+  { id: 'mastdarm', de: 'Mastdarm', lat: 'Rectum', grp: 'Dickdarm', col: 0xB47D70,
     txt: 'Der letzte Abschnitt des Darms vor dem After. Füllt er sich, melden Dehnungsfühler in der Wand den Stuhldrang.',
     fakten: [['Länge', 'ca. 12–15 cm'], ['Lage', 'im kleinen Becken vor dem Kreuzbein'], ['Aufgabe', 'Stuhl sammeln, Stuhldrang auslösen']] },
-  { id: 'after', de: 'After mit Schließmuskeln', lat: 'Canalis analis, Mm. sphincteres ani', grp: 'Dickdarm', col: 0xBC8174,
+  { id: 'after', de: 'After mit Schließmuskeln', lat: 'Canalis analis, Mm. sphincteres ani', grp: 'Dickdarm', col: 0xAD7466,
     txt: 'Der Analkanal wird von zwei Schließmuskeln verschlossen: Der innere arbeitet unwillkürlich, den äußeren können wir bewusst anspannen. Zusammen halten sie den Stuhl zurück, bis wir eine Toilette erreichen (Kontinenz).',
     fakten: [['Länge', 'ca. 4 cm'], ['Innerer Schließmuskel', 'unwillkürlich'], ['Äußerer Schließmuskel', 'willkürlich']] },
   { id: 'schleimhaut', de: 'Darmschleimhaut', lat: 'Tunica mucosa', grp: 'Darmwand', col: 0xE88F8C,
@@ -280,6 +280,16 @@ MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);               
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
 ['arterien', 'venen', 'pfortader'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
+/* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
+   zur Mitte des Streifens hin das Verhaeltnis Zielfarbe / Grundfarbe) */
+var TAENIE = ['blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'], TAENIE_ZIEL = srgb(0xF2E2DA);
+TAENIE.forEach(function (sid) { MAT[sid].vertexColors = true; if (MAT[sid + 'D']) MAT[sid + 'D'].vertexColors = true; });
+function taenieFarbe(g, sid, taenie) {
+  var b = srgb(STRUCT[sid].col), p = g.attributes.position, c = new Float32Array(p.count * 3), i, t;
+  var fr = TAENIE_ZIEL.r / b.r - 1, fg = TAENIE_ZIEL.g / b.g - 1, fb = TAENIE_ZIEL.b / b.b - 1;
+  for (i = 0; i < p.count; i++) { t = taenie(p.getX(i), p.getY(i), p.getZ(i)); c[i * 3] = 1 + t * fr; c[i * 3 + 1] = 1 + t * fg; c[i * 3 + 2] = 1 + t * fb; }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+}
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
 
 var root = new THREE.Group(); root.name = 'Darm'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
@@ -569,9 +579,12 @@ async function bauen() {
   var RDK = function (s, phi) { return dk.R(s, phi); };
   /* ein Stueck der Haut: reg > 0 teilt es an der Schnittflaeche des Bereichs in hintere Haelfte und Deckel */
   function haut(sid, A, s0, s1, Rf, o, reg) {
-    var g = schlauch(A, s0, s1, Rf, o);
-    if (!reg) { var m0 = addMesh(sid, g, MAT[sid], STRUCT[sid].de, 3, 'hinten'); if (o && o.ende) m0.userData.ende = true; if (o && o.fern) m0.userData.fern = true; tris.haut += anz(g); return; }
+    var g = schlauch(A, s0, s1, Rf, o), tn = TAENIE.indexOf(sid) >= 0;
+    if (!reg) {
+      if (tn) taenieFarbe(g, sid, dk.taenie);
+      var m0 = addMesh(sid, g, MAT[sid], STRUCT[sid].de, 3, 'hinten'); if (o && o.ende) m0.userData.ende = true; if (o && o.fern) m0.userData.fern = true; tris.haut += anz(g); return; }
     var t = schneide(g, RZ[reg].schnitt); g.dispose();
+    if (tn) { if (t.neg) taenieFarbe(t.neg, sid, dk.taenie); if (t.pos) taenieFarbe(t.pos, sid, dk.taenie); }
     if (t.neg) { addMesh(sid, t.neg, MAT[sid], STRUCT[sid].de, 3, 'hinten', reg); tris.haut += anz(t.neg); }
     if (t.pos) { addMesh(sid, t.pos, MAT[sid + 'D'], STRUCT[sid].de + ' (vorn)', 3, 'deckel', reg); tris.haut += anz(t.pos); }
   }

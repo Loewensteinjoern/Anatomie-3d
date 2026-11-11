@@ -692,12 +692,26 @@ async function organe() {
   /* Dickdarm: Rahmen um den Duenndarm. Mit der Form der Verdauung ein Abstandsfeld (Blinddarm, Sigma, Mastdarm bis zum After, Haustren), der Wurmfortsatz ein Rohr mit
      Kugel am Ende; Zahl der three.js-Objekte wie beim frueheren Rohr samt Kugeln (Zufallszahlen der Kennungen: spaeter geladene Organe bleiben gleich) */
   als('dickdarm');
-  var dk = mat('verdauung', 0xD09C8E, { rough: 0.55, coat: 0.3 });
+  var dk = mat('verdauung', 0xC08A7C, { rough: 0.55, coat: 0.3 });
   if (vform && vform.dickdarm) {
     var dkf = vform.dickdarm({ ohneAppendix: true }), wf = vform.wurmfortsatz(), wl = wf.pts[wf.pts.length - 1];
-    await sdfMesh('verdauung', dk, dkf.sdf, dkf.grenzen, 0.5);
+    /* Taenien heller abgesetzt: Vertexfarben als Faktor auf die Materialfarbe (linear je Kanal); der Wurmfortsatz (gleiches Material, Rohr und gemeinsame Kugel) bekommt den Faktor 1 */
+    dk.vertexColors = true;
+    var dkz = Kern.srgb(0xF2E2DA), dkb = Kern.srgb(0xC08A7C);
+    function eins(g) {
+      var n = g.attributes.position.count, c = new Float32Array(n * 3).fill(1);
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    }
+    var dkm = await sdfMesh('verdauung', dk, dkf.sdf, dkf.grenzen, 0.5);
     if (abgebaut) return;
-    rohr('verdauung', dk, wf.pts, wf.r, 24, false);
+    var dkg = dkm.geometry, dkp = dkg.attributes.position, dkc = new Float32Array(dkp.count * 3), dki, dkt;
+    for (dki = 0; dki < dkp.count; dki++) {
+      dkt = dkf.taenie(dkp.getX(dki), dkp.getY(dki), dkp.getZ(dki));
+      dkc[dki * 3] = 1 + dkt * (dkz.r / dkb.r - 1); dkc[dki * 3 + 1] = 1 + dkt * (dkz.g / dkb.g - 1); dkc[dki * 3 + 2] = 1 + dkt * (dkz.b / dkb.b - 1);
+    }
+    dkg.setAttribute('color', new THREE.BufferAttribute(dkc, 3));
+    eins(rohr('verdauung', dk, wf.pts, wf.r, 24, false).geometry);
+    if (!sphG.attributes.color) eins(sphG);   /* sphG ist die gemeinsame Kugel: die anderen Materialien ohne Vertexfarben ignorieren das Attribut */
     kugelM('verdauung', dk, wl[0], wl[1], wl[2], wf.r);
   } else {
     rohr('verdauung', dk, [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
