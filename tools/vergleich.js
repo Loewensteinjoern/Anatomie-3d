@@ -119,7 +119,7 @@
    „wege-beendet“)), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
    uebergaenge-darm (Körper, Dünndarm wählen, Infokarte „Darm öffnen“, Kamerafahrt „fahrt-darm“, Darm, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann die Adresse #darm direkt, Zurück-Knopf
    „← Körper“; Endzustand in erg.uebergaengeDarm) und uebergaenge-darm-handy („fahrt-darm“, „darm“).
-   Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info), handy, datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
+   Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info; dann die Strömung: stroemung, zweimal pause (müssen gleich sein), nach-dem-essen (12 s), durchsicht-stroemung, nur-fett – Werte von ZotteApp.stroemung() in erg.stroemung –, Schema nüchtern und nach dem Essen, Hilfekarten, Üben, Wege verfolgen mit wege-start, wege-zwei, wege-leuchtet, wege-alle-fertig und erg.wege), handy (dazu schema, hilfekarte, wege-start), datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
    Kamerafahrt „fahrt-zotte“, Zotte, Zurück-Knopf „← Darm“, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann den Leerdarm antippen, „Dünndarmzotte hier ansehen“ „fahrt-zotte-punkt“, Zurück-Knopf des Atlas;
    Endzustand in erg.uebergaengeZotte) und uebergaenge-zotte-handy („fahrt-zotte“, „zotte“).
 
@@ -1230,7 +1230,8 @@ const MODELLE = {
     datei: 'index.html',
     bereit: () => !!(window.ZotteApp && window.ZotteApp.ready),
     kontexte: {
-      desktop: { opt: DESKTOP, timeout: 90000, async ablauf(t) {
+      desktop: { opt: DESKTOP, timeout: 120000, async ablauf(t) {
+        const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.ZotteApp.stroemung()); };
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
         await t.klick('#cam1'); await t.weiter(900); await t.bild('zotte-innen');
         await t.klick('#cam2'); await t.weiter(900); await t.bild('oberflaeche');
@@ -1238,11 +1239,40 @@ const MODELLE = {
         await t.klick('#cam1'); await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht');
         await t.klick('#bSee'); await t.klick('#cam0'); await t.klick('#bLab'); await t.weiter(900); await t.bild('ohne-beschriftung');
         await t.klick('#bLab'); await t.klick('#rail .row >> nth=6'); await t.weiter(600); await t.bild('info');   /* Zentrales Lymphgefäß */
+        /* Strömung (Zotte innen): Info zu, 1,5 s; Pause (die zwei Bilder müssen gleich aussehen), nach dem Essen (12 s), Durchsicht, nur Fett */
+        await t.klick('#bCls'); await t.klick('#cam1'); await t.weiter(1500); await t.bild('stroemung'); await werte('stroemung');
+        await t.klick('#bPlay'); await t.weiter(500); await t.bild('pause'); await werte('pause'); await t.weiter(1500); await t.bild('pause');
+        await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(12000); await t.bild('nach-dem-essen'); await werte('nach-dem-essen');
+        await t.klick('#bSee'); await t.weiter(600); await t.bild('durchsicht-stroemung'); await werte('durchsicht-stroemung'); await t.klick('#bSee');
+        for (const id of ['#bZucker', '#bAmino', '#bWasser']) await t.klick(id);
+        await t.weiter(600); await t.bild('nur-fett'); await werte('nur-fett');
+        for (const id of ['#bZucker', '#bAmino', '#bWasser']) await t.klick(id);
+        /* Schema: erst nüchtern, dann nach dem Essen; Schema zu, wieder nüchtern */
+        await t.klick('#bNuechtern'); await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema');
+        await t.klick('#bEssen'); await t.weiter(3000); await t.bild('schema-nach-dem-essen');
+        await t.klick('#bSchemaX'); await t.klick('#bNuechtern'); await t.weiter(6000);   /* die Einblendung der Mahlzeit verschwindet, bevor die Karten aufgehen */
+        /* Hilfekarten und Üben (Strukturen finden, Wege verfolgen; Antworten über ZotteApp.tippe) */
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#paneHelp .dis >> nth=3'); await t.weiter(600); await t.bild('hilfekarte-pflege');
+        await t.klick('#paneHelp .dis >> nth=4'); await t.weiter(600); await t.bild('hilfekarte-modell');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(900); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(900);
+        await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
+        await t.js(() => { window.ZotteApp.tippe('buerstensaum'); window.ZotteApp.tippe('saumzellen'); }); await t.weiter(900); await t.bild('wege-zwei');
+        await t.js(() => { window.ZotteApp.tippe('kapillarnetz'); window.ZotteApp.tippe('arteriole'); }); await t.weiter(300); await t.bild('wege-leuchtet');
+        await t.js(() => { for (const id of ['kapillarnetz', 'venole']) window.ZotteApp.tippe(id); }); await t.weiter(300); await t.bild('wege-eins-fertig');
+        await t.klick('#qNext'); await t.js(() => { for (const id of ['buerstensaum', 'saumzellen', 'lymphgefaess']) window.ZotteApp.tippe(id); });
+        await t.klick('#qNext'); await t.js(() => { for (const id of ['arteriole', 'kapillarnetz', 'venole']) window.ZotteApp.tippe(id); }); await t.weiter(600); await t.bild('wege-alle-fertig');
+        t.erg.wege = await t.js(() => window.ZotteApp.wege());
+        await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-beendet');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
         await t.klick('#cam1'); await t.weiter(900); await t.bild('zotte-innen');
         await t.klick('#rail .row >> nth=6'); await t.weiter(600); await t.bild('info');
+        await t.klick('#bCls'); await t.klick('#bSchema'); await t.weiter(1500); await t.bild('schema'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
+        await t.klick('#bWege'); await t.weiter(300);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
