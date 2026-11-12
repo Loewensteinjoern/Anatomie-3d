@@ -217,7 +217,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1889: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
 - 2144: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/verdauung-form.js (1343 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
+## organe/verdauung/verdauung-form.js (1363 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
 
 ## organe/verdauung/zotte.css (110 Zeilen)
@@ -234,6 +234,26 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1349: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
 - 1554: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
 - 1747: 8. Renderschleife, Aufbau, Abbau
+
+## tools/duenndarm-knaeuel/abstand.js (54 Zeilen)
+
+## tools/duenndarm-knaeuel/einbauen.js (12 Zeilen)
+
+## tools/duenndarm-knaeuel/formen.js (16 Zeilen)
+
+## tools/duenndarm-knaeuel/hole.js (32 Zeilen)
+
+## tools/duenndarm-knaeuel/index.js (36 Zeilen) – Duenndarm als dichtes Knaeuel: berechnet die Tabelle DUENN_TAB in
+
+## tools/duenndarm-knaeuel/lagen.js (38 Zeilen)
+
+## tools/duenndarm-knaeuel/pruefe.js (11 Zeilen)
+
+## tools/duenndarm-knaeuel/relax.js (45 Zeilen)
+
+## tools/duenndarm-knaeuel/schnitt.js (11 Zeilen)
+
+## tools/duenndarm-knaeuel/weg.js (68 Zeilen)
 
 ## tools/kontext.js (141 Zeilen) – Kontext-Karte und Doku-Budget
 
