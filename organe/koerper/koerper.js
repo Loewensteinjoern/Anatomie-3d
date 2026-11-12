@@ -697,7 +697,7 @@ async function organe() {
     var dkf = vform.dickdarm({ ohneAppendix: true }), wf = vform.wurmfortsatz(), wl = wf.pts[wf.pts.length - 1];
     /* Taenien heller abgesetzt: Vertexfarben als Faktor auf die Materialfarbe (linear je Kanal); der Wurmfortsatz (gleiches Material, Rohr und gemeinsame Kugel) bekommt den Faktor 1 */
     dk.vertexColors = true;
-    var dkz = Kern.srgb(0xF2E2DA), dkb = Kern.srgb(0xC08A7C);
+    var dkz = Kern.srgb(0xEBD3C8), dkb = Kern.srgb(0xC08A7C);
     function eins(g) {
       var n = g.attributes.position.count, c = new Float32Array(n * 3).fill(1);
       g.setAttribute('color', new THREE.BufferAttribute(c, 3));
@@ -706,7 +706,7 @@ async function organe() {
     if (abgebaut) return;
     var dkg = dkm.geometry, dkp = dkg.attributes.position, dkc = new Float32Array(dkp.count * 3), dki, dkt;
     for (dki = 0; dki < dkp.count; dki++) {
-      dkt = dkf.taenie(dkp.getX(dki), dkp.getY(dki), dkp.getZ(dki));
+      dkt = dkf.taenie(dkp.getX(dki), dkp.getY(dki), dkp.getZ(dki), 0.12);   /* breitere Kante: das Netz des Koerpers ist grob (0,5 cm) */
       dkc[dki * 3] = 1 + dkt * (dkz.r / dkb.r - 1); dkc[dki * 3 + 1] = 1 + dkt * (dkz.g / dkb.g - 1); dkc[dki * 3 + 2] = 1 + dkt * (dkz.b / dkb.b - 1);
     }
     dkg.setAttribute('color', new THREE.BufferAttribute(dkc, 3));

@@ -1026,7 +1026,7 @@ function dickZustand() {
     return R + w * (-0.22 * f * (1 - b) * (1 - b) + 0.10 * b * (da / 1.0471976) + 0.13 * Math.exp(-(da / 0.26) * (da / 0.26)));
   };
   /* Gewicht 0..1 der Taenien-Faerbung (Mitte des Streifens 1, weich auslaufend; nur wo Haustren und Taenien sind) */
-  st.T = function (s, phi) { var w = st.W(s), da = taenieDa(phi); return w * Math.exp(-(da / 0.34) * (da / 0.34)); };
+  st.T = function (s, phi, k) { var w = st.W(s), da = taenieDa(phi); k = k || 0.025; return w * glatt(0.275 + k, 0.275 - k, da); };   /* klar begrenzter Streifen, ca. 1 cm breit; k = halbe Breite der Kante (rad), groesser fuer grobe Netze */
   var wp = kurve(WURM_PTS, 8);
   st.wurm = kette(wp, WURM_R, 3);
   DICK_ZUSTAND = st;
@@ -1058,7 +1058,7 @@ function dickdarm(opt) {
   if (wurm) for (var k = 0; k < WURM_PTS.length; k++) for (var c = 0; c < 3; c++) { if (WURM_PTS[k][c] - 0.8 < g[0][c]) g[0][c] = Math.floor((WURM_PTS[k][c] - 0.8) * 10) / 10; if (WURM_PTS[k][c] + 0.8 > g[1][c]) g[1][c] = Math.ceil((WURM_PTS[k][c] + 0.8) * 10) / 10; }
   return {
     sdf: sdf, grenzen: g, achse: A, laenge: A.laenge, R: st.R, R0: st.R0,
-    taenie: function (x, y, z) { A.q(x, y, z); if (A.i < 0) return 0; return glattO ? 0 : st.T(A.s, A.phi()); },   /* Gewicht 0..1 der Taenie an dieser Stelle der Aussenflaeche (zum Einfaerben) */
+    taenie: function (x, y, z, k) { A.q(x, y, z); if (A.i < 0) return 0; return glattO ? 0 : st.T(A.s, A.phi(), k); },   /* Gewicht 0..1 der Taenie an dieser Stelle der Aussenflaeche (zum Einfaerben) */
     abschnitte: { blinddarm: [0, S.bauhin], aufsteigend: [S.bauhin, S.flexurRechts], quer: [S.flexurRechts, S.flexurLinks], absteigend: [S.flexurLinks, S.sigma], sigma: [S.sigma, S.mastdarm], mastdarm: [S.mastdarm, S.kanal], analkanal: [S.kanal, S.ende] }
   };
 }

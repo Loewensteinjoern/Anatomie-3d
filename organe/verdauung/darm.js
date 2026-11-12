@@ -282,7 +282,7 @@ MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);        
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
 /* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
    zur Mitte des Streifens hin das Verhaeltnis Zielfarbe / Grundfarbe) */
-var TAENIE = ['blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'], TAENIE_ZIEL = srgb(0xF2E2DA);
+var TAENIE = ['blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'], TAENIE_ZIEL = srgb(0xEBD3C8);
 TAENIE.forEach(function (sid) { MAT[sid].vertexColors = true; if (MAT[sid + 'D']) MAT[sid + 'D'].vertexColors = true; });
 function taenieFarbe(g, sid, taenie) {
   var b = srgb(STRUCT[sid].col), p = g.attributes.position, c = new Float32Array(p.count * 3), i, t;
