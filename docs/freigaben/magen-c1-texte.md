@@ -1,4 +1,4 @@
-# Magen, PR C1 – Texte (ENTWURF, noch nicht freigegeben)
+# Magen, PR C1 – Texte (von Jörn freigegeben, 12. November 2026)
 
 Aufbau wie bei der Leber (`Kern.Szenarien.daten.leber`): Name, Kurzzeile, Kicker, Einleitung, vier Werte, vier Schritte, Behandlung bzw. Achtung, Pflege beobachtet, Hinweis zum Modell.
 

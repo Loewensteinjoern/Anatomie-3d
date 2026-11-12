@@ -17,5 +17,5 @@
 
 ## Nächster Schritt
 
-- Texte C1 wörtlich zur Freigabe → `docs/freigaben/magen-c1-texte.md`; Texte C2 vor C2.
+- Texte C1 freigegeben (`docs/freigaben/magen-c1-texte.md`); Umsetzung C1 läuft. Texte C2 vor C2.
 - Vorbilder: `core/szenarien.js` (`daten.leber`), Leber 7c–7f, Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11).
