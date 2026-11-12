@@ -898,7 +898,7 @@ var K3 = function (x, y, z) { return V(x - M[0], y - M[1], z - M[2]); };   /* Ko
 var AUSSCHNITTE = [
   { name: 'Übersicht', theta: UEBERSICHT.theta, phi: UEBERSICHT.phi, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb, reg: 0 },
   { name: 'Zwölffingerdarm', theta: -0.55, phi: 1.5, target: K3(-2, 99.5, 0), ext: [17, 15], halb: 8, reg: 1 },
-  { name: 'Dünndarm', theta: 0, phi: 1.3, target: K3(1.2, 93.5, 10.5), ext: [19, 10], halb: 9.5, reg: 2 },
+  { name: 'Dünndarm', theta: 0, phi: 1.3, target: K3(4.7, 94.5, 10.0), ext: [14, 9], halb: 7, reg: 2 },
   { name: 'Blinddarm', theta: -0.7, phi: 1.5, target: K3(-10.2, 90.5, 2.9), ext: [14, 16], halb: 7, reg: 3 },
   { name: 'Mastdarm', theta: 1.5708, phi: 1.5, target: K3(0, 83.5, -3), ext: [14, 16], halb: 7, reg: 4 }
 ];
@@ -1239,7 +1239,8 @@ function kand(i, id) {
    Netz einer anderen Struktur liegt; sonst keine Beschriftung. Waehrend der Bewegung bleibt die letzte Wahl. */
 var sKey = '', sT = 0, sOk = true, sichtVer = 0, VIS = {};   /* VIS: gewaehlter Ankerpunkt je Struktur (null = verdeckt) */
 var rayS = new THREE.Raycaster(), dirS = new THREE.Vector3();
-function frei(id, p) {
+/* Ein Strahl von der Kamera zum Punkt: liegt vor ihm ein undurchsichtiges Netz einer anderen Struktur? */
+function strahlFrei(id, p) {
   dirS.copy(p).sub(camera.position); var d = dirS.length(); dirS.normalize();
   rayS.set(camera.position, dirS); rayS.far = d;
   var hits = rayS.intersectObjects(root.children, true);
@@ -1247,6 +1248,19 @@ function frei(id, p) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || sid === id || !sichtbar(o) || !enabled[sid] || weichMat(o) || o.userData.lumen) continue;   /* die einfache Innenflaeche (nur bei Durchsicht) verdeckt nichts */
     if (hits[i].distance < d - 0.3) return false;
+  }
+  return true;
+}
+/* Der Mittelpunkt allein genuegt nicht: in dem dichten Knaeuel des Duenndarms laesst eine schmale Luecke zwischen zwei Schlingen den Strahl zum Anker durch, obwohl die Struktur
+   dort verdeckt ist. Darum muessen auch vier Nachbarstrahlen (0,15 cm seitlich und oben/unten, quer zur Blickrichtung) frei sein. */
+var nbR = new THREE.Vector3(), nbU = new THREE.Vector3(), nbP = new THREE.Vector3();
+function frei(id, p) {
+  if (!strahlFrei(id, p)) return false;
+  nbR.setFromMatrixColumn(camera.matrixWorld, 0); nbU.setFromMatrixColumn(camera.matrixWorld, 1);
+  var o = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (var k = 0; k < 4; k++) {
+    nbP.copy(p).addScaledVector(nbR, 0.15 * o[k][0]).addScaledVector(nbU, 0.15 * o[k][1]);
+    if (!strahlFrei(id, nbP)) return false;
   }
   return true;
 }

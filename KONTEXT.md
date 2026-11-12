@@ -189,7 +189,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/verdauung/darm.css (111 Zeilen)
 
-## organe/verdauung/darm.js (2156 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+## organe/verdauung/darm.js (2170 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
 - 20: Inhalte (Daten, getrennt vom Code)
 - 256: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
 - 318: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
@@ -197,10 +197,10 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 893: 4. Kamera: Ausschnitte, freier Bildbereich
 - 958: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
 - 1169: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1361: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
-- 1626: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
-- 1858: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
-- 2041: 8. Renderschleife, Aufbau, Abbau
+- 1375: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
+- 1640: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+- 1872: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
+- 2055: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/magen.css (109 Zeilen)
 
