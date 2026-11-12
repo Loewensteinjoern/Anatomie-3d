@@ -285,11 +285,11 @@ function abstandFuer(ext, r, fov, h) {
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (WERKZEUG_H.handy + (w < WERKZEUG_H.umbruch ? 32 : 0)), unten: u };
+    return { oben: u - (WERKZEUG_H.handy + (w < WERKZEUG_H.umbruch ? WERKZEUG_H.zeile : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 357 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 434, zeile: 30 };   /* Hoehe der Leiste (Pixel); in der ersten Reihe (Ausschnitt) stehen auch Lupe und AR: unter der Breite umbruch (gemessen) bricht sie um und die Leiste wird um zeile (gemessen) hoeher */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Magens im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
