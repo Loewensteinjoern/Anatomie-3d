@@ -107,8 +107,9 @@
    nach dem Essen); Hilfekarten („hilfekarte“ = erste Karte, „hilfekarte-pflege“ = vierte, „hilfekarte-modell“ = fünfte); Üben „ueben“ (Strukturen finden, #bQuiz, die Aufgabe hängt vom festen Zufallsstrom ab)
    und Wege verfolgen (#bWege: „wege-start“, nach zwei richtigen Stationen über MagenApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“, „wege-eins-fertig“, „wege-zwei-mitte“ (Weg 2 nach Vagusnerv und
    Schleimhaut), „wege-alle-fertig“ („Alle drei Wege geschafft.“; Stand in erg.wege), „wege-beendet“); am Ende die Krankheitsbilder und Medikamente (Reiter, je Eintrag ein Bild: „gastritis“, „gastritis-karte-zu“,
-   „geschwuer“ und „pantoprazol“ in der Innenansicht, „reflux“ im Ausschnitt Mageneingang nach dem Essen, „nsar“, „mcp“; „szenario-aus“; Wirkgrößen MagenApp.szw() in erg.szw)), handy (Übersicht, Info, Innenansicht,
-   Schema, Hilfekarte, Üben, Wege-Start, „geschwuer“ in der Innenansicht), datei (file://) und abbau
+   „geschwuer“ und „pantoprazol“ in der Innenansicht, „reflux“ im Ausschnitt Mageneingang nach dem Essen, „nsar“, „mcp“; „szenario-aus“; Wirkgrößen MagenApp.szw() in erg.szw; dann die Lupe: „lupe-nuechtern“, „lupe-nach-dem-essen“ (Chip),
+   „lupe-gastritis“, „lupe-geschwuer“, „lupe-nsar“, „lupe-pantoprazol“, „lupe-belegzelle-pantoprazol“, „lupe-belegzelle“ (Antippen über MagenApp.lupeBelegzelle, nach dem Essen), „lupe-zurueck“)), handy (Übersicht, Info, Innenansicht,
+   Schema, Hilfekarte, Üben, Wege-Start, „geschwuer“ in der Innenansicht, „lupe“, „lupe-belegzelle“), datei (file://) und abbau
    (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte uebergaenge-magen (Körper, Magen über die Infokarte „Magen öffnen“ mit Kamerafahrt „fahrt-magen“, Magen,
    Browser-Zurück mit Rückfahrt „rueckfahrt-magen“; dann die Adresse #magen direkt, Zurück-Knopf „← Körper“; Endzustand in erg.uebergaengeMagen) und uebergaenge-magen-handy („fahrt-magen“, „magen“).
 
@@ -1176,6 +1177,21 @@ const MODELLE = {
           if (bild === 'reflux' || bild === 'mcp') await t.klick('#bNuechtern');
         }
         await t.klick('#cam0'); await t.weiter(1500); await t.bild('szenario-aus'); await szw('szenario-aus');
+        /* Lupe (Magendrüse, Belegzelle; neue Bilder am Ende): nüchtern, nach dem Essen (Chip), dann mit Krankheitsbild bzw. Medikament (erst wählen, dann öffnen: die Wahl schließt die Lupe),
+           die Belegzelle über MagenApp.lupeBelegzelle (statt Pixelkoordinaten), mit Pantoprazol, zurück zur Drüse */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-nuechtern');
+        await t.klick('#lpChips button[data-m="1"]'); await t.weiter(3000); await t.bild('lupe-nach-dem-essen');
+        await t.klick('#bLupeX'); await t.weiter(300);
+        for (const [tab, name, bild] of [['Krankheitsbilder', 'Magenschleimhautentzündung (Gastritis)', 'lupe-gastritis'], ['Krankheitsbilder', 'Magengeschwür (Ulkus)', 'lupe-geschwuer'],
+          ['Medikamente', 'Ibuprofen und Diclofenac – Schaden am Magen (NSAR)', 'lupe-nsar'], ['Medikamente', 'Pantoprazol beim Magengeschwür (z. B. Pantozol®)', 'lupe-pantoprazol']]) {
+          await schalte(tab, name, 4000); await t.klick('#bLupe'); await t.weiter(1500); await t.bild(bild); await t.klick('#bLupeX'); await t.weiter(300);
+          if (bild !== 'lupe-pantoprazol') await schalte(tab, name, 1500);
+        }
+        await t.klick('#bLupe'); await t.weiter(1500); await t.js(() => window.MagenApp.lupeBelegzelle(true)); await t.weiter(2500); await t.bild('lupe-belegzelle-pantoprazol');
+        await t.klick('#bLupeX'); await t.weiter(300); await schalte('Medikamente', 'Pantoprazol beim Magengeschwür (z. B. Pantozol®)', 1500);
+        await t.klick('#bLupe'); await t.weiter(1500); await t.js(() => window.MagenApp.lupeBelegzelle(true)); await t.weiter(2500); await t.bild('lupe-belegzelle');
+        await t.klick('#lpZurueck'); await t.weiter(900); await t.bild('lupe-zurueck');
+        await t.klick('#bLupeX'); await t.weiter(600);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1190,6 +1206,9 @@ const MODELLE = {
         await t.klick('#cam1'); await t.weiter(900);
         await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")'); await t.klick('#rail .dis:has(b:text-is("Magengeschwür (Ulkus)"))'); await t.weiter(4000); await t.bild('geschwuer');
         await t.klick('#rail .dis:has(b:text-is("Magengeschwür (Ulkus)"))'); await t.weiter(1500);
+        /* Lupe (neue Bilder am Ende): Drüse, Belegzelle */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');
+        await t.js(() => window.MagenApp.lupeBelegzelle(true)); await t.weiter(1500); await t.bild('lupe-belegzelle');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
