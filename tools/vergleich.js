@@ -106,7 +106,9 @@
    „durchsicht-stroemung“ und „nur-fett“ (Stoffe-Schalter); die Werte von MagenApp.stroemung() stehen in erg.stroemung und werden von `vergleichen` verglichen; Schema (#bSchema, erst nüchtern, dann
    nach dem Essen); Hilfekarten („hilfekarte“ = erste Karte, „hilfekarte-pflege“ = vierte, „hilfekarte-modell“ = fünfte); Üben „ueben“ (Strukturen finden, #bQuiz, die Aufgabe hängt vom festen Zufallsstrom ab)
    und Wege verfolgen (#bWege: „wege-start“, nach zwei richtigen Stationen über MagenApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“, „wege-eins-fertig“, „wege-zwei-mitte“ (Weg 2 nach Vagusnerv und
-   Schleimhaut), „wege-alle-fertig“ („Alle drei Wege geschafft.“; Stand in erg.wege), „wege-beendet“)), handy (Übersicht, Info, Innenansicht, Schema, Hilfekarte, Üben, Wege-Start), datei (file://) und abbau
+   Schleimhaut), „wege-alle-fertig“ („Alle drei Wege geschafft.“; Stand in erg.wege), „wege-beendet“); am Ende die Krankheitsbilder und Medikamente (Reiter, je Eintrag ein Bild: „gastritis“, „gastritis-karte-zu“,
+   „geschwuer“ und „pantoprazol“ in der Innenansicht, „reflux“ im Ausschnitt Mageneingang nach dem Essen, „nsar“, „mcp“; „szenario-aus“; Wirkgrößen MagenApp.szw() in erg.szw)), handy (Übersicht, Info, Innenansicht,
+   Schema, Hilfekarte, Üben, Wege-Start, „geschwuer“ in der Innenansicht), datei (file://) und abbau
    (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte uebergaenge-magen (Körper, Magen über die Infokarte „Magen öffnen“ mit Kamerafahrt „fahrt-magen“, Magen,
    Browser-Zurück mit Rückfahrt „rueckfahrt-magen“; dann die Adresse #magen direkt, Zurück-Knopf „← Körper“; Endzustand in erg.uebergaengeMagen) und uebergaenge-magen-handy („fahrt-magen“, „magen“).
 
@@ -1122,7 +1124,7 @@ const MODELLE = {
     datei: 'index.html',
     bereit: () => !!(window.MagenApp && window.MagenApp.ready),
     kontexte: {
-      desktop: { opt: DESKTOP, timeout: 90000, async ablauf(t) {
+      desktop: { opt: DESKTOP, timeout: 150000, async ablauf(t) {
         const werte = async (name) => { (t.erg.stroemung || (t.erg.stroemung = {}))[t.kname + '-' + name] = await t.js(() => window.MagenApp.stroemung()); };
         await t.weiter(1500); await t.bild('uebersicht'); await t.text();
         await t.klick('#cam1'); await t.weiter(900); await t.bild('innenansicht');
@@ -1157,6 +1159,23 @@ const MODELLE = {
         await t.klick('#qNext'); await t.js(() => { for (const id of ['arterien', 'magenkoerper', 'venen', 'pfortader']) window.MagenApp.tippe(id); }); await t.weiter(600); await t.bild('wege-alle-fertig');
         t.erg.wege = await t.js(() => window.MagenApp.wege());
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-beendet');
+        /* Krankheitsbilder und Medikamente (neue Bilder am Ende, damit die Nummern der übrigen gleich bleiben); die Wirkgrößen MagenApp.szw() stehen in erg.szw. Das Geschwür und Pantoprazol in der
+           Innenansicht (#cam1), Reflux im Ausschnitt Mageneingang (#cam2) nach dem Essen, Metoclopramid stellt selbst auf „nach dem Essen“ */
+        const EINTRAEGE = [['Krankheitsbilder', 'Magenschleimhautentzündung (Gastritis)', 'gastritis', '#cam1'], ['Krankheitsbilder', 'Magengeschwür (Ulkus)', 'geschwuer', '#cam1'],
+          ['Krankheitsbilder', 'Refluxkrankheit', 'reflux', '#cam2'], ['Medikamente', 'Pantoprazol beim Magengeschwür (z. B. Pantozol®)', 'pantoprazol', '#cam1'],
+          ['Medikamente', 'Ibuprofen und Diclofenac – Schaden am Magen (NSAR)', 'nsar', '#cam1'], ['Medikamente', 'Metoclopramid bei Übelkeit (z. B. Paspertin®)', 'mcp', '#cam0']];
+        const schalte = async (tab, name, ms) => { await t.klick('#rail .tabs .tab:text-is("' + tab + '")'); await t.klick('#rail .dis:has(b:text-is("' + name + '"))'); await t.weiter(ms); };
+        const szw = async (name) => { (t.erg.szw || (t.erg.szw = {}))[t.kname + '-' + name] = await t.js(() => window.MagenApp.szw()); };
+        for (const [tab, name, bild, cam] of EINTRAEGE) {
+          await t.klick(cam); await t.weiter(900);
+          if (bild === 'reflux') await t.klick('#bEssen');
+          await schalte(tab, name, 4000);
+          await t.bild(bild); await szw(bild);
+          if (bild === 'gastritis') { await t.klick('#bCardMin'); await t.weiter(300); await t.bild('gastritis-karte-zu'); await t.klick('#bCardMin'); await t.weiter(300); }
+          await schalte(tab, name, 1500);
+          if (bild === 'reflux' || bild === 'mcp') await t.klick('#bNuechtern');
+        }
+        await t.klick('#cam0'); await t.weiter(1500); await t.bild('szenario-aus'); await szw('szenario-aus');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1167,6 +1186,10 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(900); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(900);
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
         await t.klick('#bWege'); await t.weiter(300);
+        /* Krankheitsbild (neues Bild am Ende): das Geschwür in der Innenansicht, die Karte beginnt eingeklappt */
+        await t.klick('#cam1'); await t.weiter(900);
+        await t.klick('#rail .tabs .tab:text-is("Krankheitsbilder")'); await t.klick('#rail .dis:has(b:text-is("Magengeschwür (Ulkus)"))'); await t.weiter(4000); await t.bild('geschwuer');
+        await t.klick('#rail .dis:has(b:text-is("Magengeschwür (Ulkus)"))'); await t.weiter(1500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

@@ -202,20 +202,21 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1872: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
 - 2055: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/magen.css (109 Zeilen)
+## organe/verdauung/magen.css (125 Zeilen)
 
-## organe/verdauung/magen.js (2245 Zeilen) – Magen - Mageneingang, Magensaft und Pförtner
-- 16: Inhalte (Daten, getrennt vom Code)
-- 226: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
-- 274: 2. Geometrie: Aussenwand und Innenraum in Bereichen, Kappen der Schnittflaeche, Rohre (Speiseroehre, Zwoelf…
-- 548: 2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
-- 918: 3. Zustand, Bedienung
-- 1100: 4. Kamera: Ausschnitte, freier Bildbereich
-- 1164: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1366: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1584: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau) und Magensaft (tuerki…
-- 1889: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
-- 2144: 8. Renderschleife, Aufbau, Abbau
+## organe/verdauung/magen.js (2466 Zeilen) – Magen - Mageneingang, Magensaft und Pförtner
+- 18: Inhalte (Daten, getrennt vom Code)
+- 279: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
+- 327: 2. Geometrie: Aussenwand und Innenraum in Bereichen, Kappen der Schnittflaeche, Rohre (Speiseroehre, Zwoelf…
+- 601: 2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
+- 971: 3. Zustand, Bedienung
+- 1194: 4. Kamera: Ausschnitte, freier Bildbereich
+- 1258: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1462: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1681: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau) und Magensaft (tuerki…
+- 1997: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
+- 2252: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
+- 2362: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/verdauung-form.js (1363 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
@@ -266,11 +267,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (2093 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
-- 165: 1. Im Browser (vor allen Skripten der Seite)
-- 359: 2. Abläufe je Modell
-- 1731: 3. Aufnehmen
-- 1915: 4. Vergleichen
-- 2077: 5. Aufruf
+## tools/vergleich.js (2116 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+- 167: 1. Im Browser (vor allen Skripten der Seite)
+- 361: 2. Abläufe je Modell
+- 1754: 3. Aufnehmen
+- 1938: 4. Vergleichen
+- 2100: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)
