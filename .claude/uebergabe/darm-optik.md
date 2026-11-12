@@ -9,9 +9,7 @@ Vorlage (Torso-Modell, von Jörn im Chat) nur als Anschauung, nichts daraus ins 
 
 ## Offen
 
-- Executor-Auftrag läuft: Kamera Ausschnitt „Dünndarm“ (AUSSCHNITTE[2]), Beschriftung „Sigma“ zeigt in der Übersicht auf eine Dünndarmschlinge (Sichtprüfung), Prüfung von Teilchen, Zotte-Fahrt, Handy.
-- Danach Bilder an Jörn, dann vollständiger Vergleichslauf (siehe `CLAUDE.md`); erwartete Abweichungen: Darm, Zotte-Übergänge, Körper im Bauch und Becken, Atlas-Übergänge mit dem Körper. Zu prüfen: Körper-AR/Export (die Kugel-Geometrie `sphG` bekommt ein ungenutztes Farbattribut).
-- Danach PLAN.md, `docs/dateien.md` (Werkzeug), `docs/plan-archiv.md`.
+- PR nach `main` ist offen (vollständiger Vergleichslauf: nur Darm, Zotte-Übergänge, Körper im Bauch/Becken und Atlas-Bilder mit dem Körper anders; Seitentext des Darms ohne Sigma, Gekröse, Darmvenen; Körper-USDZ anders). Nach dem Merge diese Übergabe löschen; dann PR C (`pr-c.md`).
 
 ## Wo im Code
 

@@ -108,6 +108,10 @@ three.js r128 (`three.min.js`: Lizenzkopf und eine einzige Zeile mit ~600 KB) un
 
 Prüfwerkzeug: Vergleichsaufnahmen vorher/nachher (siehe unten)
 
+## `tools/duenndarm-knaeuel/`
+
+berechnet die Mittellinie des Dünndarms (`DUENN_TAB` in `verdauung-form.js`) als dichtes Knäuel; wird von der App nie geladen. `index.js` erklärt die Schritte und führt sie mit den gewählten Einstellungen aus (Aufruf aus einem leeren Arbeitsordner): `hole.js` (Dreiecke der Nachbarn im Körper aus der laufenden App), `lagen.js` (Gitter in vier Lagen hinter der Bauchwand), `weg.js` (Gitterweg per Backbite mit festem Startwert, Leerdarm zuerst, Umwege in Taschen), `relax.js` (Entspannung); danach `schnitt.js` (Strecke für `DUENN_SCHNITT`), `einbauen.js`, `pruefe.js` (Abstände der Schlingen und zu den Nachbarn mind. 0,1 cm, Überdeckung des Dickdarms von vorn)
+
 ## `tools/nachweis.js`, `tools/originale/`
 
 `nachweis.js`: Nachweis, dass das Schema der Lunge (Schema-Panel, bedient über den Reiter „Atmung“) dasselbe tut und zeigt wie das Original-Modell (`node tools/nachweis.js lunge <ziel>` bzw. `alveole <ziel>`; bei der Alveole bekommen beide Seiten denselben Zufallsstrom für Gasteilchen und Flüge; lädt Original und App mit virtueller Zeit, vergleicht Bild, Werte und SVG, Ergebnis `<ziel>/nachweis.json`, Exit 0 = gleich; nutzt Teile von `tools/vergleich.js`, nur mit Playwright). `originale/`: die Original-Modelle der Lunge (`lunge-ebene1-thorax.html`, `lunge-ebene3-alveole.html`) als unveränderte Vorlage
