@@ -32,7 +32,7 @@ Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem M
   - Texte für PR A: von Jörn freigegeben in `docs/freigaben/magen-a-texte.md` (Stofffarben gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, türkis Magensaft; Nüchternzeiten ohne Stundenangabe; Magensonde: Abhören oder pH-Test nach Hausstandard; der Körper bekommt keine Magengefäße)
   - [x] B1–B6: Darm und Dünndarmzotte (PR #46; Abstimmung und Schritte in `docs/plan-archiv.md`, Texte in `docs/freigaben/darm-b-texte.md`)
   - [x] Optik des Darms nach einer anatomischen Vorlage von Jörn (Farben, Haustren und Tänien, Dünndarm als Knäuel; Einzelheiten in `docs/plan-archiv.md`)
-  - [ ] C: Krankheitsbilder, Medikamente, Lupen, Export und AR für Magen, Darm und Zotte – zuerst Einzelheiten und Texte mit Jörn abstimmen
+  - [ ] C: Krankheitsbilder, Medikamente, Lupen, Export und AR – mit Jörn abgestimmt (Übergabe `pr-c.md`): C1 Magen, dann PR „Aufnahme ins Blut“ (Teilchen im Darm sichtbar in Venen und Lymphe), dann C2 Darm und Zotte
 - [ ] Gehirn mit Neuron und Synapse
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
 - [ ] Auge, Ohr, Haut, Hormondrüsen

@@ -2,21 +2,20 @@
 
 ## Stand
 
-- PR A (#45), PR B (#46) und die Optik des Darms (#49) sind gemergt; `darm-optik.md` mit C1 löschen.
-- Freigegebene Texte: `docs/freigaben/magen-a-texte.md`, `docs/freigaben/darm-b-texte.md`.
-- Später: bei der Leber prüfen, ob alle Medikamente die richtige Wirkung zeigen (`PLAN.md`, Offene Punkte).
+- PR A (#45), B (#46), Optik des Darms (#49) gemergt. Texte: `docs/freigaben/magen-a-texte.md`, `darm-b-texte.md`.
+- Später: bei der Leber prüfen, ob alle Medikamente die richtige Wirkung zeigen (`PLAN.md`).
 
-## Mit Jörn entschieden (12. November 2026, Runden 1 und 2)
+## Mit Jörn entschieden (Runden 1–3)
 
-- Zwei PRs: **C1 Magen**, **C2 Darm und Zotte**. Die Texte für beide jetzt abstimmen.
-- Listen: Magen eigen (`Kern.Szenarien.daten.magen`); Darm und Zotte gemeinsam (`Kern.Szenarien.daten.darm`, `hinweis = { darm, zotte }`), wie Leber und Läppchen.
-- Wirkung in 3D wie bei der Leber: jeder Eintrag zeigt in mindestens einem Modell eine sichtbare Wirkung, weich überblendet; wo ein Modell nichts zeigt, steht das im Hinweis.
-- Magen (3 + 3): Gastritis (Schleimhaut gerötet und geschwollen); Magengeschwür (Krater an der kleinen Kurvatur, Blutung als Komplikation im Text); Refluxkrankheit (Mageneingang schließt nicht, Magensaft steigt in die Speiseröhre). Medikamente: Pantoprazol (weniger Magensaft); NSAR als Auslöser (Ibuprofen/Diclofenac, Schleimschutz fällt weg, wie Paracetamol bei der Leber); Metoclopramid (schnellere Wellen, raschere Entleerung).
-- Darm und Zotte (4 + 3): infektiöser Durchfall (z. B. Noroviren; Darm flüssig und schnell, Zotte: Wasser strömt hinaus); Verstopfung (auch durch Opioide; Stuhl staut sich im Dickdarm); Zöliakie (Zotten flach, Leerdarm glatter); Divertikulitis (Sigma). Medikamente: Trinklösung mit Zucker und Salz (Zotte: Wasser zurück ins Blut); Loperamid (Darmbewegung gebremst); Macrogol (Stuhl weicher).
-- Lupen: Magen – Magendrüse im Schnitt (Neben-, Beleg-, Hauptzellen, Schleimschicht); Darm – Analkanal im Längsschnitt (innerer und äußerer Schließmuskel, Gefäßpolster); Zotte – Saumzelle mit Bürstensaum und Transportern (Natrium-Zucker gemeinsam, Aminosäuren, Fett über Fetttröpfchen ins Lymphgefäß).
-- Export (GLB, STL) und AR wie bei Leber und Läppchen (7e/7f, 8c/8d).
+- Reihenfolge: **C1 Magen** → **Aufnahme ins Blut** (Darm: Teilchen wandern sichtbar in Darmvenen/Pfortader, Fett in Lymphe; Gefäße von vorn vom Knäuel verdeckt – Ansicht klären) → **C2 Darm und Zotte**.
+- Daten: `Kern.Szenarien.daten.magen`; Darm+Zotte gemeinsam `daten.darm` mit `hinweis = { darm, zotte }`. 3D-Wirkung wie Leber (weich überblendet). Export, AR wie Leber/Läppchen.
+- Magen: Gastritis (röter, Falten dicker, Erosionen am Vorhof); Geschwür am Magenwinkel (Krater, heller Grund, roter Rand; Blutung nur im Text); Reflux (Eingangswulst schlaff, Magensaft steigt, Speiseröhrenende rot). Pantoprazol bei Geschwür (weniger Magensaft, Krater kleiner); NSAR als Auslöser (Erosionen, leicht rot, Lupe: dünner Schleim); MCP (stellt auf „nach dem Essen“, Wellen schneller, Pförtner öfter offen, Eingang fester).
+- Magen-Lupe: Drüsenschnitt (Neben-, Beleg-, Hauptzellen, Schleim), Chips nüchtern/nach dem Essen, Krankheiten sichtbar (Helicobacter, Defekt, dünner Schleim); **Antippen der Belegzelle** zoomt ins Schema wie Nephron-Lupe (Protonenpumpe; Pantoprazol sperrt sie), mit Hinweis.
+- Darm/Zotte: Durchfall (Darm: Wasser in den Dünndarm, schneller, flüssig; Zotte: Wasser aus den Krypten hinaus); Verstopfung (Stuhl dunkel, dicht, langsam, **Dickdarm gebläht**, Haustren/Tänien gehen mit); Zöliakie (Zotte flach, Krypten tiefer; Leerdarm blasser, glatter); Divertikulitis (mehrere Ausstülpungen am Sigma, eine entzündet). Trinklösung (Zotte holt Wasser zurück, Durchfall bleibt), Loperamid (Wellen langsamer), Macrogol (Stuhl weich, Dickdarm schlanker), je bei ihrem Krankheitsbild.
+- Lupe Analkanal: Chips Ruhe | Stuhldrang | Stuhlgang; am Ende der Verdauung läuft sie von selbst bis zur Entleerung (Jörn; wohl auch Stuhl im 3D am After hinaus – im PR „Aufnahme“ prüfen).
+- Lupe Zotte: Schema der Saumzelle, folgt den Stoff-Schaltern; Zöliakie, Durchfall, Trinklösung sichtbar.
 
 ## Nächster Schritt
 
-- Runde 3 (vor C1): Einzelheiten der 3D-Wirkung im Magen, dann alle Texte für Magen und Darm/Zotte wörtlich zur Freigabe vorlegen → `docs/freigaben/magen-darm-c-texte.md`.
-- Vorbilder: `core/szenarien.js` (`daten.leber`), Leber 7c–7f, Läppchen 6b, 8b–8d.
+- Texte C1 wörtlich zur Freigabe → `docs/freigaben/magen-c1-texte.md`; Texte C2 vor C2.
+- Vorbilder: `core/szenarien.js` (`daten.leber`), Leber 7c–7f, Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11).
