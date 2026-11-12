@@ -1,5 +1,7 @@
 # Vergleichsläufe – Kontexte je Modell
 
+Jedes Organ-Modell hat den Schnelltest `kurz` (Desktop: laden, 1,5 s, Bild `uebersicht`, Seitentext; Konsole und Abbrüche wie immer). `tools/betroffen.js` wählt ihn für nicht betroffene Modelle. Die virtuelle Zeit rückt erst vor, wenn keine Skripte oder Stylesheets mehr laden (`initLaden`); `VERGLEICH_VERZOEGERUNG=<ms>` verlangsamt Skripte unter `organe/` zur Selbstprüfung.
+
 Ausgelagert aus `.claude/agents/executor.md` (November 2026), Wortlaut unverändert. Lesen, wenn `tools/vergleich.js` erweitert wird oder eine Abweichung einem Bild zugeordnet werden muss – dann nur den Absatz des Modells (`grep -n "Modell \`leber\`" docs/vergleich-kontexte.md`). Die Prüfregeln selbst stehen in `executor.md`.
 
 - Nephron: `nephron:desktop` zeigt am Ende die Schema-Bilder `schema`, `schema-hyperglykaemie` und `schema-torasemid` (je nach `weiter(1500)`), danach `hilfekarte` und `ueben`; `nephron:handy` zeigt am Ende `schema`, dann (Schema mit `#bSchemaX` zu) `hilfekarte`; das Schema liegt als SVG im DOM (kein Canvas), die 3D-Bilder bei geschlossenem Schema bleiben bytegleich, nur die Werkzeugleiste hat den Knopf „Schema“.
