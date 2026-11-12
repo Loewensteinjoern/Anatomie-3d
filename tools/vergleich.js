@@ -109,8 +109,8 @@
    Schleimhaut), „wege-alle-fertig“ („Alle drei Wege geschafft.“; Stand in erg.wege), „wege-beendet“); am Ende die Krankheitsbilder und Medikamente (Reiter, je Eintrag ein Bild: „gastritis“, „gastritis-karte-zu“,
    „geschwuer“ und „pantoprazol“ in der Innenansicht, „reflux“ im Ausschnitt Mageneingang nach dem Essen, „nsar“, „mcp“; „szenario-aus“; Wirkgrößen MagenApp.szw() in erg.szw; dann die Lupe: „lupe-nuechtern“, „lupe-nach-dem-essen“ (Chip),
    „lupe-gastritis“, „lupe-geschwuer“, „lupe-nsar“, „lupe-pantoprazol“, „lupe-belegzelle-pantoprazol“, „lupe-belegzelle“ (Antippen über MagenApp.lupeBelegzelle, nach dem Essen), „lupe-zurueck“)), handy (Übersicht, Info, Innenansicht,
-   Schema, Hilfekarte, Üben, Wege-Start, „geschwuer“ in der Innenansicht, „lupe“, „lupe-belegzelle“), datei (file://) und abbau
-   (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte uebergaenge-magen (Körper, Magen über die Infokarte „Magen öffnen“ mit Kamerafahrt „fahrt-magen“, Magen,
+   Schema, Hilfekarte, Üben, Wege-Start, „geschwuer“ in der Innenansicht, „lupe“, „lupe-belegzelle“), datei (file://; die Exporte GLB statisch, GLB animiert, STL, danach mit Magengeschwür in der Innenansicht; Name, Größe und Meldung in erg.exporte),
+   webxr (AR wie bei der Leber: Start, hinstellen, größer, Pause/Weiter in erg.ar.pause, beenden), quicklook (USDZ) und abbau (Ausschnitt wechseln, Infokarte offen lassen). Atlas-Kontexte uebergaenge-magen (Körper, Magen über die Infokarte „Magen öffnen“ mit Kamerafahrt „fahrt-magen“, Magen,
    Browser-Zurück mit Rückfahrt „rueckfahrt-magen“; dann die Adresse #magen direkt, Zurück-Knopf „← Körper“; Endzustand in erg.uebergaengeMagen) und uebergaenge-magen-handy („fahrt-magen“, „magen“).
 
    Modell darm (index.html#darm): Darm von vorn (Zwölffingerdarm, Dünndarm, Dickdarm, Mastdarm, Gekröse, Darmgefäße). Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam4
@@ -1212,6 +1212,26 @@ const MODELLE = {
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
+        /* Export per file:// (nach dem Bild, damit es unverändert bleibt): Name, Größe und Meldung (Objekte, Dateigröße) stehen in erg.exporte; dann mit Magengeschwür in der Innenansicht (Krater in den Daten) */
+        await t.export('#bGlbS', 'glb-statisch'); await t.export('#bGlbA', 'glb-animiert'); await t.export('#bStl', 'stl');
+        await t.js(() => window.MagenApp.szenario('geschwuer')); await t.klick('#cam1'); await t.weiter(3000);
+        await t.export('#bGlbS', 'glb-statisch-geschwuer'); await t.export('#bGlbA', 'glb-animiert-geschwuer'); await t.export('#bStl', 'stl-geschwuer');
+      } },
+      webxr: { opt: DESKTOP, init: [initWebXR], async ablauf(t) {   /* AR: Start, hinstellen, größer, Pause/Weiter, beenden */
+        await t.weiter(1500);
+        await t.klick('#bAR'); await t.weiter(600); await t.bild('start');
+        await t.js(() => window.__xrSitzung.dispatchEvent(new Event('select'))); await t.weiter(900); await t.bild('platziert');
+        await t.klick('#arBig'); await t.klick('#arBig'); await t.weiter(900); await t.bild('groesser');
+        const pause = [];   /* Knopf Pause/Weiter in AR: Beschriftung nach dem ersten und zweiten Klick */
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        await t.klick('#arPause'); await t.weiter(500); pause.push(await t.js(() => document.getElementById('arPause').textContent));
+        t.erg.ar.pause = pause;
+        await t.klick('#arEnd'); await t.weiter(900); await t.bild('beendet');
+        t.erg.ar.webxr = await t.js(() => window.__xrAnfrage || null);
+      } },
+      quicklook: { opt: DESKTOP, init: [initQuickLook], async ablauf(t) {
+        await t.weiter(1500);
+        await t.export('#bAR', 'ar-quicklook-usdz', 200); await t.bild('vorbereitet');
       } },
       abbau: { opt: DESKTOP, init: [initListener], ablauf: (t) => abbauAblauf(t, 'magen', async (t) => {
         await t.klick('#cam1'); await t.weiter(900); await t.bild('innenansicht');

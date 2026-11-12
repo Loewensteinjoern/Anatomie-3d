@@ -33,6 +33,10 @@
                           liefert { clips: [THREE.AnimationClip], zusatz: Namensteil, … };
                           weitere Felder landen als `a` in den Text-Funktionen.
        zusatzStatisch     optional: Namensteil für den statischen Export (Standard keiner)
+       bake(mesh)         optional: liefert null oder eine Funktion (i, v), die die gebackene lokale Lage v (THREE.Vector3, nach den Morph-Zielen) des Punkts i
+                          verändert (für STL und GLB; z. B. Verschiebungen, die sonst nur ein Shader macht)
+       ohneMorph          optional: auch das animierte GLB backt die Morph-Ziele in die Lage (Standard: bleiben als Morph-Ziele)
+       klon(klon, mesh)   optional: Klon vor dem Schreiben nachbessern (z. B. Normalen, Vertexfarben)
        transparenz        optional: Transparenz/Opazität der Materialien übernehmen (Standard aus)
        unlit              optional: MeshBasicMaterial bleibt unbeleuchtet (KHR_materials_unlit; Standard aus)
    Kern.Export.pruefeZiel(id): blendet das Element (Standard '#exp') aus, wenn
@@ -113,14 +117,18 @@ Kern.Export = (function () {
     });
     return out;
   }
+  let bakeHaken = null;   // cfg.bake des laufenden Exports (nur während run)
+  const bakeV = new THREE.Vector3();
   function baked(mesh, useWorld) {
     const g = mesh.geometry, p = g.attributes.position, n = p.count;
     const ma = (g.morphAttributes && g.morphAttributes.position) || [], inf = mesh.morphTargetInfluences || [];
     const out = new Float32Array(n * 3); const v = new THREE.Vector3();
+    const bf = bakeHaken ? bakeHaken(mesh) : null;
     mesh.updateWorldMatrix(true, false);
     for (let i = 0; i < n; i++) {
       let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
       for (let k = 0; k < ma.length; k++) { const w = inf[k] || 0; if (!w) continue; x += ma[k].getX(i) * w; y += ma[k].getY(i) * w; z += ma[k].getZ(i) * w; }
+      if (bf) { bakeV.set(x, y, z); bf(i, bakeV); x = bakeV.x; y = bakeV.y; z = bakeV.z; }
       if (useWorld) { v.set(x, y, z).applyMatrix4(mesh.matrixWorld); x = v.x; y = v.y; z = v.z; }
       out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z;
     }
@@ -248,7 +256,7 @@ Kern.Export = (function () {
   let busy = false;
   async function run(kind, cfg) {
     if (busy || !cfg.bereit()) return;
-    busy = true;
+    busy = true; bakeHaken = cfg.bake || null;
     const say = cfg.toast, tx = cfg.texte;
     const btns = document.querySelectorAll(cfg.knoepfe || '#bGlbA,#bGlbS,#bStl'); btns.forEach(b => b.disabled = true);
     await new Promise(r => setTimeout(r, 30));
@@ -271,7 +279,7 @@ Kern.Export = (function () {
         const scene = new THREE.Scene(); const rootE = new THREE.Group(); rootE.name = cfg.wurzelName; rootE.scale.setScalar(0.01); scene.add(rootE);
         rootE.userData = { signatur: WM, einheit: 'Meter' };
         const src = collect(cfg.gruppen());
-        const clones = src.map((m, i) => { const c = exportClone(m, i, anim, cfg); rootE.add(c); return { c, m }; });
+        const clones = src.map((m, i) => { const c = exportClone(m, i, anim && !cfg.ohneMorph, cfg); rootE.add(c); return { c, m }; });
         rootE.add(signPlate(cfg.schild));
         let clips = [], a = null;
         if (anim) {
@@ -291,7 +299,7 @@ Kern.Export = (function () {
       console.error(e);
       const code = e && e.code;
       say(code === 'declined' ? 'Speichern abgebrochen.' : code === 'rate_limited' ? 'Es ist noch ein Speichern-Dialog offen – bitte kurz warten.' : code === 'too_large' ? 'Die Datei ist für dieses Ziel zu groß.' : 'Export fehlgeschlagen: ' + ((e && e.message) || e));
-    } finally { btns.forEach(b => { b.disabled = false; }); busy = false; }
+    } finally { btns.forEach(b => { b.disabled = false; }); busy = false; bakeHaken = null; }
   }
   return { run, pruefeZiel, kb, stl, makeZip, glb, collect, baked, WM, WM_ASCII };
 })();

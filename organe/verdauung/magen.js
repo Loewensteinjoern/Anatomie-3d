@@ -12,7 +12,8 @@
    das Schema, Hilfekarten und Ueben folgen in spaeteren Schritten.
    Krankheitsbilder und Medikamente (Kern.Szenarien, Daten SZ_DATEN): Reiter und Erklaerkarte; in 3D wirken Gastritis (roeter, dickere Falten, Erosionen am Magenvorhof), Geschwuer
    (Krater am Magenwinkel), Reflux (Wulst weiter, Saft steigt in die Speiseroehre, Speiseroehre gerroetet), weniger Saeure, schnellere Muskelwellen (Abschnitt 7c).
-   Lupe (Abschnitt 7d): Nahansicht einer Magendruese und ihrer Belegzelle als Canvas-Schema, folgt Mahlzeit-Schalter und Krankheitsbildern. Export und AR folgen.
+   Lupe (Abschnitt 7d): Nahansicht einer Magendruese und ihrer Belegzelle als Canvas-Schema, folgt Mahlzeit-Schalter und Krankheitsbildern.
+   Export (7e: GLB statisch und animiert, STL; Krankheitsbilder werden aus denselben Formeln in die Kopie gebacken) und AR (7f: WebXR, USDZ fuer AR Quick Look) wie bei der Leber.
    ===================================================================== */
 (function () {
 'use strict';
@@ -82,6 +83,7 @@ var MARKUP = `<div id="title">
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Der Weg der Nahrung von Mund bis After – der Magen hervorgehoben">Schema</button>
     <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Magendrüse">Lupe</button>
+    <button id="bAR" class="gh" title="Den Magen mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -140,6 +142,13 @@ var MARKUP = `<div id="title">
   Verweildauer 1–5 Stunden, Fettreiches am längsten</p>
 </div>
 
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
+</div>
+
 <div class="panel" id="info">
   <button class="cls" id="bCls" aria-label="Schließen">&times;</button>
   <span class="lat" id="iLat"></span>
@@ -155,6 +164,18 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">Nächste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Magen in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um den Magen hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Hilfekarten: [Schluessel, Titel, Text, Merke] (Texte von Joern freigegeben) */
 var HILFE = [
@@ -268,7 +289,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 368 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 357 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Magens im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -2670,6 +2691,214 @@ function lupeTick() {   /* nur solange offen: Text bei Wechsel des Zustands nach
 }
 
 /* =====================================================================
+   7e. Export (Kern.Export): GLB statisch, GLB animiert und STL, jeweils der sichtbare Zustand (Durchsicht, ausgeblendete Strukturen, Innenansicht, Krankheitsbild; ohne Teilchen
+   im statischen Export, ohne Beschriftung, Lupe und Schema). Wie bei der Leber; Besonderheiten des Magens:
+   - Fuellung (Morph-Ziel) wird in die Lage gebacken (ohneMorph); die Muskelwellen (Shader) bleiben ausser Betracht.
+   - Krankheitsbilder (Abschnitt 7c) wirken im Shader und werden fuer den Export aus denselben Formeln auf die Kopie angewendet: krBake verschiebt die Punkte der Schleimhaut und
+     des Mageneingangs entlang der Normale (Falten, Wulst, Krater), krKlon legt Vertexfarben fuer Krater (Grund, Rand) und Erosionen an (die Punkte sind dabei groesser als im Bild, damit
+     die Dreiecke sie tragen; der Zellraster kommt aus Math.sin statt aus dem Shader, die Lage der Erosionen weicht daher etwas ab). Die Speiseroehre behaelt die Vertexfarben der Roetung,
+     ihre Durchsichtigkeit (Attribut aA im Shader) entfaellt im Export. Die gleiche Verschiebung gilt fuer STL und USDZ (cfg.bake); die Farbe von Krater und Erosionen gibt es in der USDZ nicht.
+   - GLB animiert: die Stroemung (Kohlenhydrate, Eiweiss, Fett, Wasser, Magensaft) als eine Schleife von EX.P = SZ_.P Sekunden (ein Zyklus nach dem Essen, im zweiten Durchlauf, damit die Wellen
+     eingeschwungen sind): jedes Teilchen ein Knoten mit Spuren fuer Lage und Groesse, berechnet mit lauf/saftZustand bei Mahlzeit, Fuellung und Wirkgroessen wie in der Ansicht. Magensaft
+     laeuft ganze Umlaeufe je Schleife (sein Tempo weicht dadurch etwas ab). Nuechtern bewegen sich nur die Magensaft-Tropfen.
+   Massstab: 1 Modelleinheit = 1 cm, die Datei hat Meter (reale Groesse).
+   ===================================================================== */
+var EX = { P: SZ_.P, NKEY: 252 };
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+/* Verschiebung der Punkte (Export, USDZ): wie im Shader dep = uDisp * aW + Krater (Abschnitt 7c), entlang der Normale (mit dem Morph-Ziel der Normalen) */
+function krBake(mesh) {
+  if (!KR) return null;
+  var g = mesh.geometry, aw = g.attributes.aW;
+  if (!aw) return null;
+  var mt = mesh.material, disp = (mt === MAT.schleimhaut || mt === MAT.schleimhautD) ? KR.dS.value : (mt === MAT.eingangI || mt === MAT.eingangID) ? KR.dE.value : null;
+  var u = KR.ulk.value, R = u.w;
+  if (disp === null || (!disp && !(R > 0))) return null;
+  var P = g.attributes.position, N = g.attributes.normal, MN = g.morphAttributes.normal && g.morphAttributes.normal[0], inf = (mesh.morphTargetInfluences && mesh.morphTargetInfluences[0]) || 0, n = new THREE.Vector3();
+  return function (i, v) {
+    var w = aw.getX(i), dep = disp * w;
+    if (R > 0) { var t = Math.sqrt(Math.pow(P.getX(i) - u.x, 2) + Math.pow(P.getY(i) - u.y, 2) + Math.pow(P.getZ(i) - u.z, 2)) / R; if (t < 1) dep += 0.4 * R * (1 - t * t * (3 - 2 * t)) * w; }
+    if (!dep) return;
+    n.set(N.getX(i), N.getY(i), N.getZ(i));
+    if (MN && inf) n.set(n.x + MN.getX(i) * inf, n.y + MN.getY(i) * inf, n.z + MN.getZ(i) * inf);
+    v.addScaledVector(n.normalize(), dep);
+  };
+}
+function krFract(x) { return x - Math.floor(x); }
+function krHash(x, y, z) { return krFract(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453); }
+/* Vertexfarben der Kopie: Farbe der Schleimhaut (Gastritis), Krater (heller Grund, dunkelroter Rand, blasser bei Heilung) und Erosionen, gleiche Formeln wie der Fragment-Shader */
+function krKlon(klon, mesh) {
+  if (!KR || (mesh.material !== MAT.schleimhaut && mesh.material !== MAT.schleimhautD)) return;
+  var u = KR.ulk.value, R = u.w, E = KR.ers.value, F = KR.ulkF.value, e = KR.ero.value;
+  if (!(R > 0) && !(E > 0)) return;
+  var P = mesh.geometry.attributes.position, n = P.count, C = new Float32Array(n * 3), b = mesh.material.color, i, c = new THREE.Color(), fl = new THREE.Color(0.80, 0.68, 0.40);
+  var rc = new THREE.Color(0.62, 0.15, 0.13).lerp(new THREE.Color(0.20, 0.002, 0.008), F), er = new THREE.Color(0.20, 0.004, 0.01);
+  for (i = 0; i < n; i++) {
+    var x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    c.copy(b);
+    if (R > 0) {
+      var t = Math.sqrt(Math.pow(x - u.x, 2) + Math.pow(y - u.y, 2) + Math.pow(z - u.z, 2)) / R;
+      var boden = 1 - sstep(0.46, 0.6, t), rand = sstep(0.40, 0.56, t) * (1 - sstep(1.15, 1.75, t));
+      c.lerp(fl, boden); c.lerp(rc, rand * (0.5 + 0.5 * F));
+    }
+    if (E > 0) {
+      var qx = x / 0.7, qy = y / 0.7, qz = z / 0.7, cx = Math.floor(qx), cy = Math.floor(qy), cz = Math.floor(qz), h = krHash(cx, cy, cz);
+      var mx = cx + 0.5 + 0.3 * (krHash(cx + 1.7, cy + 1.7, cz + 1.7) - 0.5), my = cy + 0.5 + 0.3 * (krHash(cx + 3.1, cy + 3.1, cz + 3.1) - 0.5), mz = cz + 0.5 + 0.3 * (krHash(cx + 5.3, cy + 5.3, cz + 5.3) - 0.5);
+      var punkt = (1 - sstep(0.32, 0.44, Math.sqrt((qx - mx) * (qx - mx) + (qy - my) * (qy - my) + (qz - mz) * (qz - mz)))) * (h >= 0.62 ? 1 : 0);
+      var ort = 1 - sstep(0.55 * e.w, e.w, Math.sqrt(Math.pow(x - e.x, 2) + Math.pow(y - e.y, 2) + Math.pow(z - e.z, 2)));
+      c.lerp(er, punkt * ort * E * 0.92);
+    }
+    C[i * 3] = c.r; C[i * 3 + 1] = c.g; C[i * 3 + 2] = c.b;
+  }
+  klon.geometry.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  klon.material.color.setRGB(1, 1, 1); klon.material.vertexColors = true;
+}
+var exCfg = {
+  titel: 'Magen', praefix: 'magen', wurzelName: 'Magen',
+  /* Schild unter dem Modell: Bounding-Box der exportierten Teile (Wurzel um -M verschoben, ohne Teilchen, Uebersicht) x -12,1 bis 10,9, y -13,0 bis 14,5, z -6,0 bis 7,3 -> x Mitte, y 1,5 cm unter der Unterkante, z vorn */
+  schild: [-0.6, -14.5, 7.4],
+  bereit: function () { return App.ready; },
+  gruppen: function () { root.updateMatrixWorld(true); return [root]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },   /* aktives Krankheitsbild bzw. Medikament im Dateinamen */
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  ohneMorph: true,                                    /* Fuellung in die Lage backen (auch beim animierten GLB) */
+  bake: krBake, klon: krKlon,
+  /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Lage und Groesse als Spuren ueber eine Periode (EX.P) */
+  animation: function (rootE) {
+    var NK = EX.NKEY, times = new Float32Array(NK + 1), tracks = [], nPart = 0, i, j, ki, K, v = new THREE.Vector3(), alt = { clock: clock, clockM: clockM }, te0 = SZ_.P, list = [];
+    for (j = 0; j <= NK; j++) times[j] = j * EX.P / NK;
+    root.updateMatrixWorld(true);
+    KINDS.forEach(function (Kd, k) {
+      if (!kindOn[k]) return;
+      for (i = 0; i < Kd.n; i++) {
+        var L = k === KI.saft ? Kd.sb[i] : 0;
+        list.push({ ki: k, i: i, rate: k === KI.saft ? Math.max(1, Math.round(EX.P / L)) * L / EX.P : 1, P: new Float32Array((NK + 1) * 3), S: new Float32Array((NK + 1) * 3), smax: 0 });
+      }
+    });
+    for (j = 0; j <= NK; j++) {
+      clockM = tM + te0 + times[j]; wellenSetzen();
+      var te = clockM - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P;
+      list.forEach(function (p) {
+        if (p.ki === KI.saft) { clock = alt.clock + times[j] * p.rate; saftZustand(p.i, LB); } else lauf(p.ki, p.i, ph, LB);
+        var r = (LB.st >= 1 && LB.st <= 4) ? LB.r : 0;
+        v.set(LB.x, LB.y, LB.z).applyMatrix4(root.matrixWorld);
+        p.P[j * 3] = v.x; p.P[j * 3 + 1] = v.y; p.P[j * 3 + 2] = v.z;
+        p.S[j * 3] = p.S[j * 3 + 1] = p.S[j * 3 + 2] = r;
+        if (r > p.smax) p.smax = r;
+      });
+    }
+    clock = alt.clock; clockM = alt.clockM; wellenSetzen(); if (ST) ST.letzt = '';
+    list.forEach(function (p) {
+      if (p.smax <= 0) return;   /* nie sichtbar (nuechtern, ausgeblendeter Stoff): gar nicht erst aufnehmen */
+      K = KINDS[p.ki];
+      var node = new THREE.Mesh(K.im.geometry, K.im.material); node.name = K.name.replace(/[^A-Za-z0-9_]/g, '_') + '_' + (p.i + 1);
+      node.position.set(p.P[0], p.P[1], p.P[2]); node.scale.set(p.S[0], p.S[1], p.S[2]);
+      rootE.add(node);
+      tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, p.P));
+      tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, p.S));
+      nPart++;
+    });
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Magen_Stroemung', EX.P, tracks)], zusatz: sz ? sz.datei : (mahlzeit ? 'nach-dem-essen' : 'nuechtern'), nPart: nPart };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe):', '- magen_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': die Strömung von Kohlenhydraten, Eiweiß, Fett, Wasser und Magensaft (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell des Magens in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter dem Magen.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe, mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+$('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
+$('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
+$('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
+
+/* =====================================================================
+   7f. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Der Magen wird in cm modelliert: 0,01 m je cm ist die reale Groesse, gestartet wird in dieser Groesse. Die Stroemung laeuft weiter (Knopf Pause),
+   Beschriftung und Teilchen gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG und der AR-Aufbau entstehen erst beim ersten Klick: root ist um -M verschoben
+   und bleibt unveraendert, arG wird hingestellt. Die Shader (Wellen, Krankheitsbilder) laufen in WebXR; die USDZ ist eine Momentaufnahme (Fuellung gebacken, Verschiebung ueber cfg.bake).
+   ===================================================================== */
+var AR_SKALA = 0.01;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false;
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });   /* nur die Abfrage: three.js-Objekte entstehen erst beim ersten Klick */
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.updateMatrixWorld(true);
+  root.traverse(function (o) {
+    for (var q = o; q; q = q.parent) if (!q.visible) return;
+    if (o.isMesh && !o.userData.teilchen && !o.userData.noexport) b.expandByObject(o);
+  });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() { $('arPause').textContent = playing ? 'Pause' : 'Weiter'; }
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Magen_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt cm */
+      $('labels').style.display = 'none'; $('leaders').style.display = 'none';
+      arTexte();
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      $('labels').style.display = showLabels ? '' : 'none'; $('leaders').style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme des Magens in der aktuellen Ansicht (ohne Teilchen) ---- */
+function usdzBuild() {
+  root.updateMatrixWorld(true);
+  return Kern.AR.usdz({
+    name: 'Magen', creator: 'Magen 3D - ' + Kern.WM, datei: 'magen.usda', skala: AR_SKALA,
+    gruppen: [root], bake: krBake
+  });
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Der Magen öffnet sich in AR Quick Look. Mit zwei Fingern lässt er sich vergrößern und drehen.' });
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
@@ -2717,7 +2946,7 @@ var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
     return { dreiecke: tot, umgeklappt: flip, maxDehnung: Math.round(maxD * 100) / 100, je: je };
   },
   form: function () { return form; }, aussenSdf: function () { return form.aussen(fe); } };
-function loop(now) {
+function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (openK !== openZiel) {   /* Deckel gleitet weich (ca. 600 ms) */
     openK = Math.max(0, Math.min(1, openK + Math.sign(openZiel - openK) * dt / 0.6));
@@ -2725,6 +2954,7 @@ function loop(now) {
   }
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
   if (ST) { stroemungSchritt(dt); wellenSetzen(); fuellungSetzen(fe); stroemungBild(); if (schemaOn) SCH.update(); lupeTick(); }
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (schemaOn) return;                                   /* Schema offen: das Bild des Magens ist ausgeblendet und wird nicht gezeichnet */
@@ -2741,6 +2971,7 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
+  AR && AR.abbauen();
   schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
@@ -2767,6 +2998,7 @@ return bauen().then(function () {
   applyLook();
   setSelected(selected);
   stroemungBauen();
+  Kern.Export.pruefeZiel('exp');
   root.visible = true;
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;

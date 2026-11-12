@@ -6,13 +6,13 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## sw.js (64 Zeilen) – Gemeinsamer Kern - Service Worker: Offline-Speicher der App
 
-## core/ar.js (221 Zeilen) – Gemeinsamer Kern - AR: WebXR-Sitzung (Android), USDZ-Erzeugung und AR Quick Look (iPhone/iPad)
+## core/ar.js (224 Zeilen) – Gemeinsamer Kern - AR: WebXR-Sitzung (Android), USDZ-Erzeugung und AR Quick Look (iPhone/iPad)
 
 ## core/atlas.css (42 Zeilen)
 
 ## core/atlas.js (135 Zeilen) – Gemeinsamer Kern - Atlas: Adresssteuerung der Rahmenseite index.html
 
-## core/export.js (298 Zeilen) – Gemeinsamer Kern - Export: STL (3D-Druck, im ZIP), GLB (statisch) und
+## core/export.js (306 Zeilen) – Gemeinsamer Kern - Export: STL (3D-Druck, im ZIP), GLB (statisch) und
 
 ## core/kern.css (164 Zeilen)
 
@@ -202,22 +202,24 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 1872: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
 - 2055: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/magen.css (147 Zeilen)
+## organe/verdauung/magen.css (152 Zeilen)
 
-## organe/verdauung/magen.js (2778 Zeilen) – Magen - Mageneingang, Magensaft und Pförtner
-- 19: Inhalte (Daten, getrennt vom Code)
-- 291: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
-- 339: 2. Geometrie: Aussenwand und Innenraum in Bereichen, Kappen der Schnittflaeche, Rohre (Speiseroehre, Zwoelf…
-- 613: 2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
-- 983: 3. Zustand, Bedienung
-- 1208: 4. Kamera: Ausschnitte, freier Bildbereich
-- 1272: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1477: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1696: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau) und Magensaft (tuerki…
-- 2012: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
-- 2267: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
-- 2391: 7d. Lupe: Nahansicht einer Magendruese (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; …
-- 2672: 8. Renderschleife, Aufbau, Abbau
+## organe/verdauung/magen.js (3010 Zeilen) – Magen - Mageneingang, Magensaft und Pförtner
+- 20: Inhalte (Daten, getrennt vom Code)
+- 312: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
+- 360: 2. Geometrie: Aussenwand und Innenraum in Bereichen, Kappen der Schnittflaeche, Rohre (Speiseroehre, Zwoelf…
+- 634: 2b. Fuellung (nuechtern <-> nach dem Essen) und Muskelwellen - ohne neu zu vernetzen
+- 1004: 3. Zustand, Bedienung
+- 1229: 4. Kamera: Ausschnitte, freier Bildbereich
+- 1293: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1498: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1717: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau) und Magensaft (tuerki…
+- 2033: 7. Schema - der Weg der Nahrung von Mund bis After (Knopf "Schema", wie bei der Leber)
+- 2288: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
+- 2412: 7d. Lupe: Nahansicht einer Magendruese (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; …
+- 2693: 7e. Export (Kern.Export): GLB statisch, GLB animiert und STL, jeweils der sichtbare Zustand (Durchsicht, au…
+- 2828: 7f. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, …
+- 2901: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/verdauung-form.js (1363 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
@@ -268,11 +270,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (2135 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+## tools/vergleich.js (2155 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
 - 168: 1. Im Browser (vor allen Skripten der Seite)
 - 362: 2. Abläufe je Modell
-- 1773: 3. Aufnehmen
-- 1957: 4. Vergleichen
-- 2119: 5. Aufruf
+- 1793: 3. Aufnehmen
+- 1977: 4. Vergleichen
+- 2139: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)

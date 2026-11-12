@@ -144,7 +144,8 @@ var Kern = window.Kern = window.Kern || {};
   };
 
   /* USDZ fuer AR Quick Look: Momentaufnahme der aktuellen Ansicht.
-     cfg: name, creator, datei, gruppen, skala.
+     cfg: name, creator, datei, gruppen, skala; optional bake(m): null oder Funktion (vi, v), die die lokale Lage v (THREE.Vector3, nach den Morph-Zielen)
+     des Punkts vi veraendert (wie bei Kern.Export).
      Material mit userData.usdzOp (Zahl): Der Wert gilt in der USDZ als Deckkraft
      (ersetzt op); mit usdzOp wird ein Material nur bei usdzOp <= 0 weggelassen,
      die Schwelle opacity < 0.3 gilt nur ohne usdzOp. Z. B. fuer Glas, das nur
@@ -162,6 +163,7 @@ var Kern = window.Kern = window.Kern || {};
         var list = Array.isArray(m.material) ? m.material : [m.material];
         var grs = Array.isArray(m.material) && g.groups.length ? g.groups : [{ start: 0, count: idx ? idx.length : pos.count, materialIndex: 0 }];
         m.updateWorldMatrix(true, false); nmat.getNormalMatrix(m.matrixWorld);
+        var bf = cfg.bake ? cfg.bake(m) : null;
         grs.forEach(function (gr) {
           var mt = list[gr.materialIndex]; if (!mt || !mt.visible || (typeof mt.userData.usdzOp === 'number' ? mt.userData.usdzOp <= 0 : mt.opacity < 0.3)) return;
           var map = new Map(), P = [], N = [], I = [], cr = 0, cg = 0, cb = 0, cn = 0;
@@ -171,7 +173,8 @@ var Kern = window.Kern = window.Kern || {};
               ni = map.size; map.set(vi, ni);
               var x = pos.getX(vi), y = pos.getY(vi), z = pos.getZ(vi);
               for (var k = 0; k < ma.length; k++) { var w = inf[k] || 0; if (w) { x += ma[k].getX(vi) * w; y += ma[k].getY(vi) * w; z += ma[k].getZ(vi) * w; } }
-              v.set(x, y, z).applyMatrix4(m.matrixWorld);
+              v.set(x, y, z); if (bf) bf(vi, v);
+              v.applyMatrix4(m.matrixWorld);
               P.push('(' + f4(v.x * skala) + ', ' + f4(v.y * skala) + ', ' + f4(v.z * skala) + ')');
               if (nor) { nm.set(nor.getX(vi), nor.getY(vi), nor.getZ(vi)).applyMatrix3(nmat).normalize(); N.push('(' + f4(nm.x) + ', ' + f4(nm.y) + ', ' + f4(nm.z) + ')'); }
               if (col && mt.vertexColors) { cr += col.getX(vi); cg += col.getY(vi); cb += col.getZ(vi); cn++; }
