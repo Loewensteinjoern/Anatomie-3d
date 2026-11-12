@@ -220,6 +220,22 @@ function initZeit(opt) {
   Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => opt.kerne, configurable: true });
 }
 
+/* Laufende Ladevorgänge zählen (Skripte und Stylesheets, die die Seite einfügt). Die virtuelle Zeit rückt erst vor,
+   wenn nichts mehr lädt (siehe weiter): sonst hinge die Zahl der Schritte, z. B. während ein Organ im Aufbau
+   Kern.formLaden abwartet, von der echten Ladezeit ab, und Teilchen stünden in einer anderen Phase. */
+function initLaden() {
+  window.__laedt = 0;
+  const beobachte = (n) => {
+    if (n.__gezaehlt || !((n.tagName === 'SCRIPT' && n.src) || (n.tagName === 'LINK' && n.rel === 'stylesheet'))) return;
+    n.__gezaehlt = true; n.__offen = true; window.__laedt++;
+    n.__fertig = () => { if (!n.__offen) return; n.__offen = false; window.__laedt--; };
+    n.addEventListener('load', n.__fertig); n.addEventListener('error', n.__fertig);
+  };
+  /* vor dem Laden wieder entfernt (z. B. Organ-CSS bei schnellem Wechsel): kein load-Ereignis mehr, also abzählen */
+  new MutationObserver((ms) => { for (const m of ms) { for (const n of m.addedNodes) beobachte(n); for (const n of m.removedNodes) if (n.__offen && !n.isConnected) n.__fertig(); } })
+    .observe(document, { childList: true, subtree: true });
+}
+
 /* Downloads abfangen: Blob-Links, die per a.click() ausgelöst werden */
 function initDownloads() {
   const blobs = new Map(), create = URL.createObjectURL, click = HTMLAnchorElement.prototype.click;
@@ -1303,6 +1319,9 @@ const ATLAS_BEREIT = (organ) => ({
 })[organ];
 const ATLAS_ORGAN_FERTIG = (n) => document.getElementById('boot').classList.contains('gone') && document.getElementById('organ').className === 'organ-' + n && document.getElementById('organ').childElementCount > 0;
 const ATLAS_FEHLER = () => !document.getElementById('atlasFehler').hidden;
+/* Schnelltest für jedes Organ-Modell (tools/betroffen.js wählt ihn für nicht betroffene Modelle): laden, ein Bild,
+   Seitentext; Konsole, Ladefehler und Abbrüche zählen wie bei jedem Kontext */
+for (const M of Object.values(MODELLE)) M.kontexte.kurz = { opt: DESKTOP, timeout: 90000, async ablauf(t) { await t.weiter(1500); await t.bild('uebersicht'); await t.text(); } };
 for (const organ of ['koerper', 'herz', 'niere', 'nephron', 'lunge', 'alveole', 'leber', 'laeppchen', 'magen', 'darm', 'zotte']) {
   MODELLE[organ].bereit = ATLAS_BEREIT(organ);
   for (const K of Object.values(MODELLE[organ].kontexte)) { K.adresse = ATLAS_ADRESSE[organ]; K.organ = organ; K.init = (K.init || []).concat([initAtlasZurueckAus]); }
@@ -1715,6 +1734,7 @@ MODELLE.atlas.kontexte['offline-datei'] = { opt: DESKTOP, lokal: true, bereit: A
 const TYPEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary',
   '.webmanifest': 'application/manifest+json' };
+const VERZOEGERUNG = +process.env.VERGLEICH_VERZOEGERUNG || 0;
 let swErsatz = null;   /* Text, den der Server statt sw.js liefert (Kontext update); context.route erfasst den Abruf des Service Workers nicht */
 function server(wurzel) {
   return new Promise((res) => {
@@ -1726,7 +1746,9 @@ function server(wurzel) {
       if (!p.startsWith(wurzel)) { r.writeHead(403); r.end(); return; }
       fs.readFile(p, (e, b) => {
         if (e) { r.writeHead(404); r.end(); return; }
-        r.writeHead(200, { 'Content-Type': TYPEN[path.extname(p)] || 'application/octet-stream' }); r.end(b);
+        const senden = () => { r.writeHead(200, { 'Content-Type': TYPEN[path.extname(p)] || 'application/octet-stream' }); r.end(b); };
+        /* Selbstprüfung: VERGLEICH_VERZOEGERUNG=<ms> lädt Skripte unter organe/ langsamer; die Bilder müssen gleich bleiben */
+        if (VERZOEGERUNG && url.startsWith('/organe/') && url.endsWith('.js')) setTimeout(senden, VERZOEGERUNG); else senden();
       });
     }).listen(0, '127.0.0.1', () => res(srv));
   });
@@ -1741,6 +1763,7 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   const ctx = await browser.newContext(Object.assign({ locale: 'de-DE', timezoneId: 'Europe/Berlin', reducedMotion: 'no-preference' }, K.opt));
   await ctx.addInitScript(initZeit, { epoch: Date.UTC(2026, 0, 15, 9, 30, 0), seed: 0x2F6FB5, kerne: 8 });
   await ctx.addInitScript(initDownloads);
+  await ctx.addInitScript(initLaden);
   for (const f of K.init || []) await ctx.addInitScript(f);
   const page = await ctx.newPage();
   page.setDefaultTimeout(K.timeout || 20000);   /* K.timeout: Kontexte mit sehr schwerem 3D (SwiftShader braucht für Klick und Bild dann bis zu 15 s) */
@@ -1753,7 +1776,10 @@ async function kontextAufnehmen(browser, ziel, basis, wurzel, mname, M, kname, K
   page.on('response', (r) => { if (r.status() >= 400) melde('nicht geladen: ' + r.url().replace(basis, '') + ' (' + r.status() + ')'); });
 
   let nr = 0;
-  const weiter = (ms, frameMs) => page.evaluate(([a, b]) => window.__zeit.weiter(a, b), [ms, frameMs || 50]);
+  /* vor jedem Vorrücken in echter Zeit warten, bis keine Skripte/Stylesheets mehr laden (initLaden) */
+  const laedt = () => page.evaluate(() => window.__laedt > 0).catch(() => false);   /* während einer Navigation: nicht warten */
+  const ladeRuhe = async () => { const t0 = Date.now(); while (await laedt()) { if (Date.now() - t0 > 60000) break; await warte(20); } };
+  const weiter = async (ms, frameMs) => { await ladeRuhe(); return page.evaluate(([a, b]) => window.__zeit.weiter(a, b), [ms, frameMs || 50]); };
   const t = {
     erg, kname, wurzel,
     offline: (an) => ctx.setOffline(an),

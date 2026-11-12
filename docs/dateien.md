@@ -112,6 +112,14 @@ Prüfwerkzeug: Vergleichsaufnahmen vorher/nachher (siehe unten)
 
 berechnet die Mittellinie des Dünndarms (`DUENN_TAB` in `verdauung-form.js`) als dichtes Knäuel; wird von der App nie geladen. `index.js` erklärt die Schritte und führt sie mit den gewählten Einstellungen aus (Aufruf aus einem leeren Arbeitsordner): `hole.js` (Dreiecke der Nachbarn im Körper aus der laufenden App), `lagen.js` (Gitter in vier Lagen hinter der Bauchwand), `weg.js` (Gitterweg per Backbite mit festem Startwert, Leerdarm zuerst, Umwege in Taschen), `relax.js` (Entspannung); danach `schnitt.js` (Strecke für `DUENN_SCHNITT`), `einbauen.js`, `pruefe.js` (Abstände der Schlingen und zu den Nachbarn mind. 0,1 cm, Überdeckung des Dickdarms von vorn)
 
+## `tools/betroffen.js`
+
+Wählt die Vergleichsläufe für einen PR aus: liest die Änderungen gegenüber `origin/main` (oder einer anderen Basis), ordnet Dateien über `Kern.ORGANE`/`Kern.FORMEN` Organen und Formen zu, liest die Abhängigkeiten aus dem Code (`Kern.formLaden`, `Kern.Formen.x`, `Kern.organLaden`, `Kern.Organe.x`; beim Körper zählen Organ-Skripte nur für die Kamerafahrt, außer dem Herz, dessen Form in `herz.js` steckt) und die Organe, die jeder Atlas-Kontext berührt. Ausgabe: betroffene Modelle und Atlas-Kontexte (voll prüfen), Schnelltest `<modell>:kurz` für alle übrigen; `--liste` gibt nur die `--nur`-Werte aus (Exit 3 = voller Lauf). Voller Lauf bei gemeinsamem Code; Sonderfälle: in `sw.js` nur `DATEIEN`/`VERSION`, in `core/rahmen.js` nur Einträge in `ORGANE`/`FORMEN`, in `tools/vergleich.js` nur neue Zeilen in Modell- oder Kontextblöcken. Keine App-Datei.
+
+## `tools/kontext.js`
+
+Erzeugt `KONTEXT.md` (Abschnitte je Code-Datei mit Zeilennummern) und prüft mit `--pruefen` die Obergrenzen der Doku; `--doku-pr` erkennt reine Doku-Änderungen. Keine App-Datei.
+
 ## `tools/nachweis.js`, `tools/originale/`
 
 `nachweis.js`: Nachweis, dass das Schema der Lunge (Schema-Panel, bedient über den Reiter „Atmung“) dasselbe tut und zeigt wie das Original-Modell (`node tools/nachweis.js lunge <ziel>` bzw. `alveole <ziel>`; bei der Alveole bekommen beide Seiten denselben Zufallsstrom für Gasteilchen und Flüge; lädt Original und App mit virtueller Zeit, vergleicht Bild, Werte und SVG, Ergebnis `<ziel>/nachweis.json`, Exit 0 = gleich; nutzt Teile von `tools/vergleich.js`, nur mit Playwright). `originale/`: die Original-Modelle der Lunge (`lunge-ebene1-thorax.html`, `lunge-ebene3-alveole.html`) als unveränderte Vorlage
