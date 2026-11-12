@@ -213,3 +213,9 @@ Mit Jörn abgestimmt (Oktober 2026). Reihenfolge der Schritte: AR-Deckkraft des 
   - [x] B4: Hilfekarten und Üben im Darm (Papille und Bauhin-Klappe in ihren Ausschnitten)
   - [x] B5: Dünndarmzotte `#darm/zotte` (11 Strukturen, mittlere Zotte aufgeschnitten) und Zoomstufe Darm → Zotte (Knopf „Zotte“, „Dünndarmzotte hier ansehen“ bei Leer- und Krummdarm)
   - [x] B6: Zotte mit Stoffen, Mahlzeit, Zottenpumpe, Schema, Hilfekarten und Üben; `tools/vergleich.js` mit Modellen `darm` und `zotte` und den Übergängen Körper–Darm und Darm–Zotte
+
+### Optik des Darms nach einer anatomischen Vorlage von Jörn (erledigt, November 2026)
+
+- Vorlage: Torso-Modell aus dem Handel, nur als Anschauung (nichts übernommen)
+- [x] Schritt 1: Dünndarm blassrosa, Dickdarm mittleres Graurosa, Haustren flacher und je Haustrum leicht verschieden tief, Tänien als klar begrenzte helle Streifen (Vertexfarben aus `st.T`; im Körper breitere Kante); im Darm-Modell und im Körper
+- [x] Schritt 2: Dünndarm als dichtes Knäuel (r 1,1 statt 0,9, ca. 298 cm statt 271, Leerdarm-Anteil 0,45, aufgeschnittene Schlinge 44–55 cm), berechnet mit `tools/duenndarm-knaeuel/`; von vorn höchstens ca. 10 % über dem Dickdarm (Jörn); Gekröse, Darmgefäße und Sigma von vorn verdeckt (ihre Beschriftungen entfallen in der Übersicht); Ausschnitt „Dünndarm“ neu ausgerichtet; Sichtprüfung der Beschriftung mit vier Nachbarstrahlen (0,15 cm)

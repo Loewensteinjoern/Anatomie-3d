@@ -1,28 +1,17 @@
-# Übergabe: Optik des Darms nach anatomischer Vorlage (Stand 11. November 2026)
+# Übergabe: Optik des Darms nach anatomischer Vorlage (Stand 12. November 2026)
 
-## Ziel
+Vorlage (Torso-Modell, von Jörn im Chat) nur als Anschauung, nichts daraus ins Repository (`LIZENZEN.md`). Texte freigegeben (`docs/freigaben/darm-b-texte.md`), bleiben unverändert. PR C (`pr-c.md`) wartet bis nach diesem Schritt.
 
-Jörn möchte, dass der Darm mehr einer anatomischen Vorlage ähnelt, die er im Chat hochlädt. Die Vorlage dient nur als Anschauung. Bilder oder Formen daraus nicht ins Repository übernehmen, denn fremde Inhalte brauchen Jörns Freigabe (siehe `LIZENZEN.md`).
+## Entschieden und umgesetzt (Arbeitszweig)
 
-## Stand
+- Schritt 1: Dünndarm blassrosa, Dickdarm mittleres Graurosa (#C08A7C u. a.), Haustren flacher und je Haustrum leicht verschieden tief, Tänien als klar begrenzte helle Streifen (ca. 1 cm, Vertexfarben aus `st.T` in der Formdatei; im Körper breitere Kante). Magen bytegleich.
+- Schritt 2: Dünndarm als dichtes Knäuel, r 1,1, ca. 298 cm, Leerdarm-Anteil 0,45, aufgeschnittene Schlinge 44–55 cm; von vorn höchstens ca. 10 % über dem Dickdarm (Jörn); Gekröse und Gefäße von vorn verdeckt; Körper zieht mit. Berechnet mit `tools/duenndarm-knaeuel/` (`index.js` erklärt die Schritte; Startwert 11; erzeugt dieselbe Tabelle).
 
-- Magen (#45) und Darm mit Dünndarmzotte (#46) sind gemergt. PR C (Krankheitsbilder usw., `pr-c.md`) wartet bis nach diesem Schritt.
-- Die Texte sind freigegeben (`docs/freigaben/darm-b-texte.md`) und bleiben unverändert. Ändert sich ein Name oder eine Lage, nur mit Jörns Zustimmung.
+## Offen
 
-## Vorgehen
-
-1. Vorlage ansehen und den Unterschied zum heutigen Darm beschreiben. Dafür Bilder aufnehmen, zum Beispiel `darm-desktop-01-uebersicht`, sowie Körper/Bauch (`tools/vergleich.js --nur darm`). Dabei Lage, Schlingen, Dicke, Haustren, Farbe und Gekröse betrachten.
-2. Jörn fragen: Fragen mit Optionen, die Empfehlung zuerst, was genau angepasst wird, zum Beispiel der Verlauf von Dick- und Dünndarm, die Dicke, die Oberfläche oder die Farbe.
-3. Umsetzung mit dem Executor in kleinen Schritten. Nach jedem Schritt Bilder zeigen, Jörn entscheidet.
+- PR nach `main` ist offen (vollständiger Vergleichslauf: nur Darm, Zotte-Übergänge, Körper im Bauch/Becken und Atlas-Bilder mit dem Körper anders; Seitentext des Darms ohne Sigma, Gekröse, Darmvenen; Körper-USDZ anders). Nach dem Merge diese Übergabe löschen; dann PR C (`pr-c.md`).
 
 ## Wo im Code
 
-- Form: `organe/verdauung/verdauung-form.js` ab „Darm: Zwoelffingerdarm bis After“ (ca. Zeile 755): `DUENN_TAB` (Mittellinie des Dünndarms), `duenndarm()`, `dickdarm(opt)` (Haustren, Tänien), `ringfalte()`, `gekroese()`, `darmGefaesse()`, `darmKennpunkte()` (Ankerpunkte der Beschriftung).
-- Darstellung: `organe/verdauung/darm.js`, Abschnitt 1 (Materialien/Farben) und 2 (Geometrie). Die Teilchenwege in Abschnitt 6 folgen der Mittellinie.
-- Der Körper (`organe/koerper/koerper.js`) zeigt den Darm aus derselben Form. Auch die Kamerafahrt „Darm öffnen“ und die Fahrt zur Zotte (darm.js 7b) hängen daran.
-
-## Achtung
-
-- Der Magen nutzt dieselbe Formdatei und muss bytegleich bleiben. Erwartete Abweichungen: der Darm, der Körper im Bauchbereich und die Atlas-Übergänge. Die Zotte bleibt gleich.
-- Partikel müssen im Darm bleiben, die Beschriftung muss lesbar sein, auch auf dem Handy (390×844). Leber und Pfortader müssen angeschlossen bleiben, die Fahrten weiterhin funktionieren.
-- Prüfung vor dem PR wie in `CLAUDE.md` beschrieben.
+- Form: `organe/verdauung/verdauung-form.js` ab „Darm: Zwoelffingerdarm bis After“: `DUENN_TAB`, `DUENN_R`, `DUENN_SCHNITT`, `dickZustand` (`st.R`, `st.T`), `dickdarm()` (`taenie`).
+- Darstellung: `organe/verdauung/darm.js` Abschnitt 1 (Farben, `TAENIE`), 2 (Geometrie), `ankerBauen`, Sichtprüfung; Körper `organe/koerper/koerper.js` Abschnitt Dickdarm.

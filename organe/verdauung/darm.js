@@ -23,43 +23,43 @@
    Fakten der Infokarte (Texte von Joern freigegeben; fakten = Liste [Bezeichnung, Wert]).
    ===================================================================== */
 var STRUKTUREN = [
-  { id: 'zwoelffinger', de: 'Zwölffingerdarm', lat: 'Duodenum', grp: 'Dünndarm', col: 0xE3A58C,
+  { id: 'zwoelffinger', de: 'Zwölffingerdarm', lat: 'Duodenum', grp: 'Dünndarm', col: 0xEAB0A2,
     txt: 'Der erste Abschnitt des Dünndarms legt sich wie ein C um den Kopf der Bauchspeicheldrüse. An der Papille kommen Galle und Pankreassaft hinzu. Sie neutralisieren den sauren Speisebrei aus dem Magen und spalten alle Nährstoffe weiter auf.',
     fakten: [['Länge', 'ca. 25–30 cm'], ['Zuflüsse', 'Galle und Pankreassaft'], [null, 'Nimmt besonders Eisen und Calcium auf']] },
   { id: 'papille', de: 'Papille', lat: 'Papilla duodeni major', grp: 'Dünndarm', col: 0xEAD07A,
     txt: 'Eine kleine Erhebung an der Innenwand des Zwölffingerdarms. Hier münden der Hauptgallengang und der Gang der Bauchspeicheldrüse, meist gemeinsam. Ein Schließmuskel öffnet sich vor allem nach dem Essen.',
     fakten: [['Lage', 'absteigender Teil des Zwölffingerdarms'], ['Mündung', 'Gallengang und Pankreasgang'], ['Schließmuskel', 'Sphinkter Oddi']] },
-  { id: 'leerdarm', de: 'Leerdarm', lat: 'Jejunum', grp: 'Dünndarm', col: 0xE8A98F,
+  { id: 'leerdarm', de: 'Leerdarm', lat: 'Jejunum', grp: 'Dünndarm', col: 0xEDB4A6,
     txt: 'Er folgt auf den Zwölffingerdarm und liegt vor allem im linken Oberbauch. Hohe Ringfalten und dichte Zotten geben ihm eine große Oberfläche: Hier wird der größte Teil der Nährstoffe aufgenommen. Er heißt so, weil er bei Verstorbenen meist leer gefunden wird.',
     fakten: [['Länge', 'ca. 2/5 des Dünndarms'], ['Ringfalten', 'hoch und dicht'], ['Nimmt auf', 'Zucker, Aminosäuren, Fette, Vitamine']] },
-  { id: 'krummdarm', de: 'Krummdarm', lat: 'Ileum', grp: 'Dünndarm', col: 0xDDA088,
+  { id: 'krummdarm', de: 'Krummdarm', lat: 'Ileum', grp: 'Dünndarm', col: 0xE6AA9C,
     txt: 'Der letzte und längste Abschnitt des Dünndarms liegt vor allem im rechten Unterbauch. Seine Falten werden flacher. Am Ende werden Vitamin B12 und die Gallensäuren aufgenommen, die über die Pfortader zur Leber zurückkehren.',
     fakten: [['Länge', 'ca. 3/5 des Dünndarms'], ['Endet', 'an der Bauhin-Klappe'], ['Nimmt auf', 'Vitamin B12, Gallensäuren']] },
   { id: 'bauhin', de: 'Bauhin-Klappe', lat: 'Valva ileocaecalis', grp: 'Dickdarm', col: 0xD9798F,
     txt: 'Hier mündet der Krummdarm seitlich in den Dickdarm. Die Klappe lässt den Darminhalt portionsweise in den Dickdarm und verhindert, dass er mit seinen vielen Bakterien in den Dünndarm zurückfließt.',
     fakten: [['Lage', 'rechter Unterbauch'], ['Aufgabe', 'Rückfluss verhindern'], ['Übergang', 'Krummdarm → Dickdarm']] },
-  { id: 'blinddarm', de: 'Blinddarm', lat: 'Caecum', grp: 'Dickdarm', col: 0xBE7D5F,
+  { id: 'blinddarm', de: 'Blinddarm', lat: 'Caecum', grp: 'Dickdarm', col: 0xC38D80,
     txt: 'Der Anfang des Dickdarms unterhalb der Bauhin-Klappe, ein kurzer, blind endender Sack. An ihm hängt der Wurmfortsatz.',
     fakten: [['Länge', 'ca. 7 cm'], ['Lage', 'rechter Unterbauch'], ['Trägt', 'den Wurmfortsatz']] },
-  { id: 'wurmfortsatz', de: 'Wurmfortsatz', lat: 'Appendix vermiformis', grp: 'Dickdarm', col: 0xC88566,
+  { id: 'wurmfortsatz', de: 'Wurmfortsatz', lat: 'Appendix vermiformis', grp: 'Dickdarm', col: 0xC99385,
     txt: 'Ein dünner, etwa fingerlanger Anhang des Blinddarms mit viel lymphatischem Gewebe. Entzündet er sich, spricht man umgangssprachlich von einer „Blinddarmentzündung“ (Appendizitis).',
     fakten: [['Länge', 'ca. 8–10 cm'], ['Gewebe', 'viel Abwehrgewebe'], ['Entzündung', 'Schmerz wandert in den rechten Unterbauch']] },
-  { id: 'aufsteigend', de: 'Aufsteigender Dickdarm', lat: 'Colon ascendens', grp: 'Dickdarm', col: 0xB8775A,
+  { id: 'aufsteigend', de: 'Aufsteigender Dickdarm', lat: 'Colon ascendens', grp: 'Dickdarm', col: 0xC08A7C,
     txt: 'Er steigt auf der rechten Seite bis unter die Leber auf und biegt dort in den queren Dickdarm um. Typisch für den Dickdarm sind drei Längsmuskelstreifen (Tänien) und Ausbuchtungen (Haustren).',
     fakten: [['Lage', 'rechte Bauchseite'], ['Biegung', 'unter der Leber'], ['Kennzeichen', 'Tänien und Haustren']] },
-  { id: 'quer', de: 'Querer Dickdarm', lat: 'Colon transversum', grp: 'Dickdarm', col: 0xB3735A,
+  { id: 'quer', de: 'Querer Dickdarm', lat: 'Colon transversum', grp: 'Dickdarm', col: 0xBD8779,
     txt: 'Er hängt quer durch den Oberbauch unter dem Magen durch und ist am Gekröse beweglich aufgehängt. Hier wird dem Darminhalt weiter Wasser entzogen.',
     fakten: [['Lage', 'quer unter Magen und Leber'], ['Aufhängung', 'beweglich am Gekröse'], ['Biegung links', 'unter der Milz']] },
-  { id: 'absteigend', de: 'Absteigender Dickdarm', lat: 'Colon descendens', grp: 'Dickdarm', col: 0xBA7A5E,
+  { id: 'absteigend', de: 'Absteigender Dickdarm', lat: 'Colon descendens', grp: 'Dickdarm', col: 0xC28C7E,
     txt: 'Er zieht auf der linken Seite nach unten. Der Darminhalt ist hier schon weitgehend eingedickt.',
     fakten: [['Lage', 'linke Bauchseite'], ['Inhalt', 'schon fester Stuhl'], ['Weiter', 'ins Sigma']] },
-  { id: 'sigma', de: 'Sigma', lat: 'Colon sigmoideum', grp: 'Dickdarm', col: 0xB5755A,
+  { id: 'sigma', de: 'Sigma', lat: 'Colon sigmoideum', grp: 'Dickdarm', col: 0xBC8677,
     txt: 'Die S-förmige Schlinge im linken Unterbauch verbindet den absteigenden Dickdarm mit dem Mastdarm. Hier sammelt sich der Stuhl vor der Entleerung.',
     fakten: [['Lage', 'linker Unterbauch'], ['Form', 'S-förmig'], ['Häufig betroffen', 'Divertikel']] },
-  { id: 'mastdarm', de: 'Mastdarm', lat: 'Rectum', grp: 'Dickdarm', col: 0xAE6E55,
+  { id: 'mastdarm', de: 'Mastdarm', lat: 'Rectum', grp: 'Dickdarm', col: 0xB47D70,
     txt: 'Der letzte Abschnitt des Darms vor dem After. Füllt er sich, melden Dehnungsfühler in der Wand den Stuhldrang.',
     fakten: [['Länge', 'ca. 12–15 cm'], ['Lage', 'im kleinen Becken vor dem Kreuzbein'], ['Aufgabe', 'Stuhl sammeln, Stuhldrang auslösen']] },
-  { id: 'after', de: 'After mit Schließmuskeln', lat: 'Canalis analis, Mm. sphincteres ani', grp: 'Dickdarm', col: 0xA86450,
+  { id: 'after', de: 'After mit Schließmuskeln', lat: 'Canalis analis, Mm. sphincteres ani', grp: 'Dickdarm', col: 0xAD7466,
     txt: 'Der Analkanal wird von zwei Schließmuskeln verschlossen: Der innere arbeitet unwillkürlich, den äußeren können wir bewusst anspannen. Zusammen halten sie den Stuhl zurück, bis wir eine Toilette erreichen (Kontinenz).',
     fakten: [['Länge', 'ca. 4 cm'], ['Innerer Schließmuskel', 'unwillkürlich'], ['Äußerer Schließmuskel', 'willkürlich']] },
   { id: 'schleimhaut', de: 'Darmschleimhaut', lat: 'Tunica mucosa', grp: 'Darmwand', col: 0xE88F8C,
@@ -280,6 +280,16 @@ MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);               
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
 ['arterien', 'venen', 'pfortader'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
+/* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
+   zur Mitte des Streifens hin das Verhaeltnis Zielfarbe / Grundfarbe) */
+var TAENIE = ['blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'], TAENIE_ZIEL = srgb(0xEBD3C8);
+TAENIE.forEach(function (sid) { MAT[sid].vertexColors = true; if (MAT[sid + 'D']) MAT[sid + 'D'].vertexColors = true; });
+function taenieFarbe(g, sid, taenie) {
+  var b = srgb(STRUCT[sid].col), p = g.attributes.position, c = new Float32Array(p.count * 3), i, t;
+  var fr = TAENIE_ZIEL.r / b.r - 1, fg = TAENIE_ZIEL.g / b.g - 1, fb = TAENIE_ZIEL.b / b.b - 1;
+  for (i = 0; i < p.count; i++) { t = taenie(p.getX(i), p.getY(i), p.getZ(i)); c[i * 3] = 1 + t * fr; c[i * 3 + 1] = 1 + t * fg; c[i * 3 + 2] = 1 + t * fb; }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+}
 Object.keys(MAT).forEach(function (k) { MAT[k].name = k; });
 
 var root = new THREE.Group(); root.name = 'Darm'; root.position.set(-M[0], -M[1], -M[2]); scene.add(root);   /* Koerper-Koordinaten, um die Mitte M verschoben */
@@ -569,9 +579,12 @@ async function bauen() {
   var RDK = function (s, phi) { return dk.R(s, phi); };
   /* ein Stueck der Haut: reg > 0 teilt es an der Schnittflaeche des Bereichs in hintere Haelfte und Deckel */
   function haut(sid, A, s0, s1, Rf, o, reg) {
-    var g = schlauch(A, s0, s1, Rf, o);
-    if (!reg) { var m0 = addMesh(sid, g, MAT[sid], STRUCT[sid].de, 3, 'hinten'); if (o && o.ende) m0.userData.ende = true; if (o && o.fern) m0.userData.fern = true; tris.haut += anz(g); return; }
+    var g = schlauch(A, s0, s1, Rf, o), tn = TAENIE.indexOf(sid) >= 0;
+    if (!reg) {
+      if (tn) taenieFarbe(g, sid, dk.taenie);
+      var m0 = addMesh(sid, g, MAT[sid], STRUCT[sid].de, 3, 'hinten'); if (o && o.ende) m0.userData.ende = true; if (o && o.fern) m0.userData.fern = true; tris.haut += anz(g); return; }
     var t = schneide(g, RZ[reg].schnitt); g.dispose();
+    if (tn) { if (t.neg) taenieFarbe(t.neg, sid, dk.taenie); if (t.pos) taenieFarbe(t.pos, sid, dk.taenie); }
     if (t.neg) { addMesh(sid, t.neg, MAT[sid], STRUCT[sid].de, 3, 'hinten', reg); tris.haut += anz(t.neg); }
     if (t.pos) { addMesh(sid, t.pos, MAT[sid + 'D'], STRUCT[sid].de + ' (vorn)', 3, 'deckel', reg); tris.haut += anz(t.pos); }
   }
@@ -885,7 +898,7 @@ var K3 = function (x, y, z) { return V(x - M[0], y - M[1], z - M[2]); };   /* Ko
 var AUSSCHNITTE = [
   { name: 'Übersicht', theta: UEBERSICHT.theta, phi: UEBERSICHT.phi, target: V(UEBERSICHT.ziel[0], UEBERSICHT.ziel[1], UEBERSICHT.ziel[2]), ext: UEBERSICHT.ext, halb: UEBERSICHT.halb, reg: 0 },
   { name: 'Zwölffingerdarm', theta: -0.55, phi: 1.5, target: K3(-2, 99.5, 0), ext: [17, 15], halb: 8, reg: 1 },
-  { name: 'Dünndarm', theta: 0, phi: 1.3, target: K3(1.2, 93.5, 10.5), ext: [19, 10], halb: 9.5, reg: 2 },
+  { name: 'Dünndarm', theta: 0, phi: 1.3, target: K3(4.7, 94.5, 10.0), ext: [14, 9], halb: 7, reg: 2 },
   { name: 'Blinddarm', theta: -0.7, phi: 1.5, target: K3(-10.2, 90.5, 2.9), ext: [14, 16], halb: 7, reg: 3 },
   { name: 'Mastdarm', theta: 1.5708, phi: 1.5, target: K3(0, 83.5, -3), ext: [14, 16], halb: 7, reg: 4 }
 ];
@@ -1226,7 +1239,8 @@ function kand(i, id) {
    Netz einer anderen Struktur liegt; sonst keine Beschriftung. Waehrend der Bewegung bleibt die letzte Wahl. */
 var sKey = '', sT = 0, sOk = true, sichtVer = 0, VIS = {};   /* VIS: gewaehlter Ankerpunkt je Struktur (null = verdeckt) */
 var rayS = new THREE.Raycaster(), dirS = new THREE.Vector3();
-function frei(id, p) {
+/* Ein Strahl von der Kamera zum Punkt: liegt vor ihm ein undurchsichtiges Netz einer anderen Struktur? */
+function strahlFrei(id, p) {
   dirS.copy(p).sub(camera.position); var d = dirS.length(); dirS.normalize();
   rayS.set(camera.position, dirS); rayS.far = d;
   var hits = rayS.intersectObjects(root.children, true);
@@ -1234,6 +1248,19 @@ function frei(id, p) {
     var o = hits[i].object, sid = o.userData.sid;
     if (!sid || sid === id || !sichtbar(o) || !enabled[sid] || weichMat(o) || o.userData.lumen) continue;   /* die einfache Innenflaeche (nur bei Durchsicht) verdeckt nichts */
     if (hits[i].distance < d - 0.3) return false;
+  }
+  return true;
+}
+/* Der Mittelpunkt allein genuegt nicht: in dem dichten Knaeuel des Duenndarms laesst eine schmale Luecke zwischen zwei Schlingen den Strahl zum Anker durch, obwohl die Struktur
+   dort verdeckt ist. Darum muessen auch vier Nachbarstrahlen (0,15 cm seitlich und oben/unten, quer zur Blickrichtung) frei sein. */
+var nbR = new THREE.Vector3(), nbU = new THREE.Vector3(), nbP = new THREE.Vector3();
+function frei(id, p) {
+  if (!strahlFrei(id, p)) return false;
+  nbR.setFromMatrixColumn(camera.matrixWorld, 0); nbU.setFromMatrixColumn(camera.matrixWorld, 1);
+  var o = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (var k = 0; k < 4; k++) {
+    nbP.copy(p).addScaledVector(nbR, 0.15 * o[k][0]).addScaledVector(nbU, 0.15 * o[k][1]);
+    if (!strahlFrei(id, nbP)) return false;
   }
   return true;
 }

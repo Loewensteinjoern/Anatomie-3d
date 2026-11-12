@@ -674,7 +674,7 @@ async function organe() {
   await sdfMesh('verdauung', mat('verdauung', 0xE8C27A, { rough: 0.6 }), sdfPankreas, b(-8, 96, -8, 12, 109, 2), 0.45);
   if (abgebaut) return; await weiter('Bauchspeicheldrüse');
   als('duenndarm');
-  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), vb ? vb.duodenum.pts : [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], vb ? vb.duodenum.r : 1.0, vb ? vb.duodenum.seg : 50);   // Zwoelffingerdarm bis zur Flexur (Form der Verdauung)
+  rohr('verdauung', mat('verdauung', 0xEAB0A2, { rough: 0.5, coat: 0.35 }), vb ? vb.duodenum.pts : [[-2.0, 104.0, 3.2], [-3.4, 105, 1.6], [-5.8, 103.6, -0.2], [-7.0, 100, -0.8], [-6.6, 96.6, -0.8], [-3.6, 94.8, -0.6], [0, 95.6, -0.5]], vb ? vb.duodenum.r : 1.0, vb ? vb.duodenum.seg : 50);   // Zwoelffingerdarm bis zur Flexur (Form der Verdauung)
   als('milz');
   ellM('kreislauf', mat('kreislauf', 0x7A2F4F, { rough: 0.5, coat: 0.4 }), 9.2, 108, -5.2, 2.3, 4.8, 3.2, [0.1, 0.2, -0.15]);
   /* Duenndarm: Schlingen in vier Lagen */
@@ -688,16 +688,30 @@ async function organe() {
       dd.push([-8 + 2 * t + (k % 2 ? 0.6 : -0.6), yy + (k % 2 ? 0.5 : -0.5), 3.5 + 1.8 * Math.sin(k * 1.9 + r * 1.3)]);
     }
   }
-  rohr('verdauung', mat('verdauung', 0xE3A58C, { rough: 0.5, coat: 0.35 }), dd, vb ? vb.duenndarm.r : 1.2, vb ? vb.duenndarm.seg : 420);
+  rohr('verdauung', mat('verdauung', 0xEDB4A6, { rough: 0.5, coat: 0.35 }), dd, vb ? vb.duenndarm.r : 1.2, vb ? vb.duenndarm.seg : 420);
   /* Dickdarm: Rahmen um den Duenndarm. Mit der Form der Verdauung ein Abstandsfeld (Blinddarm, Sigma, Mastdarm bis zum After, Haustren), der Wurmfortsatz ein Rohr mit
      Kugel am Ende; Zahl der three.js-Objekte wie beim frueheren Rohr samt Kugeln (Zufallszahlen der Kennungen: spaeter geladene Organe bleiben gleich) */
   als('dickdarm');
-  var dk = mat('verdauung', 0xB8775A, { rough: 0.55, coat: 0.3 });
+  var dk = mat('verdauung', 0xC08A7C, { rough: 0.55, coat: 0.3 });
   if (vform && vform.dickdarm) {
     var dkf = vform.dickdarm({ ohneAppendix: true }), wf = vform.wurmfortsatz(), wl = wf.pts[wf.pts.length - 1];
-    await sdfMesh('verdauung', dk, dkf.sdf, dkf.grenzen, 0.5);
+    /* Taenien heller abgesetzt: Vertexfarben als Faktor auf die Materialfarbe (linear je Kanal); der Wurmfortsatz (gleiches Material, Rohr und gemeinsame Kugel) bekommt den Faktor 1 */
+    dk.vertexColors = true;
+    var dkz = Kern.srgb(0xEBD3C8), dkb = Kern.srgb(0xC08A7C);
+    function eins(g) {
+      var n = g.attributes.position.count, c = new Float32Array(n * 3).fill(1);
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    }
+    var dkm = await sdfMesh('verdauung', dk, dkf.sdf, dkf.grenzen, 0.5);
     if (abgebaut) return;
-    rohr('verdauung', dk, wf.pts, wf.r, 24, false);
+    var dkg = dkm.geometry, dkp = dkg.attributes.position, dkc = new Float32Array(dkp.count * 3), dki, dkt;
+    for (dki = 0; dki < dkp.count; dki++) {
+      dkt = dkf.taenie(dkp.getX(dki), dkp.getY(dki), dkp.getZ(dki), 0.12);   /* breitere Kante: das Netz des Koerpers ist grob (0,5 cm) */
+      dkc[dki * 3] = 1 + dkt * (dkz.r / dkb.r - 1); dkc[dki * 3 + 1] = 1 + dkt * (dkz.g / dkb.g - 1); dkc[dki * 3 + 2] = 1 + dkt * (dkz.b / dkb.b - 1);
+    }
+    dkg.setAttribute('color', new THREE.BufferAttribute(dkc, 3));
+    eins(rohr('verdauung', dk, wf.pts, wf.r, 24, false).geometry);
+    if (!sphG.attributes.color) eins(sphG);   /* sphG ist die gemeinsame Kugel: die anderen Materialien ohne Vertexfarben ignorieren das Attribut */
     kugelM('verdauung', dk, wl[0], wl[1], wl[2], wf.r);
   } else {
     rohr('verdauung', dk, [[-11.2, 89.5, 0.5], [-11.5, 95, 0], [-11.6, 100, -0.5], [-10.8, 103.4, 0.8], [-8.5, 102, 4], [-6, 99.6, 6.4], [-1, 98.6, 7], [4, 99.6, 6.8],
