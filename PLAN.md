@@ -14,7 +14,7 @@ Erledigtes, Bauplan-Tabelle, Ebenen und Architektur: `docs/plan-archiv.md` (nur 
 | Lunge mit Alveole | `#lunge`, `#lunge/alveole` | Bauplan komplett |
 | Leber mit Leberläppchen | `#leber`, `#leber/laeppchen` | Bauplan komplett |
 | Magen | `#magen` | PR A fertig (#45); PR C1: Krankheitsbilder, Medikamente, Lupe, Export, AR |
-| Darm mit Dünndarmzotte | `#darm`, `#darm/zotte` | PR B fertig (#46); Krankheitsbilder, Lupe, Export, AR folgen in PR C |
+| Darm mit Dünndarmzotte | `#darm`, `#darm/zotte` | PR B fertig (#46); Krankheitsbilder, Lupe, Export, AR folgen in PR C; Aufnahme ins Blut fertig |
 
 Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem Merge nach `docs/plan-archiv.md`.
 
@@ -34,6 +34,7 @@ Je Organ nur eine Zeile. Einzelheiten eines fertigen Schritts wandern nach dem M
   - [x] Optik des Darms nach einer anatomischen Vorlage von Jörn (Farben, Haustren und Tänien, Dünndarm als Knäuel; Einzelheiten in `docs/plan-archiv.md`)
   - [ ] C: Krankheitsbilder, Medikamente, Lupen, Export und AR – mit Jörn abgestimmt (Übergabe `pr-c.md`): C1 Magen, dann PR „Aufnahme ins Blut“ (Teilchen im Darm sichtbar in Venen und Lymphe), dann C2 Darm und Zotte
     - [x] C1 Magen: drei Krankheitsbilder, drei Medikamente, Lupe (Drüse, Belegzelle), Export, AR (Texte `docs/freigaben/magen-c1-texte.md`)
+    - [x] Aufnahme ins Blut: bei Durchsicht nach dem Essen Teilchen in Darmvenen und Lymphgefäße (Lendenzisterne, Milchbrustgang), Stuhl am After hinaus, Schema mit Blut und Lymphe, vierter Weg (Texte `docs/freigaben/darm-aufnahme-texte.md`)
 - [ ] Gehirn mit Neuron und Synapse
 - [ ] Muskel mit Sarkomer, Skelett und Gelenk
 - [ ] Auge, Ohr, Haut, Hormondrüsen
@@ -84,4 +85,4 @@ Die Kollegen bekommen die App erst als fertige Version 1.0 und testen sie dann j
 - Planung und Prüfung im Hauptgespräch; Umsetzung einzelner Schritte durch den Executor-Subagenten (`.claude/agents/executor.md`, Sonnet). Commit und Push nur durch den Aufrufer. Der Executor ändert `executor.md` und `PLAN.md` nicht selbst, sondern schlägt Doku-Änderungen vor; der Aufrufer übernimmt sie und führt `PLAN.md`.
 - Änderungen über Pull Requests nach `main`; veröffentlicht über GitHub Pages.
 - Prüfen mit `tools/vergleich.js`: Umfang nach `node tools/betroffen.js` – betroffene Modelle und Atlas-Kontexte voll, alle übrigen mit dem Schnelltest `<modell>:kurz`, jeweils gegen die Referenz von `main`. Voller Lauf, wenn gemeinsamer Code geändert ist (`core/`, `index.html`, `sw.js` außer `DATEIEN`/`VERSION`, gemeinsamer Werkzeugcode in `tools/vergleich.js`), vor Version 1.0 und spätestens nach fünf PRs mit Auswahl. Ausnahme: reine Doku-Änderungen – `node tools/kontext.js --doku-pr` endet mit 0 (nur `*.md` im Hauptordner, `docs/`, `.claude/`, `tools/kontext.js` geändert) und `node tools/version.js --pruefen` ebenso; dann entfällt der Vergleichslauf, im PR-Text die Ausgabe beider Befehle nennen. Abweichungen werden mit dem gemeldeten Bereich (umschließendes Rechteck der geänderten Pixel) eingeordnet. Vergleichsläufe und andere Browserprüfungen nie gleichzeitig laufen lassen. Nach einem Neustart der Umgebung die Referenz neu aufnehmen; beim Warten `pgrep -f "^node tools/(vergleich|nachweis)"`.
-- Letzter voller Vergleichslauf: PR C1 Magen (13. November 2026, gemeinsamer Code `core/export.js`, `core/ar.js`). PRs mit Auswahl seitdem: 0 – bei jedem PR mit Auswahl um 1 erhöhen, beim fünften voll prüfen.
+- Letzter voller Vergleichslauf: PR Aufnahme ins Blut (13. November 2026, gemeinsamer Code `tools/vergleich.js`). PRs mit Auswahl seitdem: 0 – bei jedem PR mit Auswahl um 1 erhöhen, beim fünften voll prüfen.

@@ -1333,6 +1333,52 @@ function darmGefaesse() {
   return { darmarterien: arterien, darmvenen: venen, pfortader: pf };
 }
 
+/* ---- Lymphgefaesse des Darms ----
+   darmLymphe() -> { lymphgefaesse, zisterne, milchbrustgang }: je { id, pts, r0, r1 } bzw. Liste davon (Fliessrichtung von der Schlinge zur Wurzel).
+   lymphgefaesse: je Darmvene ein Lymphgefaess (lymphe-k) neben Vene und Arterie, auf der Unterseite der Gekroeseplatte (die Vene liegt in der Platte, ueber der Wurzel laufen die
+   Aeste der Ileocolica und ihre Venen), dazu der Sammelstamm truncus-intestinalis: unter der Gekroesewurzel von der Bauhin-Seite her, dann in weitem Bogen hinter der Mesenterialvene
+   rechts um die Aorta zur Lendenzisterne; truncus-intestinalis-2 fuehrt von der Flexur-Seite her in den Stamm. Die Schlingen 1-2 sind nur 0,3 cm lang: ihr Gefaess geht geradeaus
+   zum Stamm. zisterne: kleiner Sack rechts hinter der Aorta (vor dem 1.-2. Lendenwirbel); milchbrustgang: sein Anfang neben der Aorta nach oben (stumpfes Ende, "Gezeigt ist sein
+   Anfang"). Gekroesedaten und Formeln wie in darmGefaesse; nur feste Zahlen: Abstaende unter der Platte (cm) so gewaehlt, dass kein Rohr Arterien, Venen, Pfortader oder die Aorta
+   durchdringt (Luft >= 0; lymphe-2 beruehrt die Vene mit 0,03 cm Eindringtiefe) und kein Knick ueber ca. 35 Grad entsteht. */
+var TAIL = [[-1.2, 96.2, 2.9], [-0.7, 95.7, 0.9], [0.4, 95.6, -0.35]];   /* Stuetzpunkte des Stamms von der Wurzel bis zur Aorta (cm, Koerper) */
+function darmLymphe() {
+  var g = gekroese(), ac = kurve(AORTA.pts, 8), k, i;
+  function aorta(y) {   /* Punkt der Aorta-Achse in der Hoehe y */
+    for (i = 0; i < ac.length - 1; i++) if ((ac[i][1] - y) * (ac[i + 1][1] - y) <= 0) {
+      var t = (y - ac[i][1]) / ((ac[i + 1][1] - ac[i][1]) || 1);
+      return [ac[i][0] + (ac[i + 1][0] - ac[i][0]) * t, y, ac[i][2] + (ac[i + 1][2] - ac[i][2]) * t];
+    }
+    return ac[ac.length - 1].slice();
+  }
+  function rund(y, ux, uz, d) { var a = aorta(y), l = Math.sqrt(ux * ux + uz * uz); return [a[0] + ux / l * d, y, a[2] + uz / l * d]; }   /* im Abstand d von der Achse, Richtung (ux, uz): rechts = -x, hinten = -z */
+  /* H, H2: Tiefe des Stamms unter der Wurzel; HJA: Tiefe der Lymphgefaesse 1-4 unter der Platte (die uebrigen 0,5) */
+  var N = 11, H = 1.0, HJA = [-2, -0.15, -1, -1.5], H2 = 1.6, KS = 10, lymphe = [], F = [], plus = function (p, v, f) { return [p[0] + v[0] * f, p[1] + v[1] * f, p[2] + v[2] * f]; };
+  var bz = rund(96.0, -1, -1, AORTA.r + 0.35 + 0.06);   /* unteres Ende der Zisterne */
+  for (k = 0; k < N; k++) {
+    var u = Math.min(g.nu - 1, Math.round((k + 0.5) * g.nu / N)), R = g.wurzel[u], d = g.richtung[u], ta = g.wurzel[Math.min(u + 1, g.nu - 1)], tb = g.wurzel[Math.max(u - 1, 0)];
+    var t = [ta[0] - tb[0], ta[1] - tb[1], ta[2] - tb[2]], nn = [t[1] * d[2] - t[2] * d[1], t[2] * d[0] - t[0] * d[2], t[0] * d[1] - t[1] * d[0]], nl = Math.sqrt(nn[0] * nn[0] + nn[1] * nn[1] + nn[2] * nn[2]) || 1;
+    if (nn[1] < 0) nl = -nl;
+    nn = [nn[0] / nl, nn[1] / nl, nn[2] / nl];   /* Normale der Gekroeseplatte (oben = +n; die Lymphgefaesse liegen bei -n) */
+    F.push({ R: R, d: d, L: g.laenge[u], n: nn });
+  }
+  function stammPkt(q) { return plus(F[q].R, F[q].n, q < 5 ? -H2 : -H); }   /* Punkt des Stamms unter der Wurzel bei Schlinge q (Schlingen 1-5: tiefer, unter den Venenenden zur Mesenterialvene) */
+  var stamm = [], st2 = [];
+  for (k = KS; k >= 5; k--) stamm.push(stammPkt(k));
+  stamm.push(TAIL[0].slice(), TAIL[1].slice(), TAIL[2].slice(), bz);   /* weiter Bogen hinter der Mesenterialvene, rechts um die Aorta zur Zisterne */
+  for (k = 2; k <= 5; k++) st2.push(stammPkt(k));
+  for (k = 0; k < N; k++) {
+    var f = F[k], hh = k < 4 ? HJA[k] : -0.5, q = [0.97, 0.6, 0.15].map(function (x, j) { return plus(plus(f.R, f.d, f.L * x), f.n, hh); });
+    q[0][0] += 0.4; q[1][0] += 0.4; q[2][0] += 0.4;   /* neben der Arterie wie die Vene (+0,4 cm in x) */
+    var T = stammPkt(Math.max(k, 2)), mt = k < 2 ? plus(q[0], [T[0] - q[0][0], T[1] - q[0][1], T[2] - q[0][2]], 0.5) : q[1];   /* kurze Schlingen (Gekroese 0,3 cm): geradeaus zum Stamm */
+    lymphe.push({ id: 'lymphe-' + (k + 1), pts: [q[0], mt, T], r0: 0.07, r1: 0.09 });
+  }
+  lymphe.push({ id: 'truncus-intestinalis', pts: stamm, r0: 0.12, r1: 0.12 }, { id: 'truncus-intestinalis-2', pts: st2, r0: 0.12, r1: 0.12 });
+  var zis = [bz, rund(97.0, -1, -1, AORTA.r + 0.35 + 0.06), rund(98.0, -1, -1, AORTA.r + 0.35 + 0.06), rund(99.0, -1, -1, AORTA.r + 0.35 + 0.06)];
+  var mb = [zis[3].slice(), rund(100.5, -1, -1, AORTA.r + 0.13 + 0.06), rund(102.2, -1, -1, AORTA.r + 0.13 + 0.06), rund(104.0, -1, -1, AORTA.r + 0.13 + 0.06)];
+  return { lymphgefaesse: lymphe, zisterne: { id: 'zisterne', pts: zis, r0: 0.3, r1: 0.35 }, milchbrustgang: { id: 'milchbrustgang', pts: mb, r0: 0.13, r1: 0.13 } };
+}
+
 /* ---- Kennpunkte des Darms ----
    darmKennpunkte() -> { PAPILLE, FLEXUR, BAUHIN, AFTER, DUENN_SCHNITT, ... } je { p } (PAPILLE mit richtung und r wie in der Leberform, DUENN_SCHNITT mit s0, s1 = Bereich der
    Mittellinie des Duenndarms in cm ab der Flexur); Mittellinien mit Bogenlaenge: duenndarm().achse / dickdarm().achse (punkt(s), richtung(s)),
@@ -1357,6 +1403,6 @@ Kern.form('verdauung', {
   EINGANG: EINGANG, PFOERTNER: PFOERTNER, FUNDUS: FUNDUS, ANGULUS: ANGULUS,
   gefaesse: gefaesse, zwerchfell: zwerchfell, speiseroehreAnzeige: speiseroehreAnzeige, kurve: kurve, kette: kette,
   BAUHIN: BAUHIN, AFTER: AFTER, DUENN_R: DUENN_R, zwoelffingerdarm: zwoelffingerdarm, duenndarm: duenndarm, dickdarm: dickdarm, wurmfortsatz: wurmfortsatz, Achse: Achse,
-  duennSchichten: duennSchichten, blinddarmSchichten: blinddarmSchichten, mastdarmSchichten: mastdarmSchichten, zwoelffingerdarmSchichten: zwoelffingerdarmSchichten, gekroese: gekroese, darmGefaesse: darmGefaesse, darmKennpunkte: darmKennpunkte, FLEXUR: FLEXUR
+  duennSchichten: duennSchichten, blinddarmSchichten: blinddarmSchichten, mastdarmSchichten: mastdarmSchichten, zwoelffingerdarmSchichten: zwoelffingerdarmSchichten, gekroese: gekroese, darmGefaesse: darmGefaesse, darmLymphe: darmLymphe, darmKennpunkte: darmKennpunkte, FLEXUR: FLEXUR
 });
 })();
