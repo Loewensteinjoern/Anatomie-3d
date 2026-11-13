@@ -18,10 +18,6 @@ C1 Magen gemergt (#52). Reihenfolge laut `pr-c.md`: C1 → **Aufnahme ins Blut**
 - Schema: Bahnen DARMVENEN/LYMPHE, Teilchen nur kurz hinein, dahinter Pfeile.
 - Üben: vierter Weg „Weg des Fetts“ (Leerdarm/Krummdarm → Lymphgefäße → Lendenzisterne → Milchbrustgang); neue Strukturen beim Finden; Hilfekarte neu vor „So liest du das Modell“.
 
-## Nächster Schritt
+## Stand
 
-E1 (Lymphe, Glas, Texte, Üben) und E2 (Teilchen in Gefäße, Stuhl, `DarmApp.uhr`) fertig. Offen: E3 Schema (Bahnen; `lauf` liefert `o.g`, Schema nutzt `K.sx`/`K.sch`), Kopfkommentar Abschnitt 6 nachziehen, E4 vergleich.js (Text „Alle vier Wege“ Z. ~109, neue Bilder), Vergleichslauf, Doku (Form → `betroffen.js`, Strömung, Stuhl, Schema, Üben, Texte). Vorbilder: Läppchen/Zotte (Teilchen an Linienzügen, `polyMit`/`polyBei` in `zotte.js`), Magen 7c.
-
-## Prüfung
-
-`node tools/betroffen.js` (bei Formänderung auch Körper, Magen, Zotte); neue Bilder am Ende von `darm:desktop` (Durchsicht nach dem Essen, Stuhl am After, Schema, Weg des Fetts).
+E1–E4 fertig (Lymphe, Glas, Teilchen in Gefäße, Stuhl, `DarmApp.uhr`, Schema-Bahnen, vierter Weg, neue Vergleichsbilder am Ende von `darm:desktop` und `darm:handy`). Voller Vergleichslauf (gemeinsamer Code `tools/vergleich.js`): Abweichungen nur im Darm erwartet. Nächstes: PR nach `main`, danach C2 (`pr-c.md`). Nach dem Merge diese Datei löschen.
