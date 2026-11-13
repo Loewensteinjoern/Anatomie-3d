@@ -79,7 +79,16 @@ var STRUKTUREN = [
     fakten: [['Abfluss', 'zur Pfortader'], ['Inhalt', 'Blut mit den aufgenommenen Nährstoffen'], ['Verlauf', 'im Gekröse']] },
   { id: 'pfortader', de: 'Pfortader', lat: 'Vena portae hepatis', grp: 'Gekröse und Gefäße', col: 0x7A5CB0,
     txt: 'Sie sammelt das Blut aus Magen, Darm und Milz und bringt es zur Leber. Gezeigt ist ihr Anfang.',
-    fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] }
+    fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] },
+  { id: 'lymphe', de: 'Lymphgefäße des Darms', lat: 'Vasa lymphatica (Vasa chylifera)', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Sie beginnen in jeder Zotte als zentrales Lymphgefäß und laufen im Gekröse neben den Venen zur Wurzel. Sie bringen das aufgenommene Fett als feine Tröpfchen (Chylomikronen) fort; nach einer fettreichen Mahlzeit ist ihr Inhalt milchig trüb (Chylus). Unterwegs fließt die Lymphe durch die Lymphknoten des Gekröses.',
+    fakten: [['Inhalt', 'Lymphe mit Fett (Chylus)'], ['Abfluss', 'zur Lendenzisterne'], ['Unterwegs', 'Lymphknoten im Gekröse']] },
+  { id: 'zisterne', de: 'Lendenzisterne', lat: 'Cisterna chyli', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Eine kleine sackartige Erweiterung vor dem 1. bis 2. Lendenwirbel, rechts hinter der Bauchaorta. Hier fließt die Lymphe aus dem Darm mit der Lymphe aus Beinen und Becken zusammen; aus ihr geht der Milchbrustgang hervor.',
+    fakten: [['Lage', 'vor dem 1.–2. Lendenwirbel'], ['Zuflüsse', 'Darm, Beine, Becken'], ['Weiter', 'Milchbrustgang']] },
+  { id: 'milchbrustgang', de: 'Milchbrustgang', lat: 'Ductus thoracicus', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Das größte Lymphgefäß des Körpers. Es zieht vor der Wirbelsäule durch das Zwerchfell nach oben und mündet am linken Venenwinkel ins Blut, dort, wo am Hals die linke innere Drosselvene und die Schlüsselbeinvene zusammenfließen. So gelangt das Fett aus dem Darm an der Leber vorbei in den Kreislauf. Gezeigt ist sein Anfang.',
+    fakten: [['Länge', 'ca. 40 cm'], ['Mündung', 'linker Venenwinkel'], ['Lymphe', 'ca. 2–4 l pro Tag']] }
 ];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; B5: Knopf "Zotte" */
 var MARKUP = `<div id="title">
@@ -134,15 +143,16 @@ var MARKUP = `<div id="title">
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
-  <p><b style="color:#E8C84F">Gelb</b> Kohlenhydrate – werden zu Zucker gespalten und im Dünndarm aufgenommen.<br>
-  <b style="color:#E88B3A">Orange</b> Eiweiß – wird zu Aminosäuren gespalten und im Dünndarm aufgenommen.<br>
-  <b style="color:#F2F2F2">Weiß</b> Fett – braucht die Galle und wird im Dünndarm aufgenommen.<br>
-  <b style="color:#8FD0F0">Hellblau</b> Wasser – wird im Dünndarm und im Dickdarm zurückgeholt.<br>
+  <p><b style="color:#E8C84F">Gelb</b> Kohlenhydrate – werden zu Zucker gespalten, im Dünndarm aufgenommen und gehen ins Blut der Darmvenen.<br>
+  <b style="color:#E88B3A">Orange</b> Eiweiß – wird zu Aminosäuren gespalten, im Dünndarm aufgenommen und geht ins Blut der Darmvenen.<br>
+  <b style="color:#F2F2F2">Weiß</b> Fett – braucht die Galle, wird im Dünndarm aufgenommen und geht in die Lymphe.<br>
+  <b style="color:#8FD0F0">Hellblau</b> Wasser – wird im Dünndarm und im Dickdarm ins Blut zurückgeholt.<br>
   <b style="color:#5FB85A">Grün</b> Galle, <b style="color:#C9B6E6">Blassviolett</b> Pankreassaft – fließen an der Papille zu.<br>
-  <b style="color:#A8794F">Braun</b> Stuhl – im Dickdarm eingedickt.<br>
+  <b style="color:#A8794F">Braun</b> Stuhl – im Dickdarm eingedickt, verlässt den Darm am After.<br>
   <b style="color:#E0584C">Rot</b> Darmarterien, <b style="color:#A98BDC">Violett</b> Darmvenen und Pfortader.<br>
+  <b style="color:#F3E39A">Hellgelb</b> Lymphgefäße, Lendenzisterne und Milchbrustgang.<br>
   <b>Dünndarmzotte:</b> Leerdarm oder Krummdarm antippen → „Dünndarmzotte hier ansehen“.</p>
-  <p class="note" id="legNote">Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.</p>
+  <p class="note" id="legNote">Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt und seinen Weg in Blut und Lymphe.</p>
   <p class="note">Die Teilchen zeigen den Weg der Stoffe – symbolisch, nicht maßstäblich; die Zeit läuft gerafft.</p>
   <p class="note kz">Dünndarm ca. 3–5 m, Dickdarm ca. 1,5 m<br>
   Verweildauer: Dünndarm 3–6 Stunden, Dickdarm 1–3 Tage<br>
@@ -176,14 +186,16 @@ var HILFE = [
     'Bewegung, ausreichend Trinken und Ballaststoffe regen die Darmbewegung an – Bettruhe und Opioide bremsen sie.'],
   ['pflege', 'Pflege: Stuhlbeobachtung und Obstipation', 'Pflegende beobachten Häufigkeit, Menge, Farbe, Geruch und Form des Stuhls sowie Beimengungen. Die Bristol-Stuhlformen-Skala beschreibt die Form von Typ 1 (harte Kugeln) bis Typ 7 (flüssig); Typ 3 und 4 gelten als normal. Schwarzer Teerstuhl kann auf eine Blutung im oberen Verdauungstrakt hinweisen, frisches Blut auf eine Blutung im Dickdarm oder am After, heller Stuhl auf einen Gallenstau. Zur Obstipationsprophylaxe gehören Bewegung, ausreichend Flüssigkeit (sofern nicht beschränkt), ballaststoffreiche Kost, feste Toilettenzeiten mit Ruhe und Privatsphäre und eine Kolonmassage im Uhrzeigersinn.',
     'Eisenpräparate färben den Stuhl ebenfalls schwarz – bei schwarzem Stuhl immer nach Medikamenten fragen und die Beobachtung weitergeben.'],
-  ['modell', 'So liest du das Modell', 'Der Darm ist von vorn dargestellt, so wie er im Körper liegt: vom Zwölffingerdarm über die Dünndarmschlingen bis zum After. Die Teilchen stehen für Stoffe: gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, grün Galle, blassviolett Pankreassaft, braun Stuhl. Mit den Schaltern unter „Stoffe“ kannst du jeden Stoff einzeln verfolgen. „Durchsicht“ macht die Darmwand gläsern, der Ausschnitt „Dünndarm“ zeigt eine aufgeschnittene Schlinge mit Ringfalten. Über „Zotte“ oder durch Antippen von Leerdarm und Krummdarm kommst du zur Dünndarmzotte. Die Zeit läuft stark gerafft.',
+  ['aufnahme', 'Aufnahme ins Blut und in die Lymphe', 'Zucker, Aminosäuren, Wasser, Salze und die meisten Vitamine gehen aus den Zotten in die Kapillaren und über die Darmvenen in die Pfortader. So erreichen sie zuerst die Leber, die sie verarbeitet, speichert oder entgiftet. Fette werden in den Saumzellen zu Chylomikronen verpackt; sie sind zu groß für die Kapillaren und gehen in die Lymphgefäße. Über Lendenzisterne und Milchbrustgang gelangen sie am linken Venenwinkel ins Blut, an der Leber vorbei. Mit „Durchsicht“ siehst du, wie die Teilchen die Darmwand verlassen.',
+    'Ist die Schleimhaut geschädigt, etwa bei Zöliakie, wird weniger aufgenommen: Es fehlen Nährstoffe und Vitamine, oft kommen Durchfall und Gewichtsverlust dazu.'],
+  ['modell', 'So liest du das Modell', 'Der Darm ist von vorn dargestellt, so wie er im Körper liegt: vom Zwölffingerdarm über die Dünndarmschlingen bis zum After. Die Teilchen stehen für Stoffe: gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, grün Galle, blassviolett Pankreassaft, braun Stuhl. Mit den Schaltern unter „Stoffe“ kannst du jeden Stoff einzeln verfolgen. „Durchsicht“ macht die Darmwand gläsern; dann siehst du auch, wie die Teilchen in die Darmvenen und Lymphgefäße übertreten. Am Ende jedes Durchgangs nach dem Essen verlässt der Stuhl den Darm am After. Der Ausschnitt „Dünndarm“ zeigt eine aufgeschnittene Schlinge mit Ringfalten. Über „Zotte“ oder durch Antippen von Leerdarm und Krummdarm kommst du zur Dünndarmzotte. Die Zeit läuft stark gerafft.',
     'Je weiter der Inhalt im Darm wandert, desto weniger Nährstoffe und desto weniger Wasser enthält er.']
 ];
 /* Ueben "Strukturen finden": in welchen Ausschnitten (Nummer wie AUSSCHNITTE) eine Struktur im Bild liegt und sich antippen laesst. Die Waende der vier Bereiche sind in einem geoeffneten
    Ausschnitt von der Schleimhaut verdeckt, darum werden sie nur in der Uebersicht gesucht; Schleimhaut, Muskulatur, Papille, Bauhin-Klappe und After nur dort, wo sie zu sehen sind.
    Reihenfolge: der erste Eintrag ist der Ausschnitt, in den das Ueben wechselt. */
 var NUR_INNEN = { schleimhaut: [2, 1, 3, 4], muskulatur: [2, 1, 3, 4], papille: [1], bauhin: [3], after: [4] };
-/* Ueben "Wege verfolgen": feste Reihenfolge der drei Wege (Texte von Joern freigegeben, darm-b-texte.md Abschnitt G). Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name
+/* Ueben "Wege verfolgen": feste Reihenfolge der vier Wege (Texte von Joern freigegeben, darm-b-texte.md Abschnitt G). Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name
    der ersten Struktur); an = Ausschnitt, in den der Weg fuer diese Station wechselt (sonst die Uebersicht; Papille und Bauhin-Klappe liegen innen); mahlzeit = false (nuechtern) oder
    true (nach dem Essen) schaltet das Modell, fehlt sie, bleibt es wie es ist. Nur Daten: die Abfolge im Code kennt keine Darm-Besonderheiten. */
 var DICKDARM_TEIL = ['leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'];   /* "Leerdarm" gilt bei Weg 3 auch fuer Krummdarm und die Dickdarmabschnitte */
@@ -198,10 +210,14 @@ var WEGE = [
     abschluss: 'Geschafft: Galle und Pankreassaft wirken vor allem im Zwölffingerdarm und Leerdarm; die Gallensäuren werden am Ende des Krummdarms zurückgeholt.' },
   { titel: 'Weg des Blutes', aufgabe: 'Das Blut kommt aus der Bauchaorta. Tippe seine Stationen der Reihe nach an, bis es den Darm verlässt.',
     stationen: [{ ids: ['arterien'] }, { ids: DICKDARM_TEIL, de: 'Leerdarm' }, { ids: ['venen'] }, { ids: ['pfortader'] }],
-    abschluss: 'Geschafft: Das nährstoffreiche Blut aus dem Darm fließt über die Pfortader zuerst zur Leber.' }
+    abschluss: 'Geschafft: Das nährstoffreiche Blut aus dem Darm fließt über die Pfortader zuerst zur Leber.' },
+  { titel: 'Weg des Fetts', aufgabe: 'Fett wird im Dünndarm aufgenommen, aber nicht ins Blut. Tippe der Reihe nach an, wohin es geht.',
+    hinweis: 'Das Modell zeigt jetzt „nach dem Essen“.', mahlzeit: true,
+    stationen: [{ ids: ['leerdarm', 'krummdarm'], de: 'Leerdarm' }, { ids: ['lymphe'] }, { ids: ['zisterne'] }, { ids: ['milchbrustgang'] }],
+    abschluss: 'Geschafft: Das Fett gelangt über die Lymphe und den Milchbrustgang ins Blut, an der Leber vorbei.' }
 ];
 /* Notiz der Lesehilfe: nur ohne Durchsicht und ohne geoeffneten Bereich */
-var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.';
+var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt und seinen Weg in Blut und Lymphe.';
 var organ = { renderer: {}, aufbauen: aufbauen };
 var zoLetzte = null;   /* zuletzt gewaehlte Stelle fuer die Duenndarmzotte (Bogenlaenge s der Mittellinie in cm, fuer die Rueckfahrt; nur im Speicher der Seite, ueberdauert den Abbau des Darms) */
 /* Mitte des Darms im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, der Darm steht im Modell mittig (Ziel der Kamerafahrt aus dem Koerper) */
@@ -278,7 +294,8 @@ MAT.gangGalle = mat(0x5E9A4A, { rough: 0.4, coat: 0.3 }); MAT.gangPankreas = mat
 function kappeMat(hex) { return mat(hex, { rough: 0.55, side: THREE.DoubleSide }); }
 MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);                       /* Darmmuskulatur */
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
-['arterien', 'venen', 'pfortader'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
+['arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
+var DURCH_GEF = ['venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'];   /* bei Durchsicht halbdurchsichtig (applyLook) */
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
 /* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
    zur Mitte des Streifens hin das Verhaeltnis Zielfarbe / Grundfarbe) */
@@ -673,8 +690,13 @@ async function bauen() {
   [['arterien', G.darmarterien], ['venen', G.darmvenen], ['pfortader', G.pfortader]].forEach(function (a) {
     var geo = rohre(a[1].map(ln)); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo);
   });
+  /* Lymphgefaesse mit den Staemmen, Lendenzisterne und Anfang des Milchbrustgangs */
+  var L = form.darmLymphe();
+  [['lymphe', L.lymphgefaesse], ['zisterne', [L.zisterne]], ['milchbrustgang', [L.milchbrustgang]]].forEach(function (a) {
+    var geo = rohre(a[1].map(ln)); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo);
+  });
   await setLoad(0.95, 'Beschriftung'); if (abgebaut) return;
-  geoDaten = { G: G, gk: gk, kp: kp, du: du, dk: dk, Aduo: Aduo, RZ: RZ, B1: B1, B2: B2, B3: B3, B4: B4 };
+  geoDaten = { G: G, L: L, gk: gk, kp: kp, du: du, dk: dk, Aduo: Aduo, RZ: RZ, B1: B1, B2: B2, B3: B3, B4: B4 };
   ankerBauen();
 }
 
@@ -688,8 +710,8 @@ var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, 
 var wege = null, wegeT = null;   /* Ueben "Wege verfolgen" (siehe Abschnitt vor dem Antippen) */
 var autoGehe = false;            /* gehe wird vom Ueben selbst gerufen: keine neue Aufgabe */
 /* Strukturen, die im Ausschnitt vor dem geoeffneten Bereich liegen und dann ausgeblendet werden (sobald der Deckel zur Haelfte abgehoben ist); vom Krummdarm bleibt im Ausschnitt Blinddarm das Ende */
-var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'],
-  ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'absteigend', 'sigma']];
+var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'],
+  ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang', 'absteigend', 'sigma']];
 function verborgen(sid, ende, fern) {
   var r = AUSSCHNITTE[aktiv].reg;
   if (r === 0 || OPEN[r] <= 0.5) return false;
@@ -739,6 +761,8 @@ function applyLook() {
     stelleHaut(MAT[sid + 'D'], seeThrough || a2 < 0.999, (seeThrough ? GLAS : 1) * a2);
   });
   stelleMat(MAT.gekroese, true, seeThrough ? 0.3 : 0.4);
+  /* Venen und Lymphgefaesse bei Durchsicht halbdurchsichtig (die Teilchen treten durch ihre Wand), die Arterien bleiben undurchsichtig; beim Antippen zaehlen sie als dicht */
+  DURCH_GEF.forEach(function (sid) { MAT[sid].userData.dicht = true; stelleMat(MAT[sid], seeThrough, seeThrough ? 0.5 : 1); });
 }
 function setSelected(id, punkt) {
   if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
@@ -1078,7 +1102,7 @@ function wegeZeigen() {
   if (wege.fertig) {
     var ab = kasten('wg-abw');
     zeile('wg-ab', w.abschluss, ab);
-    if (last) zeile('wg-ab', 'Alle drei Wege geschafft.', ab);
+    if (last) zeile('wg-ab', 'Alle vier Wege geschafft.', ab);
   }
   $('sScore').textContent = wege.ok + ' von ' + wege.n + ' Stationen auf Anhieb richtig';
   $('qNext').style.display = last ? 'none' : '';
@@ -1194,6 +1218,9 @@ function ankerBauen() {
   A.arterien = linie(nahe('mesenterica-superior', D.G.darmarterien), [0.3, 0.7]).concat(linie(nahe('mesenterica-inferior', D.G.darmarterien), [0.4, 0.7]), linie(nahe('darmast-4', D.G.darmarterien), [0.5, 0.8]));
   A.venen = linie(nahe('mesenterica-superior-vene', D.G.darmvenen), [0.3, 0.7]).concat(linie(nahe('mesenterica-inferior-vene', D.G.darmvenen), [0.4, 0.7]), linie(nahe('darmvene-6', D.G.darmvenen), [0.5]));
   A.pfortader = linie(D.G.pfortader[0], [0.5, 1]).concat(linie(D.G.pfortader[2], [0.5]));
+  A.lymphe = linie(nahe('lymphe-6', D.L.lymphgefaesse), [0.5]).concat(linie(nahe('lymphe-3', D.L.lymphgefaesse), [0.5]), linie(nahe('lymphe-9', D.L.lymphgefaesse), [0.5]));
+  A.zisterne = linie(D.L.zisterne, [0.5]);
+  A.milchbrustgang = linie(D.L.milchbrustgang, [0.6]);
   /* Schleimhaut und Muskulatur: Punkt der Netze im geoeffneten Bereich, der einem Zielpunkt am naechsten liegt (Koerper-Koordinaten) */
   var punktAus = function (meshes, ziel) {
     var b = null, bd = 1e30;
@@ -1280,11 +1307,11 @@ function sichtPruefen(now, w, h) {
   sichtVer++;
 }
 var KURZ = {};   /* kuerzere Namen, damit die Beschriftung in die Spalte passt */
-var HANDYNAME = { zwoelffinger: 'Zwölffinger-darm', aufsteigend: 'Aufsteig. Dickdarm', quer: 'Querer Dickdarm', absteigend: 'Absteig. Dickdarm', after: 'After', arterien: 'Darmarterien', venen: 'Darmvenen', wurmfortsatz: 'Wurmfortsatz', schleimhaut: 'Schleimhaut', muskulatur: 'Muskulatur' };
+var HANDYNAME = { zwoelffinger: 'Zwölffinger-darm', aufsteigend: 'Aufsteig. Dickdarm', quer: 'Querer Dickdarm', absteigend: 'Absteig. Dickdarm', after: 'After', arterien: 'Darmarterien', venen: 'Darmvenen', lymphe: 'Lymphgefäße', wurmfortsatz: 'Wurmfortsatz', schleimhaut: 'Schleimhaut', muskulatur: 'Muskulatur' };
 var HANDY_GROSS = ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm'];   /* Handy, Uebersicht: nur diese werden beschriftet */
 /* je Ausschnitt: Strukturen in der Beschriftung (was in der Ansicht nicht zu sehen ist, steht nicht darin) */
 var LISTEN = [
-  ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm', 'after', 'gekroese', 'arterien', 'venen', 'pfortader'],
+  ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm', 'after', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'],
   ['papille', 'schleimhaut', 'muskulatur', 'zwoelffinger', 'leerdarm', 'pfortader', 'arterien', 'venen', 'quer'],
   ['schleimhaut', 'muskulatur', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'quer'],
   ['bauhin', 'schleimhaut', 'muskulatur', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'krummdarm', 'arterien', 'venen'],
