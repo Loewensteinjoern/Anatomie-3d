@@ -295,6 +295,7 @@ function kappeMat(hex) { return mat(hex, { rough: 0.55, side: THREE.DoubleSide }
 MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);                       /* Darmmuskulatur */
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
 ['arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
+var GEF_RF = 1.35, GEF_OP = 0.5;   /* Teilchen im Gefaess: Radius als Vielfaches des Gefaessradius; Deckkraft der Gefaesse bei Durchsicht */
 var DURCH_GEF = ['venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'];   /* bei Durchsicht halbdurchsichtig (applyLook) */
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
 /* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
@@ -762,7 +763,7 @@ function applyLook() {
   });
   stelleMat(MAT.gekroese, true, seeThrough ? 0.3 : 0.4);
   /* Venen und Lymphgefaesse bei Durchsicht halbdurchsichtig (die Teilchen treten durch ihre Wand), die Arterien bleiben undurchsichtig; beim Antippen zaehlen sie als dicht */
-  DURCH_GEF.forEach(function (sid) { MAT[sid].userData.dicht = true; stelleMat(MAT[sid], seeThrough, seeThrough ? 0.5 : 1); });
+  DURCH_GEF.forEach(function (sid) { MAT[sid].userData.dicht = true; stelleMat(MAT[sid], seeThrough, seeThrough ? GEF_OP : 1); });
 }
 function setSelected(id, punkt) {
   if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
@@ -1586,7 +1587,7 @@ function teilchenDaten() {
         if (lst === GFL.dc) sEnd = Math.min(sEnd, hh.s + SZ_.GMAX);
         else if (ki !== KI.fett) sEnd = Math.max(Math.min(sEnd, sEnd - 0.25), hh.s + 0.5);   /* Venen: kurz vor der Muendung in die Mesenterialvene */
         sEnd = Math.min(gg.pm.L, Math.max(sEnd, hh.s + 0.3));
-        K.gf.push(gg); K.gs.push(hh.s); K.gE.push(sEnd); K.gS.push(hh.x, hh.y, hh.z); K.gr.push(Math.min(K.rad * 0.55, 0.75 * gefaessRadius(gg, hh.s))); K.tA.push(tVonX(xa2) / K.ts[i]);
+        K.gf.push(gg); K.gs.push(hh.s); K.gE.push(sEnd); K.gS.push(hh.x, hh.y, hh.z); K.gr.push(GEF_RF * gefaessRadius(gg, hh.s)); K.tA.push(tVonX(xa2) / K.ts[i]);
       } else { K.gf.push(null); K.gs.push(0); K.gE.push(0); K.gS.push(0, 0, 0); K.gr.push(0); K.tA.push(1e9); }
     }
   });
@@ -1658,7 +1659,7 @@ function lauf(ki, i, ph, o) {
       o.g = 1; o.gf = gf.id.charAt(0) === 'l' ? 2 : 1; o.x = xa;
       if (sg >= sE) { o.r = 0; o.st = 0; } else {
         polyBei(gf.pm, sg, GP); o.gx = GP.x; o.gy = GP.y; o.gz = GP.z;
-        o.r = Math.min(K.rad * 0.55, 0.75 * gefaessRadius(gf, sg)) * (1 - sstep(0.75, 1, (sg - sS) / (sE - sS))) * w; o.st = o.r > 0.001 ? 1 : 0;
+        o.r = GEF_RF * gefaessRadius(gf, sg) * (1 - sstep(0.75, 1, (sg - sS) / (sE - sS))) * w; o.st = o.r > 0.001 ? 1 : 0;
       }
     }
   }

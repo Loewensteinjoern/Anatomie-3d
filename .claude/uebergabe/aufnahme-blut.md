@@ -13,13 +13,14 @@ C1 Magen gemergt (#52). Reihenfolge laut `pr-c.md`: C1 → **Aufnahme ins Blut**
 - Weg: Kohlenhydrate, Eiweiß, Wasser von der Wand in die nächste Darmvene (Dickdarm-Wasser in die Dickdarmvenen), verblassen dort, nicht bis zur Pfortader. Fett in die Lymphgefäße bis zur Wurzel, verblasst dort. Gleiche Farbe, kleiner, sanft verblassen; Stoffe-Schalter gelten.
 - Neue Strukturen: Lymphgefäße des Darms (im Gekröse neben den Venen), Lendenzisterne, Anfang des Milchbrustgangs; keine Lymphknoten; ohne Teilchen in Zisterne/Milchbrustgang. Farbe hellgelb wie Zotte #F3E39A, kräftiger als Gekröse #E8D9A0.
 - Gefäße bei Durchsicht gläsern (Venen, Pfortader, Lymph-Strukturen; Arterien nicht), Teilchen laufen innen (Jörn, nach Browserbild).
+- Teilchen im Gefäß: Variante B „Perlen“ (Radius 1,35 × Gefäßradius, Glas 0,5; `GEF_RF`, `GEF_OP`), Jörn nach Bildern. Üben-Abschluss „Alle vier Wege geschafft.“ freigegeben.
 - Stuhl: nur nach dem Essen, am Zyklusende am After hinaus, verblasst kurz darunter.
 - Schema: Bahnen DARMVENEN/LYMPHE, Teilchen nur kurz hinein, dahinter Pfeile.
 - Üben: vierter Weg „Weg des Fetts“ (Leerdarm/Krummdarm → Lymphgefäße → Lendenzisterne → Milchbrustgang); neue Strukturen beim Finden; Hilfekarte neu vor „So liest du das Modell“.
 
 ## Nächster Schritt
 
-Executor-Aufträge E1 (Form, Strukturen, Glas, Texte, Beschriftung, Üben), E2 (Strömung, Stuhl), E3 (Schema), E4 (vergleich.js) (Form → `betroffen.js`, Strömung, Stuhl, Schema, Üben, Texte). Vorbilder: Läppchen/Zotte (Teilchen an Linienzügen, `polyMit`/`polyBei` in `zotte.js`), Magen 7c.
+E1 (Lymphe, Glas, Texte, Üben) und E2 (Teilchen in Gefäße, Stuhl, `DarmApp.uhr`) fertig. Offen: E3 Schema (Bahnen; `lauf` liefert `o.g`, Schema nutzt `K.sx`/`K.sch`), Kopfkommentar Abschnitt 6 nachziehen, E4 vergleich.js (Text „Alle vier Wege“ Z. ~109, neue Bilder), Vergleichslauf, Doku (Form → `betroffen.js`, Strömung, Stuhl, Schema, Üben, Texte). Vorbilder: Läppchen/Zotte (Teilchen an Linienzügen, `polyMit`/`polyBei` in `zotte.js`), Magen 7c.
 
 ## Prüfung
 
