@@ -10,6 +10,10 @@
    entstehen (sauber geschlossene Schnittkante). Innenansicht: die vordere Haelfte (Deckel) gleitet nach vorn und blendet aus, wie bei der Niere.
    Grundgeruest: Strukturen, Ausschnitte, Durchsicht, Beschriftung, Infokarte, Strukturliste, Lesehilfe. Die Zeilen "Stoffe" und "Stroemung", der Mahlzeit-Schalter,
    das Schema, Hilfekarten und Ueben folgen in spaeteren Schritten.
+   Krankheitsbilder und Medikamente (Kern.Szenarien, Daten SZ_DATEN): Reiter und Erklaerkarte; in 3D wirken Gastritis (roeter, dickere Falten, Erosionen am Magenvorhof), Geschwuer
+   (Krater am Magenwinkel), Reflux (Wulst weiter, Saft steigt in die Speiseroehre, Speiseroehre gerroetet), weniger Saeure, schnellere Muskelwellen (Abschnitt 7c).
+   Lupe (Abschnitt 7d): Nahansicht einer Magendruese und ihrer Belegzelle als Canvas-Schema, folgt Mahlzeit-Schalter und Krankheitsbildern.
+   Export (7e: GLB statisch und animiert, STL; Krankheitsbilder werden aus denselben Formeln in die Kopie gebacken) und AR (7f: WebXR, USDZ fuer AR Quick Look) wie bei der Leber.
    ===================================================================== */
 (function () {
 'use strict';
@@ -78,6 +82,8 @@ var MARKUP = `<div id="title">
     <button id="cam3" class="gh">Pförtner</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Der Weg der Nahrung von Mund bis After – der Magen hervorgehoben">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Magendrüse">Lupe</button>
+    <button id="bAR" class="gh" title="Den Magen mit der Kamera in den Raum stellen">AR</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -111,6 +117,16 @@ var MARKUP = `<div id="title">
   <div id="schemaBox"></div>
 </div>
 
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schließen">&times;</button>
+  <div class="lp-kick">Lupe &middot; Nahansicht</div>
+  <h3 id="lpTitle">Magendrüse &ndash; Schnitt durch die Schleimhaut</h3>
+  <div class="lp-chips" id="lpChips"><button class="gh on" data-m="0" title="Die Drüse bildet wenig Säure">nüchtern</button><button class="gh" data-m="1" title="Die Belegzellen pumpen viel Säure in den Magen">nach dem Essen</button><button class="gh" id="lpZurueck" style="display:none">← zurück zur Drüse</button></div>
+  <div class="lp-main"><div class="lp-bild"><canvas id="lpCv"></canvas><p class="lp-hint" id="lpHint">Tippe auf eine Belegzelle, um hineinzusehen.</p></div>
+  <div class="lp-text" id="lpText"></div></div>
+  <div class="lp-leg" id="lpLeg"><span><i style="background:#FF8A78"></i>Säure (H⁺)</span><span><i style="background:#D9C2FF"></i>Pepsin</span><span><i style="background:#F3E7A8"></i>Schleim</span><span><i style="background:#9FD6F2"></i>Bicarbonat</span></div>
+</div>
+
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
   <p><b style="color:#E8C84F">Gelb</b> Kohlenhydrate – im Mund angedaut, im Magen kaum verändert.<br>
@@ -124,6 +140,13 @@ var MARKUP = `<div id="title">
   <p class="note kz">Magensaft ca. 2–3 l pro Tag, pH 1–2<br>
   Fassungsvermögen ca. 1,5 l<br>
   Verweildauer 1–5 Stunden, Fettreiches am längsten</p>
+</div>
+
+<div class="panel" id="exp">
+  <span class="tag">Export</span>
+  <button id="bGlbA" class="gh">GLB &middot; animiert</button>
+  <button id="bGlbS" class="gh">GLB &middot; statisch</button>
+  <button id="bStl" class="gh">STL</button>
 </div>
 
 <div class="panel" id="info">
@@ -141,6 +164,18 @@ var MARKUP = `<div id="title">
   <div class="lead" id="sLead"></div>
   <div class="after" id="sAfter"></div>
   <div class="qa" id="sQa" style="display:none"><span class="score" id="sScore"></span><button class="gh" id="qNext">Nächste</button><button class="gh" id="qStop">Beenden</button></div>
+</div>
+
+<div id="arUI" aria-live="polite">
+  <div class="ar-top"><span class="ar-title">Magen in AR</span><span class="ar-phase" id="arPhase"></span><button class="ar-b" id="arEnd">Beenden</button></div>
+  <div class="ar-hint" id="arHint">Bewege das Gerät langsam über den Tisch, bis ein Ring erscheint &ndash; dann tippen, um den Magen hinzustellen.</div>
+  <div class="ar-bot">
+    <button class="ar-b" id="arSmall">Kleiner</button>
+    <button class="ar-b" id="arBig">Gr&ouml;&szlig;er</button>
+    <button class="ar-b" id="arPlace">Neu hinstellen</button>
+    <button class="ar-b" id="arPause">Pause</button>
+  </div>
+  <div class="ar-wm">erstellt von J&ouml;rn L&ouml;wenstein mithilfe von Claude (K&uuml;nstliche Intelligenz)</div>
 </div>`;
 /* Hilfekarten: [Schluessel, Titel, Text, Merke] (Texte von Joern freigegeben) */
 var HILFE = [
@@ -173,6 +208,57 @@ var WEGE = [
 /* Notiz der Lesehilfe: ohne und mit Durchsicht bzw. Innenansicht */
 var LEGNOTE = ['Der Magen von vorn, wie er im Körper liegt. „Innenansicht“ und „Durchsicht“ zeigen den Inhalt.',
   'Die Teilchen zeigen den Weg der Stoffe – symbolisch, nicht maßstäblich; die Zeit läuft gerafft.'];
+/* Krankheitsbilder und Medikamente (Reiter Krankheitsbilder und Medikamente, Texte von Joern freigegeben: docs/freigaben/magen-c1-texte.md). Felder wie bei Kern.Szenarien (id, kind,
+   name, short, kicker, lead, values, steps, after, note), dazu datei (Namensteil fuer den Export) und modell = Wirkgroessen 0..1 (gastritis, erosion, ulkus, reflux, helico, schleim,
+   pumpe, eingang, essen; nicht genannte sind neutral 0) sowie die Faktoren saeure (Menge des Magensafts) und wellen (tempo der Muskelwellen), neutral 1. helico, schleim und pumpe
+   wirken erst in der Lupe (spaeterer Schritt). Die Wirkung in 3D steht in Abschnitt 7c. */
+var SZ_EINLEITUNG = { disease: 'Wähle ein Krankheitsbild – im Magen siehst du, wie sich Schleimhaut, Wand und Mageneingang verändern.',
+  drug: 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild oder zeigt seine Wirkung am Magen.' };
+var SZ_AUS = 'Krankheitsbild oder Medikament ausschalten';
+var SZ_DATEN = [
+  { id: 'gastritis', kind: 'disease', name: 'Magenschleimhautentzündung (Gastritis)', short: 'die Schleimhaut ist gerötet und geschwollen', kicker: 'Entzündung des Magens · akut oder chronisch',
+    lead: 'Die Schleimhaut des Magens ist entzündet. Auslöser sind meist das Bakterium Helicobacter pylori, Schmerzmittel wie Ibuprofen, Alkohol oder der Stress einer schweren Krankheit. Die Schleimhaut ist nicht mehr gut gegen die eigene Säure geschützt.',
+    values: [['Schleimhaut', 'gerötet, geschwollen, kleine Defekte (Erosionen)'], ['Beschwerden', 'Druck und Schmerz im Oberbauch, Übelkeit, Appetitlosigkeit'], ['Ursachen', 'Helicobacter, Schmerzmittel (NSAR), Alkohol, schwere Krankheit'], ['Verlauf', 'akut meist rasch vorbei, chronisch oft lange ohne Beschwerden']],
+    steps: [['Der Schutz wird schwächer.', 'Bakterien, Schmerzmittel oder Alkohol greifen die Schleimschicht an, die die Wand vor der Säure schützt.'], ['Säure erreicht die Zellen.', 'Magensaft dringt in die Schleimhaut ein und reizt sie.'], ['Die Schleimhaut entzündet sich.', 'Sie wird stärker durchblutet, rot und schwillt an; die Falten werden dicker.'], ['Kleine Defekte entstehen.', 'An der Oberfläche gehen Zellen verloren (Erosionen). Reicht der Schaden tiefer, wird daraus ein Geschwür.']],
+    after: [['Behandlung', 'Auslöser meiden (Schmerzmittel prüfen, kein Alkohol, nicht rauchen), Säure hemmen (z. B. Pantoprazol), bei Helicobacter Antibiotika.'], ['Pflege beobachtet', 'Schmerzen und ihren Zusammenhang mit dem Essen, Übelkeit und Erbrechen, Appetit, Blutungszeichen (Bluterbrechen, Teerstuhl); Medikamentenplan auf Schmerzmittel prüfen lassen; kleine, leichte Mahlzeiten.']],
+    note: 'In 3D ist die Schleimhaut röter, die Falten sind dicker, am Magenvorhof liegen kleine dunkelrote Erosionen. In der Lupe sitzen Helicobacter-Bakterien in der Schleimschicht.',
+    datei: 'gastritis', modell: { gastritis: 1, erosion: 1, helico: 1 } },
+  { id: 'geschwuer', kind: 'disease', name: 'Magengeschwür (Ulkus)', short: 'ein Defekt reicht tief in die Magenwand', kicker: 'Geschwürkrankheit · Magen und Zwölffingerdarm',
+    lead: 'An einer Stelle ist die Schleimhaut zerstört, der Defekt reicht bis in die tieferen Wandschichten. Das Magengeschwür sitzt meist an der kleinen Kurvatur am Magenwinkel. Häufigste Ursachen sind Helicobacter pylori und Schmerzmittel wie Ibuprofen.',
+    values: [['Lage', 'kleine Kurvatur am Magenwinkel (noch häufiger im Zwölffingerdarm)'], ['Schmerz', 'im Oberbauch, oft kurz nach dem Essen'], ['Ursachen', 'Helicobacter, NSAR (besonders zusammen mit Kortison), Rauchen'], ['Gefahren', 'Blutung, Durchbruch (Perforation)']],
+    steps: [['Säure gegen Schutz.', 'Normalerweise halten Schleim und Bicarbonat die Säure von der Wand fern.'], ['Der Schutz bricht ein.', 'Helicobacter oder Schmerzmittel schwächen ihn an einer Stelle.'], ['Säure und Pepsin dringen ein.', 'Der Magen beginnt, seine eigene Wand anzudauen – es entsteht ein Krater bis in die Unterschleimhaut.'], ['Ein Gefäß kann aufbrechen.', 'Liegt eine Arterie im Grund des Geschwürs, blutet es; im Magen färbt die Säure das Blut schwarz.']],
+    after: [['Behandlung', 'Säure hemmen (z. B. Pantoprazol), bei Helicobacter zusätzlich zwei Antibiotika, auslösende Schmerzmittel absetzen; bei Blutung Magenspiegelung mit Blutstillung.'], ['Pflege beobachtet', 'Blutungszeichen – Bluterbrechen (hellrot oder kaffeesatzartig), Teerstuhl, Blässe, schneller Puls, fallender Blutdruck; plötzlich brettharter Bauch (Durchbruch) – sofort ärztlich melden; bis zur Klärung nüchtern lassen.']],
+    note: 'In 3D liegt am Magenwinkel ein Krater mit hellem Grund und gerötetem Rand (am besten in der Innenansicht). In der Lupe reicht der Defekt durch die Schleimhaut, Helicobacter sitzt in der Schleimschicht.',
+    datei: 'geschwuer', modell: { ulkus: 1, helico: 1 } },
+  { id: 'reflux', kind: 'disease', name: 'Refluxkrankheit', short: 'Magensaft fließt zurück in die Speiseröhre', kicker: 'Erkrankung am Mageneingang · Sodbrennen',
+    lead: 'Der Verschluss am Mageneingang hält nicht dicht. Saurer Magensaft steigt in die Speiseröhre, deren Schleimhaut dafür nicht gemacht ist. Sie entzündet sich (Refluxösophagitis).',
+    values: [['Leitzeichen', 'Sodbrennen, saures Aufstoßen'], ['Verstärkt durch', 'Liegen, große und fette Mahlzeiten, Übergewicht, Alkohol, Rauchen'], ['Speiseröhre', 'unteres Ende gerötet, entzündet'], ['Folgen', 'Engstellen, Umbau der Schleimhaut (Barrett), selten Krebs']],
+    steps: [['Der Verschluss wird schwach.', 'Der Muskelring am Mageneingang und der Halt im Zwerchfell schließen nicht mehr fest.'], ['Magensaft steigt auf.', 'Vor allem nach dem Essen und im Liegen fließt Säure zurück in die Speiseröhre.'], ['Die Speiseröhre entzündet sich.', 'Ihre Schleimhaut ist nicht gegen Säure geschützt – sie brennt, wird rot und wund.'], ['Auf Dauer baut sie sich um.', 'Ständiger Reflux kann die Schleimhaut verändern (Barrett) und Engstellen bilden; das wird regelmäßig kontrolliert.']],
+    after: [['Behandlung', 'Säure hemmen (z. B. Pantoprazol), Gewicht senken, kleine Mahlzeiten, abends spät nichts mehr essen, Oberkörper im Bett höher lagern; selten eine Operation.'], ['Pflege beobachtet', 'Sodbrennen und seinen Zusammenhang mit Essen und Lage, Schluckbeschwerden, nächtlichen Husten; Oberkörper hochlagern, nach dem Essen nicht flach hinlegen; bei Magensonde und Sondenkost auf die Oberkörperhochlage achten (Aspiration).']],
+    note: 'In 3D ist der Wulst am Mageneingang schlaffer, türkiser Magensaft steigt in die Speiseröhre, ihr unteres Ende ist gerötet. Nach dem Essen ist es deutlicher.',
+    datei: 'reflux', modell: { reflux: 1 } },
+  { id: 'pantoprazol', kind: 'drug', name: 'Pantoprazol beim Magengeschwür (z. B. Pantozol®)', short: 'hemmt die Säurebildung, das Geschwür kann heilen', kicker: 'Medikament · Protonenpumpenhemmer (PPI)',
+    lead: 'Pantoprazol sperrt in den Belegzellen die Protonenpumpe, die die Säure herstellt. Es entsteht viel weniger Säure, und das Geschwür kann abheilen.',
+    values: [['Wirkung', 'Magensäure stark ↓'], ['Einnahme', 'morgens, etwa 30 Minuten vor dem Frühstück'], ['Dauer', 'beim Geschwür meist 4–8 Wochen'], ['Nebenwirkungen', 'Kopfschmerz, Durchfall; bei Dauergabe Magnesium- und Vitamin-B12-Mangel, mehr Darminfektionen']],
+    steps: [['', 'Pantoprazol wird im Darm aufgenommen und erreicht mit dem Blut die Belegzellen.'], ['', 'In den sauren Kanälchen der Zelle wird es wirksam und sperrt die Protonenpumpen dauerhaft.'], ['', 'Kaum noch Säure wird in den Magen gepumpt – erst neu gebildete Pumpen arbeiten wieder.'], ['', 'Ohne Säure kann die Schleimhaut den Krater von den Rändern her schließen.']],
+    after: [['Achtung', 'Nicht ohne Grund auf Dauer geben; nach langer Gabe langsam absetzen (die Säure kann überschießend zurückkommen). Bei Helicobacter allein nicht ausreichend – zusammen mit Antibiotika.'], ['Pflege beobachtet', 'Einnahme vor dem Frühstück, Schmerzen, Blutungszeichen; Tablette nicht zerkleinern (magensaftresistent) – bei Magensonde die Darreichung mit der Apotheke klären.']],
+    note: 'Wirkt beim Magengeschwür. In 3D kommt weniger türkiser Magensaft, der Krater wird kleiner. Tippe in der Lupe auf eine Belegzelle: Dort sind die Protonenpumpen gesperrt.',
+    datei: 'pantoprazol', modell: { ulkus: 0.4, helico: 1, saeure: 0.3, pumpe: 1 } },
+  { id: 'nsar', kind: 'drug', name: 'Ibuprofen und Diclofenac – Schaden am Magen (NSAR)', short: 'Schmerzmittel schwächen den Schutz der Schleimhaut', kicker: 'Medikament · nichtsteroidales Antirheumatikum, Nebenwirkung',
+    lead: 'NSAR hemmen die Bildung von Prostaglandinen. Das lindert Schmerz und Entzündung – aber Prostaglandine schützen auch die Magenschleimhaut. Ohne sie wird die Schleimschicht dünn, und die Säure greift die Wand an.',
+    values: [['Wirkstoffe', 'Ibuprofen, Diclofenac, Naproxen, ASS'], ['Schaden', 'Erosionen bis Geschwür, oft ohne Schmerz'], ['Höheres Risiko', 'Alter, frühere Geschwüre, Kortison, Blutverdünner'], ['Schutz', 'bei Dauergabe Pantoprazol nach Anordnung']],
+    steps: [['', 'Das Schmerzmittel wirkt im ganzen Körper, nicht nur am Ort des Schmerzes.'], ['', 'In der Magenschleimhaut fehlen die Prostaglandine: weniger Schleim, weniger Bicarbonat, schlechtere Durchblutung.'], ['', 'Die Schleimschicht wird dünn, Säure und Pepsin erreichen die Zellen.'], ['', 'Es entstehen kleine Defekte (Erosionen), daraus kann ein Geschwür werden.']],
+    after: [['Achtung', 'NSAR schaden dem Magen auch als Zäpfchen oder Spritze; die Schmerzlinderung kann Warnzeichen verdecken. Rezeptfrei gekaufte Mittel mit erfragen.'], ['Pflege beobachtet', 'Magenschmerzen, Übelkeit, Teerstuhl und Blässe; Einnahme zu den Mahlzeiten; bei Dauergabe nachfragen, ob ein Magenschutz angeordnet ist.']],
+    note: 'In 3D liegen am Magenvorhof kleine Erosionen, die Schleimhaut ist leicht gerötet. In der Lupe ist die Schleimschicht dünn.',
+    datei: 'nsar', modell: { gastritis: 0.35, erosion: 1, schleim: 1 } },
+  { id: 'mcp', kind: 'drug', name: 'Metoclopramid bei Übelkeit (z. B. Paspertin®)', short: 'beschleunigt die Magenentleerung', kicker: 'Medikament · Mittel gegen Übelkeit (Prokinetikum)',
+    lead: 'Metoclopramid dämpft das Brechzentrum im Gehirn und regt die Muskulatur von Magen und Zwölffingerdarm an. Der Mageneingang schließt fester, der Magen leert sich schneller.',
+    values: [['Wirkung', 'Übelkeit ↓, Magenentleerung schneller'], ['Wirkbeginn', 'nach 30–60 Minuten (Tablette), i. v. nach wenigen Minuten'], ['Dauer der Gabe', 'höchstens 5 Tage'], ['Nebenwirkungen', 'Unruhe, Müdigkeit, Bewegungsstörungen (z. B. Zungen- und Blickkrämpfe)']],
+    steps: [['', 'Metoclopramid blockiert Andockstellen für Dopamin im Brechzentrum und im Magen.'], ['', 'Der Muskelring am Mageneingang spannt sich stärker.'], ['', 'Die Muskelwellen laufen schneller über den Magen, der Pförtner öffnet öfter.'], ['', 'Der Speisebrei gelangt rascher in den Zwölffingerdarm, die Übelkeit lässt nach.']],
+    after: [['Achtung', 'Nicht bei Darmverschluss, Blutung im Magen-Darm-Trakt oder Parkinson (verstärkt die Bewegungsstörung); bei Kindern nur eingeschränkt.'], ['Pflege beobachtet', 'Übelkeit und Erbrechen vorher und nachher, Unruhe, ungewöhnliche Bewegungen in Gesicht, Zunge und Augen – sofort melden; i. v. langsam geben.']],
+    note: 'In 3D steht der Magen auf „nach dem Essen“: Die Muskelwellen laufen schneller, der Pförtner öffnet öfter, der Mageneingang schließt fester.',
+    datei: 'mcp', modell: { wellen: 1.6, eingang: 1, essen: 1 } }
+];
 var organ = { renderer: {}, aufbauen: aufbauen };
 /* Mitte des Magens im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, der Magen steht im Modell mittig (Ziel der Kamerafahrt aus dem Koerper) */
 var M = [4, 105, 0];
@@ -199,11 +285,11 @@ function abstandFuer(ext, r, fov, h) {
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: ueber der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - (WERKZEUG_H.handy + (w < WERKZEUG_H.umbruch ? 32 : 0)), unten: u };
+    return { oben: u - (WERKZEUG_H.handy + (w < WERKZEUG_H.umbruch ? WERKZEUG_H.zeile : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 345 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt) um (+32) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 434, zeile: 30 };   /* Hoehe der Leiste (Pixel); in der ersten Reihe (Ausschnitt) stehen auch Lupe und AR: unter der Breite umbruch (gemessen) bricht sie um und die Leiste wird um zeile (gemessen) hoeher */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Magens im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -965,7 +1051,7 @@ function setSelected(id) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -978,6 +1064,44 @@ function setSelected(id) {
     dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
+  kartenLage();
+}
+
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten SZ_DATEN): Reiter und Erklaerkarte (id kcard) unten links wie die Infokarte. Die Wirkung in 3D steht in Abschnitt 7c. */
+var SZW = { gastritis: 0, erosion: 0, ulkus: 0, reflux: 0, helico: 0, schleim: 0, pumpe: 0, eingang: 0, essen: 0, saeure: 1, wellen: 1 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags); saeure und wellen sind Faktoren, neutral 1 */
+var KR = null;                                                                            /* Daten der Krankheitsbilder (Abschnitt 7c); entstehen erst bei der ersten Wahl */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: SZ_AUS,
+  beimWechsel: function (id) {
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (wege) wegeEnd();
+      setSelected(null); closeCard();
+      schemaWeicht();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
+      krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
+      if (SZ_DATEN.some(function (sc) { return sc.id === id && sc.modell.essen; })) setMahlzeit(true);   /* Metoclopramid: der Magen steht auf "nach dem Essen" (wie ein Klick auf den Schalter; beim Abwaehlen nicht zurueck) */
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt den Magen, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
+  lv++;
 }
 
 /* Ebene ein- oder ausschalten (Schalter der Leiste) */
@@ -994,13 +1118,15 @@ function waehleListe(id) {
 }
 
 (function leiste() {
-  /* Reiter: Strukturen, Hilfekarten, Ueben */
+  /* Reiter: Strukturen, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Hilfekarten', 'Üben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -1021,6 +1147,9 @@ function waehleListe(id) {
     d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
     paneH.appendChild(d);
   });
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', SZ_EINLEITUNG.disease);
+  SZ.liste(paneM, 'drug', 'Medikamente', SZ_EINLEITUNG.drug);
   /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
   var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Magen und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge einen Weg: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
   var pb = document.createElement('div'); pb.className = 'pane-btn';
@@ -1166,6 +1295,7 @@ function ansicht(theta, phi, dist, target) {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -1174,11 +1304,13 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1531,10 +1663,11 @@ function layoutLabels(w, h) {
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 58, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
-  if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var kk = SZ.el && SZ.el.classList.contains('show') && !SZ.el.classList.contains('weg') ? SZ.el : null;   /* offene Szenariokarte (Krankheitsbild, Medikament): ebenso */
+  if (!narrow && (unten || kk)) botL = Math.min(botL, h - 22 - (unten ? $('info') : kk).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt den Magen, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte und beim Ueben keine Beschriftung */
+  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten || LUPE.open || (kk && !kk.classList.contains('min'))))) {   /* Handy: die Karte deckt den Magen, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte und beim Ueben keine Beschriftung */
     beschriftet().forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
@@ -1594,7 +1727,7 @@ function layoutLabels(w, h) {
    innen. Nuechtern: wenig Magensaft, keine Wellen, der Pfoertner ist zu. Die Welle: Gauss-Profil, laeuft in 3,2 s von der Mitte des Magenkoerpers zum Pfoertner, alle 4,5 s
    eine; wenn sie ankommt, oeffnet sich der Pfoertner kurz. Pause haelt alles an; die Fuellung des Magens laeuft in Echtzeit (der Schalter soll auch in der Pause wirken).
    ===================================================================== */
-var playing = true, speed = 1, clock = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* tM: Uhrzeit des Wechsels zu "nach dem Essen"; fzR: Fuellung roh 0..1, fe: weich */
+var playing = true, speed = 1, clock = 0, clockM = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* clockM: Uhr der Mahlzeit (laeuft wie clock, mit dem Faktor SZW.wellen); tM: Uhrzeit (clockM) des Wechsels zu "nach dem Essen"; fzR: Fuellung roh 0..1, fe: weich */
 var SZ_ = { FUELL: 1.8, P: 126, TW: 4.5, TA0: 5.0, TT: 3.2, SCHLUCK: 3.6, EIN: 2.2, WS0: 0.34, WE: 0.96, DUO: 6.5, DUOV: 1.5, KC: 0.85 };
 var R2A = 0.7548776662466927, R2B = 0.5698402909980532;   /* Plastikzahl-Folge (R2): gleichmaessig verteilte Paare aus dem Index */
 function bruch(v) { return v - Math.floor(v); }
@@ -1784,8 +1917,19 @@ function lauf(ki, i, ph, o) {
 function saftZustand(i, o) {
   var K = KINDS[KI.saft], L = K.sb[i], u = bruch((clock + K.pz[i] * L * 3.7) / L), sig = K.sa[i] + 0.05 * u, phi = K.phi0[i] + 0.7 * u, rho = 1 - 0.78 * sstep(0, 0.6, u), rad = K.rad;
   var vis = i < SAFT_N0 ? 1 : sstep(0, 1, (fe - (i - SAFT_N0) / (K.n - SAFT_N0) * 0.8) / 0.2);
+  if (SZW.saeure < 1) { var lim = SZW.saeure * (SAFT_N0 + (K.n - SAFT_N0) * Math.min(1, fe / 0.8)); vis *= 1 - sstep(lim - 1, lim, i); }   /* Pantoprazol: weniger Magensaft (der Anteil saeure der gerade sichtbaren Tropfen; die mit hoher Nummer fehlen zuerst) */
   schlauchPunkt(sig, phi, rho, rad, wellenK(sig), SQ);
   o.x = SQ.x; o.y = SQ.y; o.z = SQ.z; o.sig = sig; o.r = rad * vis * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u)); o.st = o.r > 0.001 ? 2 : 0;
+  if (SZW.reflux > 0.002 && i % 3 === 0) {   /* Reflux: jeder dritte Tropfen steigt statt dessen aus dem Magen in die Speiseroehre (weicher Wechsel ueber die Wirkgroesse) */
+    var rf = SZW.reflux;
+    if (rf < 0.5) o.r *= 1 - 2 * rf;
+    else {
+      var hoch = (2.2 + 3.8 * fe) * (0.65 + 0.35 * K.pz[i]), p3 = [0, 0, 0];   /* nach dem Essen steigt der Saft hoeher */
+      linieBei(ENT, ENT.L - 0.2 - hoch * sstep(0, 1, u), p3); querVersatz(2 * PI * K.pz[i] * 7 + i, 0.18 * (0.3 + 0.7 * bruch(i * R2A)), p3);
+      o.x = p3[0]; o.y = p3[1]; o.z = p3[2]; o.sig = 0;
+      o.r = rad * 1.4 * vis * sstep(0, 0.12, u) * (1 - sstep(0.88, 1, u)) * (2 * rf - 1); o.st = o.r > 0.001 ? 2 : 0;
+    }
+  }
 }
 function tmat(col, em) {
   var m = mat(col, { rough: 0.35 });
@@ -1809,7 +1953,7 @@ function stroemungBauen() {
 }
 /* Wellen und Pfoertner fuer die Zeit te nach dem Essen: Uniforms des Shaders, Liste WL fuer die Teilchen; WOFF = Oeffnung des Pfoertners 0..1 */
 function wellenSetzen() {
-  var te = clock - tM, TW = SZ_.TW, TT = SZ_.TT, n0 = Math.floor((te - SZ_.TA0) / TW) - 1, n, c = 0, i, offen = 0;
+  var te = clockM - tM, TW = SZ_.TW, TT = SZ_.TT, n0 = Math.floor((te - SZ_.TA0) / TW) - 1, n, c = 0, i, offen = 0;
   WL.length = 0;
   for (n = n0; n <= n0 + 3; n++) {
     var tn = SZ_.TA0 + n * TW, u = 1 - (tn - te) / TT;
@@ -1826,10 +1970,10 @@ function wellenSetzen() {
 /* je Bild: Teilchen setzen (nur wenn sich Zeit, Fuellung, Auswahl oder Ausschnitt aendern) */
 function stroemungBild() {
   if (!ST || !SL) return;
-  var key = clock + '|' + fe + '|' + lv + '|' + tM + '|' + kindOn.join('');
+  var key = clock + '|' + clockM + '|' + fe + '|' + lv + '|' + tM + '|' + kindOn.join('');
   if (key === ST.letzt) return;
   ST.letzt = key;
-  var te = clock - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P, ki, i;
+  var te = clockM - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P, ki, i;
   for (ki = 0; ki < KINDS.length; ki++) {
     var K = KINDS[ki], im = K.im;
     im.visible = kindOn[ki];
@@ -1849,7 +1993,7 @@ function stroemungSchritt(dt) {
   var ziel = mahlzeit ? 1 : 0;
   if (!fzFest && fzR !== ziel) fzR = ziel > fzR ? Math.min(ziel, fzR + dt / SZ_.FUELL) : Math.max(ziel, fzR - dt / SZ_.FUELL);
   fe = sstep(0, 1, fzR);
-  if (playing) clock += dt * speed;
+  if (playing) { clock += dt * speed; clockM += dt * speed * SZW.wellen; }   /* Metoclopramid: die Muskelwellen und alles danach (Pfoertner, Entleerung) laufen schneller */
 }
 $('bPlay').onclick = function () {
   playing = !playing;
@@ -1877,7 +2021,7 @@ var MAHLZEIT_TXT = ['Nüchtern: Der Magen ist klein und fast leer, der Pförtner
 function setMahlzeit(an, still) {
   if (an === mahlzeit) return;
   mahlzeit = an; fzFest = false;
-  if (an) tM = clock;
+  if (an) tM = clockM;
   $('bNuechtern').classList.toggle('on', !an);
   $('bEssen').classList.toggle('on', an);
   if (!still) Kern.toast(MAHLZEIT_TXT[an ? 1 : 0]);
@@ -2130,7 +2274,7 @@ function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
   $('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
   canvas.style.visibility = on ? 'hidden' : '';
@@ -2140,6 +2284,619 @@ function setSchema(on) {
 function schemaWeicht() { if (schemaOn) setSchema(false); }
 $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
+   7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * Werte des Eintrags (SZ_DATEN: gastritis, erosion, ulkus, reflux, eingang,
+   essen; saeure und wellen als Faktoren). Alle three.js-Objekte entstehen erst bei der ersten Wahl (krankBauen), ohne Wahl aendert sich nichts.
+   Die Netze der Schleimhaut bekommen dann (einmal) einen Zusatz im Vertex- und Fragment-Shader (onBeforeCompile, dazu je Punkt das Gewicht aW: 0 an der Schnittkante, damit die Kappen
+   passen, 1 sonst): Verschiebung entlang der Normale (uDisp; Gastritis: die Schleimhaut schwillt an und die Falten werden dicker; Reflux: der Wulst am Mageneingang wird weiter und
+   schlaffer, Metoclopramid: minimal kraeftiger) und, in Ruhelage-Koordinaten der Punkte (die Zeichen wandern mit der Dehnung des Magens), der Krater des Geschwuers (uUlk: Mitte und
+   Radius; Vertiefung, heller gelblich-weisser Grund, geroeteter Rand) und die Erosionen am Magenvorhof (uErs: kleine dunkelrote Punkte aus einem Zellraster der Lage, kein Zufall).
+   Gastritis: die Farbe der Schleimhaut (alle drei Netze teilen sich die Materialien) mit der Wirkgroesse roeter. Reflux: das untere Ende der Speiseroehre ueber Vertexfarben
+   gerroetet, die Speiseroehre wird durchscheinend (sonst sieht man die aufsteigenden Tropfen nicht), ein Teil der Magensaft-Tropfen steigt in die Speiseroehre (saftZustand, Abschnitt 6).
+   Saeure: weniger Magensaft-Tropfen (saftZustand). Wellen: die Uhr der Mahlzeit clockM laeuft schneller (stroemungSchritt). Essen: beimWechsel stellt den Mahlzeit-Schalter auf "nach dem Essen".
+   ===================================================================== */
+var KR_ULK = 1.3;                                  /* Radius des Kraters bei Wirkgroesse 1 (cm) */
+var KR_DICK = 0.22, KR_WEIT = 0.22, KR_FEST = 0.07;   /* Verschiebung (cm): Falten bei Gastritis, Wulst bei Reflux (weiter), Wulst bei Metoclopramid (fester) */
+var KR_FARBE = srgb(0xC5262B);                     /* Zielfarbe der entzuendeten Schleimhaut */
+var KR_GLSL = {
+  kopf: ['attribute float aW;', 'uniform float uDisp;', 'uniform vec4 uUlk;', 'varying vec3 vP0;'].join('\n'),
+  nor: ['{', '  vec3 dq = position - uUlk.xyz; float du = length(dq); float t = du / max(uUlk.w, 1e-4);',   /* Normale am Krater: zum Rand hin gekippt (Hang der Vertiefung) */
+    '  if (uUlk.w > 0.0 && t < 1.0) { vec3 rd = dq / max(du, 1e-4); rd -= objectNormal * dot(rd, objectNormal); objectNormal = normalize(objectNormal + rd * (2.4 * t * (1.0 - t)) * aW); }', '}'].join('\n'),
+  pos: ['{', '  float dep = uDisp * aW;',
+    '  float t = length(position - uUlk.xyz) / max(uUlk.w, 1e-4);',
+    '  if (uUlk.w > 0.0 && t < 1.0) dep += 0.4 * uUlk.w * (1.0 - t * t * (3.0 - 2.0 * t)) * aW;',
+    '  transformed += normalize(objectNormal) * dep;', '  vP0 = position;', '}'].join('\n'),
+  fkopf: ['varying vec3 vP0;', 'uniform vec4 uUlk;', 'uniform vec4 uEro;', 'uniform float uErs;', 'uniform float uUlkF;',
+    'float krH(vec3 c) { return fract(sin(dot(c, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }'].join('\n'),
+  frag: ['{', '  if (uUlk.w > 0.0) {',
+    '    float t = distance(vP0, uUlk.xyz) / uUlk.w;',
+    '    float boden = 1.0 - smoothstep(0.46, 0.6, t);',
+    '    float rand = smoothstep(0.40, 0.56, t) * (1.0 - smoothstep(1.15, 1.75, t));',   /* breiter, dunkelroter Rand mit weichem Auslaufen; heilend (uUlkF klein): blasser */
+    '    vec3 rc = mix(vec3(0.62, 0.15, 0.13), vec3(0.20, 0.002, 0.008), uUlkF);',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.80, 0.68, 0.40), boden);',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, rc, rand * (0.5 + 0.5 * uUlkF));', '  }',
+    '  if (uErs > 0.0) {',
+    '    vec3 q = vP0 / 0.7; vec3 c = floor(q); float h = krH(c);',
+    '    vec3 mid = c + 0.5 + 0.3 * vec3(krH(c + 1.7) - 0.5, krH(c + 3.1) - 0.5, krH(c + 5.3) - 0.5);',
+    '    float punkt = (1.0 - smoothstep(0.2, 0.3, distance(q, mid))) * step(0.62, h);',
+    '    float ort = 1.0 - smoothstep(0.55 * uEro.w, uEro.w, distance(vP0, uEro.xyz));',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.20, 0.004, 0.01), punkt * ort * uErs * 0.92);', '  }', '}'].join('\n')
+};
+function krankHaken(m, disp) {   /* Zusatz im Shader eines Materials der Schleimhaut (nach welleMat), Programm wird neu gebaut */
+  var alt = m.onBeforeCompile;
+  m.onBeforeCompile = function (sh) {
+    alt(sh);
+    sh.uniforms.uDisp = disp; sh.uniforms.uUlk = KR.ulk; sh.uniforms.uEro = KR.ero; sh.uniforms.uErs = KR.ers; sh.uniforms.uUlkF = KR.ulkF;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + KR_GLSL.kopf).replace('#include <morphnormal_vertex>', '#include <morphnormal_vertex>\n' + KR_GLSL.nor).replace('#include <project_vertex>', KR_GLSL.pos + '\n#include <project_vertex>');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + KR_GLSL.fkopf).replace('#include <color_fragment>', '#include <color_fragment>\n' + KR_GLSL.frag);
+  };
+  m.needsUpdate = true;
+}
+/* Ort des Geschwuers (Ruhelage): auf der Schleimhaut der hinteren Haelfte am Magenwinkel (Knick der kleinen Kurvatur), Innenseite der Hinterwand */
+function ulkusOrt() {
+  var A = form.kennpunkte(0).ANGULUS.p, T = [A[0] + KR_ULK_D[0], A[1] + KR_ULK_D[1]], best = null, bz = 1e9;
+  MG.innen.forEach(function (m) {
+    if (m.userData.sid !== 'schleimhaut' || m.userData.deckel || m.material !== MAT.schleimhaut) return;
+    var P = m.geometry.attributes.position.array, i;
+    for (i = 0; i < P.length; i += 3) if ((P[i] - T[0]) * (P[i] - T[0]) + (P[i + 1] - T[1]) * (P[i + 1] - T[1]) < 0.36 && P[i + 2] < bz) { bz = P[i + 2]; best = [P[i], P[i + 1], P[i + 2]]; }   /* in einem Rohr um (x, y) der Punkt ganz hinten */
+  });
+  return best;
+}
+var KR_ULK_D = [1.9, 0.3];                         /* Lage des Geschwuers zum Magenwinkel (x, y, cm) */
+function krankBauen() {
+  if (KR || abgebaut || !App.ready) return;
+  var cut = form.schnitt(0), E = form.EINGANG.p, i;
+  KR = { ulk: { value: new THREE.Vector4(0, 0, 0, 0) }, ero: { value: new THREE.Vector4(0, 0, 0, 1) }, ers: { value: 0 }, ulkF: { value: 1 }, dS: { value: 0 }, dE: { value: 0 }, col: {}, eso: null };
+  var uo = ulkusOrt(); if (uo) KR.ulk.value.set(uo[0], uo[1], uo[2], 0);
+  var ua = mlU(ML.P0, mlUvonSig(0.82), [0, 0, 0]); KR.ero.value.set(ua[0], ua[1], ua[2], 3.8);   /* Magenvorhof: Mitte der Mittellinie bei s = 0,82 */
+  var gedacht = [MAT.schleimhaut, MAT.schleimhautD, MAT.eingangI, MAT.eingangID];
+  /* Gewicht aW je Punkt: 0 an den Kappen und an der Schnittkante (|Abstand| < 0,1 cm), 1 ab 0,9 cm Abstand */
+  root.traverse(function (o) {
+    if (!o.isMesh || gedacht.indexOf(o.material) < 0) return;
+    var g = o.geometry, P = g.attributes.position.array, n = P.length / 3, W = new Float32Array(n), v;
+    if (!o.userData.kappe) for (v = 0; v < n; v++) W[v] = sstep(0.1, 0.9, Math.abs(cut(P[v * 3], P[v * 3 + 1], P[v * 3 + 2])));
+    g.setAttribute('aW', new THREE.BufferAttribute(W, 1));
+  });
+  ['schleimhaut', 'schleimhautD'].forEach(function (k) { KR.col[k] = MAT[k].color.clone(); krankHaken(MAT[k], KR.dS); });
+  ['eingangI', 'eingangID'].forEach(function (k) { krankHaken(MAT[k], KR.dE); });
+  /* Speiseroehre: Vertexfarben (unteres Ende, Gewicht je Punkt aus dem Abstand zum Mageneingang) und durchscheinend */
+  var em = STRUCT.speiseroehre.meshes[0], eg = em.geometry, EP = eg.attributes.position.array, ev = EP.length / 3, EW = new Float32Array(ev);
+  var ET = new Float32Array(ev), ed;
+  for (i = 0; i < ev; i++) {
+    ed = Math.sqrt(Math.pow(EP[i * 3] - E[0], 2) + Math.pow(EP[i * 3 + 1] - E[1], 2) + Math.pow(EP[i * 3 + 2] - E[2], 2));
+    EW[i] = 1 - sstep(3.5, 7.5, ed);                  /* Roetung: unteres Ende, weich auslaufend */
+    ET[i] = 1 - sstep(3.5, 6.0, ed);                  /* durchscheinend: nur die letzten 5 bis 6 cm ueber dem Mageneingang */
+  }
+  eg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ev * 3).fill(1), 3));
+  eg.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(ev).fill(1), 1));
+  KR.eso = { geo: eg, W: EW, T: ET, n: ev };
+  var altE = MAT.speiseroehre.onBeforeCompile;        /* Deckkraft je Punkt (Attribut aA), Material wird bei Reflux durchscheinend */
+  MAT.speiseroehre.onBeforeCompile = function (sh) {
+    altE(sh);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aA; varying float vA;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvA = aA;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vA;').replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vA;');
+  };
+  MAT.speiseroehre.vertexColors = true; MAT.speiseroehre.needsUpdate = true;
+}
+/* Netze, Farben, Speiseroehre nach den Wirkgroessen setzen */
+function krAnwenden() {
+  var g = SZW.gastritis, rf = SZW.reflux, i;
+  KR.dS.value = -KR_DICK * g;                                           /* Gastritis: die Schleimhaut schwillt an, die Falten werden dicker (gegen die Normale: ins Lumen) */
+  KR.dE.value = KR_WEIT * rf - KR_FEST * SZW.eingang;                   /* Reflux: Wulst weiter und schlaffer (mit der Normale), Metoclopramid: minimal kraeftiger */
+  KR.ulk.value.w = SZW.ulkus > 0.002 ? KR_ULK * SZW.ulkus : 0;
+  KR.ulkF.value = Math.min(1, SZW.ulkus);
+  KR.ers.value = SZW.erosion > 0.002 ? SZW.erosion : 0;
+  ['schleimhaut', 'schleimhautD'].forEach(function (k) { MAT[k].color.copy(KR.col[k]); if (g > 0) MAT[k].color.lerp(KR_FARBE, 0.72 * g); });
+  var C = KR.eso.geo.attributes.color, a = C.array, W = KR.eso.W;       /* unteres Ende der Speiseroehre geroetet: Gruen und Blau abdunkeln */
+  var A = KR.eso.geo.attributes.aA, aa = A.array, T = KR.eso.T, rm = Math.min(1, rf);
+  for (i = 0; i < KR.eso.n; i++) { var w = W[i] * rm; a[i * 3] = 1 - 0.55 * w; a[i * 3 + 1] = 1 - 0.99 * w; a[i * 3 + 2] = 1 - 0.99 * w; aa[i] = 1 - 0.42 * T[i] * rm; }
+  C.needsUpdate = true; A.needsUpdate = true;
+  var tr = rf > 0.002;
+  if (MAT.speiseroehre.transparent !== tr) { MAT.speiseroehre.transparent = tr; MAT.speiseroehre.needsUpdate = true; }
+}
+function szenarioWirkung() {
+  var n = { gastritis: 0, erosion: 0, ulkus: 0, reflux: 0, helico: 0, schleim: 0, pumpe: 0, eingang: 0, essen: 0, saeure: 1, wellen: 1 }, neutral = { saeure: 1, wellen: 1 };
+  SZ_DATEN.forEach(function (sc) {
+    var a = SZ.anteil[sc.id], m = sc.modell;
+    if (!a) return;
+    Object.keys(n).forEach(function (k) { var nv = neutral[k] === undefined ? 0 : neutral[k]; n[k] += a * ((m[k] === undefined ? nv : m[k]) - nv); });
+  });
+  if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
+  Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  if (!KR) krankBauen();
+  if (KR) krAnwenden();
+  lv++;
+}
+
+/* =====================================================================
+   7d. Lupe: Nahansicht einer Magendruese (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; kein three.js; Texte von Joern freigegeben, magen-c1-texte.md Teil D)
+   Ansicht 0 "Druese": Schnitt durch die Schleimhaut von oben nach unten - Mageninneres, Schleimschicht (mit Bicarbonat), Oberflaechenzellen mit Magengruebchen, zwei schlauchfoermige
+   Druesen (oben Nebenzellen, in der Mitte Belegzellen, am Grund Hauptzellen), Blutgefaess, Unterschleimhaut. Ansicht 1 "Belegzelle" (Antippen einer Belegzelle, Knopf zurueck):
+   Blut links, die Zelle mit Protonenpumpen, Chloridkanaelen und Bicarbonat-Transport, rechts das Druesen-Innere. Die Chips folgen dem Mahlzeit-Schalter und schalten ihn mit. Teilchen nur aus
+   clock und Index (kein Zufall); Mengen aus der Fuellung fe (weich) und den Wirkgroessen SZW (helico, gastritis, ulkus, schleim, saeure, pumpe; Abschnitt 7c, weich ueberblendet).
+   Die Lupe zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte, Erklaer- und Szenariokarte schliessen sie bzw. weichen ihr; nach dem Schliessen
+   beginnt sie wieder mit der Druese.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 400, H: 260, an: 0, key: '' };   /* an: 0 Druese, 1 Belegzelle */
+var LP_T = {
+  druese: {
+    nuechtern: 'Die Drüse ruht fast. Eine dicke Schleimschicht mit Bicarbonat liegt auf der Schleimhaut – die Säure im Mageninneren erreicht die Zellen nicht.',
+    essen: 'Geruch, Geschmack und Dehnung des Magens geben das Signal (Vagusnerv, Gastrin). Die Belegzellen pumpen Säure, die Hauptzellen geben Pepsinogen ab, das in der Säure zu Pepsin wird und Eiweiß spaltet. Die Nebenzellen halten mit Schleim dagegen.',
+    gastritis: 'Helicobacter lebt in der Schleimschicht und schwächt sie. Säure dringt in die Schleimhaut, Abwehrzellen wandern ein – die Schleimhaut entzündet sich.',
+    geschwuer: 'Wo der Schutz eingebrochen ist, haben Säure und Pepsin die Schleimhaut durchgedaut. Der Defekt reicht bis in die Unterschleimhaut, wo größere Gefäße liegen.',
+    nsar: 'Ohne Prostaglandine bilden die Nebenzellen wenig Schleim und Bicarbonat. Die Schicht ist dünn – Säure erreicht die Oberfläche, es entstehen kleine Defekte.',
+    pantoprazol: 'Die Belegzellen pumpen kaum noch Säure. Im Grund des Geschwürs wachsen von den Rändern her neue Zellen ein.'
+  },
+  zelle: {
+    nuechtern: 'Die Pumpen ruhen größtenteils in Bläschen im Inneren der Zelle. Die Belegzelle bildet auch den Intrinsic Factor, ohne den Vitamin B12 im Darm nicht aufgenommen wird.',
+    essen: 'Die Pumpen wandern an die Oberfläche. Jede tauscht ein Säureteilchen (H⁺) gegen Kalium; Chlorid folgt – im Drüseninneren entsteht Salzsäure. Zum Ausgleich gibt die Zelle Bicarbonat ins Blut ab.',
+    pantoprazol: 'Pantoprazol hat sich fest an die Pumpen gebunden. Sie stehen still, es gelangt kaum Säure in die Drüse – auch nach dem Essen. Erst neu gebildete Pumpen arbeiten wieder.'
+  }
+};
+var LP_GX = [150, 232];                              /* Mitten der beiden Druesen im Bild */
+var LP_HIT = { y0: 102, y1: 168, halb: 44 };         /* Trefferflaeche der Belegzellen je Druese (grosszuegig, auch fuer den Finger) */
+function lpFrac(x) { return x - Math.floor(x); }
+function lpHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function lpRampe(v, e) { return Math.max(0, Math.min(1, v / e, (1 - v) / e)); }
+function lpKlemm(v) { return Math.max(0, Math.min(1, v)); }
+function lpFarbe(a, b, t) {   /* Mischfarbe zweier Hexwerte */
+  t = lpKlemm(t);
+  var r = (a >> 16) & 255, g = (a >> 8) & 255, bl = a & 255;
+  return 'rgb(' + Math.round(r + (((b >> 16) & 255) - r) * t) + ',' + Math.round(g + (((b >> 8) & 255) - g) * t) + ',' + Math.round(bl + ((b & 255) - bl) * t) + ')';
+}
+function lpWeg(pts) {   /* Polylinie mit Laengen: Punkt bei Anteil u (0..1) */
+  var cum = [0], i;
+  for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  var len = cum[cum.length - 1];
+  return { at: function (u) {
+    var d = lpKlemm(u) * len, k = 1;
+    while (k < pts.length - 1 && cum[k] < d) k++;
+    var a = pts[k - 1], b = pts[k], t = (d - cum[k - 1]) / (cum[k] - cum[k - 1]);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  } };
+}
+var LP_W = null;   /* Wege der Teilchen in der Druese: je Druese drei Varianten (Saeure, Pepsin, Schleim) */
+function lpWegeBauen() {
+  LP_W = LP_GX.map(function (cx) {
+    var o = { saeure: [], pepsin: [], schleim: [] };
+    [0, 1, 2].forEach(function (v) {
+      var s = v % 2 ? 1 : -1, yc = [120, 136, 152][v];
+      o.saeure.push(lpWeg([[cx + s * 16, yc], [cx, yc - 4], [cx, 64], [cx + 3 * (v - 1), 40], [cx + 9 * (v - 1), 6]]));
+      o.pepsin.push(lpWeg([[cx + s * 10, 184], [cx, 176], [cx, 64], [cx - 3 * (v - 1), 40], [cx + 8 * (v - 1) - 4, 6]]));
+      o.schleim.push(lpWeg([[cx + s * 12, 92], [cx, 78], [cx, 64], [cx + s * 22, 50]]));
+    });
+    return o;
+  });
+}
+function lpLabel(c, text, x, y, rechts) {
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+}
+function lpLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+function lpPunkt(c, x, y, alpha, farbe, r) {
+  if (alpha <= 0.01) return;
+  c.globalAlpha = Math.min(1, alpha); c.fillStyle = farbe;
+  c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+var LP_F = { saeure: '#FF8A78', pepsin: '#D9C2FF', schleim: '#F3E7A8', bicarb: '#9FD6F2', kalium: '#F2C75C', chlorid: '#8FE0A8' };
+function lupeDruese(c) {
+  var W = LUPE.W, H = LUPE.H, f = fe, g = SZW.gastritis, sl = Math.min(1, SZW.schleim), ul = Math.min(1, SZW.ulkus), he = Math.min(1, SZW.helico), pu = Math.min(1, SZW.pumpe), i, k, u, p, gi;
+  var sa = (0.1 + 0.9 * f) * SZW.saeure * (1 - 0.6 * pu);          /* Saeuremenge 0..1 */
+  var th = 24 * (1 - 0.65 * sl), top = 58 - th;                     /* Schleimschicht: Dicke, Oberkante */
+  if (!LP_W) lpWegeBauen();
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#162C35'; c.fillRect(0, 0, W, top);                 /* Mageninneres */
+  /* Unterschleimhaut mit Fasern, Muskelschicht der Schleimhaut, Schleimhaut (bei Gastritis roeter) */
+  c.fillStyle = '#B8927E'; c.fillRect(0, 204, W, H - 204);
+  c.strokeStyle = 'rgba(120,80,70,0.5)'; c.lineWidth = 1;
+  for (i = 0; i < 16; i++) { c.beginPath(); c.moveTo(i * 26 + lpHash(i, 1) * 10, 210 + lpHash(i, 2) * 44); c.lineTo(i * 26 + 24, 210 + lpHash(i, 2) * 44 + 7 * (lpHash(i, 3) - 0.5)); c.stroke(); }
+  c.fillStyle = '#8C4A4A'; c.fillRect(0, 198, W, 6);
+  c.fillStyle = lpFarbe(0x9A5658, 0xB8323A, 0.85 * g); c.fillRect(0, 72, W, 126);
+  c.fillStyle = lpFarbe(0xC77A7A, 0xD0484C, 0.85 * g); c.fillRect(0, 58, W, 14);   /* Oberflaechenzellen */
+  c.strokeStyle = 'rgba(90,40,44,0.45)'; c.lineWidth = 0.8;
+  for (i = 0; i < 44; i++) { c.beginPath(); c.moveTo(i * 9.2, 58); c.lineTo(i * 9.2, 72); c.stroke(); }
+  /* Blutgefaess in der Unterschleimhaut mit Ast in die Schleimhaut, Blutkoerperchen laufen */
+  [[0, 232, 400, 232], [292, 100, 292, 232]].forEach(function (l, q) {
+    c.lineCap = 'round'; c.strokeStyle = '#6E2A26'; c.lineWidth = q ? 11 : 17; c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke();
+    c.strokeStyle = '#D04A3E'; c.lineWidth = q ? 8 : 13; c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke();
+  });
+  for (i = 0; i < 7; i++) lpPunkt(c, lpFrac(i / 7 + clock * 0.03) * W, 232 + (lpHash(i, 4) - 0.5) * 6, 0.9, '#F29A8E', 2.4);
+  for (i = 0; i < 3; i++) lpPunkt(c, 292 + (lpHash(i, 5) - 0.5) * 3, 232 - lpFrac(i / 3 + clock * 0.03) * 132, 0.9, '#F29A8E', 2.2);
+  /* Gastritis: Abwehrzellen in der Schleimhaut */
+  if (g > 0.01) [[48, 100], [76, 150], [104, 186], [110, 124], [276, 112], [268, 176], [318, 150], [196, 188]].forEach(function (q, n) {
+    c.globalAlpha = lpKlemm(g * 1.2 - n * 0.03); c.fillStyle = '#F0E8F4'; c.strokeStyle = '#9C84B0'; c.lineWidth = 1;
+    c.beginPath(); c.arc(q[0], q[1], 5.5, 0, 6.2832); c.fill(); c.stroke();
+    c.fillStyle = '#7A5C9C'; c.beginPath(); c.arc(q[0] - 1.5, q[1], 2.4, 0, 6.2832); c.arc(q[0] + 2, q[1] + 1.2, 2, 0, 6.2832); c.fill(); c.globalAlpha = 1;
+  });
+  /* Druesen */
+  LP_GX.forEach(function (cx) {
+    c.fillStyle = '#2A1C22'; c.beginPath(); c.moveTo(cx - 9, 58); c.lineTo(cx + 9, 58); c.lineTo(cx + 4, 72); c.lineTo(cx - 4, 72); c.closePath(); c.fill();   /* Magengruebchen */
+    [[-13, 84], [13, 92], [-13, 100]].forEach(function (q) {                                                                                            /* Nebenzellen (Schleim) */
+      c.fillStyle = '#EBC0CC'; c.strokeStyle = '#B48898'; c.lineWidth = 1; c.beginPath(); c.ellipse(cx + q[0], q[1], 9, 8, 0, 0, 6.2832); c.fill(); c.stroke();
+      c.fillStyle = '#F6DEE4'; c.beginPath(); c.arc(cx + q[0] - Math.sign(q[0]) * 2, q[1] - 2, 3, 0, 6.2832); c.fill();
+    });
+    [[-18, 122], [18, 134], [-18, 146], [18, 158]].forEach(function (q) {                                                                               /* Belegzellen (Saeure) */
+      var s = q[0] < 0 ? 1 : -1, x = cx + q[0], y = q[1];
+      c.lineJoin = 'round'; c.lineWidth = 9; c.strokeStyle = '#E8806F'; c.fillStyle = '#E8806F';
+      c.beginPath(); c.moveTo(x + s * 6, y); c.lineTo(x - s * 7, y - 7); c.lineTo(x - s * 7, y + 7); c.closePath(); c.stroke(); c.fill();
+      c.fillStyle = '#8E3C60'; c.beginPath(); c.arc(x - s * 5, y, 3, 0, 6.2832); c.fill();
+    });
+    [[-12, 172], [12, 176], [-12, 186], [12, 190]].forEach(function (q, n) {                                                                            /* Hauptzellen (Pepsinogen) */
+      c.fillStyle = '#7C84C4'; c.strokeStyle = '#4F5693'; c.lineWidth = 1; c.beginPath(); c.arc(cx + q[0], q[1], 7.5, 0, 6.2832); c.fill(); c.stroke();
+      c.fillStyle = '#C9CCF0'; c.beginPath(); c.arc(cx + q[0] + 2, q[1] - 2, 1.6, 0, 6.2832); c.arc(cx + q[0] - 2, q[1] + 2, 1.4, 0, 6.2832); c.fill();
+    });
+    c.lineCap = 'round'; c.strokeStyle = '#241A20'; c.lineWidth = 7; c.beginPath(); c.moveTo(cx, 70); c.lineTo(cx, 194); c.stroke();                       /* Drüsenlumen */
+  });
+  /* Defekt (Geschwuer): Krater durch die Schleimhaut bis in die Unterschleimhaut, Groesse mit der Wirkgroesse; Pantoprazol: neue Zellen von den Raendern */
+  if (ul > 0.01) {
+    var cx2 = 345, hw = 30 * ul, bo = 58 + 158 * ul;
+    c.fillStyle = '#4A1C24'; c.strokeStyle = '#C03238'; c.lineWidth = 2.5; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(cx2 - hw - 8, 58); c.lineTo(cx2 + hw + 8, 58); c.lineTo(cx2 + hw * 0.6, bo); c.lineTo(cx2 - hw * 0.6, bo); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#E6D8A0'; c.beginPath(); c.moveTo(cx2 - hw * 0.6 - 1, bo - 9); c.lineTo(cx2 + hw * 0.6 + 1, bo - 9); c.lineTo(cx2 + hw * 0.6, bo); c.lineTo(cx2 - hw * 0.6, bo); c.closePath(); c.fill();
+    if (pu > 0.01) for (i = 0; i < 12; i++) {
+      var t = 0.2 + 0.75 * (Math.floor(i / 2) / 5), sd = i % 2 ? 1 : -1, ex = cx2 + sd * (hw + 8 - (hw * 0.4 + 8) * t) - sd * 3, ey = 58 + (bo - 58) * t;
+      c.globalAlpha = pu; c.fillStyle = '#E9A9A4'; c.strokeStyle = '#B45A58'; c.lineWidth = 1; c.beginPath(); c.arc(ex, ey, 3.4, 0, 6.2832); c.fill(); c.stroke(); c.globalAlpha = 1;
+    }
+  }
+  /* Schleimschicht mit Bicarbonat; dahinter kleine Defekte der Oberflaeche bei duenner Schicht */
+  if (sl > 0.01) [70, 122, 196, 262, 318].forEach(function (x, n) { c.globalAlpha = sl; c.fillStyle = '#3A1218'; c.beginPath(); c.arc(x, 58, 3.6 + (n % 2), 0, Math.PI); c.fill(); c.globalAlpha = 1; });
+  c.fillStyle = 'rgba(222,214,150,0.5)'; c.fillRect(0, top, W, th);
+  c.strokeStyle = 'rgba(222,214,150,0.85)'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, top); c.lineTo(W, top); c.stroke();
+  for (i = 0, k = Math.round(34 * (1 - 0.85 * sl)); i < k; i++) lpPunkt(c, lpHash(i, 5) * W + 4 * Math.sin(clock * 0.6 + i), top + 3 + lpHash(i, 6) * (th - 6), 0.9, LP_F.bicarb, 1.7);
+  /* Helicobacter: kleine gebogene Staebchen in der Schleimschicht */
+  if (he > 0.01) for (i = 0; i < 6; i++) {
+    var hx = 40 + lpHash(i, 7) * (W - 90) + 8 * Math.sin(clock * 0.5 + i * 2), hy = top + th * (0.3 + 0.4 * lpHash(i, 8)), ha = 0.6 * Math.sin(clock * 0.7 + i) + lpHash(i, 9) * 3;
+    c.globalAlpha = he; c.strokeStyle = '#B7E35A'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.arc(hx, hy, 4.6, ha, ha + 2.4); c.stroke(); c.globalAlpha = 1;
+  }
+  /* Teilchen: Saeure und Pepsin steigen aus der Druese ins Mageninnere, Schleim in die Schicht; Saeure aus dem Mageninneren wird in der Schicht abgefangen (duenn: erreicht die Oberflaeche) */
+  LP_GX.forEach(function (cx, gi) {
+    for (k = 0; k < 12; k++) { u = lpFrac(k / 12 + clock * 0.1 + lpHash(k, gi) * 0.5); p = LP_W[gi].saeure[k % 3].at(u); lpPunkt(c, p[0], p[1], lpKlemm(sa * 12 - k) * lpRampe(u, 0.08), LP_F.saeure, 2.3); }
+    for (k = 0; k < 8; k++) { u = lpFrac(k / 8 + clock * 0.08 + lpHash(k, gi + 3) * 0.5); p = LP_W[gi].pepsin[k % 3].at(u); lpPunkt(c, p[0], p[1], lpKlemm((0.1 + 0.9 * f) * 8 - k) * lpRampe(u, 0.08), LP_F.pepsin, 2); }
+    for (k = 0; k < 6; k++) { u = lpFrac(k / 6 + clock * 0.07 + lpHash(k, gi + 6) * 0.5); p = LP_W[gi].schleim[k % 3].at(u); lpPunkt(c, p[0], p[1], lpKlemm((1 - 0.8 * sl) * (0.4 + 0.6 * f) * 6 - k) * lpRampe(u, 0.1), LP_F.schleim, 1.9); }
+  });
+  var bound = top + th * (0.5 + 0.5 * sl) + 2 * sl;
+  for (k = 0; k < 10; k++) { u = lpFrac(k / 10 + clock * 0.06 + lpHash(k, 11) * 0.4); lpPunkt(c, 20 + lpHash(k, 12) * (W - 40) + 5 * Math.sin(clock * 0.5 + k), 6 + u * (bound - 6), lpKlemm((0.15 + 0.85 * f) * SZW.saeure * 10 - k) * (1 - lpKlemm((u - 0.8) / 0.2)), LP_F.saeure, 2.1); }
+  /* Beschriftung (Fuehrungslinien wie in der Lupe der Leber) */
+  lpLabel(c, 'Mageninneres', 4, 16, false);
+  lpLeiter(c, 80, 44, 118, 46); lpLabel(c, 'Schleimschicht', 4, 48, false);
+  lpLeiter(c, 70, 66, 142, 62); lpLabel(c, 'Magengrübchen', 4, 70, false);
+  lpLeiter(c, 102, 90, 138, 86); lpLabel(c, 'Nebenzellen (Schleim)', 4, 94, false);
+  lpLeiter(c, 94, 136, 132, 130); lpLabel(c, 'Belegzellen (Säure)', 4, 140, false);
+  lpLeiter(c, 124, 182, 140, 178); lpLabel(c, 'Hauptzellen (Pepsinogen)', 4, 186, false);
+  lpLabel(c, 'Unterschleimhaut', 4, 218, false);
+  lpLeiter(c, 340, 238, 330, 232); lpLabel(c, 'Blutgefäß', 396, 252, true);
+  if (he > 0.5) { lpLeiter(c, 130, 20, 120, 40); lpLabel(c, 'Helicobacter', 100, 18, false); }
+  if (ul > 0.3) { lpLeiter(c, 360, 20, 350, 74); lpLabel(c, 'Defekt (Geschwür)', 396, 18, true); }
+  if (sl > 0.5) { lpLeiter(c, 250, 20, 256, 50); lpLabel(c, 'dünner Schleim (NSAR)', 200, 18, false); }
+}
+var LP_PY = [48, 92, 136, 180, 224], LP_CY = [70, 114, 158, 202], LP_TY = [62, 130, 198];   /* Pumpen, Chloridkanaele, Bicarbonat-Transporter (y im Bild) */
+function lupeZelle(c) {
+  var W = LUPE.W, H = LUPE.H, f = fe, pu = Math.min(1, SZW.pumpe), a = (0.08 + 0.92 * f) * (1 - 0.95 * pu), b = (0.1 + 0.9 * f) * (1 - 0.9 * pu), i, j, k, u, idx;
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#3A1A20'; c.fillRect(0, 0, 100, H);                                         /* Blut */
+  for (i = 0; i < 7; i++) { c.fillStyle = '#C9483A'; c.beginPath(); c.ellipse(16 + (i % 3) * 28 + lpHash(i, 1) * 6, lpFrac(i / 7 + clock * 0.04) * H, 9, 5, 0, 0, 6.2832); c.fill(); }
+  c.fillStyle = '#241A20'; c.fillRect(288, 0, W - 288, H);                                  /* Druesen-Inneres */
+  c.strokeStyle = 'rgba(200,120,120,0.22)'; c.lineWidth = 2;
+  for (i = 0; i < 6; i++) { c.beginPath(); c.moveTo(290, 20 + i * 40); c.bezierCurveTo(312, 30 + i * 40, 308, 44 + i * 40, 292, 52 + i * 40); c.stroke(); }
+  c.fillStyle = '#C75A58'; c.strokeStyle = '#7E3F3F'; c.lineWidth = 2;                       /* Zelle */
+  c.beginPath(); c.moveTo(128, 20); c.lineTo(256, 20); c.arcTo(284, 20, 284, 48, 28); c.lineTo(284, 212); c.arcTo(284, 240, 256, 240, 28); c.lineTo(128, 240); c.arcTo(100, 240, 100, 212, 28); c.lineTo(100, 48); c.arcTo(100, 20, 128, 20, 28); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#8E3C60'; c.beginPath(); c.ellipse(150, 130, 26, 38, 0, 0, 6.2832); c.fill();
+  c.strokeStyle = '#6A2E2E'; c.lineWidth = 6; c.beginPath(); c.moveTo(284, 20); c.lineTo(284, 240); c.moveTo(100, 20); c.lineTo(100, 240); c.stroke();   /* Zellwand */
+  /* Bicarbonat-Transporter (Blutseite) und Chloridkanaele (zum Druesen-Inneren) */
+  LP_TY.forEach(function (y) { c.fillStyle = '#6FA9CF'; c.strokeStyle = '#2E6A8C'; c.lineWidth = 1.2; c.fillRect(95, y - 9, 10, 18); c.strokeRect(95, y - 9, 10, 18); });
+  LP_CY.forEach(function (y) { c.fillStyle = '#2F6B45'; c.strokeStyle = '#8FE0A8'; c.lineWidth = 1.2; c.fillRect(280, y - 7, 8, 14); c.strokeRect(280, y - 7, 8, 14); });
+  /* Pumpen: nuechtern (meist) in Blaeschen im Zellinneren, nach dem Essen in der Wand; Pantoprazol sperrt sie */
+  LP_PY.forEach(function (y, jj) {
+    var wand = jj === 2 ? 1 : f, xp = 236 + 48 * wand, vr = jj === 2 ? 0 : 12 * (1 - f);
+    if (vr > 0.5) { c.fillStyle = '#A8423F'; c.strokeStyle = '#6A2E2E'; c.lineWidth = 1.2; c.beginPath(); c.arc(236, y, vr, 0, 6.2832); c.fill(); c.stroke(); }
+    c.fillStyle = lpFarbe(0x7DA2E8, 0x8A8F9A, pu); c.strokeStyle = '#3C5EA8'; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(xp - 6, y - 11); c.lineTo(xp + 6, y - 11); c.lineTo(xp + 6, y + 11); c.lineTo(xp - 6, y + 11); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = '#fff'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(xp - 2, y - 4); c.lineTo(xp + 2, y); c.lineTo(xp - 2, y + 4); c.stroke();
+    if (pu > 0.01) { c.globalAlpha = pu; c.strokeStyle = '#F05A4A'; c.lineWidth = 2.6; c.beginPath(); c.moveTo(xp - 11, y - 14); c.lineTo(xp + 11, y + 14); c.moveTo(xp + 11, y - 14); c.lineTo(xp - 11, y + 14); c.stroke(); c.globalAlpha = 1; }
+  });
+  /* Teilchen: H+ hinaus (Pumpe), K+ hinein (Pumpe), Cl- hinaus (Kanal), Bicarbonat ins Blut */
+  LP_PY.forEach(function (y, jj) {
+    for (k = 0; k < 3; k++) {
+      idx = jj * 3 + k; u = lpFrac(idx * 0.37 + clock * 0.12 + k / 3);
+      lpPunkt(c, 262 + u * 118, y + (lpHash(idx, 3) - 0.5) * 8 + (u > 0.4 ? (u - 0.4) * (lpHash(idx, 4) - 0.5) * 70 : 0), lpKlemm(a * 15 - idx) * lpRampe(u, 0.1), LP_F.saeure, 2.6);
+      u = lpFrac(idx * 0.29 + 0.5 - clock * 0.1 + k / 3);
+      lpPunkt(c, 262 + u * 118, y + (lpHash(idx, 5) - 0.5) * 8, lpKlemm(a * 15 - idx) * lpRampe(u, 0.1), LP_F.kalium, 2.4);
+    }
+  });
+  LP_CY.forEach(function (y, jj) {
+    for (k = 0; k < 2; k++) { idx = jj * 2 + k; u = lpFrac(idx * 0.41 + clock * 0.1 + k / 2); lpPunkt(c, 232 + u * 150, y + (lpHash(idx, 6) - 0.5) * 6, lpKlemm(a * 8 - idx) * lpRampe(u, 0.1), LP_F.chlorid, 2.4); }
+  });
+  LP_TY.forEach(function (y, jj) {
+    for (k = 0; k < 3; k++) { idx = jj * 3 + k; u = lpFrac(idx * 0.33 + clock * 0.1 + k / 3); lpPunkt(c, 140 - u * 110, y + (lpHash(idx, 7) - 0.5) * 8, lpKlemm(b * 9 - idx) * lpRampe(u, 0.1), LP_F.bicarb, 2.4); }
+  });
+  /* Beschriftung */
+  lpLabel(c, 'Blut', 4, 16, false);
+  lpLabel(c, 'Drüseninneres', 396, 16, true);
+  lpLeiter(c, 340, 66, 290, 50); lpLabel(c, 'Protonenpumpe', 396, 70, true);
+  lpLeiter(c, 330, 114, 360, 100); lpLabel(c, 'Kalium (K⁺)', 396, 118, true);
+  lpLeiter(c, 330, 160, 292, 158); lpLabel(c, 'Chlorid (Cl⁻)', 396, 162, true);
+  lpLeiter(c, 360, 206, 340, 190); lpLabel(c, 'Säure (H⁺)', 396, 210, true);
+  lpLeiter(c, 60, 124, 98, 130); lpLabel(c, 'Bicarbonat (ins Blut)', 4, 122, false);
+  if (pu > 0.5) { lpLeiter(c, 340, 238, 290, 226); lpLabel(c, 'Pantoprazol (Pumpe gesperrt)', 396, 252, true); }
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  if (LUPE.an) lupeZelle(c); else lupeDruese(c);
+}
+function lupeZustand() {   /* Schluessel des Textes: Pantoprazol, NSAR, Geschwuer, Gastritis (in dieser Rangfolge), sonst die Mahlzeit; in der Belegzelle nur Pantoprazol */
+  var r = LUPE.an ? ['pantoprazol'] : ['pantoprazol', 'nsar', 'geschwuer', 'gastritis'], q = null, n;
+  for (n = 0; n < r.length && !q; n++) if (SZ.anteil[r[n]] > 0.5) q = r[n];
+  return q || (mahlzeit ? 'essen' : 'nuechtern');
+}
+function lupeText() {
+  var z = lupeZustand();
+  LUPE.key = LUPE.an + z;
+  $('lpTitle').textContent = LUPE.an ? 'Belegzelle – so entsteht die Säure' : 'Magendrüse – Schnitt durch die Schleimhaut';
+  $('lpText').textContent = (LUPE.an ? LP_T.zelle : LP_T.druese)[z];
+  $('lpHint').style.display = LUPE.an ? 'none' : ''; $('lpLeg').style.display = LUPE.an ? 'none' : '';
+  $('lpZurueck').style.display = LUPE.an ? '' : 'none';   /* Knopf neben den Chips */
+  $('lpCv').classList.remove('klick');
+}
+function lupeChips() {
+  Array.prototype.forEach.call($('lpChips').querySelectorAll('button[data-m]'), function (b) { b.classList.toggle('on', (b.getAttribute('data-m') === '1') === mahlzeit); });
+}
+function lupeOeffnen() {
+  if (abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  LUPE.an = 0; lupeChips(); lupeText();                  /* die Lupe beginnt mit der Druese im Zustand des Mahlzeit-Schalters */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; LUPE.an = 0; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+function lupeBelegzelle(an) {   /* in die Belegzelle wechseln (Antippen) oder zurueck zur Druese */
+  if (!LUPE.open) lupeOeffnen();
+  LUPE.an = an ? 1 : 0; lupeText(); lupeDraw();
+}
+function lupeTreffer(e) {   /* Klick im Canvas: liegt er auf den Belegzellen einer Druese? (Bildkoordinaten) */
+  var cv = $('lpCv'), r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * LUPE.W, y = (e.clientY - r.top) / r.height * LUPE.H;
+  return LP_GX.some(function (cx) { return Math.abs(x - cx) < LP_HIT.halb && y > LP_HIT.y0 && y < LP_HIT.y1; });
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  Array.prototype.forEach.call($('lpChips').querySelectorAll('button[data-m]'), function (b) { b.addEventListener('click', function () { setMahlzeit(b.getAttribute('data-m') === '1', true); lupeChips(); lupeText(); }); });
+  cv.addEventListener('click', function (e) { if (!LUPE.an && lupeTreffer(e)) lupeBelegzelle(true); });
+  cv.addEventListener('mousemove', function (e) { cv.classList.toggle('klick', !LUPE.an && lupeTreffer(e)); });
+  $('lpZurueck').addEventListener('click', function () { lupeBelegzelle(false); });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick() {   /* nur solange offen: Text bei Wechsel des Zustands nachziehen und neu zeichnen */
+  if (!LUPE.open) return;
+  if (LUPE.key !== LUPE.an + lupeZustand()) lupeText();
+  lupeChips(); lupeDraw();
+}
+
+/* =====================================================================
+   7e. Export (Kern.Export): GLB statisch, GLB animiert und STL, jeweils der sichtbare Zustand (Durchsicht, ausgeblendete Strukturen, Innenansicht, Krankheitsbild; ohne Teilchen
+   im statischen Export, ohne Beschriftung, Lupe und Schema). Wie bei der Leber; Besonderheiten des Magens:
+   - Fuellung (Morph-Ziel) wird in die Lage gebacken (ohneMorph); die Muskelwellen (Shader) bleiben ausser Betracht.
+   - Krankheitsbilder (Abschnitt 7c) wirken im Shader und werden fuer den Export aus denselben Formeln auf die Kopie angewendet: krBake verschiebt die Punkte der Schleimhaut und
+     des Mageneingangs entlang der Normale (Falten, Wulst, Krater), krKlon legt Vertexfarben fuer Krater (Grund, Rand) und Erosionen an (die Punkte sind dabei groesser als im Bild, damit
+     die Dreiecke sie tragen; der Zellraster kommt aus Math.sin statt aus dem Shader, die Lage der Erosionen weicht daher etwas ab). Die Speiseroehre behaelt die Vertexfarben der Roetung,
+     ihre Durchsichtigkeit (Attribut aA im Shader) entfaellt im Export. Die gleiche Verschiebung gilt fuer STL und USDZ (cfg.bake); die Farbe von Krater und Erosionen gibt es in der USDZ nicht.
+   - GLB animiert: die Stroemung (Kohlenhydrate, Eiweiss, Fett, Wasser, Magensaft) als eine Schleife von EX.P = SZ_.P Sekunden (ein Zyklus nach dem Essen, im zweiten Durchlauf, damit die Wellen
+     eingeschwungen sind): jedes Teilchen ein Knoten mit Spuren fuer Lage und Groesse, berechnet mit lauf/saftZustand bei Mahlzeit, Fuellung und Wirkgroessen wie in der Ansicht. Magensaft
+     laeuft ganze Umlaeufe je Schleife (sein Tempo weicht dadurch etwas ab). Nuechtern bewegen sich nur die Magensaft-Tropfen.
+   Massstab: 1 Modelleinheit = 1 cm, die Datei hat Meter (reale Groesse).
+   ===================================================================== */
+var EX = { P: SZ_.P, NKEY: 252 };
+function szenarioExport() {   /* aktives Krankheitsbild bzw. Medikament (Anteil > 0,5) fuer den Dateinamen, sonst null */
+  var r = null;
+  SZ_DATEN.forEach(function (sc) { if (SZ.anteil[sc.id] > 0.5) r = sc; });
+  return r;
+}
+/* Verschiebung der Punkte (Export, USDZ): wie im Shader dep = uDisp * aW + Krater (Abschnitt 7c), entlang der Normale (mit dem Morph-Ziel der Normalen) */
+function krBake(mesh) {
+  if (!KR) return null;
+  var g = mesh.geometry, aw = g.attributes.aW;
+  if (!aw) return null;
+  var mt = mesh.material, disp = (mt === MAT.schleimhaut || mt === MAT.schleimhautD) ? KR.dS.value : (mt === MAT.eingangI || mt === MAT.eingangID) ? KR.dE.value : null;
+  var u = KR.ulk.value, R = u.w;
+  if (disp === null || (!disp && !(R > 0))) return null;
+  var P = g.attributes.position, N = g.attributes.normal, MN = g.morphAttributes.normal && g.morphAttributes.normal[0], inf = (mesh.morphTargetInfluences && mesh.morphTargetInfluences[0]) || 0, n = new THREE.Vector3();
+  return function (i, v) {
+    var w = aw.getX(i), dep = disp * w;
+    if (R > 0) { var t = Math.sqrt(Math.pow(P.getX(i) - u.x, 2) + Math.pow(P.getY(i) - u.y, 2) + Math.pow(P.getZ(i) - u.z, 2)) / R; if (t < 1) dep += 0.4 * R * (1 - t * t * (3 - 2 * t)) * w; }
+    if (!dep) return;
+    n.set(N.getX(i), N.getY(i), N.getZ(i));
+    if (MN && inf) n.set(n.x + MN.getX(i) * inf, n.y + MN.getY(i) * inf, n.z + MN.getZ(i) * inf);
+    v.addScaledVector(n.normalize(), dep);
+  };
+}
+function krFract(x) { return x - Math.floor(x); }
+function krHash(x, y, z) { return krFract(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453); }
+/* Vertexfarben der Kopie: Farbe der Schleimhaut (Gastritis), Krater (heller Grund, dunkelroter Rand, blasser bei Heilung) und Erosionen, gleiche Formeln wie der Fragment-Shader */
+function krKlon(klon, mesh) {
+  if (!KR || (mesh.material !== MAT.schleimhaut && mesh.material !== MAT.schleimhautD)) return;
+  var u = KR.ulk.value, R = u.w, E = KR.ers.value, F = KR.ulkF.value, e = KR.ero.value;
+  if (!(R > 0) && !(E > 0)) return;
+  var P = mesh.geometry.attributes.position, n = P.count, C = new Float32Array(n * 3), b = mesh.material.color, i, c = new THREE.Color(), fl = new THREE.Color(0.80, 0.68, 0.40);
+  var rc = new THREE.Color(0.62, 0.15, 0.13).lerp(new THREE.Color(0.20, 0.002, 0.008), F), er = new THREE.Color(0.20, 0.004, 0.01);
+  for (i = 0; i < n; i++) {
+    var x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    c.copy(b);
+    if (R > 0) {
+      var t = Math.sqrt(Math.pow(x - u.x, 2) + Math.pow(y - u.y, 2) + Math.pow(z - u.z, 2)) / R;
+      var boden = 1 - sstep(0.46, 0.6, t), rand = sstep(0.40, 0.56, t) * (1 - sstep(1.15, 1.75, t));
+      c.lerp(fl, boden); c.lerp(rc, rand * (0.5 + 0.5 * F));
+    }
+    if (E > 0) {
+      var qx = x / 0.7, qy = y / 0.7, qz = z / 0.7, cx = Math.floor(qx), cy = Math.floor(qy), cz = Math.floor(qz), h = krHash(cx, cy, cz);
+      var mx = cx + 0.5 + 0.3 * (krHash(cx + 1.7, cy + 1.7, cz + 1.7) - 0.5), my = cy + 0.5 + 0.3 * (krHash(cx + 3.1, cy + 3.1, cz + 3.1) - 0.5), mz = cz + 0.5 + 0.3 * (krHash(cx + 5.3, cy + 5.3, cz + 5.3) - 0.5);
+      var punkt = (1 - sstep(0.32, 0.44, Math.sqrt((qx - mx) * (qx - mx) + (qy - my) * (qy - my) + (qz - mz) * (qz - mz)))) * (h >= 0.62 ? 1 : 0);
+      var ort = 1 - sstep(0.55 * e.w, e.w, Math.sqrt(Math.pow(x - e.x, 2) + Math.pow(y - e.y, 2) + Math.pow(z - e.z, 2)));
+      c.lerp(er, punkt * ort * E * 0.92);
+    }
+    C[i * 3] = c.r; C[i * 3 + 1] = c.g; C[i * 3 + 2] = c.b;
+  }
+  klon.geometry.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  klon.material.color.setRGB(1, 1, 1); klon.material.vertexColors = true;
+}
+var exCfg = {
+  titel: 'Magen', praefix: 'magen', wurzelName: 'Magen',
+  /* Schild unter dem Modell: Bounding-Box der exportierten Teile (Wurzel um -M verschoben, ohne Teilchen, Uebersicht) x -12,1 bis 10,9, y -13,0 bis 14,5, z -6,0 bis 7,3 -> x Mitte, y 1,5 cm unter der Unterkante, z vorn */
+  schild: [-0.6, -14.5, 7.4],
+  bereit: function () { return App.ready; },
+  gruppen: function () { root.updateMatrixWorld(true); return [root]; },
+  get zusatzStatisch() { var sc = szenarioExport(); return sc ? sc.datei : ''; },   /* aktives Krankheitsbild bzw. Medikament im Dateinamen */
+  toast: function (msg) { Kern.toast(msg); },
+  transparenz: true,
+  ohneMorph: true,                                    /* Fuellung in die Lage backen (auch beim animierten GLB) */
+  bake: krBake, klon: krKlon,
+  /* Stroemung backen: je Teilchen ein Knoten (Groesse 0 = unsichtbar), Lage und Groesse als Spuren ueber eine Periode (EX.P) */
+  animation: function (rootE) {
+    var NK = EX.NKEY, times = new Float32Array(NK + 1), tracks = [], nPart = 0, i, j, ki, K, v = new THREE.Vector3(), alt = { clock: clock, clockM: clockM }, te0 = SZ_.P, list = [];
+    for (j = 0; j <= NK; j++) times[j] = j * EX.P / NK;
+    root.updateMatrixWorld(true);
+    KINDS.forEach(function (Kd, k) {
+      if (!kindOn[k]) return;
+      for (i = 0; i < Kd.n; i++) {
+        var L = k === KI.saft ? Kd.sb[i] : 0;
+        list.push({ ki: k, i: i, rate: k === KI.saft ? Math.max(1, Math.round(EX.P / L)) * L / EX.P : 1, P: new Float32Array((NK + 1) * 3), S: new Float32Array((NK + 1) * 3), smax: 0 });
+      }
+    });
+    for (j = 0; j <= NK; j++) {
+      clockM = tM + te0 + times[j]; wellenSetzen();
+      var te = clockM - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P;
+      list.forEach(function (p) {
+        if (p.ki === KI.saft) { clock = alt.clock + times[j] * p.rate; saftZustand(p.i, LB); } else lauf(p.ki, p.i, ph, LB);
+        var r = (LB.st >= 1 && LB.st <= 4) ? LB.r : 0;
+        v.set(LB.x, LB.y, LB.z).applyMatrix4(root.matrixWorld);
+        p.P[j * 3] = v.x; p.P[j * 3 + 1] = v.y; p.P[j * 3 + 2] = v.z;
+        p.S[j * 3] = p.S[j * 3 + 1] = p.S[j * 3 + 2] = r;
+        if (r > p.smax) p.smax = r;
+      });
+    }
+    clock = alt.clock; clockM = alt.clockM; wellenSetzen(); if (ST) ST.letzt = '';
+    list.forEach(function (p) {
+      if (p.smax <= 0) return;   /* nie sichtbar (nuechtern, ausgeblendeter Stoff): gar nicht erst aufnehmen */
+      K = KINDS[p.ki];
+      var node = new THREE.Mesh(K.im.geometry, K.im.material); node.name = K.name.replace(/[^A-Za-z0-9_]/g, '_') + '_' + (p.i + 1);
+      node.position.set(p.P[0], p.P[1], p.P[2]); node.scale.set(p.S[0], p.S[1], p.S[2]);
+      rootE.add(node);
+      tracks.push(new THREE.VectorKeyframeTrack(node.name + '.position', times, p.P));
+      tracks.push(new THREE.VectorKeyframeTrack(node.name + '.scale', times, p.S));
+      nPart++;
+    });
+    var sz = szenarioExport();
+    return { clips: [new THREE.AnimationClip('Magen_Stroemung', EX.P, tracks)], zusatz: sz ? sz.datei : (mahlzeit ? 'nach-dem-essen' : 'nuechtern'), nPart: nPart };
+  },
+  texte: {
+    stlStart: 'STL wird erzeugt …',
+    glbStart: 'GLB wird erzeugt …',
+    animStart: 'Strömung wird aufgezeichnet …',
+    stlLiesmich: ['Datei (Maßstab Millimeter, Z-Achse nach oben, reale Größe):', '- magen_ansicht.stl: alles, was beim Export sichtbar war', 'STL kennt keine Farbe – dafür gibt es die GLB-Datei.'],
+    stlFertig: function (i) {
+      return 'STL gespeichert &middot; <span class="em">' + i.dateien + ' Datei, ' + Math.round(i.dreiecke).toLocaleString('de-DE') + ' Dreiecke, ' + Kern.Export.kb(i.groesse) + ', Einheit mm</span><br>Reale Größe – STL kennt keine Farbe.';
+    },
+    glbLiesmich: function (i) {
+      return [i.anim ? i.name + ': die Strömung von Kohlenhydraten, Eiweiß, Fett, Wasser und Magensaft (' + i.a.nPart + ' Teilchen, ' + EX.P + ' s) als Animation, läuft in Schleife. Die Teilchen sind symbolisch, nicht maßstäblich.' : i.name + ': farbiges 3D-Modell des Magens in der Ansicht beim Export, ohne Bewegung.', 'Maßstab: Meter (reale Größe). Die Signatur steht in den Metadaten und auf dem Schild unter dem Magen.'];
+    },
+    glbFertig: function (i) {
+      return 'GLB gespeichert &middot; <span class="em">' + i.objekte + ' Objekte, ' + Kern.Export.kb(i.groesse) + ', Einheit Meter</span><br>Reale Größe, mit Farben, ' + (i.anim ? 'mit Strömung: ' + i.a.nPart + ' Teilchen mit ' + (EX.NKEY + 1) + ' Keyframes, ' + EX.P + ' s Schleife. Im Viewer die Wiedergabe starten.' : 'ohne Bewegung.');
+    }
+  }
+};
+$('bGlbA').onclick = function () { Kern.Export.run('glb-anim', exCfg); };
+$('bGlbS').onclick = function () { Kern.Export.run('glb', exCfg); };
+$('bStl').onclick = function () { Kern.Export.run('stl', exCfg); };
+
+/* =====================================================================
+   7f. AR - ohne weitere Apps: WebXR im Browser (Android, Chrome mit ARCore) oder AR Quick Look (iPhone/iPad, Safari) mit selbst erzeugter USDZ-Datei.
+   Der Magen wird in cm modelliert: 0,01 m je cm ist die reale Groesse, gestartet wird in dieser Groesse. Die Stroemung laeuft weiter (Knopf Pause),
+   Beschriftung und Teilchen gibt es in der USDZ bzw. in AR nicht. Die Gruppe arG und der AR-Aufbau entstehen erst beim ersten Klick: root ist um -M verschoben
+   und bleibt unveraendert, arG wird hingestellt. Die Shader (Wellen, Krankheitsbilder) laufen in WebXR; die USDZ ist eine Momentaufnahme (Fuellung gebacken, Verschiebung ueber cfg.bake).
+   ===================================================================== */
+var AR_SKALA = 0.01;
+var inAR = false, AR = null, arG = null, arCfg = null, xrOK = false;
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then(function (ok) { xrOK = ok; }).catch(function () { xrOK = false; });   /* nur die Abfrage: three.js-Objekte entstehen erst beim ersten Klick */
+function arFuss() {   /* Hoehe der Unterkante des sichtbaren Modells (ohne Teilchen) ueber dem Ursprung */
+  var b = new THREE.Box3();
+  root.updateMatrixWorld(true);
+  root.traverse(function (o) {
+    for (var q = o; q; q = q.parent) if (!q.visible) return;
+    if (o.isMesh && !o.userData.teilchen && !o.userData.noexport) b.expandByObject(o);
+  });
+  return b.isEmpty() ? 0 : -b.min.y;
+}
+function arTexte() { $('arPause').textContent = playing ? 'Pause' : 'Weiter'; }
+function arErzeugen() {
+  arG = new THREE.Group(); arG.name = 'Magen_AR';
+  arCfg = {
+    renderer: renderer, scene: scene, camera: camera, root: arG,
+    stufen: [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03], skala: AR_SKALA,
+    fuss: 0,                                          /* Unterkante steht auf der Flaeche; wird beim Start gesetzt */
+    hintergrund: 0x0b171c,
+    ids: { ui: 'arUI', hint: 'arHint', ende: 'arEnd', kleiner: 'arSmall', groesser: 'arBig', neu: 'arPlace' },
+    knoepfe: ['arEnd', 'arSmall', 'arBig', 'arPlace', 'arPause'],
+    quickLook: function () { arQuickLook(); },
+    beimStart: function () {
+      inAR = true;
+      if (schemaOn) setSchema(false);                 /* Schema, Lupe und Karten schliessen vor AR */
+      lupeClose(); if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); setSelected(null); szWeichen();
+      scene.add(arG); arG.add(root);                  /* das Modell steht in der Gruppe, die in AR hingestellt wird */
+      arCfg.fuss = arFuss();
+      camera.near = 0.01; camera.far = 100;           /* Meter statt cm */
+      $('labels').style.display = 'none'; $('leaders').style.display = 'none';
+      arTexte();
+    },
+    beimEnde: function () {
+      inAR = false;
+      scene.add(root); scene.remove(arG);
+      camera.near = kamAlt.near; camera.far = kamAlt.far;
+      $('labels').style.display = showLabels ? '' : 'none'; $('leaders').style.display = showLabels ? '' : 'none';
+      var w = window.innerWidth, h = window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      groesse(w, h);
+      lv++;
+    }
+  };
+  AR = Kern.AR.xr(arCfg);
+  return AR;
+}
+$('arPause').onclick = function () { $('bPlay').click(); arTexte(); };
+$('bAR').onclick = function () {
+  if (abgebaut) return;
+  if (!AR) arErzeugen();
+  AR.xr = xrOK;
+  AR.start();
+};
+/* ---- USDZ fuer AR Quick Look: Momentaufnahme des Magens in der aktuellen Ansicht (ohne Teilchen) ---- */
+function usdzBuild() {
+  root.updateMatrixWorld(true);
+  return Kern.AR.usdz({
+    name: 'Magen', creator: 'Magen 3D - ' + Kern.WM, datei: 'magen.usda', skala: AR_SKALA,
+    gruppen: [root], bake: krBake
+  });
+}
+function arQuickLook() {
+  Kern.AR.quickLook({ bauen: usdzBuild, link: $('arQL'), fertig: 'Der Magen öffnet sich in AR Quick Look. Mit zwei Fingern lässt er sich vergrößern und drehen.' });
+}
 
 /* =====================================================================
    8. Renderschleife, Aufbau, Abbau
@@ -2155,14 +2912,17 @@ var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
   /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art, Pfoertner, Fuellung, Wellen) und Lage der Teilchen (Koerper-Koordinaten) */
   stroemung: function () {
     var n = {}; KINDS.forEach(function (K) { var c = 0; for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) c++; n[K.id] = K.im && K.im.visible ? c : 0; });
-    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, fuellung: fe, te: clock - tM, pfoertnerOffen: WOFF, wellen: WL.map(function (w) { return { s: w.s, a: w.a }; }), sichtbar: n };
+    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, fuellung: fe, te: clockM - tM, pfoertnerOffen: WOFF, wellen: WL.map(function (w) { return { s: w.s, a: w.a }; }), sichtbar: n };
   },
   teilchen: function () {
     var out = [];
     KINDS.forEach(function (K, ki) { for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) { K.im.getMatrixAt(i, STM); out.push({ art: K.id, st: K.st[i], s: K.sg[i], r: K.vis[i], p: [STM.elements[12], STM.elements[13], STM.elements[14]] }); } });
     return out;
   },
-  stand: function (f, te) { /* fuer die Pruefung: Fuellung (roh 0..1) und Zeit sofort setzen und festhalten */ fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) { tM = clock - te; } $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
+  lupe: function (an, z) { /* fuer die Pruefung: Lupe oeffnen/schliessen, optional Zustand 'nuechtern' | 'essen' (schaltet den Mahlzeit-Schalter mit) */ if (an) lupeOeffnen(); else lupeClose(); if (an && z !== undefined && z !== null) { setMahlzeit(z === 'essen' || z === 1 || z === true, true); lupeChips(); lupeText(); } return { offen: LUPE.open, belegzelle: !!LUPE.an, mahlzeit: mahlzeit }; },
+  lupeBelegzelle: function (an) { lupeBelegzelle(an === undefined ? true : !!an); return { offen: LUPE.open, belegzelle: !!LUPE.an }; },   /* wie das Antippen einer Belegzelle bzw. der Knopf zurueck */
+  szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
+    stand: function (f, te) { /* fuer die Pruefung: Fuellung (roh 0..1) und Zeit sofort setzen und festhalten */ fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) { tM = clockM - te; } $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
   /* fuer die Pruefung: umgeklappte Dreiecke (Normale bei f = 1 gegenueber f = 0 um mehr als 90 Grad gedreht) und groesste Kantendehnung der Netze der Wand */
   netz: function () {
     var tot = 0, flip = 0, maxD = 0, je = {};
@@ -2186,13 +2946,15 @@ var App = window.MagenApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
     return { dreiecke: tot, umgeklappt: flip, maxDehnung: Math.round(maxD * 100) / 100, je: je };
   },
   form: function () { return form; }, aussenSdf: function () { return form.aussen(fe); } };
-function loop(now) {
+function loop(now, frame) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (openK !== openZiel) {   /* Deckel gleitet weich (ca. 600 ms) */
     openK = Math.max(0, Math.min(1, openK + Math.sign(openZiel - openK) * dt / 0.6));
     applyLook(); lv++;
   }
-  if (ST) { stroemungSchritt(dt); wellenSetzen(); fuellungSetzen(fe); stroemungBild(); if (schemaOn) SCH.update(); }
+  if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
+  if (ST) { stroemungSchritt(dt); wellenSetzen(); fuellungSetzen(fe); stroemungBild(); if (schemaOn) SCH.update(); lupeTick(); }
+  if (inAR) { AR.frame(frame); renderer.render(scene, camera); return; }   /* in AR bestimmt die Sitzung die Kamera */
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (schemaOn) return;                                   /* Schema offen: das Bild des Magens ist ausgeblendet und wird nicht gezeichnet */
@@ -2209,7 +2971,8 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
-  schemaWeicht(); SCH.abbauen();
+  AR && AR.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
@@ -2235,9 +2998,11 @@ return bauen().then(function () {
   applyLook();
   setSelected(selected);
   stroemungBauen();
+  Kern.Export.pruefeZiel('exp');
   root.visible = true;
   App.aufbauMs = Math.round(performance.now() - t0);
   App.ready = true;
+  szenarioWirkung();                                      /* ein schon gewaehltes Krankheitsbild (vor dem Ende des Aufbaus) wirkt jetzt */
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }
 Kern.organ('magen', organ);

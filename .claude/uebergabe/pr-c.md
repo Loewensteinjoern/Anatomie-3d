@@ -1,27 +1,21 @@
-# Übergabe: Magen, Darm und Zotte – PR C (Stand 12. November 2026)
+# Übergabe: Magen, Darm und Zotte – PR C (Stand 13. November 2026)
 
 ## Stand
 
-- Gemergt: PR A Magen (#45), PR B Darm mit Dünndarmzotte (#46), Optik des Darms (#49: Farben, Haustren/Tänien, Dünndarm als Knäuel r 1,1, ca. 298 cm; Werkzeug `tools/duenndarm-knaeuel/`), Prüfläufe nach Betroffenheit (#50: `tools/betroffen.js`, Schnelltest `<modell>:kurz`, siehe `CLAUDE.md`).
-- Freigegebene Texte: `docs/freigaben/magen-a-texte.md`, `docs/freigaben/darm-b-texte.md` – unverändert lassen.
-- Magen, Darm und Zotte haben noch keine Krankheitsbilder, Medikamente, Lupe, Export und AR (`vergleich.js`: dort „keine Exporte, kein AR“).
+- PR A (#45), B (#46), Optik des Darms (#49) gemergt. Texte: `docs/freigaben/magen-a-texte.md`, `darm-b-texte.md`.
+- Später: bei der Leber prüfen, ob alle Medikamente die richtige Wirkung zeigen (`PLAN.md`).
 
-## Aufgabe PR C
+## Mit Jörn entschieden (Runden 1–3)
 
-Krankheitsbilder, Medikamente, Lupen, Export (GLB, STL) und AR (WebXR, AR Quick Look) für Magen, Darm und Zotte.
+- Reihenfolge: **C1 Magen** → **Aufnahme ins Blut** (Darm: Teilchen wandern sichtbar in Darmvenen/Pfortader, Fett in Lymphe; Gefäße von vorn vom Knäuel verdeckt – Ansicht klären) → **C2 Darm und Zotte**.
+- Daten: Magen in `magen.js` (Inhalte, `SZ_DATEN`; nur ein Modell, kein gemeinsamer Code); Darm+Zotte gemeinsam `daten.darm` mit `hinweis = { darm, zotte }`. 3D-Wirkung wie Leber (weich überblendet). Export, AR wie Leber/Läppchen.
+- Magen: Gastritis (röter, Falten dicker, Erosionen am Vorhof); Geschwür am Magenwinkel (Krater, heller Grund, roter Rand; Blutung nur im Text); Reflux (Eingangswulst schlaff, Magensaft steigt, Speiseröhrenende rot). Pantoprazol bei Geschwür (weniger Magensaft, Krater kleiner); NSAR als Auslöser (Erosionen, leicht rot, Lupe: dünner Schleim); MCP (stellt auf „nach dem Essen“, Wellen schneller, Pförtner öfter offen, Eingang fester).
+- Magen-Lupe: Drüsenschnitt (Neben-, Beleg-, Hauptzellen, Schleim), Chips nüchtern/nach dem Essen, Krankheiten sichtbar (Helicobacter, Defekt, dünner Schleim); **Antippen der Belegzelle** zoomt ins Schema wie Nephron-Lupe (Protonenpumpe; Pantoprazol sperrt sie), mit Hinweis.
+- Darm/Zotte: Durchfall (Darm: Wasser in den Dünndarm, schneller, flüssig; Zotte: Wasser aus den Krypten hinaus); Verstopfung (Stuhl dunkel, dicht, langsam, **Dickdarm gebläht**, Haustren/Tänien gehen mit); Zöliakie (Zotte flach, Krypten tiefer; Leerdarm blasser, glatter); Divertikulitis (mehrere Ausstülpungen am Sigma, eine entzündet). Trinklösung (Zotte holt Wasser zurück, Durchfall bleibt), Loperamid (Wellen langsamer), Macrogol (Stuhl weich, Dickdarm schlanker), je bei ihrem Krankheitsbild.
+- Lupe Analkanal: Chips Ruhe | Stuhldrang | Stuhlgang; am Ende der Verdauung läuft sie von selbst bis zur Entleerung (Jörn; wohl auch Stuhl im 3D am After hinaus – im PR „Aufnahme“ prüfen).
+- Lupe Zotte: Schema der Saumzelle, folgt den Stoff-Schaltern; Zöliakie, Durchfall, Trinklösung sichtbar.
 
-1. Zuerst mit Jörn abstimmen, in Runden mit Fragen und Optionen, die Empfehlung zuerst: grundsätzlich (welche Krankheitsbilder und Medikamente je Modell, für Pflege und Gesundheitsberufe; was die Lupe zeigt; ob ein PR oder mehrere), dann Einzelheiten. Alle Texte entwirft Claude und legt sie wörtlich zur Freigabe vor; danach `docs/freigaben/magen-darm-c-texte.md`.
-2. Umsetzung durch den Executor in kleinen Schritten, nach jedem Schritt Bilder an Jörn.
-3. `tools/vergleich.js` um die neuen Kontexte erweitern (Szenarien, Lupe, Exporte, webxr, quicklook wie bei der Leber), `docs/vergleich-kontexte.md` nachtragen.
+## Nächster Schritt
 
-## Vorbilder
-
-- Leber (`organe/leber/leber.js`): 7c Krankheitsbilder und Medikamente in 3D (Wirkgrößen `SZW`), 7d Lupe, 7e Export, 7f AR. Läppchen (`laeppchen.js`): 6b, 8b Lupe, 8c Export, 8d AR.
-- Daten: `Kern.Szenarien.daten.leber` in `core/szenarien.js` (Reiter, Erklärkarte `#kcard`).
-- Abschnitte per `grep -n -A40 "^## <pfad>" KONTEXT.md` finden, nicht ganze Dateien lesen.
-
-## Achtung
-
-- Darm: Die Sichtprüfung der Beschriftung nutzt vier Nachbarstrahlen (`frei`/`strahlFrei` in `darm.js`); Sigma, Gekröse und Darmgefäße sind von vorn verdeckt.
-- Im Körper bekommt die gemeinsame Kugel-Geometrie `sphG` ein ungenutztes Farbattribut (Tänien-Vertexfarben); beim Export prüfen, dass nichts Unerwartetes mitkommt.
-- Offen und nicht Teil von PR C: Wirkung der Medikamente in Leber und Läppchen prüfen (`PLAN.md`, Offene Punkte).
+- C1 Magen fertig (PR offen; voller Vergleichslauf, nur Magen weicht ab). Danach PR „Aufnahme ins Blut“: zuerst mit Jörn die Ansicht klären (Gefäße vom Knäuel verdeckt), dann Texte; danach C2 mit Texten zuerst.
+- Vorbilder: Magen 7c–7f (`magen.js`), `core/szenarien.js` (`daten.leber`), Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11). Export/AR-Haken `cfg.bake`, `cfg.klon`, `cfg.ohneMorph` in `core/export.js`.
