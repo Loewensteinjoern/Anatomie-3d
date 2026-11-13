@@ -1,4 +1,4 @@
-# Übergabe: Magen, Darm und Zotte – PR C (Stand 12. November 2026)
+# Übergabe: Magen, Darm und Zotte – PR C (Stand 13. November 2026)
 
 ## Stand
 
@@ -17,5 +17,5 @@
 
 ## Nächster Schritt
 
-- Texte C1 freigegeben (`docs/freigaben/magen-c1-texte.md`); Umsetzung C1 in drei Executor-Schritten: 1 Szenarien + 3D (läuft), 2 Lupe, 3 Export/AR. Texte C2 vor C2.
-- Vorbilder: `core/szenarien.js` (`daten.leber`), Leber 7c–7f, Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11).
+- C1 Magen fertig (PR offen; voller Vergleichslauf, nur Magen weicht ab). Danach PR „Aufnahme ins Blut“: zuerst mit Jörn die Ansicht klären (Gefäße vom Knäuel verdeckt), dann Texte; danach C2 mit Texten zuerst.
+- Vorbilder: Magen 7c–7f (`magen.js`), `core/szenarien.js` (`daten.leber`), Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11). Export/AR-Haken `cfg.bake`, `cfg.klon`, `cfg.ohneMorph` in `core/export.js`.
