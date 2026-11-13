@@ -270,11 +270,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (2155 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
-- 168: 1. Im Browser (vor allen Skripten der Seite)
-- 362: 2. Abläufe je Modell
-- 1793: 3. Aufnehmen
-- 1977: 4. Vergleichen
-- 2139: 5. Aufruf
+## tools/vergleich.js (2179 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+- 170: 1. Im Browser (vor allen Skripten der Seite)
+- 364: 2. Abläufe je Modell
+- 1817: 3. Aufnehmen
+- 2001: 4. Vergleichen
+- 2163: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)

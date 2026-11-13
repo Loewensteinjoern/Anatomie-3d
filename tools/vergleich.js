@@ -118,8 +118,10 @@
    1500 ms müssen gleich aussehen), „nach-dem-essen“ (#bEssen, nach 12 s), „durchsicht-stroemung“, Ausschnitt Zwölffingerdarm und Dünndarm nach dem Essen („zwoelffingerdarm-essen“, „duenndarm-essen“),
    „nur-fett“ (Stoffe-Schalter); die Werte von DarmApp.stroemung() stehen in erg.stroemung und werden von `vergleichen` verglichen; Schema (#bSchema, erst nüchtern, dann nach dem Essen); Hilfekarten
    („hilfekarte“, „hilfekarte-pflege“, „hilfekarte-modell“), Üben „ueben“ (Strukturen finden, hängt vom festen Zufallsstrom ab) und Wege verfolgen („wege-start“, nach zwei richtigen Stationen über
-   DarmApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“, „wege-eins-fertig“, „wege-zwei-mitte“ (Weg 2 nach der Papille), „wege-alle-fertig“ („Alle drei Wege geschafft.“; Stand in erg.wege),
-   „wege-beendet“)), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
+   DarmApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“, „wege-eins-fertig“, „wege-zwei-mitte“ (Weg 2 nach der Papille), „wege-alle-fertig“ (nach drei von vier Wegen, daher keine Abschlusszeile; Stand in erg.wege),
+   „wege-beendet“; „hilfekarte-modell“ ist die sechste Karte; am Ende neu: „hilfekarte-aufnahme“, „wege-fett-start“, „wege-fett-fertig“ (Weg 4 „Weg des Fetts“, „Alle vier Wege geschafft.“; Stand in erg.wegeFett),
+   bei Pause und fester Uhr (DarmApp.uhr(t) setzt die Uhr; erg.stroemung.imGefaess = Teilchen in den Gefäßen) „gefaesse-durchsicht“ (30 s nach dem Essen), „gefaesse-fett“ (nur Fett, 45 s), „stuhl-after“ (Ausschnitt Mastdarm, 140 s),
+   „schema-gefaesse“ (45 s), „info-lymphe“), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start, am Ende „schema-gefaesse“), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
    uebergaenge-darm (Körper, Dünndarm wählen, Infokarte „Darm öffnen“, Kamerafahrt „fahrt-darm“, Darm, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann die Adresse #darm direkt, Zurück-Knopf
    „← Körper“; Endzustand in erg.uebergaengeDarm) und uebergaenge-darm-handy („fahrt-darm“, „darm“).
    Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info; dann die Strömung: stroemung, zweimal pause (müssen gleich sein), nach-dem-essen (12 s), durchsicht-stroemung, nur-fett – Werte von ZotteApp.stroemung() in erg.stroemung –, Schema nüchtern und nach dem Essen, Hilfekarten, Üben, Wege verfolgen mit wege-start, wege-zwei, wege-leuchtet, wege-alle-fertig und erg.wege), handy (dazu schema, hilfekarte, wege-start), datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
@@ -1272,7 +1274,7 @@ const MODELLE = {
         /* Hilfekarten und Üben (Strukturen finden, Wege verfolgen; Antworten über DarmApp.tippe) */
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#paneHelp .dis >> nth=3'); await t.weiter(600); await t.bild('hilfekarte-pflege');
-        await t.klick('#paneHelp .dis >> nth=4'); await t.weiter(600); await t.bild('hilfekarte-modell');
+        await t.klick('#paneHelp .dis >> nth=5'); await t.weiter(600); await t.bild('hilfekarte-modell');   /* die fünfte Karte „Aufnahme ins Blut“ steht an Index 4, „So liest du das Modell“ an Index 5 */
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(900); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(900);
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
         await t.js(() => { window.DarmApp.tippe('zwoelffinger'); window.DarmApp.tippe('leerdarm'); }); await t.weiter(300); await t.bild('wege-zwei');
@@ -1283,6 +1285,24 @@ const MODELLE = {
         await t.klick('#qNext'); await t.js(() => { for (const id of ['arterien', 'leerdarm', 'venen', 'pfortader']) window.DarmApp.tippe(id); }); await t.weiter(600); await t.bild('wege-alle-fertig');
         t.erg.wege = await t.js(() => window.DarmApp.wege());
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-beendet');
+        /* neu (Aufnahme ins Blut): Hilfekarte „aufnahme“, vierter Weg „Weg des Fetts“, Gefäße mit fester Uhr (Pause), Stuhl, Schema, Info Lymphe; nur am Ende, damit die Bilder davor ihre Namen behalten */
+        const uhrNach = async (s) => { await t.js((s) => { const a = window.DarmApp; a.uhr(a.uhr() - a.stroemung().te + s); }, s); await t.weiter(800); };   /* Uhr: s Sekunden seit dem Wechsel zu „nach dem Essen“ */
+        await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=4'); await t.weiter(600); await t.bild('hilfekarte-aufnahme');
+        await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(900);
+        for (let i = 0; i < 3; i++) { await t.klick('#qNext'); await t.weiter(300); }
+        await t.weiter(600); await t.bild('wege-fett-start');
+        await t.js(() => { for (const id of ['leerdarm', 'lymphe', 'zisterne', 'milchbrustgang']) window.DarmApp.tippe(id); }); await t.weiter(600); await t.bild('wege-fett-fertig');
+        t.erg.wegeFett = await t.js(() => window.DarmApp.wege());
+        await t.klick('#bWege'); await t.weiter(900);
+        await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(2500);   /* Pause: die Uhr steht, die Bilder hängen nicht von der Ladezeit ab */
+        await uhrNach(30); await t.klick('#bSee'); await t.weiter(600); await t.bild('gefaesse-durchsicht'); await werte('gefaesse-durchsicht');
+        await uhrNach(0); for (const id of ['#bKh', '#bEiw', '#bWasser']) await t.klick(id);
+        await uhrNach(45); await t.bild('gefaesse-fett'); await werte('gefaesse-fett');
+        for (const id of ['#bKh', '#bEiw', '#bWasser']) await t.klick(id);
+        await t.klick('#cam4'); await uhrNach(140); await t.weiter(900); await t.bild('stuhl-after'); await werte('stuhl-after');
+        await t.klick('#cam0'); await t.klick('#bSee'); await uhrNach(45);
+        await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema-gefaesse'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await t.klick('#rail .tabs .tab:text-is("Strukturen")'); await t.js(() => window.DarmApp.waehle('lymphe')); await t.weiter(600); await t.bild('info-lymphe'); await t.klick('#bCls');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1294,6 +1314,10 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bQuiz'); await t.weiter(900); await t.bild('ueben'); await t.klick('#qStop'); await t.weiter(900);
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
         await t.klick('#bWege'); await t.weiter(300);
+        /* neu: Schema mit den Bahnen DARMVENEN/LYMPHE (nach dem Essen, Pause, Uhr 45 s nach dem Wechsel) */
+        await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(2500);
+        await t.js(() => { const a = window.DarmApp; a.uhr(a.uhr() - a.stroemung().te + 45); }); await t.weiter(800);
+        await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema-gefaesse'); await t.klick('#bSchemaX'); await t.weiter(300);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
