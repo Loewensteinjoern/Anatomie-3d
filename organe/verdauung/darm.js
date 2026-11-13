@@ -1409,9 +1409,10 @@ function layoutLabels(w, h) {
    Wegstelle x (cm), im Winkel phi und mit dem Abstand rho (0..1) des freien Radius - es bleibt so im Innenraum, auch an den Ringfalten.
    Nach dem Essen (Zeit te seit dem Wechsel, Zyklus P = 170 s): der Speisebrei kommt in Portionen am Anfang des Zwoelffingerdarms an (Wasser zuerst, Fett zuletzt), Galle und
    Pankreassaft fliessen an der Papille zu. Im Duenndarm pendeln die Teilchen hin und her (Mischbewegung) und rueckeln weiter; Kohlenhydrate, Eiweiss und Fett werden
-   gestaffelt aufgenommen (sie werden kleiner und wandern zur Wand), das meiste im Leerdarm; Wasser vor allem im Duenndarm, ein Rest im Dickdarm; Galle am Ende des Krummdarms
+   gestaffelt aufgenommen (an ihrer Stelle werden sie klein, treten in die naechste Darmvene bzw. - Fett - in das naechste Lymphgefaess ueber und laufen darin als kleine Perlen stromab,
+   am Ende des Linienzugs verblassen sie), das meiste im Leerdarm; Wasser vor allem im Duenndarm, ein Rest im Dickdarm (dort in die Dickdarmvenen); Galle am Ende des Krummdarms
    (die Gallensaeuren), Pankreassaft im Leerdarm. Im Dickdarm entsteht der Stuhl: Teilchen werden dunkler, groesser, sind langsamer und sammeln sich im Mastdarm. Am Ende des
-   Zyklus loest sich der gesammelte Stuhl auf. Nuechtern: kaum Inhalt, ein paar Reste (Wasser) werden von einer schwachen Welle weitergeschoben, wenige Tropfen Galle und
+   Zyklus laeuft der gesammelte Stuhl nacheinander durch den Analkanal am After hinaus und verblasst kurz dahinter. Nuechtern: kaum Inhalt, ein paar Reste (Wasser) werden von einer schwachen Welle weitergeschoben, wenige Tropfen Galle und
    Pankreassaft, im Dickdarm etwas Stuhl. Pause haelt alles an; der Wechsel nuechtern <-> nach dem Essen blendet in Echtzeit ein bzw. aus.
    ===================================================================== */
 var playing = true, speed = 1, clock = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* tM: Uhrzeit des Wechsels zu "nach dem Essen"; fzR: Uebergang roh 0..1, fe: weich */
@@ -1432,7 +1433,7 @@ var KINDS = [
 var KI = { kh: 0, eiweiss: 1, fett: 2, wasser: 3, galle: 4, pank: 5, stuhl: 6 };
 var kindOn = [true, true, true, true, true, true, true];
 var STUHL_C0 = srgb(0xC9A15B), STUHL_C1 = srgb(0x6E4222);   /* hellbraun am Anfang des Dickdarms, dunkelbraun im Mastdarm */
-var ST = null, WG = null, TT = null, WGX = null, STM = new THREE.Matrix4(), SQ = { x: 0, y: 0, z: 0, rmax: 1 }, LB = { st: 0, x: 0, r: 0, rho: 0, phi: 0, tip: 0, c: 0, tl: 0, g: 0, gf: 0, gx: 0, gy: 0, gz: 0, rs: -1, xs: 0 }, GT = { x: 0, y: 0, z: 0, rmax: 1 }, GP = { x: 0, y: 0, z: 0 }, GFL = null;
+var ST = null, WG = null, TT = null, WGX = null, STM = new THREE.Matrix4(), SQ = { x: 0, y: 0, z: 0, rmax: 1 }, LB = { st: 0, x: 0, r: 0, rho: 0, phi: 0, tip: 0, c: 0, tl: 0, g: 0, gf: 0, gx: 0, gy: 0, gz: 0, rs: -1, xs: 0, gt: 0, gu: 0, gp: 0 }, GT = { x: 0, y: 0, z: 0, rmax: 1 }, GP = { x: 0, y: 0, z: 0 }, GFL = null;
 
 /* ---- Weg: Messpunkte, Zeittabelle ---- */
 function wegBauen() {
@@ -1573,7 +1574,7 @@ function teilchenDaten() {
       K.es.push(e); K.xaa.push(xa); K.xr.push(xr); K.xt.push(xt);
     }
     K.vis = new Float32Array(n); K.xg = new Float32Array(n); K.tip = new Float32Array(n);
-    K.gv = new Float32Array(n); K.sch = new Float32Array(n); K.sx = new Float32Array(n);   /* gv: Radius im Gefaess (sichtbar), sch/sx: Radius und Wegstelle fuer das Schema (Darm) */
+    K.gv = new Float32Array(n); K.sch = new Float32Array(n); K.sx = new Float32Array(n); K.gt = new Uint8Array(n); K.gu = new Float32Array(n); K.gp = new Float32Array(n);   /* gt, gu, gp: Gefaessart, Uebertritt und Fortschritt fuer das Schema; gv: Radius im Gefaess (sichtbar), sch/sx: Radius und Wegstelle fuer das Schema (Darm) */
     /* Gefaess je Teilchen: Kohlenhydrate, Eiweiss, Wasser (Duenndarm) -> naechste Darmvene, Wasser im Dickdarm -> naechste Dickdarmvene, Fett -> naechstes Lymphgefaess */
     K.gf = []; K.gs = []; K.gE = []; K.gS = []; K.gr = []; K.tA = [];
     for (i = 0; i < n; i++) {
@@ -1594,7 +1595,7 @@ function teilchenDaten() {
 }
 function lauf(ki, i, ph, o) {
   var K = KINDS[ki], tl, tt, xb, x, w = 1, a, r, rho = K.rho[i], X = WGX;
-  o.st = 0; o.r = 0; o.tip = 0; o.c = 0; o.phi = K.phi0[i]; o.rho = rho; o.g = 0; o.gf = 0; o.rs = -1; o.xs = 0;   /* g: 1 = Lage direkt in gx, gy, gz (Gefaess, Uebertritt, Analkanal); gf: 0 Segment bei x, 1 Darmvenen, 2 Lymphgefaesse, 3 After; rs, xs: Radius und Wegstelle der Darmansicht fuer das Schema (rs < 0: wie r, x) */
+  o.st = 0; o.r = 0; o.tip = 0; o.c = 0; o.phi = K.phi0[i]; o.rho = rho; o.g = 0; o.gf = 0; o.rs = -1; o.xs = 0; o.gt = 0; o.gu = 0; o.gp = 0;   /* gt: 1 Darmvenen, 2 Lymphgefaesse, 3 After (auch im Uebertritt), gu: Uebertritt 0..1, gp: Fortschritt im Gefaess bzw. hinter dem After 0..1 (nur fuer das Schema); g: 1 = Lage direkt in gx, gy, gz (Gefaess, Uebertritt, Analkanal); gf: 0 Segment bei x, 1 Darmvenen, 2 Lymphgefaesse, 3 After; rs, xs: Radius und Wegstelle der Darmansicht fuer das Schema (rs < 0: wie r, x) */
   if (ki === KI.stuhl) {
     if (i < K.nR) { x = K.xr[i] + 0.25 * Math.sin(0.3 * clock + K.pz[i] * 6.2832); o.x = x; o.r = K.rad * 1.4 * K.rs[i]; o.c = 1; o.st = 1; return; }
     tl = ph - K.es[i];
@@ -1616,6 +1617,7 @@ function lauf(ki, i, ph, o) {
         o.gx = FR.x + FR.tx * ex; o.gy = FR.y + FR.ty * ex; o.gz = FR.z + FR.tz * ex;
         rm = Math.min(rm, Math.max(0.03, 0.8 * (kf[k0] + (kf[k1] - kf[k0]) * (kk - k0))));
         o.r = rm * (1 - sstep(sl, sl + 1.5, sk)); o.g = 1; o.gf = 3; o.st = o.r > 0.001 ? 1 : 0;
+        o.gt = 3; o.gu = 1; o.gp = Math.max(0, Math.min(1, (pp - X.e) / (WG.pEnd - X.e)));
       }
     }
     return;
@@ -1654,10 +1656,12 @@ function lauf(ki, i, ph, o) {
       wegPunkt(xA, pA, 1, K.gr[i], GT);
       o.gx = GT.x + (S[i * 3] - GT.x) * e; o.gy = GT.y + (S[i * 3 + 1] - GT.y) * e; o.gz = GT.z + (S[i * 3 + 2] - GT.z) * e;
       o.x = xA; o.r = rG; o.g = 1; o.gf = 0; o.st = o.r > 0.001 ? 1 : 0;
+      o.gt = gf.id.charAt(0) === 'l' ? 2 : 1; o.gu = e;
     } else {
       var sS = K.gs[i], sE = K.gE[i], sg = sS + SZ_.GV * (d - SZ_.UT);
-      o.g = 1; o.gf = gf.id.charAt(0) === 'l' ? 2 : 1; o.x = xa;
+      o.g = 1; o.gf = gf.id.charAt(0) === 'l' ? 2 : 1; o.x = xa; o.gt = o.gf; o.gu = 1;
       if (sg >= sE) { o.r = 0; o.st = 0; } else {
+        o.gp = (sg - sS) / (sE - sS);
         polyBei(gf.pm, sg, GP); o.gx = GP.x; o.gy = GP.y; o.gz = GP.z;
         o.r = GEF_RF * gefaessRadius(gf, sg) * (1 - sstep(0.75, 1, (sg - sS) / (sE - sS))) * w; o.st = o.r > 0.001 ? 1 : 0;
       }
@@ -1715,7 +1719,7 @@ function stroemungBild() {
         rmaxS = SQ.rmax;
       }
       if (rs > 0) { if (r > 0 && !gd && xs === LB.x) { if (rs > rmaxS) rs = rmaxS; } else { wegPunkt(xs, phi, 0, rs, GT); if (rs > GT.rmax) rs = GT.rmax; } }
-      K.vis[i] = gd ? 0 : r; K.gv[i] = gd ? r : 0; K.xg[i] = LB.x; K.tip[i] = LB.tip; K.sch[i] = rs; K.sx[i] = xs;
+      K.vis[i] = gd ? 0 : r; K.gv[i] = gd ? r : 0; K.xg[i] = LB.x; K.tip[i] = LB.tip; K.sch[i] = rs; K.sx[i] = xs; K.gt[i] = gd ? LB.gt : 0; K.gu[i] = LB.gu; K.gp[i] = LB.gp;
       if (col) { var c = LB.c; col[i * 3] = STUHL_C0.r + (STUHL_C1.r - STUHL_C0.r) * c; col[i * 3 + 1] = STUHL_C0.g + (STUHL_C1.g - STUHL_C0.g) * c; col[i * 3 + 2] = STUHL_C0.b + (STUHL_C1.b - STUHL_C0.b) * c; }
       STM.makeScale(r, r, r); STM.setPosition(SQ.x, SQ.y, SQ.z);
       im.setMatrixAt(i, STM);
@@ -1769,7 +1773,10 @@ $('bEssen').onclick = function () { setMahlzeit(true); };
 /* =====================================================================
    7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
    Der Darm als gestreckter Weg (Bildkoordinaten 460 breit): Zwoelffingerdarm, Leerdarm, Krummdarm in Schlingen, Dickdarm als Rahmen darum, Mastdarm; dazu die Kaestchen der
-   Zufluesse (Galle, Pankreassaft), Pfeile an den Orten der Aufnahme, nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit. Die Punkte sind dieselben
+   Zufluesse (Galle, Pankreassaft), Pfeile an den Orten der Aufnahme, zwei schmale Bahnen links neben dem Darm (DARMVENEN violett, LYMPHE hellgelb; sie gehen vom Leerdarm
+   aus, je mit einem beschrifteten Pfeil dahinter: zur Pfortader -> Leber, Milchbrustgang -> Blut), nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit.
+   Teilchen im Gefaess (lauf: gt 1 Darmvenen, 2 Lymphe, 3 After): sie laufen vom Ort der Aufnahme gerade zur naechsten Stelle der Bahn (gu) und die Bahn entlang (gp) und
+   verblassen am Ende; Wasser aus dem Dickdarm geht in die Bahn DARMVENEN, Stuhl hinter dem After laeuft am Ende des Mastdarms nach unten hinaus. Die Punkte sind dieselben
    Teilchen wie im 3D-Modell (gleiche Farben, gleiche Zeitfunktion lauf aus Abschnitt 6, Wegstelle x -> Lage im Schema; Tempo, Pause, Mahlzeit und Stoffe-Schalter gelten mit).
    Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall; gebaut wird es erst beim ersten Oeffnen.
    ===================================================================== */
@@ -1834,15 +1841,17 @@ var SCH = (function () {
   var SI = glatt([[282, 122], [280, 186], [144, 186], [140, 219], [310, 219], [314, 252], [144, 252], [140, 285], [310, 285], [314, 318], [144, 318], [138, 338]], 4);
   var DICK = glatt([[138, 338], [114, 350], [114, 170], [124, 138], [346, 138], [356, 170], [356, 350], [328, 382], [264, 374], [230, 400]], 5);
   var REKT = [[230, 400], [230, 430]];
+  var BAHN = [[[150, 194], [90, 194], [90, 128]], [[150, 212], [16, 212], [16, 70]]];   /* Bahnen aus dem Leerdarm heraus: Darmvenen, Lymphe (die Teilchen enden dort, der Pfeil dahinter zeigt den Weiterweg) */
+  var BAHNF = ['#8E6FD0', '#F3E39A'];
   var LN = null, FM = null, FMASTDARM = 0.89;
   function bauePfade() {
-    LN = { duo: laenge(DUO), si: laenge(SI), dick: laenge(DICK), rekt: laenge(REKT) };
+    LN = { duo: laenge(DUO), si: laenge(SI), dick: laenge(DICK), rekt: laenge(REKT), bahn: BAHN.map(laenge) };
     FMASTDARM = (WGX.sM - WGX.sB) / (WGX.e - WGX.c0);   /* ab hier der Mastdarm (Bruchteil des Weges im Dickdarm) */
   }
   /* Lage eines Teilchens im Schema: Wegstelle x (cm), Index i; schreibt o.x, o.y */
   var P = { x: 0, y: 0, tx: 0, ty: 0 };
-  function lage(K, ki, i, o) {
-    var X = WGX, x = K.sx[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, breite;
+  function lage(K, ki, i, o, xx) {   /* xx: andere Wegstelle als K.sx (Ort der Aufnahme) */
+    var X = WGX, x = xx === undefined ? K.sx[i] : xx, seitl = Math.sin(i * 2.399963 + ki) * 0.55, breite;
     if (x < X.u0) { bei(LN.duo, x / X.d1 * LN.duo.L, P); breite = 2.8; }
     else if (x <= X.u1) { bei(LN.si, (x - X.u0) / (X.u1 - X.u0) * LN.si.L, P); breite = 2.6; }
     else {
@@ -1851,6 +1860,25 @@ var SCH = (function () {
       breite = 3.6;
     }
     o.x = P.x - P.ty * seitl * breite; o.y = P.y + P.tx * seitl * breite;
+  }
+  /* Lage eines Teilchens im Gefaess (gt 1, 2) oder hinter dem After (gt 3): Uebertritt gerade vom Ort der Aufnahme zur naechsten Stelle der Bahn, dann die Bahn entlang; schreibt o.x, o.y */
+  function lageGef(K, ki, i, o) {
+    var gt = K.gt[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, ln, s, sn, d, q;
+    if (gt === 3) {
+      bei(LN.rekt, LN.rekt.L, P);
+      o.x = P.x - P.ty * seitl * 3.6; o.y = P.y + P.tx * seitl * 3.6 + 14 * K.gp[i];
+      return;
+    }
+    ln = LN.bahn[gt - 1];
+    lage(K, ki, i, o, K.xaa[i]);   /* Ort der Aufnahme */
+    for (q = 0, d = 1e30, sn = 0; q < ln.p.length - 1; q++) {   /* naechste Stelle der Bahn (Fusspunkt auf jedem Stueck) */
+      var a = ln.p[q], b = ln.p[q + 1], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((o.x - a[0]) * dx + (o.y - a[1]) * dy) / l2)),
+        e = Math.pow(o.x - (a[0] + dx * t), 2) + Math.pow(o.y - (a[1] + dy * t), 2);
+      if (e < d) { d = e; sn = ln.cum[q] + t * Math.sqrt(l2); }
+    }
+    var u = K.gu[i];
+    bei(ln, sn + (ln.L - sn) * K.gp[i], P);
+    o.x += (P.x - P.ty * seitl * 1.6 - o.x) * u; o.y += (P.y + P.tx * seitl * 1.6 - o.y) * u;
   }
   /* Stelle der Papille im Schema (Bruchteil des Zwoelffingerdarms) */
   function papilleBild(o) { return bei(LN.duo, WG.xP / WGX.d1 * LN.duo.L, o); }
@@ -1866,6 +1894,8 @@ var SCH = (function () {
       'aria-label': 'Schema: der Darm als gestreckter Weg, an welchen Stellen welche Stoffe aufgenommen werden' }, box);
     var i;
     /* ---- Darm: Dickdarm hinten, dann Duenndarm (Leerdarm, Krummdarm), Zwoelffingerdarm; Mastdarm ---- */
+    var gb = E('g', null, svg);   /* Bahnen hinter dem Darm (sie beginnen im Leerdarm) */
+    BAHN.forEach(function (b, q) { rohr(gb, b, 6.4, BAHNF[q]); });
     var gd = E('g', null, svg), sk = 0;
     while (sk < LN.si.cum.length - 1 && LN.si.cum[sk] < 0.4 * LN.si.L) sk++;
     rohr(gd, DICK.map(function (q) { return [q[0], q[1]]; }), 15, '#B87868');
@@ -1915,6 +1945,11 @@ var SCH = (function () {
     text(ga, 231, 353, 'Vitamin B12, Gallensäuren', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
     pfeil(106, 244, -1, 0, 14, '#A8DEF6'); pfeil(106, 256, -1, 0, 14, '#C5D0D6');
     text(ga, 86, 247, 'Wasser,', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 }); text(ga, 86, 259, 'Salze', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
+    /* Bahnen: Pfeil dahinter mit Ziel, Name an der Bahn */
+    pfeil(90, 124, 0, -1, 20, BAHNF[0]); pfeil(16, 66, 0, -1, 20, BAHNF[1]);
+    text(ga, 90, 98, 'zur Pfortader → Leber', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
+    text(ga, 8, 40, 'Milchbrustgang → Blut', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
+    station('DARMVENEN', 90, 86, 'middle'); station('LYMPHE', 8, 28);
     /* Stationen: die Linien enden mit einem Punkt auf dem Abschnitt (Leerdarm: obere Schlinge, Krummdarm: unterste Schlinge, Dickdarm: Rahmen) */
     station('ZWÖLFFINGERDARM', 452, 40, 'end', 314, 44, 336, 36);
     station('LEERDARM', 372, 226, null, 300, 219, 368, 222);
@@ -1961,6 +1996,17 @@ var SCH = (function () {
       var K = KINDS[ki], pool = DOT[ki], show = K.im.visible;
       for (i = 0; i < K.n; i++) {
         var q = pool[i], v = show && K.sch[i] > 0.001;
+        if (show && K.gt[i] && K.gv[i] > 0.001) {   /* Gefaess und After: eigene Lage, Groesse wie die uebrigen Punkte, am Ende der Bahn verblassend */
+          lageGef(K, ki, i, o);
+          var fd = 1 - sstep(K.gt[i] === 3 ? 0.4 : 0.75, 1, K.gp[i]), rg = Math.round(Math.max(1.7, Math.min(4.2, K.rad * K.rs[i] * 19)) * fd * 10) / 10, gx = f1(o.x), gy = f1(o.y);
+          if (rg > 0.3) {
+            if (gx !== q.x) { q.el.setAttribute('cx', gx); q.x = gx; }
+            if (gy !== q.y) { q.el.setAttribute('cy', gy); q.y = gy; }
+            if (rg !== q.r) { q.el.setAttribute('r', rg); q.r = rg; }
+            if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+          } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+          continue;
+        }
         if (v) {
           lage(K, ki, i, o);
           var rr = Math.round(Math.max(1.7, Math.min(4.2, K.sch[i] * 19)) * 10) / 10, x = f1(o.x), y = f1(o.y);
