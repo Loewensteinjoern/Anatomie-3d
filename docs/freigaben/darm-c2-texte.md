@@ -1,4 +1,4 @@
-# Darm und Zotte, PR C2a – Texte (ENTWURF, noch nicht freigegeben)
+# Darm und Zotte, PR C2a – Texte (von Jörn freigegeben, 15. November 2026)
 
 Aufbau wie bei Leber und Magen (`Kern.Szenarien.daten.darm`): Name, Kurzzeile, Kicker, Einleitung, vier Werte, vier Schritte, Behandlung bzw. Achtung, Pflege beobachtet, Hinweis zum Modell getrennt für Darm und Zotte. Die Auswahl bleibt beim Wechsel Darm ↔ Zotte erhalten.
 
@@ -46,7 +46,7 @@ Aufbau wie bei Leber und Magen (`Kern.Szenarien.daten.darm`): Name, Kurzzeile, K
 
 - Kurz: Gluten lässt die Zotten des Dünndarms schwinden
 - Kicker: Unverträglichkeit von Gluten · lebenslang
-- Einleitung: Bei Zöliakie reagiert das Abwehrsystem auf Gluten, ein Eiweiß aus verschiedenen Getreidesorten (Weizen, Roggen, Gerste, Dinkel). Die Schleimhaut des Dünndarms entzündet sich, die Zotten bilden sich zurück. Die Fläche, über die Nahrung aufgenommen wird, schrumpft.
+- Einleitung: Bei Zöliakie reagiert das Abwehrsystem auf Gluten, ein Eiweiß aus verschiedenen Getreidesorten (z. B. Weizen, Roggen, Gerste, Dinkel). Die Schleimhaut des Dünndarms entzündet sich, die Zotten bilden sich zurück. Die Fläche, über die Nahrung aufgenommen wird, schrumpft.
 - Werte: Zotten – flach, Krypten tiefer · Beschwerden – Durchfall, Blähungen, Gewichtsverlust, Müdigkeit, oft auch kaum Beschwerden · Folgen – Mangel an Eisen, Folsäure, Vitaminen und Kalzium · Nachweis – Antikörper im Blut, Gewebeprobe aus dem Zwölffingerdarm bei einer Magenspiegelung (Ösophagogastroduodenoskopie)
 - Schritte:
   1. **Gluten erreicht den Dünndarm.** Ein Teil davon wird nicht vollständig gespalten.
