@@ -1,32 +1,23 @@
 # Übergabe: PR „Aufnahme ins Blut“ (Darm) – Stand 13. November 2026
 
+C1 Magen gemergt (#52). Reihenfolge laut `pr-c.md`: C1 → **Aufnahme ins Blut** → C2. Texte freigegeben: `docs/freigaben/darm-aufnahme-texte.md` (A–E), wörtlich übernehmen.
+
+## Code heute (`organe/verdauung/darm.js`)
+
+- Abschnitt 6 Strömung (Z. ~1375): Teilchen je Art als InstancedMesh, Weg entlang der Mittellinie (`wegBauen`, `WGX`), nur aus `clock` und Index. Aufnahme in `lauf`: im Bereich `xaa` kleiner, zur Wand (`rho`→1), verschwinden. Stuhl löst sich am Zyklusende auf (`1 - sstep(P-5, P, ph)`).
+- Gefäße aus `form.gefaesse` (Z. ~673); in `verdauung-form.js` `darmGefaesse()` (Z. ~1287): 11 Äste `darmvene-k` von der Schlinge über die Arkade zur oberen Mesenterialvene, Dickdarmvenen `*-vene`. Kein Lymphgefäß im Darm. Durchsicht: `GLAS` 0.22.
+
+## Entschieden mit Jörn
+
+- Ansicht: nichts Neues; Teilchen in den Gefäßen immer da, deutlich bei „Durchsicht“. Übersicht ohne Durchsicht und `pause`-Bilder bleiben gleich (außer neue Strukturen sichtbar? prüfen).
+- Weg: Kohlenhydrate, Eiweiß, Wasser von der Wand in die nächste Darmvene (Dickdarm-Wasser in die Dickdarmvenen), verblassen dort, nicht bis zur Pfortader. Fett in die Lymphgefäße bis zur Wurzel, verblasst dort. Gleiche Farbe, kleiner, sanft verblassen; Stoffe-Schalter gelten.
+- Neue Strukturen: Lymphgefäße des Darms (im Gekröse neben den Venen), Lendenzisterne, Anfang des Milchbrustgangs; keine Lymphknoten; ohne Teilchen in Zisterne/Milchbrustgang. Farbe hellgelb wie Zotte #F3E39A, kräftiger als Gekröse #E8D9A0.
+- Gefäße bei Durchsicht gläsern (Venen, Pfortader, Lymph-Strukturen; Arterien nicht), Teilchen laufen innen (Jörn, nach Browserbild).
+- Teilchen im Gefäß: Variante B „Perlen“ (Radius 1,35 × Gefäßradius, Glas 0,5; `GEF_RF`, `GEF_OP`), Jörn nach Bildern. Üben-Abschluss „Alle vier Wege geschafft.“ freigegeben.
+- Stuhl: nur nach dem Essen, am Zyklusende am After hinaus, verblasst kurz darunter.
+- Schema: Bahnen DARMVENEN/LYMPHE, Teilchen nur kurz hinein, dahinter Pfeile.
+- Üben: vierter Weg „Weg des Fetts“ (Leerdarm/Krummdarm → Lymphgefäße → Lendenzisterne → Milchbrustgang); neue Strukturen beim Finden; Hilfekarte neu vor „So liest du das Modell“.
+
 ## Stand
 
-- C1 Magen gemergt (PR #52).
-- Reihenfolge laut `pr-c.md`: C1 → **Aufnahme ins Blut** → C2 Darm und Zotte. Entscheidungen für C2 stehen in `pr-c.md`, nicht hier.
-
-## Wunsch von Jörn
-
-- Im Darm (`#darm`) sollen die aufgenommenen Teilchen sichtbar ins Blut wandern: Kohlenhydrate, Eiweiß, Wasser über die Darmvenen in die Pfortader, Fett in die Lymphe. Wichtig für spätere Krankheitsbilder (Zöliakie: weniger Aufnahme, Durchfall).
-- Analkanal: wohl auch Stuhl im 3D am After hinaus (passt zur Lupe Analkanal in C2: am Ende der Verdauung Entleerung von selbst) – hier mit Jörn klären.
-
-## Was der Code heute macht (`organe/verdauung/darm.js`)
-
-- Abschnitt 6 Strömung (ab Z. ~1375): Teilchen je Art als InstancedMesh, Weg = Messpunkte entlang der Mittellinie (`wegBauen`, `X`), nur aus `clock` und Index (kein Zufall). Aufnahme heute: Teilchen werden im Bereich `xa` kleiner und wandern zur Wand, dann verschwinden sie.
-- Gefäße: Strukturen `arterien`, `venen`, `pfortader` aus `form.gefaesse` (`G.darmvenen`, `G.pfortader`, Abschnitt 2, Z. ~673). Ein Lymphgefäß gibt es im Darm **nicht** (nur im Text beim Gekröse); in der Zotte schon (`zotte.js`, Fett ins Lymphgefäß).
-- Von vorn verdeckt das Dünndarm-Knäuel die Gefäße (Optik-PR #49).
-
-## Offene Fragen an Jörn (erste Runde, Grundsätzliches)
-
-1. Ansicht: eigener Ausschnitt „Aufnahme“ (Knäuel durchsichtig, Gefäße hervor) · Durchsicht automatisch, sobald Teilchen ins Blut gehen · Kamerafahrt von hinten/seitlich.
-2. Weg der Teilchen: von der Wand über die nächste Darmvene bis zur Pfortader (und Leberrand) · nur bis in die Darmvenen.
-3. Lymphe: neues Gefäß (Lymphgefäße im Gekröse bis zur Cisterna chyli / Milchbrustgang) · Fett nur symbolisch zur Wurzel des Gekröses.
-4. Stuhl am After: hinaus, mit Schalter oder am Ende des Zyklus · nicht im 3D, nur in der Lupe (C2).
-5. Gilt es auch fürs Schema „Wo wird was aufgenommen“ und für Üben (Weg „Blut zur Pfortader“)?
-
-Dann Einzelheiten und Texte (neue Strukturen, Hilfekarte, Lesehilfe) wörtlich zur Freigabe.
-
-## Prüfung
-
-- Betroffen voraussichtlich `darm` (ggf. Form → auch Körper, Magen, Zotte über `verdauung-form.js`): `node tools/betroffen.js`. `pause`-Bilder müssen weiter gleich sein; neue Bilder am Ende von `darm:desktop`.
-- Vorbilder: Teilchen in Gefäßen bei Leber/Läppchen (Abschnitt Strömung), Zotte (Fett ins Lymphgefäß), Magen 7c für weich überblendete Zusätze.
+E1–E4 fertig (Lymphe, Glas, Teilchen in Gefäße, Stuhl, `DarmApp.uhr`, Schema-Bahnen, vierter Weg, neue Vergleichsbilder am Ende von `darm:desktop` und `darm:handy`). Voller Vergleichslauf (gemeinsamer Code `tools/vergleich.js`): Abweichungen nur im Darm erwartet. Nächstes: PR nach `main`, danach C2 (`pr-c.md`). Nach dem Merge diese Datei löschen.

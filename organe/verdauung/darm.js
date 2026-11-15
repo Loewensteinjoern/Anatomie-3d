@@ -79,7 +79,16 @@ var STRUKTUREN = [
     fakten: [['Abfluss', 'zur Pfortader'], ['Inhalt', 'Blut mit den aufgenommenen Nährstoffen'], ['Verlauf', 'im Gekröse']] },
   { id: 'pfortader', de: 'Pfortader', lat: 'Vena portae hepatis', grp: 'Gekröse und Gefäße', col: 0x7A5CB0,
     txt: 'Sie sammelt das Blut aus Magen, Darm und Milz und bringt es zur Leber. Gezeigt ist ihr Anfang.',
-    fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] }
+    fakten: [['Ziel', 'Leber'], ['Zuflüsse', 'Magen, Darm, Milz'], [null, 'Weiter im Modell „Leber“']] },
+  { id: 'lymphe', de: 'Lymphgefäße des Darms', lat: 'Vasa lymphatica (Vasa chylifera)', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Sie beginnen in jeder Zotte als zentrales Lymphgefäß und laufen im Gekröse neben den Venen zur Wurzel. Sie bringen das aufgenommene Fett als feine Tröpfchen (Chylomikronen) fort; nach einer fettreichen Mahlzeit ist ihr Inhalt milchig trüb (Chylus). Unterwegs fließt die Lymphe durch die Lymphknoten des Gekröses.',
+    fakten: [['Inhalt', 'Lymphe mit Fett (Chylus)'], ['Abfluss', 'zur Lendenzisterne'], ['Unterwegs', 'Lymphknoten im Gekröse']] },
+  { id: 'zisterne', de: 'Lendenzisterne', lat: 'Cisterna chyli', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Eine kleine sackartige Erweiterung vor dem 1. bis 2. Lendenwirbel, rechts hinter der Bauchaorta. Hier fließt die Lymphe aus dem Darm mit der Lymphe aus Beinen und Becken zusammen; aus ihr geht der Milchbrustgang hervor.',
+    fakten: [['Lage', 'vor dem 1.–2. Lendenwirbel'], ['Zuflüsse', 'Darm, Beine, Becken'], ['Weiter', 'Milchbrustgang']] },
+  { id: 'milchbrustgang', de: 'Milchbrustgang', lat: 'Ductus thoracicus', grp: 'Gekröse und Gefäße', col: 0xF3E39A,
+    txt: 'Das größte Lymphgefäß des Körpers. Es zieht vor der Wirbelsäule durch das Zwerchfell nach oben und mündet am linken Venenwinkel ins Blut, dort, wo am Hals die linke innere Drosselvene und die Schlüsselbeinvene zusammenfließen. So gelangt das Fett aus dem Darm an der Leber vorbei in den Kreislauf. Gezeigt ist sein Anfang.',
+    fakten: [['Länge', 'ca. 40 cm'], ['Mündung', 'linker Venenwinkel'], ['Lymphe', 'ca. 2–4 l pro Tag']] }
 ];
 /* Bedienelemente (Markup), wird von aufbauen in umg.bereich eingesetzt; B5: Knopf "Zotte" */
 var MARKUP = `<div id="title">
@@ -134,15 +143,16 @@ var MARKUP = `<div id="title">
 
 <div class="panel" id="legend">
   <h4>Lesehilfe</h4>
-  <p><b style="color:#E8C84F">Gelb</b> Kohlenhydrate – werden zu Zucker gespalten und im Dünndarm aufgenommen.<br>
-  <b style="color:#E88B3A">Orange</b> Eiweiß – wird zu Aminosäuren gespalten und im Dünndarm aufgenommen.<br>
-  <b style="color:#F2F2F2">Weiß</b> Fett – braucht die Galle und wird im Dünndarm aufgenommen.<br>
-  <b style="color:#8FD0F0">Hellblau</b> Wasser – wird im Dünndarm und im Dickdarm zurückgeholt.<br>
+  <p><b style="color:#E8C84F">Gelb</b> Kohlenhydrate – werden zu Zucker gespalten, im Dünndarm aufgenommen und gehen ins Blut der Darmvenen.<br>
+  <b style="color:#E88B3A">Orange</b> Eiweiß – wird zu Aminosäuren gespalten, im Dünndarm aufgenommen und geht ins Blut der Darmvenen.<br>
+  <b style="color:#F2F2F2">Weiß</b> Fett – braucht die Galle, wird im Dünndarm aufgenommen und geht in die Lymphe.<br>
+  <b style="color:#8FD0F0">Hellblau</b> Wasser – wird im Dünndarm und im Dickdarm ins Blut zurückgeholt.<br>
   <b style="color:#5FB85A">Grün</b> Galle, <b style="color:#C9B6E6">Blassviolett</b> Pankreassaft – fließen an der Papille zu.<br>
-  <b style="color:#A8794F">Braun</b> Stuhl – im Dickdarm eingedickt.<br>
+  <b style="color:#A8794F">Braun</b> Stuhl – im Dickdarm eingedickt, verlässt den Darm am After.<br>
   <b style="color:#E0584C">Rot</b> Darmarterien, <b style="color:#A98BDC">Violett</b> Darmvenen und Pfortader.<br>
+  <b style="color:#F3E39A">Hellgelb</b> Lymphgefäße, Lendenzisterne und Milchbrustgang.<br>
   <b>Dünndarmzotte:</b> Leerdarm oder Krummdarm antippen → „Dünndarmzotte hier ansehen“.</p>
-  <p class="note" id="legNote">Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.</p>
+  <p class="note" id="legNote">Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt und seinen Weg in Blut und Lymphe.</p>
   <p class="note">Die Teilchen zeigen den Weg der Stoffe – symbolisch, nicht maßstäblich; die Zeit läuft gerafft.</p>
   <p class="note kz">Dünndarm ca. 3–5 m, Dickdarm ca. 1,5 m<br>
   Verweildauer: Dünndarm 3–6 Stunden, Dickdarm 1–3 Tage<br>
@@ -176,14 +186,16 @@ var HILFE = [
     'Bewegung, ausreichend Trinken und Ballaststoffe regen die Darmbewegung an – Bettruhe und Opioide bremsen sie.'],
   ['pflege', 'Pflege: Stuhlbeobachtung und Obstipation', 'Pflegende beobachten Häufigkeit, Menge, Farbe, Geruch und Form des Stuhls sowie Beimengungen. Die Bristol-Stuhlformen-Skala beschreibt die Form von Typ 1 (harte Kugeln) bis Typ 7 (flüssig); Typ 3 und 4 gelten als normal. Schwarzer Teerstuhl kann auf eine Blutung im oberen Verdauungstrakt hinweisen, frisches Blut auf eine Blutung im Dickdarm oder am After, heller Stuhl auf einen Gallenstau. Zur Obstipationsprophylaxe gehören Bewegung, ausreichend Flüssigkeit (sofern nicht beschränkt), ballaststoffreiche Kost, feste Toilettenzeiten mit Ruhe und Privatsphäre und eine Kolonmassage im Uhrzeigersinn.',
     'Eisenpräparate färben den Stuhl ebenfalls schwarz – bei schwarzem Stuhl immer nach Medikamenten fragen und die Beobachtung weitergeben.'],
-  ['modell', 'So liest du das Modell', 'Der Darm ist von vorn dargestellt, so wie er im Körper liegt: vom Zwölffingerdarm über die Dünndarmschlingen bis zum After. Die Teilchen stehen für Stoffe: gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, grün Galle, blassviolett Pankreassaft, braun Stuhl. Mit den Schaltern unter „Stoffe“ kannst du jeden Stoff einzeln verfolgen. „Durchsicht“ macht die Darmwand gläsern, der Ausschnitt „Dünndarm“ zeigt eine aufgeschnittene Schlinge mit Ringfalten. Über „Zotte“ oder durch Antippen von Leerdarm und Krummdarm kommst du zur Dünndarmzotte. Die Zeit läuft stark gerafft.',
+  ['aufnahme', 'Aufnahme ins Blut und in die Lymphe', 'Zucker, Aminosäuren, Wasser, Salze und die meisten Vitamine gehen aus den Zotten in die Kapillaren und über die Darmvenen in die Pfortader. So erreichen sie zuerst die Leber, die sie verarbeitet, speichert oder entgiftet. Fette werden in den Saumzellen zu Chylomikronen verpackt; sie sind zu groß für die Kapillaren und gehen in die Lymphgefäße. Über Lendenzisterne und Milchbrustgang gelangen sie am linken Venenwinkel ins Blut, an der Leber vorbei. Mit „Durchsicht“ siehst du, wie die Teilchen die Darmwand verlassen.',
+    'Ist die Schleimhaut geschädigt, etwa bei Zöliakie, wird weniger aufgenommen: Es fehlen Nährstoffe und Vitamine, oft kommen Durchfall und Gewichtsverlust dazu.'],
+  ['modell', 'So liest du das Modell', 'Der Darm ist von vorn dargestellt, so wie er im Körper liegt: vom Zwölffingerdarm über die Dünndarmschlingen bis zum After. Die Teilchen stehen für Stoffe: gelb Kohlenhydrate, orange Eiweiß, weiß Fett, hellblau Wasser, grün Galle, blassviolett Pankreassaft, braun Stuhl. Mit den Schaltern unter „Stoffe“ kannst du jeden Stoff einzeln verfolgen. „Durchsicht“ macht die Darmwand gläsern; dann siehst du auch, wie die Teilchen in die Darmvenen und Lymphgefäße übertreten. Am Ende jedes Durchgangs nach dem Essen verlässt der Stuhl den Darm am After. Der Ausschnitt „Dünndarm“ zeigt eine aufgeschnittene Schlinge mit Ringfalten. Über „Zotte“ oder durch Antippen von Leerdarm und Krummdarm kommst du zur Dünndarmzotte. Die Zeit läuft stark gerafft.',
     'Je weiter der Inhalt im Darm wandert, desto weniger Nährstoffe und desto weniger Wasser enthält er.']
 ];
 /* Ueben "Strukturen finden": in welchen Ausschnitten (Nummer wie AUSSCHNITTE) eine Struktur im Bild liegt und sich antippen laesst. Die Waende der vier Bereiche sind in einem geoeffneten
    Ausschnitt von der Schleimhaut verdeckt, darum werden sie nur in der Uebersicht gesucht; Schleimhaut, Muskulatur, Papille, Bauhin-Klappe und After nur dort, wo sie zu sehen sind.
    Reihenfolge: der erste Eintrag ist der Ausschnitt, in den das Ueben wechselt. */
 var NUR_INNEN = { schleimhaut: [2, 1, 3, 4], muskulatur: [2, 1, 3, 4], papille: [1], bauhin: [3], after: [4] };
-/* Ueben "Wege verfolgen": feste Reihenfolge der drei Wege (Texte von Joern freigegeben, darm-b-texte.md Abschnitt G). Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name
+/* Ueben "Wege verfolgen": feste Reihenfolge der vier Wege (Texte von Joern freigegeben, darm-b-texte.md Abschnitt G). Station = Liste von Struktur-ids (ids), Anzeigename de (sonst der Name
    der ersten Struktur); an = Ausschnitt, in den der Weg fuer diese Station wechselt (sonst die Uebersicht; Papille und Bauhin-Klappe liegen innen); mahlzeit = false (nuechtern) oder
    true (nach dem Essen) schaltet das Modell, fehlt sie, bleibt es wie es ist. Nur Daten: die Abfolge im Code kennt keine Darm-Besonderheiten. */
 var DICKDARM_TEIL = ['leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma'];   /* "Leerdarm" gilt bei Weg 3 auch fuer Krummdarm und die Dickdarmabschnitte */
@@ -198,10 +210,14 @@ var WEGE = [
     abschluss: 'Geschafft: Galle und Pankreassaft wirken vor allem im Zwölffingerdarm und Leerdarm; die Gallensäuren werden am Ende des Krummdarms zurückgeholt.' },
   { titel: 'Weg des Blutes', aufgabe: 'Das Blut kommt aus der Bauchaorta. Tippe seine Stationen der Reihe nach an, bis es den Darm verlässt.',
     stationen: [{ ids: ['arterien'] }, { ids: DICKDARM_TEIL, de: 'Leerdarm' }, { ids: ['venen'] }, { ids: ['pfortader'] }],
-    abschluss: 'Geschafft: Das nährstoffreiche Blut aus dem Darm fließt über die Pfortader zuerst zur Leber.' }
+    abschluss: 'Geschafft: Das nährstoffreiche Blut aus dem Darm fließt über die Pfortader zuerst zur Leber.' },
+  { titel: 'Weg des Fetts', aufgabe: 'Fett wird im Dünndarm aufgenommen, aber nicht ins Blut. Tippe der Reihe nach an, wohin es geht.',
+    hinweis: 'Das Modell zeigt jetzt „nach dem Essen“.', mahlzeit: true,
+    stationen: [{ ids: ['leerdarm', 'krummdarm'], de: 'Leerdarm' }, { ids: ['lymphe'] }, { ids: ['zisterne'] }, { ids: ['milchbrustgang'] }],
+    abschluss: 'Geschafft: Das Fett gelangt über die Lymphe und den Milchbrustgang ins Blut, an der Leber vorbei.' }
 ];
 /* Notiz der Lesehilfe: nur ohne Durchsicht und ohne geoeffneten Bereich */
-var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt.';
+var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt und seinen Weg in Blut und Lymphe.';
 var organ = { renderer: {}, aufbauen: aufbauen };
 var zoLetzte = null;   /* zuletzt gewaehlte Stelle fuer die Duenndarmzotte (Bogenlaenge s der Mittellinie in cm, fuer die Rueckfahrt; nur im Speicher der Seite, ueberdauert den Abbau des Darms) */
 /* Mitte des Darms im Koerper (cm): die Wurzelgruppe root ist um -M verschoben, der Darm steht im Modell mittig (Ziel der Kamerafahrt aus dem Koerper) */
@@ -278,7 +294,9 @@ MAT.gangGalle = mat(0x5E9A4A, { rough: 0.4, coat: 0.3 }); MAT.gangPankreas = mat
 function kappeMat(hex) { return mat(hex, { rough: 0.55, side: THREE.DoubleSide }); }
 MAT.kLaengs = kappeMat(0xD9776A); MAT.kRing = kappeMat(0xB8473F);                       /* Darmmuskulatur */
 MAT.kSphInnen = kappeMat(0x8F3030); MAT.kSphAussen = kappeMat(0xA84A3C);                /* Schliessmuskeln (After) */
-['arterien', 'venen', 'pfortader'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
+['arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'].forEach(function (sid) { MAT[sid] = mat(STRUCT[sid].col, { rough: 0.4, coat: 0.3 }); });
+var GEF_RF = 1.35, GEF_OP = 0.5;   /* Teilchen im Gefaess: Radius als Vielfaches des Gefaessradius; Deckkraft der Gefaesse bei Durchsicht */
+var DURCH_GEF = ['venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'];   /* bei Durchsicht halbdurchsichtig (applyLook) */
 MAT.gekroese = mat(STRUCT.gekroese.col, { rough: 0.7, opacity: 0.4, side: THREE.DoubleSide });
 /* Taenien heller abgesetzt: die Aussenhaut des Dickdarms (Blinddarm bis Sigma) bekommt Vertexfarben (Faktor auf die Materialfarbe, linear je Kanal: 1 ausserhalb der Taenien,
    zur Mitte des Streifens hin das Verhaeltnis Zielfarbe / Grundfarbe) */
@@ -673,8 +691,13 @@ async function bauen() {
   [['arterien', G.darmarterien], ['venen', G.darmvenen], ['pfortader', G.pfortader]].forEach(function (a) {
     var geo = rohre(a[1].map(ln)); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo);
   });
+  /* Lymphgefaesse mit den Staemmen, Lendenzisterne und Anfang des Milchbrustgangs */
+  var L = form.darmLymphe();
+  [['lymphe', L.lymphgefaesse], ['zisterne', [L.zisterne]], ['milchbrustgang', [L.milchbrustgang]]].forEach(function (a) {
+    var geo = rohre(a[1].map(ln)); addMesh(a[0], geo, MAT[a[0]], STRUCT[a[0]].de, 4, 'hinten'); tris.rohre += anz(geo);
+  });
   await setLoad(0.95, 'Beschriftung'); if (abgebaut) return;
-  geoDaten = { G: G, gk: gk, kp: kp, du: du, dk: dk, Aduo: Aduo, RZ: RZ, B1: B1, B2: B2, B3: B3, B4: B4 };
+  geoDaten = { G: G, L: L, gk: gk, kp: kp, du: du, dk: dk, Aduo: Aduo, RZ: RZ, B1: B1, B2: B2, B3: B3, B4: B4 };
   ankerBauen();
 }
 
@@ -688,8 +711,8 @@ var quiz = null, quizT = null;   /* Ueben "Strukturen finden": { n, ok, target, 
 var wege = null, wegeT = null;   /* Ueben "Wege verfolgen" (siehe Abschnitt vor dem Antippen) */
 var autoGehe = false;            /* gehe wird vom Ueben selbst gerufen: keine neue Aufgabe */
 /* Strukturen, die im Ausschnitt vor dem geoeffneten Bereich liegen und dann ausgeblendet werden (sobald der Deckel zur Haelfte abgehoben ist); vom Krummdarm bleibt im Ausschnitt Blinddarm das Ende */
-var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader'],
-  ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'absteigend', 'sigma']];
+var WEG = [[], ['quer', 'aufsteigend', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'], ['quer', 'aufsteigend', 'absteigend', 'blinddarm', 'wurmfortsatz', 'sigma', 'mastdarm', 'after', 'zwoelffinger', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang', 'papille'], ['quer', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'],
+  ['leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang', 'absteigend', 'sigma']];
 function verborgen(sid, ende, fern) {
   var r = AUSSCHNITTE[aktiv].reg;
   if (r === 0 || OPEN[r] <= 0.5) return false;
@@ -739,6 +762,8 @@ function applyLook() {
     stelleHaut(MAT[sid + 'D'], seeThrough || a2 < 0.999, (seeThrough ? GLAS : 1) * a2);
   });
   stelleMat(MAT.gekroese, true, seeThrough ? 0.3 : 0.4);
+  /* Venen und Lymphgefaesse bei Durchsicht halbdurchsichtig (die Teilchen treten durch ihre Wand), die Arterien bleiben undurchsichtig; beim Antippen zaehlen sie als dicht */
+  DURCH_GEF.forEach(function (sid) { MAT[sid].userData.dicht = true; stelleMat(MAT[sid], seeThrough, seeThrough ? GEF_OP : 1); });
 }
 function setSelected(id, punkt) {
   if (id && (quiz || wege)) id = null;                   /* beim Ueben keine Infokarte */
@@ -1078,7 +1103,7 @@ function wegeZeigen() {
   if (wege.fertig) {
     var ab = kasten('wg-abw');
     zeile('wg-ab', w.abschluss, ab);
-    if (last) zeile('wg-ab', 'Alle drei Wege geschafft.', ab);
+    if (last) zeile('wg-ab', 'Alle vier Wege geschafft.', ab);
   }
   $('sScore').textContent = wege.ok + ' von ' + wege.n + ' Stationen auf Anhieb richtig';
   $('qNext').style.display = last ? 'none' : '';
@@ -1194,6 +1219,9 @@ function ankerBauen() {
   A.arterien = linie(nahe('mesenterica-superior', D.G.darmarterien), [0.3, 0.7]).concat(linie(nahe('mesenterica-inferior', D.G.darmarterien), [0.4, 0.7]), linie(nahe('darmast-4', D.G.darmarterien), [0.5, 0.8]));
   A.venen = linie(nahe('mesenterica-superior-vene', D.G.darmvenen), [0.3, 0.7]).concat(linie(nahe('mesenterica-inferior-vene', D.G.darmvenen), [0.4, 0.7]), linie(nahe('darmvene-6', D.G.darmvenen), [0.5]));
   A.pfortader = linie(D.G.pfortader[0], [0.5, 1]).concat(linie(D.G.pfortader[2], [0.5]));
+  A.lymphe = linie(nahe('lymphe-6', D.L.lymphgefaesse), [0.5]).concat(linie(nahe('lymphe-3', D.L.lymphgefaesse), [0.5]), linie(nahe('lymphe-9', D.L.lymphgefaesse), [0.5]));
+  A.zisterne = linie(D.L.zisterne, [0.5]);
+  A.milchbrustgang = linie(D.L.milchbrustgang, [0.6]);
   /* Schleimhaut und Muskulatur: Punkt der Netze im geoeffneten Bereich, der einem Zielpunkt am naechsten liegt (Koerper-Koordinaten) */
   var punktAus = function (meshes, ziel) {
     var b = null, bd = 1e30;
@@ -1280,11 +1308,11 @@ function sichtPruefen(now, w, h) {
   sichtVer++;
 }
 var KURZ = {};   /* kuerzere Namen, damit die Beschriftung in die Spalte passt */
-var HANDYNAME = { zwoelffinger: 'Zwölffinger-darm', aufsteigend: 'Aufsteig. Dickdarm', quer: 'Querer Dickdarm', absteigend: 'Absteig. Dickdarm', after: 'After', arterien: 'Darmarterien', venen: 'Darmvenen', wurmfortsatz: 'Wurmfortsatz', schleimhaut: 'Schleimhaut', muskulatur: 'Muskulatur' };
+var HANDYNAME = { zwoelffinger: 'Zwölffinger-darm', aufsteigend: 'Aufsteig. Dickdarm', quer: 'Querer Dickdarm', absteigend: 'Absteig. Dickdarm', after: 'After', arterien: 'Darmarterien', venen: 'Darmvenen', lymphe: 'Lymphgefäße', wurmfortsatz: 'Wurmfortsatz', schleimhaut: 'Schleimhaut', muskulatur: 'Muskulatur' };
 var HANDY_GROSS = ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm'];   /* Handy, Uebersicht: nur diese werden beschriftet */
 /* je Ausschnitt: Strukturen in der Beschriftung (was in der Ansicht nicht zu sehen ist, steht nicht darin) */
 var LISTEN = [
-  ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm', 'after', 'gekroese', 'arterien', 'venen', 'pfortader'],
+  ['zwoelffinger', 'leerdarm', 'krummdarm', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm', 'after', 'gekroese', 'arterien', 'venen', 'pfortader', 'lymphe', 'zisterne', 'milchbrustgang'],
   ['papille', 'schleimhaut', 'muskulatur', 'zwoelffinger', 'leerdarm', 'pfortader', 'arterien', 'venen', 'quer'],
   ['schleimhaut', 'muskulatur', 'leerdarm', 'krummdarm', 'gekroese', 'arterien', 'venen', 'quer'],
   ['bauhin', 'schleimhaut', 'muskulatur', 'blinddarm', 'wurmfortsatz', 'aufsteigend', 'krummdarm', 'arterien', 'venen'],
@@ -1381,13 +1409,15 @@ function layoutLabels(w, h) {
    Wegstelle x (cm), im Winkel phi und mit dem Abstand rho (0..1) des freien Radius - es bleibt so im Innenraum, auch an den Ringfalten.
    Nach dem Essen (Zeit te seit dem Wechsel, Zyklus P = 170 s): der Speisebrei kommt in Portionen am Anfang des Zwoelffingerdarms an (Wasser zuerst, Fett zuletzt), Galle und
    Pankreassaft fliessen an der Papille zu. Im Duenndarm pendeln die Teilchen hin und her (Mischbewegung) und rueckeln weiter; Kohlenhydrate, Eiweiss und Fett werden
-   gestaffelt aufgenommen (sie werden kleiner und wandern zur Wand), das meiste im Leerdarm; Wasser vor allem im Duenndarm, ein Rest im Dickdarm; Galle am Ende des Krummdarms
+   gestaffelt aufgenommen (an ihrer Stelle werden sie klein, treten in die naechste Darmvene bzw. - Fett - in das naechste Lymphgefaess ueber und laufen darin als kleine Perlen stromab,
+   am Ende des Linienzugs verblassen sie), das meiste im Leerdarm; Wasser vor allem im Duenndarm, ein Rest im Dickdarm (dort in die Dickdarmvenen); Galle am Ende des Krummdarms
    (die Gallensaeuren), Pankreassaft im Leerdarm. Im Dickdarm entsteht der Stuhl: Teilchen werden dunkler, groesser, sind langsamer und sammeln sich im Mastdarm. Am Ende des
-   Zyklus loest sich der gesammelte Stuhl auf. Nuechtern: kaum Inhalt, ein paar Reste (Wasser) werden von einer schwachen Welle weitergeschoben, wenige Tropfen Galle und
+   Zyklus laeuft der gesammelte Stuhl nacheinander durch den Analkanal am After hinaus und verblasst kurz dahinter. Nuechtern: kaum Inhalt, ein paar Reste (Wasser) werden von einer schwachen Welle weitergeschoben, wenige Tropfen Galle und
    Pankreassaft, im Dickdarm etwas Stuhl. Pause haelt alles an; der Wechsel nuechtern <-> nach dem Essen blendet in Echtzeit ein bzw. aus.
    ===================================================================== */
 var playing = true, speed = 1, clock = 0, tM = 0, mahlzeit = false, fzR = 0, fe = 0, fzFest = false;   /* tM: Uhrzeit des Wechsels zu "nach dem Essen"; fzR: Uebergang roh 0..1, fe: weich */
-var SZ_ = { UEBERG: 1.5, P: 150, DS: 0.15, AW: 12, TAU: 5.5, VS: 2.6, TRICKLE: 60, TWV: 48, VW: 7, DW: 28, KW: 6 };
+var SZ_ = { UEBERG: 1.5, P: 150, DS: 0.15, AW: 12, TAU: 5.5, VS: 2.6, TRICKLE: 60, TWV: 48, VW: 7, DW: 28, KW: 6,
+  UT: 1.2, GV: 1.6, GMAX: 6, ST0: 18, ST1: 4, STD: 7, STV: 5, NACH: 2 };   /* Aufnahme: UT Uebertritt in das Gefaess (s), GV Tempo im Gefaess (cm/s), GMAX Weg in Dickdarmvenen (cm); Stuhl am After: Fenster P-ST0 .. P-ST1, STD Dauer, STV Staffelung (s), NACH cm hinter dem After */
 var R2A = 0.7548776662466927, R2B = 0.5698402909980532;   /* Plastikzahl-Folge (R2): gleichmaessig verteilte Paare aus dem Index */
 function bruch(v) { return v - Math.floor(v); }
 /* Arten: e = Fenster der Ankunftszeiten (s nach dem Essen), xa = Bereich der Aufnahme (cm ab Anfang des Duenndarms), tsc = Tempo, nR = die ersten nR Teilchen sind die Ruhe-Teilchen (nuechtern) */
@@ -1403,7 +1433,7 @@ var KINDS = [
 var KI = { kh: 0, eiweiss: 1, fett: 2, wasser: 3, galle: 4, pank: 5, stuhl: 6 };
 var kindOn = [true, true, true, true, true, true, true];
 var STUHL_C0 = srgb(0xC9A15B), STUHL_C1 = srgb(0x6E4222);   /* hellbraun am Anfang des Dickdarms, dunkelbraun im Mastdarm */
-var ST = null, WG = null, TT = null, WGX = null, STM = new THREE.Matrix4(), SQ = { x: 0, y: 0, z: 0, rmax: 1 }, LB = { st: 0, x: 0, r: 0, rho: 0, phi: 0, tip: 0, c: 0, tl: 0 };
+var ST = null, WG = null, TT = null, WGX = null, STM = new THREE.Matrix4(), SQ = { x: 0, y: 0, z: 0, rmax: 1 }, LB = { st: 0, x: 0, r: 0, rho: 0, phi: 0, tip: 0, c: 0, tl: 0, g: 0, gf: 0, gx: 0, gy: 0, gz: 0, rs: -1, xs: 0, gt: 0, gu: 0, gp: 0 }, GT = { x: 0, y: 0, z: 0, rmax: 1 }, GP = { x: 0, y: 0, z: 0 }, GFL = null;
 
 /* ---- Weg: Messpunkte, Zeittabelle ---- */
 function wegBauen() {
@@ -1440,6 +1470,10 @@ function wegBauen() {
     for (j = 0; j < NP; j++) F[k * NP + j] = F[kA * NP + j] + (F[kB * NP + j] - F[kA * NP + j]) * t;
   }
   WG = { ds: DSW, n: n, NP: NP, C: C, N: N, B: B, F: F, kA: kA, kB: kB };
+  /* Analkanal hinter dem Ende der Wegtabelle (nur fuer den Stuhl am After): kleinster freier Radius bis zur Schleimhaut je 0,1 cm ab sE */
+  var nK = Math.max(2, Math.ceil((Adk.laenge - sE) / 0.1) + 1), KF = new Float32Array(nK);
+  for (k = 0; k < nK; k++) { var mn = 1e9, sk = Math.min(Adk.laenge, sE + k * 0.1); for (j = 0; j < 8; j++) mn = Math.min(mn, frei(2, sk, TWO * j / 8)); KF[k] = Math.max(0, mn); }
+  WG.kf = KF; WG.sE = sE; WG.pEnd = X.e + (Adk.laenge - sE) + SZ_.NACH;
   WGX = X;
   /* Zeit, die ein Teilchen vom Anfang bis zur Stelle x braucht (Tempo je Abschnitt in cm/s) */
   var V = { duo: 5.0, leer: 5.6, krumm: 6.4, conn: 2.5, kolon: 2.0 };
@@ -1472,15 +1506,51 @@ function wegPunkt(x, phi, rho, rad, out) {
   return out;
 }
 /* Mischbewegung: Hin- und Herpendeln um die Wegstelle (Amplitude in cm) */
-function pendel(x, pz) {
+function pendel(x, pz, c) {   /* c: Uhr (Standard clock) */
   var X = WGX, amp = 0.5 * (1 - sstep(X.d1 - 1, X.d1, x)) * sstep(0, 3, x) + 2.4 * sstep(X.u0, X.u0 + 6, x) * (1 - sstep(X.u1 - 6, X.u1, x)) + 0.8 * sstep(X.c0, X.c0 + 4, x);
-  return amp * Math.sin(2 * PI * (clock / SZ_.TAU + pz));
+  return amp * Math.sin(2 * PI * ((c === undefined ? clock : c) / SZ_.TAU + pz));
+}
+/* ---- Gefaesse, in die Nahrungsbestandteile uebertreten (Aufnahme ins Blut und in die Lymphe) ----
+   Linienzuege wie die Netze der Gefaesse (Catmull-Rom-Kurve der Form, dieselbe Kurve wie in rohre) mit Bogenlaenge; gleiche Verfahren wie polyMit/polyBei in zotte.js. */
+function polyMit(pts) {   /* Linienzug mit Bogenlaenge */
+  var cum = [0], i;
+  for (i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.sqrt(Math.pow(pts[i][0] - pts[i - 1][0], 2) + Math.pow(pts[i][1] - pts[i - 1][1], 2) + Math.pow(pts[i][2] - pts[i - 1][2], 2)));
+  return { p: pts, cum: cum, L: cum[cum.length - 1] };
+}
+function polyBei(pf, s, o) {   /* Punkt bei Bogenlaenge s */
+  s = Math.max(0, Math.min(pf.L, s));
+  var lo = 0, hi = pf.p.length - 1;
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (pf.cum[m] <= s) lo = m; else hi = m; }
+  var d = pf.cum[hi] - pf.cum[lo], t = d > 1e-9 ? (s - pf.cum[lo]) / d : 0, a = pf.p[lo], b = pf.p[hi];
+  o.x = a[0] + (b[0] - a[0]) * t; o.y = a[1] + (b[1] - a[1]) * t; o.z = a[2] + (b[2] - a[2]) * t;
+  return o;
+}
+function polyNah(pf, w) {   /* naechster Punkt des Linienzugs zu w: { d, s, x, y, z } */
+  var best = { d: 1e30, s: 0, x: 0, y: 0, z: 0 }, i;
+  for (i = 0; i < pf.p.length - 1; i++) {
+    var a = pf.p[i], b = pf.p[i + 1], vx = b[0] - a[0], vy = b[1] - a[1], vz = b[2] - a[2], l2 = vx * vx + vy * vy + vz * vz;
+    var t = l2 > 1e-12 ? Math.max(0, Math.min(1, ((w[0] - a[0]) * vx + (w[1] - a[1]) * vy + (w[2] - a[2]) * vz) / l2)) : 0;
+    var qx = a[0] + vx * t, qy = a[1] + vy * t, qz = a[2] + vz * t, d = Math.sqrt(Math.pow(w[0] - qx, 2) + Math.pow(w[1] - qy, 2) + Math.pow(w[2] - qz, 2));
+    if (d < best.d) { best.d = d; best.s = pf.cum[i] + (pf.cum[i + 1] - pf.cum[i]) * t; best.x = qx; best.y = qy; best.z = qz; }
+  }
+  return best;
+}
+function gefaessRadius(g, s) { var t = Math.max(0, Math.min(1, s / g.pm.L)); return g.r0 + (g.r1 - g.r0) * t * t * (3 - 2 * t); }   /* wie der Radius in rohre */
+var DICKDARMVENEN = ['ileocolica-vene', 'colica-dextra-vene', 'colica-media-vene', 'colica-sinistra-vene', 'sigmoideae-vene', 'mesenterica-inferior-vene'];
+function gefaessListen() {
+  var G = geoDaten.G, L = geoDaten.L;
+  function lin(g) { return { id: g.id, pm: polyMit(form.kurve(g.pts, 8)), r0: g.r0, r1: g.r1 }; }
+  return {
+    dv: G.darmvenen.filter(function (g) { return /^darmvene-\d+$/.test(g.id); }).map(lin),
+    dc: G.darmvenen.filter(function (g) { return DICKDARMVENEN.indexOf(g.id) >= 0; }).map(lin),
+    ly: L.lymphgefaesse.filter(function (g) { return /^lymphe-\d+$/.test(g.id); }).map(lin)
+  };
 }
 /* Teilchen: feste Eigenschaften je Index */
 function teilchenDaten() {
   var X = WGX, Ldu = X.u1 - X.u0, kp = geoDaten.kp, Aduo = geoDaten.Aduo, dk = geoDaten.dk, AB = dk.abschnitte;
   var sP = Aduo.von(kp.PAPILLE.p);
-  WG.xP = sP;
+  WG.xP = sP; GFL = gefaessListen();
   WG.tip = [kp.PAPILLE.p[0] + kp.PAPILLE.richtung[0] * 0.75, kp.PAPILLE.p[1] + kp.PAPILLE.richtung[1] * 0.75, kp.PAPILLE.p[2] + kp.PAPILLE.richtung[2] * 0.75];
   KINDS.forEach(function (K, ki) {
     var n = K.n, i;
@@ -1504,11 +1574,28 @@ function teilchenDaten() {
       K.es.push(e); K.xaa.push(xa); K.xr.push(xr); K.xt.push(xt);
     }
     K.vis = new Float32Array(n); K.xg = new Float32Array(n); K.tip = new Float32Array(n);
+    K.gv = new Float32Array(n); K.sch = new Float32Array(n); K.sx = new Float32Array(n); K.gt = new Uint8Array(n); K.gu = new Float32Array(n); K.gp = new Float32Array(n);   /* gt, gu, gp: Gefaessart, Uebertritt und Fortschritt fuer das Schema; gv: Radius im Gefaess (sichtbar), sch/sx: Radius und Wegstelle fuer das Schema (Darm) */
+    /* Gefaess je Teilchen: Kohlenhydrate, Eiweiss, Wasser (Duenndarm) -> naechste Darmvene, Wasser im Dickdarm -> naechste Dickdarmvene, Fett -> naechstes Lymphgefaess */
+    K.gf = []; K.gs = []; K.gE = []; K.gS = []; K.gr = []; K.tA = [];
+    for (i = 0; i < n; i++) {
+      var gx = null, xa2 = K.xaa[i];
+      if (ki <= KI.wasser && i >= K.nR && xa2 < 1e8) {
+        var lst = ki === KI.fett ? GFL.ly : (ki === KI.wasser && xa2 >= X.c0) ? GFL.dc : GFL.dv, wp = wegPunkt(xa2, K.phi0[i], 1, K.rad * K.rs[i], GT), W = [wp.x, wp.y, wp.z], bd = 1e30, q;
+        for (q = 0; q < lst.length; q++) { var h = polyNah(lst[q].pm, W); if (h.d < bd) { bd = h.d; gx = { g: lst[q], h: h }; } }
+      }
+      if (gx) {
+        var gg = gx.g, hh = gx.h, sEnd = gg.pm.L;
+        if (lst === GFL.dc) sEnd = Math.min(sEnd, hh.s + SZ_.GMAX);
+        else if (ki !== KI.fett) sEnd = Math.max(Math.min(sEnd, sEnd - 0.25), hh.s + 0.5);   /* Venen: kurz vor der Muendung in die Mesenterialvene */
+        sEnd = Math.min(gg.pm.L, Math.max(sEnd, hh.s + 0.3));
+        K.gf.push(gg); K.gs.push(hh.s); K.gE.push(sEnd); K.gS.push(hh.x, hh.y, hh.z); K.gr.push(GEF_RF * gefaessRadius(gg, hh.s)); K.tA.push(tVonX(xa2) / K.ts[i]);
+      } else { K.gf.push(null); K.gs.push(0); K.gE.push(0); K.gS.push(0, 0, 0); K.gr.push(0); K.tA.push(1e9); }
+    }
   });
 }
 function lauf(ki, i, ph, o) {
   var K = KINDS[ki], tl, tt, xb, x, w = 1, a, r, rho = K.rho[i], X = WGX;
-  o.st = 0; o.r = 0; o.tip = 0; o.c = 0; o.phi = K.phi0[i]; o.rho = rho;
+  o.st = 0; o.r = 0; o.tip = 0; o.c = 0; o.phi = K.phi0[i]; o.rho = rho; o.g = 0; o.gf = 0; o.rs = -1; o.xs = 0; o.gt = 0; o.gu = 0; o.gp = 0;   /* gt: 1 Darmvenen, 2 Lymphgefaesse, 3 After (auch im Uebertritt), gu: Uebertritt 0..1, gp: Fortschritt im Gefaess bzw. hinter dem After 0..1 (nur fuer das Schema); g: 1 = Lage direkt in gx, gy, gz (Gefaess, Uebertritt, Analkanal); gf: 0 Segment bei x, 1 Darmvenen, 2 Lymphgefaesse, 3 After; rs, xs: Radius und Wegstelle der Darmansicht fuer das Schema (rs < 0: wie r, x) */
   if (ki === KI.stuhl) {
     if (i < K.nR) { x = K.xr[i] + 0.25 * Math.sin(0.3 * clock + K.pz[i] * 6.2832); o.x = x; o.r = K.rad * 1.4 * K.rs[i]; o.c = 1; o.st = 1; return; }
     tl = ph - K.es[i];
@@ -1517,6 +1604,22 @@ function lauf(ki, i, ph, o) {
     x = xl > xt - L ? xt - L + L * (1 - Math.exp(-(xl - (xt - L)) / L)) : xl;
     var fr = Math.max(0, Math.min(1, (x - X.c0) / (X.e - X.c0)));
     o.x = x; o.c = fr; o.rho = Math.min(0.85, rho); o.r = (K.rad * 0.9 + 0.1 * fr) * K.rs[i] * sstep(0, 1, tl) * sstep(0, 0.25, fe) * (1 - sstep(SZ_.P - 5, SZ_.P, ph)); o.st = o.r > 0.001 ? 1 : 0;
+    /* am Zyklusende laeuft der gesammelte Stuhl nacheinander (vorderster zuerst) durch den Analkanal zum After und ein Stueck dahinter */
+    var sf = Math.max(0, Math.min(1, (X.e - 0.8 - xt) / 14)), us = sstep(0, 1, (ph - (SZ_.P - SZ_.ST0 + SZ_.STV * sf)) / SZ_.STD);
+    if (us > 0 && o.r > 0) {
+      var pp = x + (WG.pEnd - x) * us, rm = o.r;
+      o.rs = o.st ? o.r : 0; o.xs = x;
+      o.rho = Math.min(0.85, rho) * (1 - sstep(X.e - 3, X.e, pp)); o.x = pp; o.c = Math.max(0, Math.min(1, (pp - X.c0) / (X.e - X.c0)));
+      if (pp > X.e) {   /* hinter dem Ende der Wegtabelle: auf der Mittellinie des Analkanals, danach gerade weiter */
+        var sk = WG.sE + (pp - X.e), A = geoDaten.dk.achse, sl = A.laenge, kf = WG.kf, kk = Math.min(kf.length - 1, (Math.min(sk, sl) - WG.sE) / 0.1), k0 = Math.floor(kk), k1 = Math.min(kf.length - 1, k0 + 1);
+        rahmen(A, Math.min(sk, sl));
+        var ex = Math.max(0, sk - sl);
+        o.gx = FR.x + FR.tx * ex; o.gy = FR.y + FR.ty * ex; o.gz = FR.z + FR.tz * ex;
+        rm = Math.min(rm, Math.max(0.03, 0.8 * (kf[k0] + (kf[k1] - kf[k0]) * (kk - k0))));
+        o.r = rm * (1 - sstep(sl, sl + 1.5, sk)); o.g = 1; o.gf = 3; o.st = o.r > 0.001 ? 1 : 0;
+        o.gt = 3; o.gu = 1; o.gp = Math.max(0, Math.min(1, (pp - X.e) / (WG.pEnd - X.e)));
+      }
+    }
     return;
   }
   if (i < K.nR) {
@@ -1540,6 +1643,30 @@ function lauf(ki, i, ph, o) {
   r = K.rad * K.rs[i] * sstep(0, 0.8, tl) * (1 - a) * (1 - 0.3 * sstep(X.u0, xa, xb)) * w;
   if (ki === KI.wasser) r *= 1 + 0.5 * sstep(X.c0, X.c0 + 10, xb);
   o.x = x; o.r = r; o.rho = rho + (1 - rho) * a; o.st = r > 0.001 ? 1 : 0; o.tl = tl;
+  var gf = K.gf ? K.gf[i] : null;
+  if (gf) {   /* Aufnahme: das Teilchen schrumpft nicht zu nichts, sondern auf die Groesse im Gefaess und tritt dort ueber (Radius rG), dann stromab bis zum Ende des Linienzugs */
+    var rG = K.gr[i] * w, d = tl - K.tA[i];
+    o.rs = o.st ? r : 0; o.xs = x;   /* Darmansicht fuer das Schema: wie bisher verschwindet das Teilchen an der Wand */
+    if (d < 0) {
+      r = K.rad * K.rs[i] * sstep(0, 0.8, tl) * (1 - 0.3 * sstep(X.u0, xa, xb)) * w;
+      if (ki === KI.wasser) r *= 1 + 0.5 * sstep(X.c0, X.c0 + 10, xb);
+      o.r = r * (1 - a) + rG * a; o.st = o.r > 0.001 ? 1 : 0;
+    } else if (d < SZ_.UT) {   /* Uebertritt: vom Ort bei tA (mit Pendeln zu dieser Zeit) gerade zum Einstieg S */
+      var cA = clock - d, xA = Math.max(0, Math.min(X.e, xa + pendel(xa, K.pz[i], cA))), pA = K.phi0[i] + 0.5 * Math.sin(0.25 * cA + K.pz[i] * 6.2832), e = sstep(0, 1, d / SZ_.UT), S = K.gS;
+      wegPunkt(xA, pA, 1, K.gr[i], GT);
+      o.gx = GT.x + (S[i * 3] - GT.x) * e; o.gy = GT.y + (S[i * 3 + 1] - GT.y) * e; o.gz = GT.z + (S[i * 3 + 2] - GT.z) * e;
+      o.x = xA; o.r = rG; o.g = 1; o.gf = 0; o.st = o.r > 0.001 ? 1 : 0;
+      o.gt = gf.id.charAt(0) === 'l' ? 2 : 1; o.gu = e;
+    } else {
+      var sS = K.gs[i], sE = K.gE[i], sg = sS + SZ_.GV * (d - SZ_.UT);
+      o.g = 1; o.gf = gf.id.charAt(0) === 'l' ? 2 : 1; o.x = xa; o.gt = o.gf; o.gu = 1;
+      if (sg >= sE) { o.r = 0; o.st = 0; } else {
+        o.gp = (sg - sS) / (sE - sS);
+        polyBei(gf.pm, sg, GP); o.gx = GP.x; o.gy = GP.y; o.gz = GP.z;
+        o.r = GEF_RF * gefaessRadius(gf, sg) * (1 - sstep(0.75, 1, (sg - sS) / (sE - sS))) * w; o.st = o.r > 0.001 ? 1 : 0;
+      }
+    }
+  }
   if (ki >= KI.galle) o.tip = 1 - sstep(0, 1.2, tl);   /* Galle und Pankreassaft treten an der Papille aus */
 }
 function tmat(col, em) {
@@ -1570,23 +1697,29 @@ function stroemungBild() {
   if (key === ST.letzt) return;
   ST.letzt = key;
   var te = clock - tM, ph = te - Math.floor(te / SZ_.P) * SZ_.P, ki, i, tp = WG.tip, seg = WGX.seg, sv = seg.map(function (g) { return !enabled[g.sid] || verborgen(g.sid, g.ende, g.fern); });
+  var svG = [false, !enabled.venen || verborgen('venen'), !enabled.lymphe || verborgen('lymphe'), !enabled.after || verborgen('after')];   /* Gefaesse und After (gf 1-3) */
+  function segAus(x) { var sg = seg.length - 1; while (sg > 0 && seg[sg].x0 > x) sg--; return sv[sg]; }
   for (ki = 0; ki < KINDS.length; ki++) {
     var K = KINDS[ki], im = K.im, col = ki === KI.stuhl ? im.instanceColor.array : null;
     im.visible = kindOn[ki];
     for (i = 0; i < K.n; i++) {
       lauf(ki, i, ph, LB);
-      var r = LB.st ? LB.r : 0;
-      if (r > 0) { var sg = seg.length - 1; while (sg > 0 && seg[sg].x0 > LB.x) sg--; if (sv[sg]) r = 0; }   /* Inhalt einer ausgeblendeten Struktur */
-      if (r > 0) {
-        var phi = LB.phi + (ki === KI.stuhl ? 0 : 0.5 * Math.sin(0.25 * clock + K.pz[i] * 6.2832));
+      var r = LB.st ? LB.r : 0, rs = LB.rs < 0 ? r : LB.rs, xs = LB.rs < 0 ? LB.x : LB.xs, gd = LB.g;
+      if (r > 0) { if (gd && LB.gf > 0) { if (svG[LB.gf]) r = 0; } else if (segAus(LB.x)) r = 0; }   /* Inhalt einer ausgeblendeten Struktur */
+      if (rs > 0 && segAus(xs)) rs = 0;
+      var phi = LB.phi + (ki === KI.stuhl ? 0 : 0.5 * Math.sin(0.25 * clock + K.pz[i] * 6.2832)), rmaxS = 1;
+      if (r > 0 && gd) { SQ.x = LB.gx; SQ.y = LB.gy; SQ.z = LB.gz; }
+      else if (r > 0) {
         wegPunkt(LB.x, phi, LB.rho, r, SQ);
         if (r > SQ.rmax) r = SQ.rmax;
         if (LB.tip > 0) {   /* Spitze der Papille -> in den Innenraum */
           var m = LB.tip * LB.tip * (3 - 2 * LB.tip);
           SQ.x += (tp[0] - SQ.x) * m; SQ.y += (tp[1] - SQ.y) * m; SQ.z += (tp[2] - SQ.z) * m;
         }
+        rmaxS = SQ.rmax;
       }
-      K.vis[i] = r; K.xg[i] = LB.x; K.tip[i] = LB.tip;
+      if (rs > 0) { if (r > 0 && !gd && xs === LB.x) { if (rs > rmaxS) rs = rmaxS; } else { wegPunkt(xs, phi, 0, rs, GT); if (rs > GT.rmax) rs = GT.rmax; } }
+      K.vis[i] = gd ? 0 : r; K.gv[i] = gd ? r : 0; K.xg[i] = LB.x; K.tip[i] = LB.tip; K.sch[i] = rs; K.sx[i] = xs; K.gt[i] = gd ? LB.gt : 0; K.gu[i] = LB.gu; K.gp[i] = LB.gp;
       if (col) { var c = LB.c; col[i * 3] = STUHL_C0.r + (STUHL_C1.r - STUHL_C0.r) * c; col[i * 3 + 1] = STUHL_C0.g + (STUHL_C1.g - STUHL_C0.g) * c; col[i * 3 + 2] = STUHL_C0.b + (STUHL_C1.b - STUHL_C0.b) * c; }
       STM.makeScale(r, r, r); STM.setPosition(SQ.x, SQ.y, SQ.z);
       im.setMatrixAt(i, STM);
@@ -1640,7 +1773,10 @@ $('bEssen').onclick = function () { setMahlzeit(true); };
 /* =====================================================================
    7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
    Der Darm als gestreckter Weg (Bildkoordinaten 460 breit): Zwoelffingerdarm, Leerdarm, Krummdarm in Schlingen, Dickdarm als Rahmen darum, Mastdarm; dazu die Kaestchen der
-   Zufluesse (Galle, Pankreassaft), Pfeile an den Orten der Aufnahme, nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit. Die Punkte sind dieselben
+   Zufluesse (Galle, Pankreassaft), Pfeile an den Orten der Aufnahme, zwei schmale Bahnen links neben dem Darm (DARMVENEN violett, LYMPHE hellgelb; sie gehen vom Leerdarm
+   aus, je mit einem beschrifteten Pfeil dahinter: zur Pfortader -> Leber, Milchbrustgang -> Blut), nummerierte Legende, Kennzahlen und eine Hinweiszeile je nach Mahlzeit.
+   Teilchen im Gefaess (lauf: gt 1 Darmvenen, 2 Lymphe, 3 After): sie laufen vom Ort der Aufnahme gerade zur naechsten Stelle der Bahn (gu) und die Bahn entlang (gp) und
+   verblassen am Ende; Wasser aus dem Dickdarm geht in die Bahn DARMVENEN, Stuhl hinter dem After laeuft am Ende des Mastdarms nach unten hinaus. Die Punkte sind dieselben
    Teilchen wie im 3D-Modell (gleiche Farben, gleiche Zeitfunktion lauf aus Abschnitt 6, Wegstelle x -> Lage im Schema; Tempo, Pause, Mahlzeit und Stoffe-Schalter gelten mit).
    Das Schema legt nichts in der 3D-Szene an und zieht keinen Zufall; gebaut wird es erst beim ersten Oeffnen.
    ===================================================================== */
@@ -1705,15 +1841,17 @@ var SCH = (function () {
   var SI = glatt([[282, 122], [280, 186], [144, 186], [140, 219], [310, 219], [314, 252], [144, 252], [140, 285], [310, 285], [314, 318], [144, 318], [138, 338]], 4);
   var DICK = glatt([[138, 338], [114, 350], [114, 170], [124, 138], [346, 138], [356, 170], [356, 350], [328, 382], [264, 374], [230, 400]], 5);
   var REKT = [[230, 400], [230, 430]];
+  var BAHN = [[[150, 194], [90, 194], [90, 128]], [[150, 212], [16, 212], [16, 70]]];   /* Bahnen aus dem Leerdarm heraus: Darmvenen, Lymphe (die Teilchen enden dort, der Pfeil dahinter zeigt den Weiterweg) */
+  var BAHNF = ['#8E6FD0', '#F3E39A'];
   var LN = null, FM = null, FMASTDARM = 0.89;
   function bauePfade() {
-    LN = { duo: laenge(DUO), si: laenge(SI), dick: laenge(DICK), rekt: laenge(REKT) };
+    LN = { duo: laenge(DUO), si: laenge(SI), dick: laenge(DICK), rekt: laenge(REKT), bahn: BAHN.map(laenge) };
     FMASTDARM = (WGX.sM - WGX.sB) / (WGX.e - WGX.c0);   /* ab hier der Mastdarm (Bruchteil des Weges im Dickdarm) */
   }
   /* Lage eines Teilchens im Schema: Wegstelle x (cm), Index i; schreibt o.x, o.y */
   var P = { x: 0, y: 0, tx: 0, ty: 0 };
-  function lage(K, ki, i, o) {
-    var X = WGX, x = K.xg[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, breite;
+  function lage(K, ki, i, o, xx) {   /* xx: andere Wegstelle als K.sx (Ort der Aufnahme) */
+    var X = WGX, x = xx === undefined ? K.sx[i] : xx, seitl = Math.sin(i * 2.399963 + ki) * 0.55, breite;
     if (x < X.u0) { bei(LN.duo, x / X.d1 * LN.duo.L, P); breite = 2.8; }
     else if (x <= X.u1) { bei(LN.si, (x - X.u0) / (X.u1 - X.u0) * LN.si.L, P); breite = 2.6; }
     else {
@@ -1722,6 +1860,25 @@ var SCH = (function () {
       breite = 3.6;
     }
     o.x = P.x - P.ty * seitl * breite; o.y = P.y + P.tx * seitl * breite;
+  }
+  /* Lage eines Teilchens im Gefaess (gt 1, 2) oder hinter dem After (gt 3): Uebertritt gerade vom Ort der Aufnahme zur naechsten Stelle der Bahn, dann die Bahn entlang; schreibt o.x, o.y */
+  function lageGef(K, ki, i, o) {
+    var gt = K.gt[i], seitl = Math.sin(i * 2.399963 + ki) * 0.55, ln, s, sn, d, q;
+    if (gt === 3) {
+      bei(LN.rekt, LN.rekt.L, P);
+      o.x = P.x - P.ty * seitl * 3.6; o.y = P.y + P.tx * seitl * 3.6 + 14 * K.gp[i];
+      return;
+    }
+    ln = LN.bahn[gt - 1];
+    lage(K, ki, i, o, K.xaa[i]);   /* Ort der Aufnahme */
+    for (q = 0, d = 1e30, sn = 0; q < ln.p.length - 1; q++) {   /* naechste Stelle der Bahn (Fusspunkt auf jedem Stueck) */
+      var a = ln.p[q], b = ln.p[q + 1], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((o.x - a[0]) * dx + (o.y - a[1]) * dy) / l2)),
+        e = Math.pow(o.x - (a[0] + dx * t), 2) + Math.pow(o.y - (a[1] + dy * t), 2);
+      if (e < d) { d = e; sn = ln.cum[q] + t * Math.sqrt(l2); }
+    }
+    var u = K.gu[i];
+    bei(ln, sn + (ln.L - sn) * K.gp[i], P);
+    o.x += (P.x - P.ty * seitl * 1.6 - o.x) * u; o.y += (P.y + P.tx * seitl * 1.6 - o.y) * u;
   }
   /* Stelle der Papille im Schema (Bruchteil des Zwoelffingerdarms) */
   function papilleBild(o) { return bei(LN.duo, WG.xP / WGX.d1 * LN.duo.L, o); }
@@ -1737,6 +1894,8 @@ var SCH = (function () {
       'aria-label': 'Schema: der Darm als gestreckter Weg, an welchen Stellen welche Stoffe aufgenommen werden' }, box);
     var i;
     /* ---- Darm: Dickdarm hinten, dann Duenndarm (Leerdarm, Krummdarm), Zwoelffingerdarm; Mastdarm ---- */
+    var gb = E('g', null, svg);   /* Bahnen hinter dem Darm (sie beginnen im Leerdarm) */
+    BAHN.forEach(function (b, q) { rohr(gb, b, 6.4, BAHNF[q]); });
     var gd = E('g', null, svg), sk = 0;
     while (sk < LN.si.cum.length - 1 && LN.si.cum[sk] < 0.4 * LN.si.L) sk++;
     rohr(gd, DICK.map(function (q) { return [q[0], q[1]]; }), 15, '#B87868');
@@ -1786,6 +1945,11 @@ var SCH = (function () {
     text(ga, 231, 353, 'Vitamin B12, Gallensäuren', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
     pfeil(106, 244, -1, 0, 14, '#A8DEF6'); pfeil(106, 256, -1, 0, 14, '#C5D0D6');
     text(ga, 86, 247, 'Wasser,', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 }); text(ga, 86, 259, 'Salze', AUF['font-size'], DIM, { 'text-anchor': 'end', 'stroke-width': 2.2 });
+    /* Bahnen: Pfeil dahinter mit Ziel, Name an der Bahn */
+    pfeil(90, 124, 0, -1, 20, BAHNF[0]); pfeil(16, 66, 0, -1, 20, BAHNF[1]);
+    text(ga, 90, 98, 'zur Pfortader → Leber', AUF['font-size'], DIM, { 'text-anchor': 'middle', 'stroke-width': 2.2 });
+    text(ga, 8, 40, 'Milchbrustgang → Blut', AUF['font-size'], DIM, { 'stroke-width': 2.2 });
+    station('DARMVENEN', 90, 86, 'middle'); station('LYMPHE', 8, 28);
     /* Stationen: die Linien enden mit einem Punkt auf dem Abschnitt (Leerdarm: obere Schlinge, Krummdarm: unterste Schlinge, Dickdarm: Rahmen) */
     station('ZWÖLFFINGERDARM', 452, 40, 'end', 314, 44, 336, 36);
     station('LEERDARM', 372, 226, null, 300, 219, 368, 222);
@@ -1831,10 +1995,21 @@ var SCH = (function () {
     for (ki = 0; ki < KINDS.length; ki++) {
       var K = KINDS[ki], pool = DOT[ki], show = K.im.visible;
       for (i = 0; i < K.n; i++) {
-        var q = pool[i], v = show && K.vis[i] > 0.001;
+        var q = pool[i], v = show && K.sch[i] > 0.001;
+        if (show && K.gt[i] && K.gv[i] > 0.001) {   /* Gefaess und After: eigene Lage, Groesse wie die uebrigen Punkte, am Ende der Bahn verblassend */
+          lageGef(K, ki, i, o);
+          var fd = 1 - sstep(K.gt[i] === 3 ? 0.4 : 0.75, 1, K.gp[i]), rg = Math.round(Math.max(1.7, Math.min(4.2, K.rad * K.rs[i] * 19)) * fd * 10) / 10, gx = f1(o.x), gy = f1(o.y);
+          if (rg > 0.3) {
+            if (gx !== q.x) { q.el.setAttribute('cx', gx); q.x = gx; }
+            if (gy !== q.y) { q.el.setAttribute('cy', gy); q.y = gy; }
+            if (rg !== q.r) { q.el.setAttribute('r', rg); q.r = rg; }
+            if (!q.on) { q.el.setAttribute('display', 'inline'); q.on = true; }
+          } else if (q.on) { q.el.setAttribute('display', 'none'); q.on = false; }
+          continue;
+        }
         if (v) {
           lage(K, ki, i, o);
-          var rr = Math.round(Math.max(1.7, Math.min(4.2, K.vis[i] * 19)) * 10) / 10, x = f1(o.x), y = f1(o.y);
+          var rr = Math.round(Math.max(1.7, Math.min(4.2, K.sch[i] * 19)) * 10) / 10, x = f1(o.x), y = f1(o.y);
           if (x !== q.x) { q.el.setAttribute('cx', x); q.x = x; }
           if (y !== q.y) { q.el.setAttribute('cy', y); q.y = y; }
           if (rr !== q.r) { q.el.setAttribute('r', rr); q.r = rr; }
@@ -2068,7 +2243,8 @@ var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, geh
   /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art, Uebergang, Uhr) und Lage der Teilchen (Koerper-Koordinaten, Wegstelle x in cm) */
   stroemung: function () {
     var n = {}; KINDS.forEach(function (K) { var c = 0; for (var i = 0; i < K.n; i++) if (K.vis[i] > 0.001) c++; n[K.id] = K.im && K.im.visible ? c : 0; });
-    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, uebergang: fe, te: clock - tM, sichtbar: n };
+    var g = {}; KINDS.forEach(function (K) { var c = 0; for (var i = 0; i < K.n; i++) if (K.gv[i] > 0.001) c++; g[K.id] = K.im && K.im.visible ? c : 0; });   /* imGefaess: sichtbare Teilchen in Gefaessen (und hinter dem After) */
+    return { clock: clock, playing: playing, speed: speed, mahlzeit: mahlzeit, uebergang: fe, te: clock - tM, sichtbar: n, imGefaess: g };
   },
   teilchen: function () {
     var out = [];
@@ -2096,6 +2272,8 @@ var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, geh
     });
     return { geprueft: n, ausserhalb: aus, schlimmster: schlimm, beispiel: bsp };
   },
+  /* fuer die Pruefung: Uhr lesen oder setzen (Sekunden bei "normal") */
+  uhr: function (t) { if (t !== undefined) { clock = t; if (ST) ST.letzt = ''; lv++; } return clock; },
   /* fuer die Pruefung: Uebergang (roh 0..1) und Zeit sofort setzen und festhalten */
   stand: function (f, te) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
   form: function () { return form; },
