@@ -14,6 +14,10 @@
    ganzen Darm, nuechtern / nach dem Essen), Abschnitt 7: Schema "Wo wird was aufgenommen". Reiter Hilfekarten und Ueben (Strukturen finden, Wege verfolgen) wie beim Magen;
    die Duenndarmzotte (Abschnitt 7b: Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und Krummdarm, Kamerafahrt in die Darmwand) ist ein eigenes
    Modell (organe/verdauung/zotte.js, #darm/zotte).
+   Reiter Krankheitsbilder und Medikamente (Kern.Szenarien.daten.darm, Texte freigegeben: docs/freigaben/darm-c2-texte.md) mit Erklaerkarte wie beim Magen; die Auswahl
+   bleibt beim Wechsel Darm <-> Zotte erhalten (Kern.Szenarien.wahl.darm). Ihre Wirkung in 3D (Abschnitt 7c): Wasser aus der Duenndarmwand, schnellere bzw. langsamere
+   Wellen, geblaehter Dickdarm mit dichtem Stuhl, blasse glatte Schleimhaut, Ausstuelpungen am Sigma, verdickte Abschnitte mit Engstelle und Fistel, geroetetes Sigma
+   mit Geschwueren und blutigem Stuhl; alle Objekte entstehen erst bei der ersten Wahl.
    ===================================================================== */
 (function () {
 'use strict';
@@ -782,7 +786,7 @@ function setSelected(id, punkt) {
   var box = $('info');
   zoWahl = id === 'leerdarm' || id === 'krummdarm' ? zoStelle(id, punkt) : null;
   $('iOpen').style.display = zoWahl !== null ? '' : 'none';   /* Knopf "Duenndarmzotte hier ansehen" nur bei Leerdarm und Krummdarm */
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -795,6 +799,7 @@ function setSelected(id, punkt) {
     dl.appendChild(dd);
   });
   box.classList.add('show');
+  kartenLage();
 }
 
 /* Ebene ein- oder ausschalten (Schalter der Leiste) */
@@ -811,15 +816,59 @@ function waehleListe(id) {
   setSelected(id);
 }
 
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.darm, Texte von Joern freigegeben: docs/freigaben/darm-c2-texte.md): Reiter und Erklaerkarte (id kcard)
+   unten links wie die Infokarte. Felder wie bei Kern.Szenarien (id, kind, name, short, kicker, lead, values, steps, after, note = hinweis.darm), dazu datei und modell = Wirkgroessen
+   0..1 (durchfall, verstopfung, zoeliakie, divertikel, crohn, colitis, bremse, weich, daempf; nicht genannte sind 0). Die Wirkung in 3D steht in Abschnitt 7c. */
+var SZ_EINLEITUNG = { disease: 'Wähle ein Krankheitsbild – in Darm und Zotte siehst du, wie sich Schleimhaut, Wand und Stuhl verändern.',
+  drug: 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild.' };
+var SZ_AUS = 'Krankheitsbild oder Medikament ausschalten';
+var SZ_DATEN = Kern.Szenarien.daten.darm.map(function (sc) { var o = Object.assign({}, sc); o.note = sc.hinweis.darm; return o; });
+var SZW = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags) */
+var KR = null;                                                                            /* Daten der Krankheitsbilder (Abschnitt 7c); entstehen erst bei der ersten Wahl */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: SZ_AUS,
+  beimWechsel: function (id) {
+    Kern.Szenarien.wahl.darm = id || null;             /* Merker fuer den Wechsel Darm <-> Zotte */
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (wege) wegeEnd();
+      setSelected(null); closeCard();
+      schemaWeicht();
+      krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
+      if (!seeThrough && !SZ_DATEN.some(function (sc) { return sc.id === id && sc.modell.divertikel; })) durchsicht(true);   /* Wasser, Stuhl und Schleimhaut sieht man nur bei Durchsicht (wie beim Magen der Mahlzeit-Schalter; beim Abwaehlen nicht zurueck) */
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt den Darm, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  lv++;
+}
+
 (function leiste() {
   /* Strukturen: nach Gruppen, Farbpunkt blendet die Struktur ein und aus */
-  /* Reiter: Strukturen, Hilfekarten, Ueben */
+  /* Reiter: Strukturen, Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Hilfekarten', 'Üben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -840,6 +889,9 @@ function waehleListe(id) {
     d.addEventListener('keydown', function (e) { if (e.key === 'Enter') openHelp(c[0]); });
     paneH.appendChild(d);
   });
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', SZ_EINLEITUNG.disease);
+  SZ.liste(paneM, 'drug', 'Medikamente', SZ_EINLEITUNG.drug);
   /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
   var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur am Darm und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge einen Weg: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
   var pb = document.createElement('div'); pb.className = 'pane-btn';
@@ -993,11 +1045,13 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1348,10 +1402,11 @@ function layoutLabels(w, h) {
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 58, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
-  if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var kk = SZ.el && SZ.el.classList.contains('show') && !SZ.el.classList.contains('weg') ? SZ.el : null;   /* offene Szenariokarte (Krankheitsbild, Medikament): ebenso */
+  if (!narrow && (unten || kk)) botL = Math.min(botL, h - 22 - (unten ? $('info') : kk).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt den Darm, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte und beim Ueben keine Beschriftung */
+  if (showLabels && !$('scard').classList.contains('show') && !(narrow && (selected || unten || (kk && !kk.classList.contains('min'))))) {   /* Handy: die Karte deckt den Darm, ohne Beschriftung bleibt sie frei; bei einer Hilfekarte und beim Ueben keine Beschriftung */
     beschriftet().forEach(function (id) {
       if (!enabled[id] || verborgen(id)) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen, die Namen stehen dann neben dem Modell */
@@ -1721,19 +1776,21 @@ function stroemungBild() {
       if (rs > 0) { if (r > 0 && !gd && xs === LB.x) { if (rs > rmaxS) rs = rmaxS; } else { wegPunkt(xs, phi, 0, rs, GT); if (rs > GT.rmax) rs = GT.rmax; } }
       K.vis[i] = gd ? 0 : r; K.gv[i] = gd ? r : 0; K.xg[i] = LB.x; K.tip[i] = LB.tip; K.sch[i] = rs; K.sx[i] = xs; K.gt[i] = gd ? LB.gt : 0; K.gu[i] = LB.gu; K.gp[i] = LB.gp;
       if (col) { var c = LB.c; col[i * 3] = STUHL_C0.r + (STUHL_C1.r - STUHL_C0.r) * c; col[i * 3 + 1] = STUHL_C0.g + (STUHL_C1.g - STUHL_C0.g) * c; col[i * 3 + 2] = STUHL_C0.b + (STUHL_C1.b - STUHL_C0.b) * c; }
+      if (col && KR) krStuhlFarbe(col, i * 3);
       STM.makeScale(r, r, r); STM.setPosition(SQ.x, SQ.y, SQ.z);
       im.setMatrixAt(i, STM);
     }
     im.instanceMatrix.needsUpdate = true;
     if (col) im.instanceColor.needsUpdate = true;
   }
+  if (KR) krStroemung(segAus);
 }
 /* je Bild: Uhr und Uebergang fortschreiben (Pause haelt die Stroemung an, der Uebergang laeuft in Echtzeit) */
 function stroemungSchritt(dt) {
   var ziel = mahlzeit ? 1 : 0;
   if (!fzFest && fzR !== ziel) fzR = ziel > fzR ? Math.min(ziel, fzR + dt / SZ_.UEBERG) : Math.max(ziel, fzR - dt / SZ_.UEBERG);
   fe = sstep(0, 1, fzR);
-  if (playing) clock += dt * speed;
+  if (playing) clock += dt * speed * (KR ? krWellen() : 1);
 }
 $('bPlay').onclick = function () {
   playing = !playing;
@@ -2228,6 +2285,205 @@ function zoFahrtBild(now) {
 }
 
 /* =====================================================================
+   7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * Werte des Eintrags (SZ_DATEN). Alle three.js-Objekte entstehen erst bei der
+   ersten Wahl (krankBauen), ohne Wahl aendert sich nichts. Die Netze der Aussenhaut (Leerdarm bis Mastdarm samt Deckeln), der Schleimhaut und der durchscheinenden Innenflaeche
+   bekommen dann (einmal) einen Zusatz im Vertex- und Fragment-Shader (onBeforeCompile) und je Punkt zwei Attribute, aus der Mittellinie des Darms berechnet (Bogenlaenge s, Winkel phi):
+   aA = (Blaehung, Verdickung, Engstelle, Colitis) und aB = (Zoeliakie-Gewicht, Hoehe der Ringfalte, Abweichung durch die Haustren, 0). Gewicht 0 an den Schnittkanten der Bereiche
+   (die Kappen passen dann), die Verschiebung geht entlang der Normale:
+   - verstopfung: der Dickdarm (vom aufsteigenden Teil ab bis zum Sigma) ist gebleaeht (Haustren und Taenien gehen mit), dichter dunkler Stuhl (eigene Kugeln), Wellen langsamer;
+   - durchfall: zusaetzliches Wasser (hellblaue Kugeln) tritt aus der Wand des Duenndarms und fliesst weiter bis in den Dickdarm, Wellen schneller, Stuhl heller;
+   - zoeliakie: Leerdarm blasser, Ringfalten der Schleimhaut flacher (Verschiebung um die Hoehe der Falte);
+   - divertikel: fuenf Ausstuelpungen am Sigma in den Haustren (feste Lagen), die mittlere groesser, rot und geschwollen;
+   - crohn: Endstueck des Ileums und ein Stueck des aufsteigenden Dickdarms verdickt und geroetet (Schleimhaut: nach innen, Pflastersteine), Engstelle am Ileum, Fistel als feiner Gang;
+   - colitis: Sigma und Mastdarm geroetet, Haustren am Sigma flacher, Geschwuere (Punkte aus einem Zellraster, kein Zufall) auf der Schleimhaut, Stuhl blutig;
+   - bremse (Loperamid): Wellen langsamer, Stuhl fester; weich (Macrogol): Stuhl weicher und heller, Dickdarm schlanker; daempf (Budesonid): Roetung, Schwellung und Geschwuere gehen zurueck.
+   ===================================================================== */
+var KR_GLSL = {
+  kopf: ['attribute vec4 aA;', 'attribute vec4 aB;', 'uniform vec4 uD;', 'uniform vec2 uV;', 'varying vec3 vP0;', 'varying vec4 vA;', 'varying vec4 vB;'].join('\n'),   /* uD: Blaehung, Verdickung, Engstelle, Abflachung der Haustren; uV: Vorzeichen von Verdickung und Engstelle (Haut / Schleimhaut), Abflachung der Falten */
+  pos: ['{', '  float dep = aA.x * uD.x + aA.y * uD.y * uV.x - aA.z * uD.z * uV.y - aA.w * aB.z * uD.w + aB.y * aB.x * uF;',
+    '  transformed += normalize(objectNormal) * dep; vP0 = position; vA = aA; vB = aB;', '}'].join('\n'),
+  fkopf: ['varying vec3 vP0;', 'varying vec4 vA;', 'varying vec4 vB;', 'uniform vec4 uR;', 'uniform vec3 uC;', 'uniform float uP;', 'uniform float uMuk;',
+    'float krH(vec3 c) { return fract(sin(dot(c, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }'].join('\n'),   /* uR: Roetung Crohn, Roetung Colitis, Geschwuere, Groesse der Geschwuere; uC: Pflastersteine; uP: Blaesse */
+  frag: ['{', '  float rot = clamp(vA.y * uR.x * 1.3 + vA.w * uR.y, 0.0, 1.0);',
+    '  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.75, 0.06, 0.07), 0.85 * rot);',
+    '  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.84, 0.72, 0.70), 0.3 * uP * vB.x);',
+    '  if (uMuk > 0.5) {',
+    '    vec3 q = vP0 / 0.5; vec3 c = floor(q); float h = krH(c);',
+    '    vec3 mid = c + 0.5 + 0.3 * vec3(krH(c + 1.7) - 0.5, krH(c + 3.1) - 0.5, krH(c + 5.3) - 0.5);',
+    '    float punkt = (1.0 - smoothstep(0.17 * uR.w, 0.30 * uR.w, distance(q, mid))) * step(0.45, h) * smoothstep(0.3, 0.7, vA.w);',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.30, 0.01, 0.02), punkt * uR.z * 0.95);',
+    '  }',
+    '  if (uC.x > 0.0 && vA.y > 0.05) {',   /* Pflastersteine: Voronoi-Zellen aus festen Hash-Punkten (Insel = Zelle, Furche = Naehe zur Zellgrenze) */
+    '    vec3 q = vP0 / 0.55; vec3 c = floor(q); float d1 = 9.0; float d2 = 9.0;',
+    '    for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) for (int k = -1; k <= 1; k++) {',
+    '      vec3 n = c + vec3(float(i), float(j), float(k));',
+    '      vec3 pt = n + 0.5 + 0.8 * vec3(krH(n + 1.7) - 0.5, krH(n + 3.1) - 0.5, krH(n + 5.3) - 0.5);',
+    '      float d = distance(q, pt); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;',
+    '    }',
+    '    float furche = 1.0 - smoothstep(0.0, 0.32, d2 - d1);',
+    '    float w = smoothstep(0.1, 0.6, vA.y) * uC.x * (uMuk > 0.5 ? 1.0 : 0.15);',
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.40, 0.38), 0.4 * w * (1.0 - furche));',   /* Inseln leicht geschwollen, hellrot */
+    '    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.30, 0.02, 0.03), 0.9 * w * furche);',
+    '  }', '}'].join('\n')
+};
+function krankHaken(m, muk) {   /* Zusatz im Shader eines Materials der Haut bzw. Schleimhaut (muk: Schleimhaut: Geschwuere, Pflastersteine, Verdickung nach innen); das Programm wird neu gebaut */
+  var alt = m.onBeforeCompile, U = KR.u;
+  m.onBeforeCompile = function (sh) {
+    alt(sh);
+    sh.uniforms.uD = U.D; sh.uniforms.uR = U.R; sh.uniforms.uC = U.C; sh.uniforms.uP = U.P; sh.uniforms.uF = U.F;
+    sh.uniforms.uV = { value: muk ? new THREE.Vector2(-0.6, 1.4) : new THREE.Vector2(1, 1) }; sh.uniforms.uMuk = { value: muk ? 1 : 0 };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + KR_GLSL.kopf + '\nuniform float uF;').replace('#include <project_vertex>', KR_GLSL.pos + '\n#include <project_vertex>');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + KR_GLSL.fkopf).replace('#include <color_fragment>', '#include <color_fragment>\n' + KR_GLSL.frag);
+  };
+  m.needsUpdate = true;
+}
+var KR_N = { wasser: 96, stuhl: 120 };   /* Zahl der zusaetzlichen Kugeln: Wasser aus der Duenndarmwand, dichter Stuhl */
+var KR_H = 3.2;                          /* Abstand der Haustren (HAUSTRE der Form) */
+var KR_SIG = 0.4;                        /* Anfangswinkel der Taenien im Dickdarm (st.phi0 der Form): die Taenien liegen bei phi0 + m * 120 Grad, die Haustren dazwischen */
+function krankBauen() {
+  if (KR || abgebaut || !geoDaten || !ST) return;
+  var D = geoDaten, du = D.du, dk = D.dk, AB = dk.abschnitte, Adu = du.achse, Adk = dk.achse, Aduo = D.Aduo, bFalte = D.RZ[2].def.schichten[2].b, H = KR_H;
+  var Ldu = du.laenge, LE = du.leerEnde, SB = AB.blinddarm[1], SM = AB.mastdarm[0], i;
+  KR = { u: { D: { value: new THREE.Vector4() }, R: { value: new THREE.Vector4(0, 0, 0, 1) }, C: { value: new THREE.Vector3() }, P: { value: 0 }, F: { value: 0 } }, grp: new THREE.Group(), div: [], fist: null, wasser: null, stuhl: null };
+  var HAUT = ['leerdarm', 'krummdarm', 'blinddarm', 'aufsteigend', 'quer', 'absteigend', 'sigma', 'mastdarm'], gedacht = [MAT.schleimhaut, MAT.schleimhautL];
+  HAUT.forEach(function (sid) { gedacht.push(MAT[sid]); if (MAT[sid + 'D']) gedacht.push(MAT[sid + 'D']); });
+  /* Attribute je Punkt (Koerper-Koordinaten = Koordinaten der Netze): Mittellinie je nach Netz; die durchscheinende Innenflaeche (ohne Bereich) nimmt die naechste der drei Mittellinien */
+  root.traverse(function (o) {
+    if (!o.isMesh || o.isInstancedMesh || gedacht.indexOf(o.material) < 0) return;
+    var g = o.geometry, P = g.attributes.position.array, n = P.length / 3, A = new Float32Array(n * 4), B = new Float32Array(n * 4), v, u = o.userData, art = 0;
+    var muk = o.material === MAT.schleimhaut || o.material === MAT.schleimhautL;
+    if (u.sid === 'schleimhaut') art = u.lumen && !u.reg ? 9 : u.reg === 1 ? 1 : u.reg === 2 ? 2 : 3;
+    else art = (u.sid === 'leerdarm' || u.sid === 'krummdarm') ? 2 : 3;
+    for (v = 0; v < n; v++) {
+      var x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2], ax = art, s, phi, d;
+      if (art === 9) {   /* naechste Mittellinie */
+        var d1 = Aduo.q(x, y, z), d2 = Adu.q(x, y, z), d3 = Adk.q(x, y, z);
+        ax = d1 <= d2 && d1 <= d3 ? 1 : d2 <= d3 ? 2 : 3;
+      }
+      if (ax === 2) {
+        d = Adu.q(x, y, z); if (Adu.i < 0) continue; s = Adu.s; phi = Adu.phi();
+        A[v * 4 + 1] = sstep(Ldu - 9, Ldu - 7, s) * (1 - sstep(Ldu - 1.5, Ldu - 0.3, s));                 /* Verdickung am Endstueck des Ileums */
+        A[v * 4 + 2] = Math.exp(-Math.pow((s - (Ldu - 4.8)) / 0.9, 2));                                  /* Engstelle */
+        B[v * 4] = 1 - sstep(LE - 4, LE + 2, s);                                                          /* Leerdarm (Zoeliakie) */
+        if (u.sid === 'schleimhaut' && u.reg === 2 && !u.lumen) B[v * 4 + 1] = Math.max(0, bFalte(s, phi) - 0.52);   /* Hoehe der Ringfalte */
+      } else if (ax === 3) {
+        d = Adk.q(x, y, z); if (Adk.i < 0) continue; s = Adk.s; phi = Adk.phi();
+        A[v * 4] = sstep(SB + 3.8, SB + 8, s) * (1 - sstep(SM - 5.5, SM - 1, s));                         /* Blaehung: nicht im Bereich der Kappen (Blinddarm bis 3 cm hinter der Klappe, Mastdarm) */
+        A[v * 4 + 1] = sstep(SB + 3.4, SB + 5, s) * (1 - sstep(SB + 8, SB + 10, s));                       /* Verdickung am aufsteigenden Dickdarm */
+        A[v * 4 + 3] = sstep(AB.sigma[0] - 1.5, AB.sigma[0] + 1.5, s) * (1 - sstep(AB.analkanal[0] - 0.8, AB.analkanal[0] + 0.2, s));   /* Colitis: Sigma und Mastdarm */
+        if (s < SM) B[v * 4 + 2] = dk.R(s, phi) - dk.R0(s);                                              /* Abweichung durch Haustren und Taenien */
+      }
+    }
+    g.setAttribute('aA', new THREE.BufferAttribute(A, 4)); g.setAttribute('aB', new THREE.BufferAttribute(B, 4));
+  });
+  gedacht.forEach(function (m) { krankHaken(m, m === MAT.schleimhaut || m === MAT.schleimhautL); });
+  root.add(KR.grp);
+  /* Kugeln: zusaetzliches Wasser und dichter Stuhl (Teilchen: nur aus clock und Index) */
+  function kugeln(n, hex, em, name) {
+    var m = tmat(hex, em), im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), m, n);
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false;
+    im.name = name; im.userData.teilchen = 'krank'; im.userData.noexport = true; im.raycast = function () {};
+    KR.grp.add(im); return im;
+  }
+  KR.wasser = kugeln(KR_N.wasser, KINDS[KI.wasser].col, KINDS[KI.wasser].em, 'Wasser (Durchfall)');
+  KR.stuhl = kugeln(KR_N.stuhl, 0x4A2C14, 0x1A0E06, 'Stuhl (Verstopfung)');
+  /* Ausstuelpungen am Sigma: fuenf Haustren-Einschnitte hintereinander, dazwischen zwischen den Taenien (Lagen fest) */
+  var dm = mat(0xD9A18F, { rough: 0.5, coat: 0.3 }), de = mat(0xC23A33, { rough: 0.4, coat: 0.4 }), k0 = Math.ceil((AB.sigma[0] + 2.2) / H), sg = new THREE.SphereGeometry(1, 16, 12), j, m3;
+  de.emissive.copy(srgb(0x6A0F0F)).multiplyScalar(0.5);
+  for (j = 0; j < 5; j++) {
+    var sj = (k0 + j) * H + H / 2, fr = rahmen(Adk, sj), best = -9, bp = null, mm;
+    for (mm = 0; mm < 3; mm++) {
+      var ph = KR_SIG + PI / 3 + mm * 2 * PI / 3, ux = Math.cos(ph) * fr.nx + Math.sin(ph) * fr.bx, uy = Math.cos(ph) * fr.ny + Math.sin(ph) * fr.by, uz = Math.cos(ph) * fr.nz + Math.sin(ph) * fr.bz;
+      if (uz + 0.15 * (mm === (j % 3) ? 1 : 0) > best) { best = uz + 0.15 * (mm === (j % 3) ? 1 : 0); bp = { ph: ph, ux: ux, uy: uy, uz: uz }; }
+    }
+    var Rj = dk.R(sj, bp.ph), gross = j === 2, rr = gross ? 0.85 : 0.46;
+    m3 = new THREE.Mesh(sg, gross ? de : dm); m3.name = gross ? 'Divertikulitis' : 'Divertikel';
+    m3.position.set(fr.x + bp.ux * (Rj + 0.12), fr.y + bp.uy * (Rj + 0.12), fr.z + bp.uz * (Rj + 0.12));
+    m3.userData.teilchen = 'krank'; m3.userData.noexport = true; m3.raycast = function () {}; m3.userData.rr = rr; m3.visible = false; m3.renderOrder = 3;
+    KR.grp.add(m3); KR.div.push(m3);
+  }
+  /* Fistel: feiner Gang aus der Wand des Ileums zur naechsten Nachbarschlinge des Duenndarms (andere Stelle der Mittellinie) */
+  var sf = Ldu - 6.4, pa = Adu.punkt(sf), bd = 1e9, pb = null, t;
+  for (t = 0; t < Ldu - 12; t += 0.3) { var pq = Adu.punkt(t), dd = Math.sqrt(Math.pow(pq[0] - pa[0], 2) + Math.pow(pq[1] - pa[1], 2) + Math.pow(pq[2] - pa[2], 2)); if (Math.abs(t - sf) > 12 && dd > 3.8 && dd < bd) { bd = dd; pb = pq; } }   /* mindestens 3,8 cm Abstand der Mittellinien: zwischen den Schlingen bleibt Platz fuer den Gang */
+  if (pb) {
+    var dx = (pb[0] - pa[0]) / bd, dy = (pb[1] - pa[1]) / bd, dz = (pb[2] - pa[2]) / bd, Rw = form.DUENN_R, e0 = Math.min(Rw - 0.05, bd / 2);
+    var p0 = [pa[0] + dx * e0, pa[1] + dy * e0, pa[2] + dz * e0], p2 = [pb[0] - dx * e0, pb[1] - dy * e0, pb[2] - dz * e0], p1 = [(p0[0] + p2[0]) / 2, (p0[1] + p2[1]) / 2, (p0[2] + p2[2]) / 2];
+    var fg = rohre([{ pts: [p0, p1, p2], r0: 0.18, r1: 0.18, seiten: 8, segmente: 14 }]), fm = mat(0xA02E2E, { rough: 0.45, coat: 0.3 });
+    fm.emissive.copy(srgb(0x5A0A0A)).multiplyScalar(0.5);
+    KR.fist = new THREE.Mesh(fg, fm); KR.fist.name = 'Fistel'; KR.fist.userData.teilchen = 'krank'; KR.fist.userData.noexport = true; KR.fist.raycast = function () {}; KR.fist.visible = false; KR.fist.renderOrder = 4;
+    KR.grp.add(KR.fist);
+  }
+  krAnwenden();
+}
+function krWellen() {   /* Faktor fuer die Uhr der Stroemung (die Wellen laufen schneller bzw. langsamer) */
+  var W = SZW;
+  return (1 + 0.8 * W.durchfall) * (1 - 0.5 * W.verstopfung * (1 - W.weich)) * (1 - 0.55 * W.bremse);
+}
+function krFarbe(c, i, r, g, b, t) { c[i] += (r - c[i]) * t; c[i + 1] += (g - c[i + 1]) * t; c[i + 2] += (b - c[i + 2]) * t; }
+/* Farbe des Stuhls nach den Wirkgroessen (Feld col wie in stroemungBild) */
+var KR_HELL = srgb(0xE6CE90), KR_DUNKEL = srgb(0x3A2210), KR_BLUT = srgb(0xA32020);
+function krStuhlFarbe(col, i) {
+  var W = SZW, t;
+  t = 0.7 * W.verstopfung * (1 - 0.7 * W.weich); if (t > 0) krFarbe(col, i, KR_DUNKEL.r, KR_DUNKEL.g, KR_DUNKEL.b, t);
+  t = Math.max(0.9 * W.durchfall * (1 - 0.5 * W.bremse), 0.6 * W.weich * W.verstopfung); if (t > 0) krFarbe(col, i, KR_HELL.r, KR_HELL.g, KR_HELL.b, Math.min(1, t));
+  t = 0.85 * W.colitis * (1 - 0.8 * W.daempf); if (t > 0) krFarbe(col, i, KR_BLUT.r, KR_BLUT.g, KR_BLUT.b, t);
+}
+/* zusaetzliche Kugeln setzen (Aufruf am Ende von stroemungBild; segAus: Inhalt einer ausgeblendeten Struktur) */
+function krStroemung(segAus) {
+  if (!KR) return;
+  var X = WGX, W = SZW, n, i, ww = W.durchfall * (1 - 0.45 * W.bremse), ws = W.verstopfung * (1 - 0.55 * W.weich);
+  var im = KR.wasser, st = KR.stuhl, K = KINDS[KI.wasser], KS = KINDS[KI.stuhl], Ldu = X.u1 - X.u0;
+  im.visible = kindOn[KI.wasser] && ww > 0.004; st.visible = kindOn[KI.stuhl] && ws > 0.004;
+  if (im.visible) for (i = 0; i < KR_N.wasser; i++) {
+    var tau = clock / 6.5 + bruch(0.13 + i * 0.618034), k = Math.floor(tau), u = tau - k, w = bruch(0.3 + i * R2A + k * 0.37), kolon = bruch(0.2 + i * R2B) < 0.3;
+    var x0 = kolon ? X.c0 + 4 + (X.e - X.c0 - 22) * w : X.u0 + 10 + (Ldu - 22) * w, x = x0 + (kolon ? 9 : 6) * u, rho = 0.97 - 0.62 * sstep(0, 0.35, u), phi = 2 * PI * bruch(0.1 + i * R2B + k * 0.21) + 0.5 * Math.sin(0.25 * clock + i);
+    var r = K.rad * 1.5 * sstep(0, 0.12, u) * (1 - sstep(0.82, 1, u)) * ww * (0.85 + 0.3 * bruch(i * 0.37));
+    if (r > 0 && segAus(x)) r = 0;
+    if (r > 0) { wegPunkt(x, phi, rho, r, SQ); if (r > SQ.rmax) r = SQ.rmax; } else SQ.x = SQ.y = SQ.z = 0;
+    STM.makeScale(r, r, r); STM.setPosition(SQ.x, SQ.y, SQ.z); im.setMatrixAt(i, STM);
+  }
+  if (im.visible) im.instanceMatrix.needsUpdate = true;
+  if (st.visible) {
+    var cT = srgb(0x4A2C14), cH = srgb(0xB89058);
+    st.material.color.copy(cT).lerp(cH, 0.75 * W.weich);
+    for (i = 0; i < KR_N.stuhl; i++) {
+      var q = bruch(0.4 + i * R2A), xx = X.c0 + 12 + (X.e - X.c0 - 22) * (Math.floor(q * 40) / 40 + 0.02 * bruch(i * 0.7)), ph2 = 2 * PI * bruch(0.1 + i * R2B), rho2 = Math.sqrt(bruch(0.3 + i * 0.6180339887)) * 0.9;
+      xx += 0.25 * Math.sin(0.2 * clock + i);
+      var rs = KS.rad * (1.9 + 1.3 * bruch(i * 0.37)) * ws;
+      if (rs > 0 && segAus(xx)) rs = 0;
+      if (rs > 0) { wegPunkt(xx, ph2, rho2, rs, SQ); if (rs > SQ.rmax) rs = SQ.rmax; } else SQ.x = SQ.y = SQ.z = 0;
+      STM.makeScale(rs, rs, rs); STM.setPosition(SQ.x, SQ.y, SQ.z); st.setMatrixAt(i, STM);
+    }
+    st.instanceMatrix.needsUpdate = true;
+  }
+}
+/* Netze, Farben und Objekte nach den Wirkgroessen setzen */
+function krAnwenden() {
+  var W = SZW, U = KR.u, dae = 1 - W.daempf, i;
+  U.D.value.set(0.6 * W.verstopfung * (1 - 0.7 * W.weich), 0.32 * W.crohn * dae, 0.5 * W.crohn, 0.85 * W.colitis);
+  U.R.value.set(W.crohn * dae, W.colitis * (1 - 0.85 * W.daempf), W.colitis * (1 - 0.8 * W.daempf), 1 - 0.55 * W.daempf);
+  U.C.value.set(W.crohn * (1 - 0.5 * W.daempf), 0, 0);
+  U.P.value = W.zoeliakie; U.F.value = 0.85 * W.zoeliakie;
+  var dv = W.divertikel;
+  KR.div.forEach(function (m) { var sc = m.userData.rr * dv; m.visible = dv > 0.01; m.scale.set(sc, sc, sc); });
+  if (KR.fist) { var cf = Math.min(1, 1.6 * W.crohn); KR.fist.visible = cf > 0.01; KR.fist.scale.set(cf, cf, cf); }
+}
+function szenarioWirkung() {
+  var n = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };
+  SZ_DATEN.forEach(function (sc) {
+    var a = SZ.anteil[sc.id], m = sc.modell;
+    if (!a) return;
+    Object.keys(n).forEach(function (k) { n[k] += a * (m[k] === undefined ? 0 : m[k]); });
+  });
+  if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
+  Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  if (!KR) krankBauen();
+  if (KR) krAnwenden();
+  if (ST) ST.letzt = '';
+  lv++;
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
@@ -2276,6 +2532,7 @@ var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, geh
   uhr: function (t) { if (t !== undefined) { clock = t; if (ST) ST.letzt = ''; lv++; } return clock; },
   /* fuer die Pruefung: Uebergang (roh 0..1) und Zeit sofort setzen und festhalten */
   stand: function (f, te) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
+  szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   form: function () { return form; },
   zotte: function (s) { zoOeffnen(s === undefined ? null : s); }, stelle: function () { return { wahl: zoWahl, letzte: zoLetzte, standard: zoStandard }; } };   /* Fahrt zur Duenndarmzotte (fuer die Pruefung), gewaehlte Stelle */
 var bereitMerker = false;
@@ -2289,6 +2546,7 @@ function loop(now) {
     bewegt = true;
   }
   if (bewegt && !fz) { applyVisibility(); applyLook(); lv++; }
+  if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
   if (ST && !fz) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? zoFahrtBild(now) : false;
@@ -2312,7 +2570,7 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
-  schemaWeicht(); SCH.abbauen();
+  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
@@ -2338,6 +2596,9 @@ return bauen().then(function () {
   applyLook();
   setSelected(selected);
   stroemungBauen();
+  /* Auswahl ueber den Wechsel Darm <-> Zotte: kommt man aus der Zotte zurueck, gilt die Auswahl weiter (Karte auf dem Handy eingeklappt); von anderswo (Koerper, Adresse) wird sie vergessen */
+  var wahl = Kern.Szenarien.wahl.darm;
+  if (umg.von === 'zotte' && wahl) { SZ.direkt(wahl); szenarioWirkung(); } else Kern.Szenarien.wahl.darm = null;
   zoP = Kern.organLaden('zotte', { ohneCss: true }).then(function (o) { return o; }, function (e) { zoFehl = true; console.warn(e && e.message || e); return null; });   /* nur das Skript, im Hintergrund: liefert organ.form und organ.start fuer die Fahrt (erzeugt keine three.js-Objekte) */
   if (umg.von === 'zotte') { zoP.then(function () { if (!abgebaut) { zoRueckkehr(); bereitMerker = true; } }); return; }   /* Rueckweg aus dem Zotten-Modell */
   bereitMerker = true;   /* sichtbar und bereit wird das Organ im naechsten Bild (loop), damit die Uhr der Stroemung immer im selben Bild beginnt (unabhaengig von der Ladezeit) */

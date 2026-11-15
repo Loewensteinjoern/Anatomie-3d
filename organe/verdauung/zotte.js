@@ -7,7 +7,9 @@
    Alles ist festgelegt, kein Zufall (die kleinen Unterschiede kommen aus hash()). 11 Strukturen mit je eigenem Material, Ausschnitte, Durchsicht, Beschriftung,
    Infokarte, Strukturliste, Lesehilfe. Dazu (Schritt B6) die Strömung: Zucker, Aminosäuren, Fett, Wasser und Blut als Teilchen (nur aus clock und Index), Mahlzeit-Schalter,
    Zottenpumpe (die mittlere Zotte verkürzt sich rhythmisch, per Vertex-Shader und für die Teilchen mit derselben Formel), Schema (Oberfläche und Wege der Stoffe),
-   Hilfekarten und Üben (Strukturen finden, Wege verfolgen).
+   Hilfekarten und Üben (Strukturen finden, Wege verfolgen). Reiter Krankheitsbilder und Medikamente (Kern.Szenarien.daten.darm, hinweis.zotte, Texte freigegeben:
+   docs/freigaben/darm-c2-texte.md) mit Erklärkarte wie im Darm; die Auswahl bleibt beim Wechsel Darm <-> Zotte erhalten (Kern.Szenarien.wahl.darm). Die Wirkung in 3D folgt später
+   (hier nur Reiter, Karte und die Wirkgrößen SZW).
    organ.start (Startansicht) und organ.form (Geometrie als reine Funktionen) dienen der Kamerafahrt aus dem Darm (darm.js, Zoomstufe Darm -> Zotte).
    ===================================================================== */
 (function () {
@@ -781,7 +783,7 @@ function setSelected(id) {
   });
   lv++;
   var box = $('info');
-  if (!id) { box.classList.remove('show'); return; }
+  if (!id) { box.classList.remove('show'); kartenLage(); return; }
   if (!quiz && !wege) closeCard();                       /* die Infokarte ersetzt eine offene Hilfekarte; beim Ueben erscheint sie nicht */
   var s = STRUCT[id];
   $('iLat').textContent = s.lat;
@@ -794,6 +796,7 @@ function setSelected(id) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  kartenLage();
 }
 
 function ebene(sid, an) {
@@ -805,14 +808,67 @@ function waehleListe(id) {
   if (quiz || wege) return;
   setSelected(id);
 }
+/* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.darm wie im Darm, Texte von Joern freigegeben: docs/freigaben/darm-c2-texte.md): Reiter und
+   Erklaerkarte (id kcard) unten links wie die Infokarte. Felder wie bei Kern.Szenarien (note = hinweis.zotte), dazu datei und modell = Wirkgroessen (durchfall, verstopfung, zoeliakie,
+   divertikel, crohn, colitis, bremse, weich, daempf; siehe Kern.Szenarien.daten.darm). Eine Wirkung in 3D gibt es in der Zotte noch nicht (SZW wird nur mitgefuehrt). */
+var SZ_EINLEITUNG = { disease: 'Wähle ein Krankheitsbild – in Darm und Zotte siehst du, wie sich Schleimhaut, Wand und Stuhl verändern.',
+  drug: 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild.' };
+var SZ_AUS = 'Krankheitsbild oder Medikament ausschalten';
+var SZ_DATEN = Kern.Szenarien.daten.darm.map(function (sc) { var o = Object.assign({}, sc); o.note = sc.hinweis.zotte; return o; });
+var SZW = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags) */
+var SZ = Kern.Szenarien({
+  daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: SZ_AUS,
+  beimWechsel: function (id) {
+    Kern.Szenarien.wahl.darm = id || null;             /* Merker fuer den Wechsel Darm <-> Zotte */
+    if (id) {                                          /* Hilfekarte, Info und Ueben weichen der Szenariokarte */
+      if (quiz) quizEnd();
+      if (wege) wegeEnd();
+      setSelected(null); closeCard();
+      schemaWeicht();
+      if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Zotte, sie beginnt eingeklappt (Titelzeile) */
+    }
+    kartenLage();
+  },
+  beimEinklappen: function () {
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    kartenLage();
+  }
+});
+function szWeichen() {
+  if (SZ.aktiv && SZ.offen) {
+    SZ.zuklappen();
+    var bm = SZ.el.querySelector('#bCardMin'); if (bm) bm.textContent = '+';
+  }
+}
+/* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
+function kartenLage() {
+  if (!SZ || !SZ.el) return;
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  lv++;
+}
+/* Wirkgroessen nach den Anteilen setzen (die Wirkung in 3D folgt in einem spaeteren Schritt) */
+function szenarioWirkung() {
+  var n = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };
+  SZ_DATEN.forEach(function (sc) {
+    var a = SZ.anteil[sc.id], m = sc.modell;
+    if (!a) return;
+    Object.keys(n).forEach(function (k) { n[k] += a * (m[k] === undefined ? 0 : m[k]); });
+  });
+  if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
+  Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  lv++;
+}
+
 (function leiste() {
-  /* Reiter: Strukturen (nach Gruppen, Farbpunkt blendet die Struktur ein und aus), Hilfekarten, Ueben */
+  /* Reiter: Strukturen (nach Gruppen, Farbpunkt blendet die Struktur ein und aus), Hilfekarten, Ueben, Krankheitsbilder, Medikamente */
   var tabs = document.createElement('div'); tabs.className = 'tabs';
   var rail = document.createElement('div'); rail.id = 'paneStruct';
   var paneH = document.createElement('div'); paneH.id = 'paneHelp';
   var paneU = document.createElement('div'); paneU.id = 'paneUeben';
-  var panes = [rail, paneH, paneU];
-  ['Strukturen', 'Hilfekarten', 'Üben'].forEach(function (name, k) {
+  var paneD = document.createElement('div'); paneD.id = 'paneDis';
+  var paneM = document.createElement('div'); paneM.id = 'paneMed';
+  var panes = [rail, paneH, paneU, paneD, paneM];
+  ['Strukturen', 'Hilfekarten', 'Üben', 'Krankheitsbilder', 'Medikamente'].forEach(function (name, k) {
     var b = document.createElement('button'); b.className = 'tab' + (k === 0 ? ' on' : ''); b.textContent = name;
     b.addEventListener('click', function () {
       Array.prototype.forEach.call(tabs.children, function (x) { x.classList.remove('on'); });
@@ -834,6 +890,9 @@ function waehleListe(id) {
     paneH.appendChild(d);
   });
   /* Ueben: Strukturen finden und Wege verfolgen (schliessen sich gegenseitig aus) */
+  /* Krankheitsbilder, Medikamente */
+  SZ.liste(paneD, 'disease', 'Krankheitsbilder', SZ_EINLEITUNG.disease);
+  SZ.liste(paneM, 'drug', 'Medikamente', SZ_EINLEITUNG.drug);
   var iu = document.createElement('p'); iu.className = 'dis-intro'; iu.textContent = 'Finde die gesuchte Struktur an der Zotte und tippe sie an. Die Beschriftung verschwindet solange. Oder verfolge einen Weg: Tippe die Stationen der Reihe nach an.'; paneU.appendChild(iu);
   var pb = document.createElement('div'); pb.className = 'pane-btn';
   var bq = document.createElement('button'); bq.className = 'gh'; bq.id = 'bQuiz'; bq.textContent = 'Strukturen finden';
@@ -973,11 +1032,13 @@ function showCard(kick, title, lead, after, istQuiz) {
   if (selected && !istQuiz) setSelected(null);
   $('scard').classList.add('show');
   $('info').classList.remove('show');
+  kartenLage();
   lv++;
 }
 function closeCard() {
   $('scard').classList.remove('show');
   document.querySelectorAll('.dis[data-card]').forEach(function (d) { d.classList.remove('on'); });
+  kartenLage();
   lv++;
 }
 function openHelp(key) {
@@ -1298,10 +1359,11 @@ function layoutLabels(w, h) {
   var topL = r.y0, topR = narrow ? Math.max(r.y0, 214) : Math.max(r.y0, $('tools').getBoundingClientRect().bottom + 16);   /* oben: Anfang des freien Bereichs (Desktop rechts unter der Werkzeugleiste, Handy unter dem Zurueck-Knopf des Atlas) */
   var botL = narrow ? r.y1 - 6 : h - 40, botR = botL;
   var unten = $('info').classList.contains('show');   /* Infokarte unten links: Beschriftung links darueber */
-  if (!narrow && unten) botL = Math.min(botL, h - 22 - $('info').offsetHeight - 24);
+  var kk = SZ.el && SZ.el.classList.contains('show') && !SZ.el.classList.contains('weg') ? SZ.el : null;   /* offene Szenariokarte (Krankheitsbild, Medikament): ebenso */
+  if (!narrow && (unten || kk)) botL = Math.min(botL, h - 22 - (unten ? $('info') : kk).offsetHeight - 24);
   var gap = narrow ? 27 : 36, items = [];
   Object.keys(LAB).forEach(function (id) { var b = LAB[id]; b.el.style.display = 'none'; b.ln.style.display = 'none'; b.dot.style.display = 'none'; });
-  if (showLabels && !(narrow && (selected || unten))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei */
+  if (showLabels && !(narrow && (selected || unten || (kk && !kk.classList.contains('min'))))) {   /* Handy: die Karte deckt das Modell, ohne Beschriftung bleibt es frei */
     LISTEN[aktiv].forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen */
@@ -1752,6 +1814,7 @@ var kamAlt = { near: camera.near, far: camera.far };
 var App = window.ZotteApp = { ready: false, aufbauMs: 0, waehle: setSelected, gehe: gehe, durchsicht: durchsicht, ansicht: ansicht, dreiecke: tris, treffer: trefferAn,
   mahlzeit: function (an) { setMahlzeit(!!an); },
   schema: function (an) { setSchema(!!an); },
+  szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
   wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice(), ausschnitt: aktiv }; },
   quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
@@ -1817,6 +1880,7 @@ function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   var neuBereit = false;
   if (bereitMerker && !App.ready) { bereitMerker = false; neuBereit = true; clock = 0; root.visible = true; App.aufbauMs = Math.round(performance.now() - t0); App.ready = true; }   /* die Uhr beginnt in diesem Bild bei 0 */
+  if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
   if (ST) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
@@ -1830,7 +1894,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  schemaWeicht(); SCH.abbauen();
+  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);
@@ -1857,6 +1921,9 @@ return bauen().then(function () {
   applyVisibility();
   setSelected(selected);
   stroemungBauen();
+  /* Auswahl ueber den Wechsel Darm <-> Zotte: kommt man aus dem Darm, gilt die Auswahl weiter (Karte auf dem Handy eingeklappt); von anderswo (Koerper, Adresse) wird sie vergessen */
+  var wahl = Kern.Szenarien.wahl.darm;
+  if (umg.von === 'darm' && wahl) { SZ.direkt(wahl); szenarioWirkung(); } else Kern.Szenarien.wahl.darm = null;
   bereitMerker = true;   /* bereit wird das Organ im naechsten Bild (loop), damit die Uhr der Stroemung immer im selben Bild beginnt (unabhaengig von der Ladezeit) */
 }).catch(function (e) { if (abgebaut) return; console.error(e); $('bootSt').textContent = 'Fehler beim Aufbau: ' + e.message; });
 }

@@ -24,7 +24,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## core/sdf.js (188 Zeilen) – Gemeinsamer Kern - SDF: Gitter, Auswertung und Surface Nets fuer
 
-## core/szenarien.js (237 Zeilen) – Gemeinsamer Kern - Krankheitsbilder und Medikamente (Reiter + Erklaerkarte)
+## core/szenarien.js (325 Zeilen) – Gemeinsamer Kern - Krankheitsbilder und Medikamente (Reiter + Erklaerkarte)
 
 ## organe/herz/herz.css (147 Zeilen)
 
@@ -187,20 +187,21 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 2468: 7b. Kamerafahrt zum Nephron (Infokarte "Nephron hier ansehen" bei Rinde, Saeulen, Pyramiden und Papillen, K…
 - 2640: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/darm.css (111 Zeilen)
+## organe/verdauung/darm.css (127 Zeilen)
 
-## organe/verdauung/darm.js (2348 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
-- 20: Inhalte (Daten, getrennt vom Code)
-- 272: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
-- 336: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
-- 704: 3. Zustand, Bedienung
-- 918: 4. Kamera: Ausschnitte, freier Bildbereich
-- 983: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1194: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1403: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
-- 1773: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
-- 2047: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
-- 2230: 8. Renderschleife, Aufbau, Abbau
+## organe/verdauung/darm.js (2609 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+- 24: Inhalte (Daten, getrennt vom Code)
+- 276: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
+- 340: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
+- 708: 3. Zustand, Bedienung
+- 970: 4. Kamera: Ausschnitte, freier Bildbereich
+- 1035: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1248: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1458: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
+- 1830: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+- 2104: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
+- 2287: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
+- 2486: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/magen.css (152 Zeilen)
 
@@ -224,20 +225,20 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 ## organe/verdauung/verdauung-form.js (1409 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
 
-## organe/verdauung/zotte.css (110 Zeilen)
+## organe/verdauung/zotte.css (126 Zeilen)
 
-## organe/verdauung/zotte.js (1865 Zeilen) – Dünndarmzotte - Saumzellen, Kapillaren und Lymphgefäß
-- 16: Inhalte (Daten, getrennt vom Code): Texte von Joern freigegeben (darm-b-texte.md, Teil 2)
-- 166: Form (feste Größen, Modelleinheit 0,1 mm): reine Funktionen, die Geometrie als Daten liefern (organ.form). …
-- 531: Strömung: Wege der Teilchen (nur Daten und Formeln, kein three.js, kein Zufall) und Zottenpumpe
-- 696: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie)
-- 742: 2. Zustand, Bedienung
-- 905: 3. Kamera: Ausschnitte, freier Bildbereich
-- 963: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1169: 4. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1349: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
-- 1554: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
-- 1747: 8. Renderschleife, Aufbau, Abbau
+## organe/verdauung/zotte.js (1932 Zeilen) – Dünndarmzotte - Saumzellen, Kapillaren und Lymphgefäß
+- 18: Inhalte (Daten, getrennt vom Code): Texte von Joern freigegeben (darm-b-texte.md, Teil 2)
+- 168: Form (feste Größen, Modelleinheit 0,1 mm): reine Funktionen, die Geometrie als Daten liefern (organ.form). …
+- 533: Strömung: Wege der Teilchen (nur Daten und Formeln, kein three.js, kein Zufall) und Zottenpumpe
+- 698: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie)
+- 744: 2. Zustand, Bedienung
+- 964: 3. Kamera: Ausschnitte, freier Bildbereich
+- 1022: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1230: 4. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1411: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
+- 1616: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
+- 1809: 8. Renderschleife, Aufbau, Abbau
 
 ## tools/betroffen.js (209 Zeilen) – Betroffene Prüfläufe: welche Modelle tools/vergleich.js prüfen muss
 
