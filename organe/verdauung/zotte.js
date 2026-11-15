@@ -8,8 +8,8 @@
    Infokarte, Strukturliste, Lesehilfe. Dazu (Schritt B6) die Strömung: Zucker, Aminosäuren, Fett, Wasser und Blut als Teilchen (nur aus clock und Index), Mahlzeit-Schalter,
    Zottenpumpe (die mittlere Zotte verkürzt sich rhythmisch, per Vertex-Shader und für die Teilchen mit derselben Formel), Schema (Oberfläche und Wege der Stoffe),
    Hilfekarten und Üben (Strukturen finden, Wege verfolgen). Reiter Krankheitsbilder und Medikamente (Kern.Szenarien.daten.darm, hinweis.zotte, Texte freigegeben:
-   docs/freigaben/darm-c2-texte.md) mit Erklärkarte wie im Darm; die Auswahl bleibt beim Wechsel Darm <-> Zotte erhalten (Kern.Szenarien.wahl.darm). Die Wirkung in 3D folgt später
-   (hier nur Reiter, Karte und die Wirkgrößen SZW).
+   docs/freigaben/darm-c2-texte.md) mit Erklärkarte wie im Darm; die Auswahl bleibt beim Wechsel Darm <-> Zotte erhalten (Kern.Szenarien.wahl.darm). Die Wirkung in 3D: Abschnitt 6b (Durchfall: Wasser aus
+   den Krypten; Trinklösung: Wasser und Zucker durch die Saumzellen ins Blut; Zöliakie: flache Zotten, tiefere Krypten; Crohn: Abwehrzellen, kürzer und gerötet).
    organ.start (Startansicht) und organ.form (Geometrie als reine Funktionen) dienen der Kamerafahrt aus dem Darm (darm.js, Zoomstufe Darm -> Zotte).
    ===================================================================== */
 (function () {
@@ -810,12 +810,12 @@ function waehleListe(id) {
 }
 /* Krankheitsbilder und Medikamente (Kern.Szenarien, Daten Kern.Szenarien.daten.darm wie im Darm, Texte von Joern freigegeben: docs/freigaben/darm-c2-texte.md): Reiter und
    Erklaerkarte (id kcard) unten links wie die Infokarte. Felder wie bei Kern.Szenarien (note = hinweis.zotte), dazu datei und modell = Wirkgroessen (durchfall, verstopfung, zoeliakie,
-   divertikel, crohn, colitis, bremse, weich, daempf; siehe Kern.Szenarien.daten.darm). Eine Wirkung in 3D gibt es in der Zotte noch nicht (SZW wird nur mitgefuehrt). */
+   divertikel, crohn, colitis, bremse, weich, daempf; siehe Kern.Szenarien.daten.darm). Die Wirkung in 3D steht in Abschnitt 6b. */
 var SZ_EINLEITUNG = { disease: 'Wähle ein Krankheitsbild – in Darm und Zotte siehst du, wie sich Schleimhaut, Wand und Stuhl verändern.',
   drug: 'Wähle ein Medikament – es wirkt an dem genannten Krankheitsbild.' };
 var SZ_AUS = 'Krankheitsbild oder Medikament ausschalten';
 var SZ_DATEN = Kern.Szenarien.daten.darm.map(function (sc) { var o = Object.assign({}, sc); o.note = sc.hinweis.zotte; return o; });
-var SZW = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags) */
+var SZW = { trink: 0, durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };   /* Wirkgroessen (weich ueberblendet, Summe der Anteile * Werte des Eintrags) */
 var SZ = Kern.Szenarien({
   daten: SZ_DATEN, karte: 'kcard', dauer: 1.2, ausTitel: SZ_AUS,
   beimWechsel: function (id) {
@@ -846,16 +846,18 @@ function kartenLage() {
   SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
   lv++;
 }
-/* Wirkgroessen nach den Anteilen setzen (die Wirkung in 3D folgt in einem spaeteren Schritt) */
+/* Wirkgroessen nach den Anteilen setzen, dann die Wirkung in 3D (Abschnitt 6b) */
 function szenarioWirkung() {
-  var n = { durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };
+  var n = { trink: 0, durchfall: 0, verstopfung: 0, zoeliakie: 0, divertikel: 0, crohn: 0, colitis: 0, bremse: 0, weich: 0, daempf: 0 };
   SZ_DATEN.forEach(function (sc) {
     var a = SZ.anteil[sc.id], m = sc.modell;
     if (!a) return;
     Object.keys(n).forEach(function (k) { n[k] += a * (m[k] === undefined ? 0 : m[k]); });
   });
+  n.trink = SZ.anteil.trinkloesung || 0;   /* Anteil der Trinkloesung (modell wie Durchfall, die Wirkung in der Zotte ist mehr) */
   if (Object.keys(n).every(function (k) { return n[k] === SZW[k]; })) return;
   Object.keys(n).forEach(function (k) { SZW[k] = n[k]; });
+  krankWirkung();   /* Abschnitt 6b */
   lv++;
 }
 
@@ -1304,6 +1306,13 @@ function frei(id, p) {
   }
   return true;
 }
+/* Anker der verformten Teile (Krankheitsbilder, Abschnitt 6b: flachere Zotten): Lage in der Ruhelage -> verformt; ohne Verformung unveraendert */
+function kand(id, p) {
+  if (!flachA || id === 'krypten' || id === 'ringfalte') return p;
+  var q = p.clone();
+  if (id === 'nachbarn') q.y -= flachA * Math.min(Math.max(q.y, 0), ZR0.h); else pumpe(q, pumpA + flachA);
+  return q;
+}
 var pS = new THREE.Vector3();
 function imBild(p) {   /* Anker liegt sichtbar im Bild (nicht am Rand, nicht hinter der Kamera) */
   pS.copy(p).project(camera);
@@ -1319,7 +1328,7 @@ function sichtPruefen(now, w, h) {
     if (!enabled[id]) return;
     var c = KAND[aktiv][id] || [], i;
     VIS[id] = null;
-    for (i = 0; i < c.length; i++) if (imBild(c[i]) && frei(id, c[i])) { VIS[id] = c[i]; break; }
+    for (i = 0; i < c.length; i++) { var q = kand(id, c[i]); if (imBild(q) && frei(id, q)) { VIS[id] = c[i]; break; } }   /* gemerkt wird die Ruhelage, verformt wird beim Zeichnen (kand) */
   });
   sichtVer++;
 }
@@ -1367,7 +1376,7 @@ function layoutLabels(w, h) {
     LISTEN[aktiv].forEach(function (id) {
       if (!enabled[id]) return;
       if (narrow && aktiv === 0 && HANDY_GROSS.indexOf(id) < 0) return;   /* Handy-Uebersicht: nur die grossen Strukturen */
-      var an = id in VIS ? VIS[id] : (KAND[aktiv][id] || [])[0];
+      var an = id in VIS ? VIS[id] : (KAND[aktiv][id] || [])[0]; if (an) an = kand(id, an);
       if (!an) return;
       pv.copy(an).project(camera);
       if (pv.z > 1) return;
@@ -1429,6 +1438,9 @@ var KINDS = [
   { id: 'wasser', name: 'Wasser', col: 0x8FD0F0, em: 0x1F5A86, n: 70, rad: 0.056, an: [0, 12], nR: 7, btn: 'bWasser' },
   { id: 'blut', name: 'Blut', col: 0xC8372D, em: 0x5A1410, n: 80, rad: 0.038, nR: 0 }
 ];
+var KX = [];                                               /* zusaetzliche Arten der Krankheitsbilder (Abschnitt 6b), erst bei der ersten Wahl angelegt */
+var flachA = 0;                                            /* Verkuerzung der Zotte durch Krankheitsbilder (Zoeliakie, Crohn), zur Zottenpumpe addiert */
+var KRG = null;                                            /* Objekte der Krankheitsbilder (Abschnitt 6b), erst bei der ersten Wahl */
 var KI = { zucker: 0, amino: 1, fett: 2, wasser: 3, blut: 4 };
 var kindOn = [true, true, true, true, true];
 var TAG_SID = [null, null, 'saumzellen', 'kapillarnetz', 'venole', 'arteriole', 'lymphgefaess', null];   /* Etikett des Abschnitts (1 Darminhalt, 2 Zelle, 3 Kapillare, 4 Venole, 5 Arteriole, 6 Lymphe, 7 Gewebe) -> Struktur */
@@ -1440,7 +1452,10 @@ var FA = 0.20, FB = 0.34, FC = 0.40, FD = 0.50;            /* Fett: Darminhalt, 
 
 /* Feste Eigenschaften je Index (nur aus dem Index) und die Wege durch das Netz */
 function teilchenDaten() {
-  KINDS.forEach(function (K, ki) {
+  KINDS.forEach(teilchenFuer);
+}
+function teilchenFuer(K, ki) {   /* Krankheitsbilder (6b) legen mit teilchenFuer ihre zusaetzlichen Arten KX an (Index ki >= 10) */
+  {
     var i;
     K.e = []; K.pz = []; K.rs = []; K.pf = []; K.l0 = []; K.l1 = []; K.aS = []; K.yS = []; K.rN = []; K.a0 = []; K.r0 = []; K.y0 = []; K.ox = []; K.oz = [];
     for (i = 0; i < K.n; i++) {
@@ -1470,12 +1485,12 @@ function teilchenDaten() {
       K.aS.push(aS); K.yS.push(yS); K.rN.push(rN); K.a0.push(a0); K.r0.push(r0); K.y0.push(y0); K.l0.push(l0); K.l1.push(l1); K.pf.push(pf); K.ox.push(ox); K.oz.push(oz);
     }
     K.vis = new Float32Array(K.n); K.tag = new Uint8Array(K.n); K.pos = new Float32Array(K.n * 3); K.cc = new Float32Array(K.n);
-  });
+  }
 }
 function polar(o, r, a, y) { o.x = r * Math.sin(a); o.z = -r * Math.cos(a); o.y = y; }
 /* Lage (Ruhelage) des Teilchens i der Art ki beim Fortschritt u (0..1) seines Zyklus: schreibt o.x, o.y, o.z, o.s (Groesse), o.t (Abschnitt), o.c (Farbe beim Blut) */
 function ort(ki, i, u, o) {
-  var K = KINDS[ki], f, pf = K.pf[i], P_ = SZ_.P;
+  var K = ki >= 10 ? KX[ki - 10] : KINDS[ki], f, pf = K.pf[i], P_ = SZ_.P;
   o.t = 0; o.s = 1; o.c = 0;
   if (ki === KI.blut) {
     var sl = u * pf.L; polyBei(pf, sl, o);
@@ -1541,7 +1556,7 @@ function stroemungBauen() {
 /* je Bild: Teilchen setzen (nur wenn sich Zeit, Uebergang, Auswahl oder Stoffe aendern) */
 function stroemungBild() {
   if (!ST) return;
-  var key = clock + '|' + fe + '|' + tM + '|' + kindOn.join('');
+  var key = clock + '|' + fe + '|' + tM + '|' + kindOn.join('') + (KRG ? '|' + flachA : '');
   if (key === ST.letzt) return;
   ST.letzt = key;
   var ki, i;
@@ -1554,14 +1569,17 @@ function stroemungBild() {
       if (r < 0.0008) r = 0;
       if (r > 0 && TAG_SID[LB.t] && !enabled[TAG_SID[LB.t]]) r = 0;   /* Inhalt einer ausgeblendeten Struktur */
       K.vis[i] = r; K.tag[i] = r > 0 ? LB.t : 0; K.pos[i * 3] = LB.x; K.pos[i * 3 + 1] = LB.y; K.pos[i * 3 + 2] = LB.z; K.cc[i] = LB.c;
-      TMPP.x = LB.x; TMPP.y = LB.y; TMPP.z = LB.z; pumpe(TMPP, pumpA);
+      TMPP.x = LB.x; TMPP.y = LB.y; TMPP.z = LB.z; pumpe(TMPP, pumpA + flachA);
       if (col) { var c = LB.c; col[i * 3] = BLUT_C0.r + (BLUT_C1.r - BLUT_C0.r) * c; col[i * 3 + 1] = BLUT_C0.g + (BLUT_C1.g - BLUT_C0.g) * c; col[i * 3 + 2] = BLUT_C0.b + (BLUT_C1.b - BLUT_C0.b) * c; }
-      STM.makeScale(r, r, r); STM.setPosition(TMPP.x, TMPP.y, TMPP.z);
+      var rv = r;
+      if (KRG && KRG.zoe > 0 && i >= K.nR && ki !== KI.blut) { var hz = bruch(0.13 + i * R2B * 1.3 + ki * 0.2); rv = r * (1 - sstep(hz, hz + 0.1, 0.7 * KRG.zoe)); }   /* Zoeliakie: weniger Aufnahme (nur im Bild, das Schema bleibt) */
+      STM.makeScale(rv, rv, rv); STM.setPosition(TMPP.x, TMPP.y, TMPP.z);
       im.setMatrixAt(i, STM);
     }
     im.instanceMatrix.needsUpdate = true;
     if (col) im.instanceColor.needsUpdate = true;
   }
+  if (KRG) krankTeilchen();
 }
 /* Zottenpumpe: Verkuerzung zur Zeit clock (Schlag in den ersten 45 % jedes Zyklus von TP s) */
 function pumpWert() { var c = clock / TP, fr = c - Math.floor(c), p = fr < 0.45 ? Math.pow(Math.sin(PI * fr / 0.45), 2) : 0; return (PUMPE_A0 + (PUMPE_A1 - PUMPE_A0) * fe) * p; }
@@ -1572,7 +1590,7 @@ function stroemungSchritt(dt) {
   if (!fzFest && fzR !== ziel) fzR = ziel > fzR ? Math.min(ziel, fzR + dt / SZ_.UEBERG) : Math.max(ziel, fzR - dt / SZ_.UEBERG);
   fe = sstep(0, 1, fzR);
   if (playing) clock += dt * speed;
-  pumpA = pumpWert(); PU.uPump.value = pumpA;
+  pumpA = pumpWert(); PU.uPump.value = pumpA + flachA;
   if (fe !== feMilch) {   /* nach dem Essen ist die Lymphe leicht milchig */
     feMilch = fe;
     MAT.lymphgefaess.color.copy(LYM_C0).lerp(LYM_C1, 0.8 * fe); MAT.lymphgefaess.opacity = 0.62 + 0.2 * fe;
@@ -1612,6 +1630,117 @@ function setMahlzeit(an, still) {
 }
 $('bNuechtern').onclick = function () { setMahlzeit(false); };
 $('bEssen').onclick = function () { setMahlzeit(true); };
+
+/* =====================================================================
+   6b. Krankheitsbilder und Medikamente in der Zotte. Wirkgroessen SZW (Summe der weich ueberblendeten Anteile * Werte des Eintrags in Kern.Szenarien.daten.darm: durchfall, zoeliakie, crohn,
+   daempf; dazu trink = Anteil der Trinkloesung). Alle three.js-Objekte entstehen erst bei der ersten Wahl (krankBauen), ohne Wahl aendert sich nichts. Feste Bahnen, kein Zufall.
+   Durchfall (auch Loperamid, Trinkloesung): hellblaue Wasserteilchen steigen aus den elf Krypten und stroemen ins Lumen. Trinkloesung: dazu gehen Wasser und Zucker (gelb) ueber den
+   Weg der Stoffteilchen (Abschnitt 6, Art KX) durch die Saumzellen ins Blut (Natrium hat keine eigene Teilchenfarbe: Wasser und Zucker zeigen die gemeinsame Aufnahme).
+   Zoeliakie: die Zotten werden flach (Zotte in der Mitte: dieselbe Verformung wie die Zottenpumpe, Hoehe stark verkuerzt, Spitze breit; Netze per Vertex-Shader, Teilchen mit pumpe(),
+   die Nachbarzotten nur in der Hoehe), die Krypten reichen tiefer (Vertex-Shader: Ringfalte und Auskleidung der Krypten sinken um uTief * Gewicht des Kryptenrandes), weniger Teilchen
+   der Aufnahme. Crohn: Abwehrzellen (kleine runde Zellen, feste Lagen in den Luecken des Kapillarnetzes), die Zotte etwas kuerzer und gerotet; Budesonid (daempf): weniger Zellen, weniger rot.
+   ===================================================================== */
+var KR_ZOE = 0.72, KR_CROHN = 0.12, KR_TIEF = 0.9;       /* Verkuerzung bei Zoeliakie und Crohn (Bruchteil der Hoehe wie bei der Pumpe), Kryptentiefe bei Zoeliakie (0,1 mm) */
+var KR_WP = 7;                                           /* Wasser aus den Krypten: Dauer eines Umlaufs (s bei "normal") */
+var KR_ROT = srgb(0xE0604E);
+function krankLage() {   /* Lagen der Abwehrzellen: in den Luecken zwischen den Ringen und Verbindungen des Kapillarnetzes (Ruhelage) */
+  var L = [], k, i;
+  for (k = 0; k < NETZ_Y.length - 1; k++) for (i = 1; i < NETZ_N; i++) {
+    if (i % 2 !== k % 2 || (k >= 4 && (i <= 3 || i >= 11))) continue;
+    var y = (NETZ_Y[k] + NETZ_Y[k + 1]) / 2, a = -PI / 2 + PI * i / NETZ_N, rr = zr(ZR0.h, ZR0.r, y) - 0.38, h = hash(k * 17 + i * 3.1);
+    L.push({ x: rr * Math.sin(a), y: y + 0.12 * (h - 0.5), z: -rr * Math.cos(a), s: 0.06 + 0.025 * hash(k * 5 + i), th: hash(k * 11 + i * 7) });
+  }
+  return L;
+}
+function krankBauen() {
+  if (KRG || abgebaut || !ST) return;
+  var GL = KRYPTEN.map(function (c) { return 'vec2(' + c[0].toFixed(3) + ', ' + c[1].toFixed(3) + ')'; });
+  var glKw = ['float zKw(vec2 p) {', '  float w = 0.0;'].concat(GL.map(function (c) { return '  w = max(w, 1.0 - smoothstep(0.55, 1.15, length(p - ' + c + ') / ' + KR_R.toFixed(3) + '));'; }), ['  return w;', '}']).join('\n');
+  KRG = { uFl: { value: 0 }, uTief: { value: 0 }, zoe: 0, df: 0, trink: 0, cw: 0, zellen: krankLage(), cwAlt: -1, farben: {} };
+  /* Nachbarzotten: nur in der Hoehe flacher (dieselbe Formel wie zPumpe, ohne Verbreiterung) */
+  MAT.nachbarn.onBeforeCompile = function (sh) {
+    sh.uniforms.uFl = KRG.uFl;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uFl;').replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y -= uFl * min(max(transformed.y, 0.0), ' + ZR0.h.toFixed(3) + ');');
+  };
+  /* Ringfalte und Auskleidung der Krypten: tiefere Krypten (Gewicht = weicher Rand der Krypten wie kryptaW, nicht am Boden der Falte) */
+  var tief = function (sh) {
+    sh.uniforms.uTief = KRG.uTief;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTief;\n' + glKw).replace('#include <begin_vertex>', '#include <begin_vertex>\nif (transformed.y > -2.99) transformed.y -= uTief * zKw(transformed.xz);');
+  };
+  MAT.ringfalte.onBeforeCompile = tief; MAT.krypten.onBeforeCompile = tief;
+  ['nachbarn', 'ringfalte', 'krypten'].forEach(function (k) { MAT[k].needsUpdate = true; });
+  ['saumzellen', 'nachbarn', 'ringfalte'].forEach(function (k) { KRG.farben[k] = MAT[k].color.clone(); });
+  /* Wasser aus den Krypten (44 Teilchen, vier je Krypte) */
+  var mk = tmat(KINDS[KI.wasser].col, KINDS[KI.wasser].em); mk.name = 'teilchen-krypten-wasser';
+  KRG.wk = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), mk, 44);
+  /* Abwehrzellen: kleine runde Zellen (Material mit der Zottenpumpe) */
+  var mz = Kern.mat(0xC9B6E8, { rough: 0.4 }, envTex); mz.name = 'abwehrzellen'; mz.emissive.copy(srgb(0x4A3A78)).multiplyScalar(0.5); pumpMat(mz);
+  KRG.az = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), mz, KRG.zellen.length);
+  /* Wasser und Zucker, die mit der Trinkloesung ueber die Saumzellen zurueck ins Blut gehen: Wege wie die Stoffteilchen (Art KX, ort) */
+  KX.push({ id: 'trink-wasser', col: KINDS[KI.wasser].col, em: KINDS[KI.wasser].em, n: 24, rad: 0.056 }, { id: 'trink-zucker', col: KINDS[KI.zucker].col, em: KINDS[KI.zucker].em, n: 16, rad: 0.07 });
+  KX.forEach(function (K, j) {
+    teilchenFuer(K, 10 + j);
+    var m = tmat(K.col, K.em); m.name = 'teilchen-' + K.id;
+    K.im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), m, K.n);
+  });
+  [KRG.wk, KRG.az].concat(KX.map(function (K) { return K.im; })).forEach(function (im) {
+    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; im.userData.teilchen = im.material.name; im.userData.noexport = true;
+    im.raycast = function () {}; im.name = im.material.name; root.add(im);
+  });
+  KRG.wk.name = 'Wasser aus den Krypten'; KRG.az.name = 'Abwehrzellen';
+}
+/* Netze, Farben, Zellen nach den Wirkgroessen setzen */
+function krankAnwenden() {
+  var zoe = Math.min(1, SZW.zoeliakie), da = Math.min(1, SZW.daempf), cr = Math.min(1, SZW.crohn), cw = cr * (1 - 0.8 * da), rot = cr * (1 - 0.9 * da);
+  KRG.zoe = zoe; KRG.df = Math.min(1, SZW.durchfall); KRG.trink = Math.min(1, SZW.trink);
+  flachA = KR_ZOE * zoe + KR_CROHN * cw;
+  KRG.uFl.value = flachA; KRG.uTief.value = KR_TIEF * zoe;
+  [['saumzellen', 0.7], ['nachbarn', 0.4], ['ringfalte', 0.35]].forEach(function (f) { MAT[f[0]].color.copy(KRG.farben[f[0]]); if (rot > 0) MAT[f[0]].color.lerp(KR_ROT, f[1] * rot); });
+  if (cw !== KRG.cwAlt) {
+    KRG.cwAlt = cw;
+    KRG.zellen.forEach(function (c, i) { var s = c.s * sstep(c.th * 0.9, c.th * 0.9 + 0.1, cw); STM.makeScale(s, s, s); STM.setPosition(c.x, c.y, c.z); KRG.az.setMatrixAt(i, STM); });
+    KRG.az.instanceMatrix.needsUpdate = true;
+  }
+  if (ST) ST.letzt = '';
+}
+/* je Bild (aus stroemungBild): Wasser aus den Krypten und die Teilchen der Trinkloesung; Lage in der Ruhelage, dann mit der Verkuerzung der Zotte (nur Hoehe) bzw. der Pumpe verformt */
+function krankTeilchen() {
+  var i, wd = sstep(0, 0.4, KRG.df), r, im = KRG.wk, h, c, ph, u, f, ex, ez, l, yS, o = LB;
+  im.visible = kindOn[KI.wasser];
+  for (i = 0; i < 44; i++) {
+    c = KRYPTEN[i % 11]; h = hash(i * 1.7 + 3); ph = bruch(Math.floor(i / 11) / 4 + 0.11 * h); u = bruch(clock / KR_WP + ph);
+    yS = basisY(c[0], c[1]); l = Math.sqrt(c[0] * c[0] + c[1] * c[1]) || 1;
+    ex = (c[0] / l) * Math.cos(0.8 * (h - 0.5)) - (c[1] / l) * Math.sin(0.8 * (h - 0.5)); ez = (c[1] / l) * Math.cos(0.8 * (h - 0.5)) + (c[0] / l) * Math.sin(0.8 * (h - 0.5));
+    if (u < 0.4) { f = u / 0.4; o.x = c[0] + 0.12 * Math.sin(f * 7 + i); o.z = c[1] + 0.12 * Math.cos(f * 6 + i); o.y = yS - KR_T + 0.25 + (KR_T - 0.15) * f; }
+    else { f = sstep(0, 1, (u - 0.4) / 0.6); o.x = c[0] + ex * 1.6 * f; o.z = c[1] + ez * 1.6 * f; o.y = yS + 0.1 + 2.4 * f; }
+    o.y -= flachA * Math.min(Math.max(o.y, 0), ZR0.h);   /* Nachbarzotten sind flacher: der Strom folgt ihnen */
+    r = KINDS[KI.wasser].rad * (0.85 + 0.3 * bruch(i * 0.37)) * wd * sstep(0, 0.08, u) * (1 - sstep(0.9, 1, u));
+    if (r < 0.0008) r = 0;
+    STM.makeScale(r, r, r); STM.setPosition(o.x, o.y, o.z); im.setMatrixAt(i, STM);
+  }
+  im.instanceMatrix.needsUpdate = true;
+  var wt = sstep(0, 0.4, KRG.trink);
+  KX.forEach(function (K, j) {
+    var m = K.im, p;
+    m.visible = kindOn[j ? KI.zucker : KI.wasser];
+    for (i = 0; i < K.n; i++) {
+      u = bruch((clock + K.pz[i] * SZ_.P) / SZ_.P);
+      ort(10 + j, i, u, o);
+      r = K.rad * K.rs[i] * o.s * wt * sstep(0, 0.03, u) * (1 - sstep(0.95, 1, u));
+      if (r < 0.0008 || (TAG_SID[o.t] && !enabled[TAG_SID[o.t]])) r = 0;
+      p = pumpe(o, pumpA + flachA);
+      STM.makeScale(r, r, r); STM.setPosition(p.x, p.y, p.z); m.setMatrixAt(i, STM);
+    }
+    m.instanceMatrix.needsUpdate = true;
+  });
+  KRG.az.visible = true;
+}
+function krankWirkung() {   /* aus szenarioWirkung: bei der ersten Wahl bauen, danach nachfuehren (auch beim Zurueck auf 0) */
+  if (!ST) return;
+  if (!KRG && !(SZW.durchfall > 0.002 || SZW.zoeliakie > 0.002 || SZW.crohn > 0.002 || SZW.trink > 0.002)) return;
+  if (!KRG) krankBauen();
+  if (KRG) krankAnwenden();
+}
 
 /* =====================================================================
    7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
@@ -1874,7 +2003,7 @@ var App = window.ZotteApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
     return { geprueft: n, falsch: falsch, beispiel: bsp };
   },
   /* fuer die Pruefung: Uebergang (roh 0..1), Zeit seit dem Essen und Uhr sofort setzen und festhalten */
-  stand: function (f, te, c) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (c !== undefined) clock = c; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); pumpA = pumpWert(); PU.uPump.value = pumpA; if (ST) ST.letzt = ''; lv++; stroemungBild(); } };
+  stand: function (f, te, c) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (c !== undefined) clock = c; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); pumpA = pumpWert(); PU.uPump.value = pumpA + flachA; if (ST) ST.letzt = ''; lv++; stroemungBild(); } };
 var bereitMerker = false;
 function loop(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;

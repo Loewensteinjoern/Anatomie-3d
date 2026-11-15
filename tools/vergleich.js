@@ -413,6 +413,15 @@ async function abbauAblauf(t, name, bedienung) {
   if (felder.length) for (const k of felder) process.stdout.write('    ' + k + ': ' + JSON.stringify([m1[k], m2[k], m3[k]]) + '\n');
 }
 
+/* Krankheitsbilder und Medikamente von Darm und Zotte (C2a): je Eintrag sofort setzen (Prüf-Schnittstelle, App.szenario), Karte einklappen, Bild; die Strömung steht still (Pause) */
+const DARM_SZ = ['durchfall', 'verstopfung', 'zoeliakie', 'divertikulitis', 'crohn', 'colitis', 'trinkloesung', 'loperamid', 'macrogol', 'budesonidCrohn', 'budesonidColitis'];
+async function szenarienBilder(t, app, ids, vor) {
+  for (const id of ids) {
+    await t.js((x) => window[x[0]].szenario(x[1]), [app, id]); await t.weiter(2500);
+    await t.js(() => { const b = document.getElementById('bCardMin'); if (b && b.textContent !== '+') b.click(); }); await t.weiter(600);
+    await t.bild((vor || 'sz-') + id);
+  }
+}
 const MODELLE = {
   koerper: {
     datei: 'index.html',
@@ -1303,6 +1312,9 @@ const MODELLE = {
         await t.klick('#cam0'); await t.klick('#bSee'); await uhrNach(45);
         await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema-gefaesse'); await t.klick('#bSchemaX'); await t.weiter(300);
         await t.klick('#rail .tabs .tab:text-is("Strukturen")'); await t.js(() => window.DarmApp.waehle('lymphe')); await t.weiter(600); await t.bild('info-lymphe'); await t.klick('#bCls');
+        /* C2a: alle elf Krankheitsbilder und Medikamente in der Übersicht (Durchsicht setzt die App selbst), zuletzt ausschalten */
+        await t.klick('#cam0'); await szenarienBilder(t, 'DarmApp', DARM_SZ);
+        await t.js(() => window.DarmApp.szenario(null)); await t.weiter(2500); await t.bild('sz-aus');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1318,6 +1330,8 @@ const MODELLE = {
         await t.klick('#bPlay'); await t.klick('#bEssen'); await t.weiter(2500);
         await t.js(() => { const a = window.DarmApp; a.uhr(a.uhr() - a.stroemung().te + 45); }); await t.weiter(800);
         await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema-gefaesse'); await t.klick('#bSchemaX'); await t.weiter(300);
+        await szenarienBilder(t, 'DarmApp', ['durchfall', 'crohn']);   /* C2a */
+        await t.js(() => window.DarmApp.szenario(null)); await t.weiter(2500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1366,6 +1380,12 @@ const MODELLE = {
         await t.klick('#qNext'); await t.js(() => { for (const id of ['arteriole', 'kapillarnetz', 'venole']) window.ZotteApp.tippe(id); }); await t.weiter(600); await t.bild('wege-alle-fertig');
         t.erg.wege = await t.js(() => window.ZotteApp.wege());
         await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-beendet');
+        /* C2a: Krankheitsbilder und Medikamente in der Zotte (Strömung angehalten); Übersicht, Zöliakie auch im Ausschnitt Krypten, die übrigen in Zotte innen; zuletzt ausschalten */
+        await t.klick('#bPlay'); await t.klick('#cam0');
+        await szenarienBilder(t, 'ZotteApp', ['durchfall', 'zoeliakie']);
+        await t.klick('#cam3'); await szenarienBilder(t, 'ZotteApp', ['zoeliakie'], 'sz-krypten-');
+        await t.klick('#cam1'); await szenarienBilder(t, 'ZotteApp', ['trinkloesung', 'crohn', 'budesonidCrohn', 'verstopfung']);
+        await t.js(() => window.ZotteApp.szenario(null)); await t.weiter(2500); await t.bild('sz-aus');
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1375,6 +1395,8 @@ const MODELLE = {
         await t.klick('#rail .tabs .tab:text-is("Hilfekarten")'); await t.klick('#paneHelp .dis >> nth=0'); await t.weiter(600); await t.bild('hilfekarte');
         await t.klick('#rail .tabs .tab:text-is("Üben")'); await t.klick('#bWege'); await t.weiter(900); await t.bild('wege-start');
         await t.klick('#bWege'); await t.weiter(300);
+        await t.klick('#cam0'); await szenarienBilder(t, 'ZotteApp', ['zoeliakie']);   /* C2a */
+        await t.js(() => window.ZotteApp.szenario(null)); await t.weiter(2500);
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1653,6 +1675,11 @@ MODELLE.atlas.kontexte['uebergaenge-zotte'] = { opt: DESKTOP, adresse: '#darm', 
   await organ('zotte'); await t.weiter(1500); await t.bild('zotte-von-darm');
   await t.klick('#atlasZurueck'); await organ('darm'); await t.weiter(1000); await t.bild('rueckfahrt-darm-punkt'); await t.weiter(1200); await t.bild('darm-von-zotte');
   const z2 = await t.js(ATLAS_ENDZUSTAND);
+  /* C2a: Zöliakie im Darm wählen, Knopf „Zotte“: die Auswahl bleibt, die Zotte zeigt sie (Bild zotte-zoeliakie) */
+  await t.warteAuf(ATLAS_DARM_ZOTTE_BEREIT);
+  await t.js(() => window.DarmApp.szenario('zoeliakie')); await t.weiter(2500);
+  await t.klick('#bZotte'); await t.weiter(600); await t.bisAdresse('#darm/zotte');
+  await organ('zotte'); await t.weiter(3500); await t.bild('zotte-zoeliakie');
   const ok = ATLAS_ENDZUSTAND_OK(z1) && ATLAS_ENDZUSTAND_OK(z2) && /Darm/.test(knopf);
   t.erg.uebergaengeZotte = { endzustand: [z1, z2], knopf, ok };
   process.stdout.write('  uebergaenge-zotte: ' + (ok ? 'Endzustand gleich (Standbild weg, keine inline-Styles), Zurück-Knopf „' + knopf + '“' : 'ABWEICHUNG Endzustand: ' + JSON.stringify([z1, z2, knopf])) + '\n');
