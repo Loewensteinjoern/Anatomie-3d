@@ -187,21 +187,22 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 2468: 7b. Kamerafahrt zum Nephron (Infokarte "Nephron hier ansehen" bei Rinde, Saeulen, Pyramiden und Papillen, K…
 - 2640: 8. Renderschleife, Aufbau, Abbau
 
-## organe/verdauung/darm.css (127 Zeilen)
+## organe/verdauung/darm.css (146 Zeilen)
 
-## organe/verdauung/darm.js (2609 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+## organe/verdauung/darm.js (2907 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
 - 24: Inhalte (Daten, getrennt vom Code)
-- 276: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
-- 340: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
-- 708: 3. Zustand, Bedienung
-- 970: 4. Kamera: Ausschnitte, freier Bildbereich
-- 1035: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1248: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1458: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
-- 1830: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
-- 2104: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
-- 2287: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
-- 2486: 8. Renderschleife, Aufbau, Abbau
+- 307: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
+- 371: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
+- 739: 3. Zustand, Bedienung
+- 1003: 4. Kamera: Ausschnitte, freier Bildbereich
+- 1068: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1282: 5. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1492: 6. Stroemung: Kohlenhydrate (gelb), Eiweiss (orange), Fett (weiss), Wasser (hellblau), Galle (gruen), Pankr…
+- 1864: 7. Schema - Wo wird was aufgenommen (Knopf "Schema", wie beim Magen)
+- 2138: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
+- 2321: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
+- 2520: 7d. Lupe: Nahansicht des Analkanals (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; kei…
+- 2780: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/magen.css (152 Zeilen)
 
@@ -272,11 +273,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (2206 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+## tools/vergleich.js (2222 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
 - 170: 1. Im Browser (vor allen Skripten der Seite)
 - 364: 2. Abläufe je Modell
-- 1844: 3. Aufnehmen
-- 2028: 4. Vergleichen
-- 2190: 5. Aufruf
+- 1860: 3. Aufnehmen
+- 2044: 4. Vergleichen
+- 2206: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)

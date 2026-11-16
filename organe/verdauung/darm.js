@@ -112,6 +112,7 @@ var MARKUP = `<div id="title">
     <button id="bZotte" class="gh" title="Zur Dünndarmzotte – ein kleines Stück Schleimhaut, stark vergrößert">Zotte</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Wo wird was aufgenommen – entlang des ganzen Darms">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Nahansicht des Analkanals">Lupe</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -143,6 +144,15 @@ var MARKUP = `<div id="title">
   <div class="sch-head"><span class="kick">Schema &middot; Wo wird was aufgenommen</span><span class="sch-hint">Gleiche Stoffe wie im 3D-Modell, entlang des ganzen Darms.</span>
   <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
   <div id="schemaBox"></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schließen">&times;</button>
+  <div class="lp-kick">Lupe &middot; Nahansicht</div>
+  <h3 id="lpTitle">Mastdarm und Analkanal &ndash; Längsschnitt</h3>
+  <div class="lp-chips" id="lpChips"></div>
+  <div class="lp-main"><div class="lp-bild"><canvas id="lpCv"></canvas><p class="lp-hint" id="lpHint"></p></div>
+  <div class="lp-text" id="lpText"></div></div>
 </div>
 
 <div class="panel" id="legend">
@@ -220,6 +230,27 @@ var WEGE = [
     stationen: [{ ids: ['leerdarm', 'krummdarm'], de: 'Leerdarm' }, { ids: ['lymphe'] }, { ids: ['zisterne'] }, { ids: ['milchbrustgang'] }],
     abschluss: 'Geschafft: Das Fett gelangt über die Lymphe und den Milchbrustgang ins Blut, an der Leber vorbei.' }
 ];
+/* Lupe Analkanal (Abschnitt 7d; Texte von Joern freigegeben, darm-c2b-texte.md Teil A). Chips: [Schluessel, Name, Kurztext]; Texte je Phase und je Krankheitsbild bzw. Medikament (Schluessel = Id in Kern.Szenarien.daten.darm) */
+var LUPE_KICK = 'Lupe · Nahansicht', LUPE_TITEL = 'Mastdarm und Analkanal – Längsschnitt';
+var LUPE_CHIPS = [
+  ['auto', 'automatisch', 'folgt dem Stuhl im Modell'],
+  ['ruhe', 'Ruhe', 'Die Ampulle ist leer, beide Schließmuskeln sind zu'],
+  ['drang', 'Stuhldrang', 'Stuhl dehnt die Ampulle'],
+  ['gang', 'Stuhlgang', 'Beide Schließmuskeln öffnen sich']
+];
+var LUPE_HINWEIS = 'Folgt dem Stuhl im Modell – Durchsicht und „nach dem Essen“ einschalten.';
+var LUPE_TEXT = {
+  ruhe: 'Der Mastdarm ist meist leer. Der innere Schließmuskel ist ständig leicht angespannt und hält den After dicht, ohne dass wir daran denken. Der äußere Schließmuskel unterstützt ihn.',
+  drang: 'Eine Welle schiebt Stuhl aus dem Sigma in die Ampulle. Dehnungsfühler in der Wand melden das ans Rückenmark und ans Gehirn – wir spüren Stuhldrang. Der innere Schließmuskel öffnet sich kurz, die Schleimhaut prüft, ob Gas oder Stuhl ankommt. Der äußere Schließmuskel bleibt bewusst zu, bis eine Toilette erreicht ist; dann lässt der Drang wieder nach.',
+  gang: 'Auf der Toilette öffnen sich beide Schließmuskeln. Bauchpresse und die Wellen des Darms schieben den Stuhl hinaus. Danach schließen sich beide wieder.',
+  durchfall: 'Flüssiger Stuhl erreicht die Ampulle rasch und oft. Der Drang ist stark und kommt plötzlich – der äußere Schließmuskel muss viel halten. Bei älteren oder geschwächten Menschen reicht das nicht immer: Gefahr der Inkontinenz und wunder Haut am After.',
+  verstopfung: 'Harter, trockener Stuhl staut sich in der Ampulle und dehnt sie. Wer den Drang oft unterdrückt, spürt ihn mit der Zeit schwächer. Zum Entleeren muss stark gepresst werden.',
+  colitis: 'Die Schleimhaut des Mastdarms ist entzündet und blutet leicht. Schon kleine Mengen lösen Drang aus, oft mit schmerzhaftem Pressen ohne viel Stuhl (Tenesmen). Der Stuhl ist blutig und schleimig.',
+  loperamid: 'Die Wellen laufen langsamer, der Stuhl kommt seltener und fester in der Ampulle an – der Drang lässt nach.',
+  macrogol: 'Macrogol hält Wasser im Stuhl. Er kommt weicher in der Ampulle an und geht ohne starkes Pressen hinaus.',
+  budesonidColitis: 'Der Schaum wird über den After gegeben und wirkt direkt auf die entzündete Schleimhaut von Mastdarm und Sigma. Die Entzündung geht zurück, der Drang wird seltener, der Stuhl weniger blutig.'
+};
+var LUPE_KRANK = ['durchfall', 'verstopfung', 'colitis', 'loperamid', 'macrogol', 'budesonidColitis'];   /* Wahl, die die Lupe veraendert (Reihenfolge = Rangfolge); alle anderen: Phasentexte */
 /* Notiz der Lesehilfe: nur ohne Durchsicht und ohne geoeffneten Bereich */
 var LEGNOTE = 'Der Darm von vorn, wie er im Körper liegt. „Durchsicht“ zeigt den Inhalt und seinen Weg in Blut und Lymphe.';
 var organ = { renderer: {}, aufbauen: aufbauen };
@@ -253,7 +284,7 @@ function werkzeugRand(w, h) {
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
-var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 478 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema) um (+30; zweizeilig ist erlaubt, Joern). 478 gemessen mit dem Knopf Zotte (sieben Knoepfe in der Reihe Ausschnitt) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 516 };   /* Hoehe der Leiste (Pixel), unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema und Lupe) um (+30; zweizeilig ist erlaubt, Joern). 516 gemessen mit dem Knopf Lupe (acht Knoepfe in der Reihe Ausschnitt; vorher 478 mit sieben) */
 /* Startansicht bei Fenstergroesse w x h: Kamera (Blickpunkt in Modell-Koordinaten, also relativ zu M) und View-Offset (Pixel); die Werte, mit denen aufbauen die Uebersicht zeigt */
 organ.mitte = M;   /* Mitte des Darms im Koerper (cm): Koerper-Punkt = Modell-Punkt + mitte */
 organ.start = function (w, h) {
@@ -799,6 +830,7 @@ function setSelected(id, punkt) {
     dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 
@@ -834,6 +866,7 @@ var SZ = Kern.Szenarien({
       if (wege) wegeEnd();
       setSelected(null); closeCard();
       schemaWeicht();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
       krankBauen();                                    /* erst jetzt entstehen die three.js-Objekte der Krankheitsbilder */
       if (!seeThrough && !SZ_DATEN.some(function (sc) { return sc.id === id && sc.modell.divertikel; })) durchsicht(true);   /* Wasser, Stuhl und Schleimhaut sieht man nur bei Durchsicht (wie beim Magen der Mahlzeit-Schalter; beim Abwaehlen nicht zurueck) */
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt den Darm, sie beginnt eingeklappt (Titelzeile) */
@@ -841,7 +874,7 @@ var SZ = Kern.Szenarien({
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -854,7 +887,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 
@@ -1037,6 +1070,7 @@ function ansicht(theta, phi, dist, target) {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -2090,7 +2124,7 @@ function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
   $('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
   canvas.style.visibility = on ? 'hidden' : '';
@@ -2204,7 +2238,7 @@ function zoAusblenden() {
 function zoOeffnen(s) {
   if (fz || abgebaut || zoWartet || !App.ready) return;
   if (zoP && !zoModul() && !zoFehl) { zoWartet = true; zoP.then(function () { zoWartet = false; if (!abgebaut) zoOeffnen(s); }); return; }
-  schemaWeicht();
+  schemaWeicht(); lupeClose();
   if (quiz) quizEnd();
   if (wege) wegeEnd();
   closeCard();
@@ -2484,6 +2518,266 @@ function szenarioWirkung() {
 }
 
 /* =====================================================================
+   7d. Lupe: Nahansicht des Analkanals (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; kein three.js; Texte von Joern freigegeben, darm-c2b-texte.md Teil A)
+   Laengsschnitt einfach: Mastdarm-Ampulle (oben), Dehnungsfuehler in der Wand, innerer Schliessmuskel (glatt, unwillkuerlich, innen), aeusserer Schliessmuskel (willkuerlich, aussen),
+   After und Stuhl. Drei Phasen (Chips): Ruhe, Stuhldrang, Stuhlgang; "automatisch" (Standard) folgt dem Stuhl im Modell: die Phase kommt aus der Zeit des Zyklus (lupeModell,
+   dieselben Zeiten wie lauf in Abschnitt 6: Stuhl erreicht die Ampulle -> Stuhldrang, Stuhl am After hinaus -> Stuhlgang, sonst Ruhe) und gilt nur bei "nach dem Essen" mit Durchsicht
+   (sonst Ruhe und ein Hinweis). Ein Tipp auf eine Phase haelt sie fest und spielt sie als Schleife ab (LP_T Sekunden), bis "automatisch" gewaehlt wird.
+   Krankheitsbilder und Medikamente (LUPE_KRANK; Wirkung aus den Anteilen SZ.anteil, weich ueberblendet): Durchfall (fluessiger, hellerer Stuhl, Drang zweimal so oft), Verstopfung
+   (dunkler harter Stuhl, erweiterte Ampulle), Colitis ulcerosa (rote Schleimhaut, Blut); Loperamid, Macrogol und Budesonid-Rektalschaum als gemilderte Form ihres Bildes. Ihr Text
+   ersetzt den Phasentext. Teilchen und Bewegung nur aus clock und Index (kein Zufall). Die Lupe zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte,
+   Erklaer- und Szenariokarte und die Fahrt zur Zotte schliessen sie bzw. weichen ihr.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 400, H: 260, wahl: 'auto', key: '', folgt: false };   /* wahl: auto | ruhe | drang | gang */
+var LP_T = { ruhe: 8, drang: 9, gang: 8 };   /* Dauer der Schleife je festgehaltener Phase (Sekunden bei "normal"); Durchfall: Stuhldrang doppelt so oft */
+var LP_CX = 225;                              /* Mitte des Kanals im Bild */
+function lpFrac(x) { return x - Math.floor(x); }
+function lpHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function lpKlemm(v) { return Math.max(0, Math.min(1, v)); }
+function lpMisch(a, b, t) {   /* Mischfarbe zweier Hexwerte (wieder ein Hexwert) */
+  t = lpKlemm(t);
+  var r = (a >> 16) & 255, g = (a >> 8) & 255, bl = a & 255;
+  return (Math.round(r + (((b >> 16) & 255) - r) * t) << 16) | (Math.round(g + (((b >> 8) & 255) - g) * t) << 8) | Math.round(bl + ((b & 255) - bl) * t);
+}
+function lpRgb(h) { return 'rgb(' + ((h >> 16) & 255) + ',' + ((h >> 8) & 255) + ',' + (h & 255) + ')'; }
+function lpLabel(c, text, x, y, rechts) {   /* Beschriftung; liefert die Breite */
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+  return w;
+}
+function lpLeiter(c, x1, y1, x2, y2) {
+  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+}
+function lpBeschrift(c, text, x, y, rechts, zx, zy) {   /* Beschriftung mit Fuehrungslinie zum Ziel (zx, zy) */
+  var w = lpLabel(c, text, x, y, rechts);
+  lpLeiter(c, rechts ? x - w - 4 : x + w + 4, y - 3, zx, zy);
+}
+function lpPunkt(c, x, y, alpha, farbe, r) {
+  if (alpha <= 0.01) return;
+  c.globalAlpha = Math.min(1, alpha); c.fillStyle = farbe;
+  c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+/* Wirkung der Wahl: Gewichte 0..1 (weich ueberblendet aus den Anteilen); Medikamente als gemilderte Form ihres Bildes */
+function lupeWirkung() {
+  var a = SZ.anteil, g = function (id) { return a[id] || 0; };
+  return { d: Math.min(1, g('durchfall') + 0.45 * g('loperamid')), v: Math.min(1, g('verstopfung') + 0.45 * g('macrogol')), c: Math.min(1, g('colitis') + 0.4 * g('budesonidColitis')),
+    fest: g('loperamid'), weich: g('macrogol') };
+}
+/* Phase des Stuhls im Modell (Zeiten wie lauf): { ph: 'ruhe' | 'drang' | 'gang', u: Fortschritt 0..1 in der Phase, folgt: gilt das Modell } */
+function lupeModell() {
+  var K = KINDS[KI.stuhl], X = WGX, P = SZ_.P, i, ank = 1e9;
+  if (!X || !K.es || !mahlzeit || !seeThrough || fe < 0.5) return { ph: 'ruhe', u: 0, folgt: false };
+  for (i = K.nR; i < K.n; i++) ank = Math.min(ank, K.es[i]);
+  ank += (X.sM - X.sB) / SZ_.VS;                      /* der erste Stuhl erreicht den Mastdarm (Ampulle) */
+  var te = clock - tM, ph = te - Math.floor(te / P) * P, g0 = P - SZ_.ST0, g1 = P - SZ_.ST1;
+  if (ph >= g0 && ph < g1) return { ph: 'gang', u: (ph - g0) / (g1 - g0), folgt: true };
+  if (ph >= ank && ph < g0) return { ph: 'drang', u: (ph - ank) / (g0 - ank), folgt: true };
+  return { ph: 'ruhe', u: 0, folgt: true };
+}
+function lupeLage() {   /* wirksame Phase und Fortschritt: festgehalten (Schleife aus der Uhr) oder aus dem Modell */
+  var m = lupeModell(), W = lupeWirkung();
+  if (LUPE.wahl === 'auto') return { ph: m.ph, u: m.u, folgt: m.folgt, W: W };
+  var T = LP_T[LUPE.wahl] * (LUPE.wahl === 'drang' && W.d > 0.5 ? 0.5 : 1);
+  return { ph: LUPE.wahl, u: lpFrac(clock / T), folgt: false, W: W };
+}
+function lupeKrank() { var q = null, n; for (n = 0; n < LUPE_KRANK.length && !q; n++) if (SZ.anteil[LUPE_KRANK[n]] > 0.5) q = LUPE_KRANK[n]; return q; }
+/* Zustand der Teile je Phase: A Halbbreite der Ampulle, io/oo Oeffnung des inneren/aeusseren Schliessmuskels (0..1), fill Fuellung der Ampulle (0..1), yT/yB Ober- und Unterkante des Stuhls im Kanal */
+function lupeZustand() {
+  var L = lupeLage(), W = L.W, u = L.u, s = lpKlemm, ss = function (a, b, x) { return sstep(a, b, x); };
+  if (L.ph === 'drang' && W.d > 0.5) u = lpFrac(u * 2);                     /* Durchfall: der Drang kommt zweimal so oft */
+  var lvl0 = 0.1 * W.d + 0.62 * W.v, fmax = 0.6 + 0.28 * W.v + 0.1 * W.d - 0.12 * W.fest;   /* Fuellstand in Ruhe, nach Stuhldrang */
+  var Z = { A: 54 + 14 * W.v, io: 0, oo: 0, fill: lvl0, yT: 999, yB: 999, akt: 0, ph: L.ph, u: u, folgt: L.folgt, W: W };
+  if (L.ph === 'drang') {
+    var e = ss(0, 0.35, u), ab = 1 - ss(0.85, 1, u);
+    ab = W.v > 0.5 ? 1 : ab;                                                  /* hartem Stuhl laesst der Drang nicht nach: er bleibt */
+    Z.fill = lvl0 + (fmax - lvl0) * e * ab;
+    Z.A += 14 * e * ab * (1 - 0.3 * W.v); Z.akt = ss(0.1, 0.35, u) * (1 - ss(0.75, 0.95, u));
+    Z.io = 0.5 * Math.sin(3.1416 * s((u - 0.5) / 0.2));
+  } else if (L.ph === 'gang') {
+    var f0 = fmax * ss(0, 0.08, u), op = ss(0, 0.12, u) * (1 - ss(0.88, 0.99, u));
+    Z.io = Z.oo = op; Z.A += 14 * (1 - ss(0.2, 0.8, u)) * (1 - 0.3 * W.v); Z.akt = 0.5 * (1 - ss(0.3, 0.7, u));
+    var yF0 = 128 - 120 * f0;                                                 /* Oberkante des Stuhls in der Ampulle; er wandert als Block durch den Kanal */
+    Z.fill = 0; Z.yT = yF0 + (272 - yF0) * ss(0.4, 0.84, u); Z.yB = 134 + 128 * ss(0.08, 0.62, u);
+    if (f0 < 0.02 || Z.yT >= Z.yB) Z.yT = Z.yB = 999;
+  }
+  return Z;
+}
+/* Halbbreite des Lichtraums in der Hoehe y (Ampulle, Trichter, Kanal, After) */
+function lpBreite(Z, y) {
+  var wo = sstep(150, 176, y), op = Z.io * (1 - wo) + Z.oo * wo, wc = 1.2 + 12.5 * op, t = sstep(98, 134, y);
+  return Z.A * (1 - t) + wc * t;
+}
+function lpBahn(Z, y0, y1, seite) {   /* Polygonzug am Rand des Lichtraums (seite -1 links, 1 rechts) mit Abstand d nach aussen */
+  var p = [], y;
+  for (y = y0; y <= y1; y += 2) p.push(y);
+  return p.map(function (yy) { return LP_CX + seite * lpBreite(Z, yy); });
+}
+function lpStuhl(c, x0, x1, yT, yB, Z) {   /* Stuhl in der Flaeche; Art aus den Wirkgroessen (Durchfall fluessig und hell, Verstopfung hart und dunkel, Macrogol weicher, Colitis mit Blut) */
+  var W = Z.W, i, n, x, y, r, ht = W.v * (1 - 0.7 * W.weich), fl = W.d * (1 - 0.4 * W.fest);
+  var col = lpRgb(lpMisch(lpMisch(0x8A5A2E, 0xCDA85E, fl), 0x4A2C14, ht * 0.9));
+  if (yB - yT < 1) return;
+  c.fillStyle = col; c.fillRect(x0, yT, x1 - x0, yB - yT);
+  if (ht > 0.5) {   /* harte Brocken */
+    c.fillStyle = '#3A2210'; c.fillRect(x0, yT, x1 - x0, yB - yT);
+    for (i = 0, n = Math.ceil((x1 - x0) * (yB - yT) / 230); i < n; i++) {
+      x = x0 + lpHash(i, 21) * (x1 - x0); y = yT + 5 + lpHash(i, 22) * Math.max(1, yB - yT - 5); r = 5 + 4 * lpHash(i, 23);
+      c.fillStyle = lpHash(i, 24) > 0.5 ? '#5C381C' : '#4A2C14'; c.strokeStyle = '#2E1A0C'; c.lineWidth = 0.8;
+      c.beginPath(); c.ellipse(x, y, r * 1.2, r, lpHash(i, 25) * 3, 0, 6.2832); c.fill(); c.stroke();
+    }
+  } else {
+    for (i = 0, n = Math.ceil((x1 - x0) * (yB - yT) / 260); i < n; i++) lpPunkt(c, x0 + lpHash(i, 31) * (x1 - x0), yT + lpHash(i, 32) * (yB - yT), 0.5, '#5A3718', 2 + 2 * lpHash(i, 33));
+  }
+  if (fl > 0.3) {   /* fluessig: Wellen und Blasen */
+    c.strokeStyle = 'rgba(245,225,170,0.6)'; c.lineWidth = 1;
+    for (i = 0; i < 4; i++) { y = yT + 6 + i * 11; if (y > yB) break; c.beginPath(); for (x = x0; x <= x1; x += 4) c.lineTo(x, y + 1.6 * Math.sin(x * 0.2 + clock * 1.2 + i)); c.stroke(); }
+    for (i = 0; i < 7; i++) lpPunkt(c, x0 + lpHash(i, 34) * (x1 - x0), yT + 4 + lpFrac(lpHash(i, 35) + clock * 0.05) * Math.max(1, yB - yT - 4), fl * 0.7, '#F6E8BC', 2.2);
+  }
+  if (W.c > 0.05) {   /* Blut und Schleim im Stuhl */
+    for (i = 0; i < 9; i++) lpPunkt(c, x0 + lpHash(i, 41) * (x1 - x0), yT + lpHash(i, 42) * (yB - yT), W.c, '#C0262E', 2.4 + lpHash(i, 43));
+    c.strokeStyle = 'rgba(200,36,46,' + (0.7 * W.c) + ')'; c.lineWidth = 2;
+    for (i = 0; i < 3; i++) { x = x0 + lpHash(i, 44) * (x1 - x0 - 16); y = yT + 4 + lpHash(i, 45) * Math.max(1, yB - yT - 8); c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + 8, y + 5, x + 16, y - 1); c.stroke(); }
+  }
+}
+function lupeBild(c) {
+  var Z = lupeZustand(), W = Z.W, cx = LP_CX, H = LUPE.H, ys = [], i, k, y, hw;
+  for (y = 0; y <= 248; y += 2) ys.push(y);
+  var bw = ys.map(function (yy) { return lpBreite(Z, yy); });
+  var entz = W.c;                                                         /* Entzuendung der Schleimhaut */
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, LUPE.W, H);
+  /* Haut um den After (aussen), Wand der Ampulle, Schliessmuskeln */
+  function seitePoly(seite, f0, f1, d0, d1, y0, y1) {   /* Band neben dem Lichtraum: Abstand d0 .. d1 (Funktionen von y), von y0 bis y1 */
+    var pa = [], pb = [];
+    for (var q = 0; q < ys.length; q++) { var yy = ys[q]; if (yy < y0 || yy > y1) continue; pa.push([cx + seite * (bw[q] + d0(yy)), yy]); pb.push([cx + seite * (bw[q] + d1(yy)), yy]); }
+    c.beginPath(); pa.forEach(function (p, q) { q ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); }); pb.reverse().forEach(function (p) { c.lineTo(p[0], p[1]); }); c.closePath();
+    c.fillStyle = f0; c.fill(); if (f1) { c.strokeStyle = f1; c.lineWidth = 1.2; c.lineJoin = 'round'; c.stroke(); }
+  }
+  var d14 = function (yy) { return 14; }, d0 = function (yy) { return 0; };
+  /* Haut: ab y=196 ein Band aussen am aeusseren Schliessmuskel bis zum After */
+  [-1, 1].forEach(function (s) {
+    var pa = [], pb = [], q;
+    for (q = 0; q < ys.length; q++) { var yy = ys[q]; if (yy < 196 || yy > 246) continue; pa.push([cx + s * (bw[q] + (yy < 214 ? 31 : 31 - 21 * sstep(214, 246, yy))), yy]); pb.push([cx + s * (bw[q] + (yy < 214 ? 14 : 0)), yy]); }
+    c.beginPath(); pa.forEach(function (p, n) { n ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]); }); pb.reverse().forEach(function (p) { c.lineTo(p[0], p[1]); }); c.closePath();
+    c.fillStyle = '#D2A584'; c.fill(); c.strokeStyle = '#8E6A4E'; c.lineWidth = 1.2; c.lineJoin = 'round'; c.stroke();
+  });
+  /* Lichtraum */
+  c.beginPath(); ys.forEach(function (yy, q) { q ? c.lineTo(cx - bw[q], yy) : c.moveTo(cx - bw[q], yy); });
+  for (i = ys.length - 1; i >= 0; i--) c.lineTo(cx + bw[i], ys[i]);
+  c.closePath(); c.fillStyle = '#241A20'; c.fill();
+  c.save(); c.clip();
+  /* Stuhl in der Ampulle (Fuellstand von unten) und im Kanal */
+  var yF = 128 - 120 * Z.fill;
+  if (Z.fill > 0.02) {
+    c.save(); c.beginPath(); c.rect(0, yF + 2 * Math.sin(clock * 0.9), LUPE.W, 134 - yF); c.clip();
+    lpStuhl(c, 0, LUPE.W, yF - 3, 134, Z); c.restore();
+  }
+  if (Z.ph === 'gang' && Z.yT < 400 && Z.yB > Z.yT) { c.save(); c.beginPath(); c.rect(0, Math.max(0, Z.yT), LUPE.W, Z.yB - Math.max(0, Z.yT) + 1); c.clip(); lpStuhl(c, 0, LUPE.W, Z.yT, Z.yB, Z); c.restore(); }
+  c.restore();
+  /* Stuhl, der aus dem After tritt (ausserhalb des Lichtraums) */
+  if (Z.ph === 'gang' && Z.yB > 246 && Z.yB > Z.yT) {
+    var hb = bw[ys.length - 1];
+    c.save(); c.beginPath(); c.rect(cx - hb - 1, 246, 2 * hb + 2, Math.min(Z.yB, 262) - 246); c.clip(); lpStuhl(c, cx - hb - 1, cx + hb + 1, Math.max(246, Z.yT), Z.yB, Z); c.restore();
+  }
+  /* Wand der Ampulle mit Schleimhaut (Colitis: rot, Geschwuere) */
+  var muk = lpRgb(lpMisch(0xD98E8E, 0xD8343C, entz)), wand = lpRgb(lpMisch(0xA86A66, 0x8C2A30, entz * 0.7));
+  [-1, 1].forEach(function (s) { seitePoly(s, wand, '#6A3C3A', d0, d14, 0, 150); });
+  [-1, 1].forEach(function (s) {
+    c.beginPath(); for (var q = 0; q < ys.length; q++) { var yy = ys[q]; if (yy > 214) break; q ? c.lineTo(cx + s * bw[q], yy) : c.moveTo(cx + s * bw[q], yy); }
+    c.strokeStyle = muk; c.lineWidth = 3 + 1.5 * entz; c.lineJoin = 'round'; c.stroke();
+  });
+  if (entz > 0.05) for (k = 0; k < 6; k++) { y = 14 + k * 17 + 4 * lpHash(k, 51); var q2 = Math.round(y / 2); lpPunkt(c, cx + (k % 2 ? 1 : -1) * (bw[q2] - 1), y, entz, '#7A0F18', 2.6); }
+  /* Blut an der Schleimhaut (Colitis): Tropfen laufen langsam nach unten */
+  if (entz > 0.05) for (k = 0; k < 4; k++) { y = 10 + lpFrac(lpHash(k, 52) + clock * 0.03) * 100; var q3 = Math.round(y / 2); lpPunkt(c, cx + (k % 2 ? 1 : -1) * (bw[q3] - 3.5), y, entz, '#C0262E', 2.2); }
+  /* Dehnungsfuehler in der Wand: je zwei links und rechts, kurze Nervenfaser nach aussen; bei Dehnung (akt) laufen Signale nach aussen */
+  var sy = [34, 76];
+  [-1, 1].forEach(function (s) {
+    sy.forEach(function (yy, n) {
+      var q = Math.round(yy / 2), x1 = cx + s * (bw[q] + 8), x2 = cx + s * (bw[q] + 8 + 26);
+      c.strokeStyle = '#F2C75C'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x1, yy); c.lineTo(x2, yy); c.stroke();
+      c.beginPath(); c.moveTo(x1, yy); c.lineTo(x1 - s * 6, yy - 4); c.moveTo(x1, yy); c.lineTo(x1 - s * 6, yy + 4); c.stroke();
+      c.fillStyle = lpRgb(lpMisch(0xC9A24A, 0xFFE27A, Z.akt)); c.strokeStyle = '#7A5A14'; c.lineWidth = 1; c.beginPath(); c.arc(x1, yy, 3.6, 0, 6.2832); c.fill(); c.stroke();
+      for (k = 0; k < 2; k++) { var uu = lpFrac(clock * 0.45 + k / 2 + n * 0.3 + (s > 0 ? 0.15 : 0)); lpPunkt(c, x1 + s * (uu * 26), yy, Z.akt * (1 - sstep(0.7, 1, uu)), '#FFF0A8', 2); }
+    });
+  });
+  /* Schliessmuskeln: aeusserer (quergestreift, dunkelrot, aussen und weiter unten), innerer (glatt, hell, innen) */
+  [-1, 1].forEach(function (s) {
+    seitePoly(s, '#A63A36', '#5E1E1C', function (yy) { return 14 * (1 - sstep(170, 182, yy)); }, function (yy) { return 14 * (1 - sstep(170, 182, yy)) + 17; }, 148, 214);
+  });
+  [-1, 1].forEach(function (s) { seitePoly(s, '#E6B496', '#8A5A44', d0, d14, 124, 178); });
+  /* Lichtraum-Rand im Kanal (Schleimhaut) */
+  [-1, 1].forEach(function (s) {
+    c.beginPath(); var first = true; for (var q = 0; q < ys.length; q++) { var yy = ys[q]; if (yy < 124 || yy > 246) continue; first ? c.moveTo(cx + s * bw[q], yy) : c.lineTo(cx + s * bw[q], yy); first = false; }
+    c.strokeStyle = muk; c.lineWidth = 1.6; c.stroke();
+  });
+  /* Beschriftung (Fuehrungslinien wie in der Lupe des Magens) */
+  var bm = Math.round(40 / 2), ba = bw[Math.round(24 / 2)];
+  lpBeschrift(c, 'Mastdarm-Ampulle', 4, 16, false, cx - bw[7] - 9, 14);
+  lpBeschrift(c, 'Dehnungsfühler', 396, 26, true, cx + bw[17] + 8, 34);
+  lpBeschrift(c, 'innerer Schließmuskel (unwillkürlich)', 4, 126, false, cx - bw[72] - 7, 144);
+  lpBeschrift(c, 'äußerer Schließmuskel (willkürlich)', 4, 196, false, cx - bw[98] - 18, 190);
+  lpBeschrift(c, 'After', 396, 246, true, cx + bw[122] + 3, 244);
+  var stuhlDa = Z.fill > 0.08 || (Z.ph === 'gang' && Z.yB > Z.yT && Z.yT < 250), sm = Z.ph === 'gang' ? (Math.max(Z.yT, 20) + Math.min(Z.yB, 240)) / 2 : (yF + 134) / 2;   /* sm: Mitte des Stuhls */
+  if (stuhlDa) lpBeschrift(c, 'Stuhl', 4, 100, false, cx - 22, Math.max(40, Math.min(240, sm)));
+  if (W.d > 0.5 && stuhlDa) lpBeschrift(c, 'flüssiger Stuhl', 396, 124, true, cx + 30, 116);
+  if (W.v > 0.5 && stuhlDa) lpBeschrift(c, 'harter Stuhl', 396, 124, true, cx + 30, 116);
+  if (W.c > 0.5) { lpBeschrift(c, 'entzündete Schleimhaut', 396, 96, true, cx + bw[30] + 5, 60); lpBeschrift(c, 'Blut', 396, 114, true, cx + bw[42] - 4, 84); }
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  lupeBild(c);
+}
+function lupeText() {   /* Text und Hinweis nach Wahl: Krankheitsbild bzw. Medikament, sonst die Phase; Schluessel merken, damit lupeTick nur bei Wechsel neu setzt */
+  var k = lupeKrank(), L = lupeLage();
+  LUPE.key = (k || L.ph) + '|' + (LUPE.wahl === 'auto' && !L.folgt);
+  $('lpTitle').textContent = LUPE_TITEL;
+  $('lpText').textContent = LUPE_TEXT[k || L.ph];
+  $('lpHint').textContent = LUPE.wahl === 'auto' && !L.folgt ? LUPE_HINWEIS : '';
+}
+function lupeChips() {
+  Array.prototype.forEach.call($('lpChips').querySelectorAll('button[data-w]'), function (b) { b.classList.toggle('on', b.getAttribute('data-w') === LUPE.wahl); });
+}
+function lupeWahl(w) { LUPE.wahl = w || 'auto'; lupeChips(); lupeText(); lupeDraw(); }
+function lupeOeffnen() {
+  if (abgebaut || fz) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  LUPE.wahl = 'auto'; lupeChips(); lupeText();            /* die Lupe beginnt mit "automatisch" */
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE.open) return;
+  LUPE.open = false; LUPE.wahl = 'auto'; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  LUPE_CHIPS.forEach(function (q) {
+    var b = document.createElement('button'); b.className = 'gh' + (q[0] === 'auto' ? ' on' : ''); b.setAttribute('data-w', q[0]); b.title = q[2]; b.textContent = q[1];
+    b.addEventListener('click', function () { lupeWahl(q[0]); });
+    $('lpChips').appendChild(b);
+  });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick() {   /* nur solange offen: Text bei Wechsel der Phase nachziehen und neu zeichnen */
+  if (!LUPE.open) return;
+  var k = lupeKrank(), L = lupeLage();
+  if (LUPE.key !== (k || L.ph) + '|' + (LUPE.wahl === 'auto' && !L.folgt)) lupeText();
+  lupeDraw();
+}
+
+/* =====================================================================
    8. Renderschleife, Aufbau, Abbau
    ===================================================================== */
 var t0 = performance.now(), last = t0;
@@ -2534,6 +2828,10 @@ var App = window.DarmApp = { ready: false, aufbauMs: 0, waehle: setSelected, geh
   stand: function (f, te) { fzFest = true; fzR = f; fe = sstep(0, 1, f); mahlzeit = f > 0.5; if (te !== undefined) tM = clock - te; $('bNuechtern').classList.toggle('on', !mahlzeit); $('bEssen').classList.toggle('on', mahlzeit); lv++; },
   szenario: function (id) { SZ.direkt(id || null); szenarioWirkung(); }, szw: function () { return Object.assign({}, SZW); },   /* Krankheitsbild oder Medikament sofort setzen (fuer die Pruefung), aktuelle Wirkgroessen */
   form: function () { return form; },
+  /* fuer die Pruefung: Lupe oeffnen/schliessen, Phase festhalten ('ruhe' | 'drang' | 'gang') oder null/'auto' (folgt dem Stuhl im Modell); liefert den Zustand */
+  lupe: function (an, w) { if (an) { if (!LUPE.open) lupeOeffnen(); if (w !== undefined) lupeWahl(w); } else lupeClose(); return App.lupeZustand(); },
+  lupePhase: function (w) { if (!LUPE.open) lupeOeffnen(); lupeWahl(w); return App.lupeZustand(); },
+  lupeZustand: function () { var L = lupeLage(); return { offen: LUPE.open, wahl: LUPE.wahl, phase: L.ph, u: L.u, folgt: L.folgt, krank: lupeKrank() }; },
   zotte: function (s) { zoOeffnen(s === undefined ? null : s); }, stelle: function () { return { wahl: zoWahl, letzte: zoLetzte, standard: zoStandard }; } };   /* Fahrt zur Duenndarmzotte (fuer die Pruefung), gewaehlte Stelle */
 var bereitMerker = false;
 function loop(now) {
@@ -2547,7 +2845,7 @@ function loop(now) {
   }
   if (bewegt && !fz) { applyVisibility(); applyLook(); lv++; }
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
-  if (ST && !fz) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
+  if (ST && !fz) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); lupeTick(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   var weiter = fz ? zoFahrtBild(now) : false;
   Kern.kamera(camera, view);
@@ -2570,7 +2868,7 @@ organ.abbauen = function () {
   canvas.style.pointerEvents = '';
   orbit.loesen();
   wzEnde();
-  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);

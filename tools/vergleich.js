@@ -121,7 +121,7 @@
    DarmApp.tippe „wege-zwei“, nach zwei Fehlern „wege-leuchtet“, „wege-eins-fertig“, „wege-zwei-mitte“ (Weg 2 nach der Papille), „wege-alle-fertig“ (nach drei von vier Wegen, daher keine Abschlusszeile; Stand in erg.wege),
    „wege-beendet“; „hilfekarte-modell“ ist die sechste Karte; am Ende neu: „hilfekarte-aufnahme“, „wege-fett-start“, „wege-fett-fertig“ (Weg 4 „Weg des Fetts“, „Alle vier Wege geschafft.“; Stand in erg.wegeFett),
    bei Pause und fester Uhr (DarmApp.uhr(t) setzt die Uhr; erg.stroemung.imGefaess = Teilchen in den Gefäßen) „gefaesse-durchsicht“ (30 s nach dem Essen), „gefaesse-fett“ (nur Fett, 45 s), „stuhl-after“ (Ausschnitt Mastdarm, 140 s),
-   „schema-gefaesse“ (45 s), „info-lymphe“), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start, am Ende „schema-gefaesse“), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
+   „schema-gefaesse“ (45 s), „info-lymphe“; C2a: Krankheitsbilder „sz-…“, „sz-aus“; C2b Lupe Analkanal nach „sz-aus“ bei Pause, nach dem Essen mit Durchsicht: „lupe-auto“ (Uhr 100 s: Stuhldrang) und „lupe-auto-stuhlgang“ (136 s), die Chips „lupe-ruhe“, „lupe-stuhldrang“, „lupe-stuhlgang“ (feste Uhr), je Krankheitsbild „lupe-durchfall“, „lupe-verstopfung“, „lupe-colitis“, „lupe-macrogol“; Zustand in erg.lupe), handy (Übersicht, Info, Dünndarm, Schema, Hilfekarte, Üben, Wege-Start, am Ende „schema-gefaesse“, Krankheitsbilder und neu „lupe“), datei (file://) und abbau (Ausschnitt wechseln, Infokarte offen lassen); keine Exporte, kein AR. Atlas-Kontexte
    uebergaenge-darm (Körper, Dünndarm wählen, Infokarte „Darm öffnen“, Kamerafahrt „fahrt-darm“, Darm, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann die Adresse #darm direkt, Zurück-Knopf
    „← Körper“; Endzustand in erg.uebergaengeDarm) und uebergaenge-darm-handy („fahrt-darm“, „darm“).
    Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info; dann die Strömung: stroemung, zweimal pause (müssen gleich sein), nach-dem-essen (12 s), durchsicht-stroemung, nur-fett – Werte von ZotteApp.stroemung() in erg.stroemung –, Schema nüchtern und nach dem Essen, Hilfekarten, Üben, Wege verfolgen mit wege-start, wege-zwei, wege-leuchtet, wege-alle-fertig und erg.wege), handy (dazu schema, hilfekarte, wege-start), datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
@@ -1315,6 +1315,20 @@ const MODELLE = {
         /* C2a: alle elf Krankheitsbilder und Medikamente in der Übersicht (Durchsicht setzt die App selbst), zuletzt ausschalten */
         await t.klick('#cam0'); await szenarienBilder(t, 'DarmApp', DARM_SZ);
         await t.js(() => window.DarmApp.szenario(null)); await t.weiter(2500); await t.bild('sz-aus');
+        /* C2b Lupe Analkanal (neue Bilder am Ende; Pause, nach dem Essen mit Durchsicht): „automatisch“ folgt dem Stuhl im Modell (100 s: Stuhldrang, 136 s: Stuhlgang), die Chips halten eine Phase fest
+           (Uhr fest: die Schleife hängt von clock ab), dann je Krankheitsbild bzw. Medikament (erst wählen, dann öffnen: die Wahl schließt die Lupe) bei 100 s; Zustand in erg.lupe */
+        await t.js(() => { window.DarmApp.mahlzeit(true); window.DarmApp.durchsicht(true); }); await t.weiter(600);
+        await uhrNach(100); await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-auto'); t.erg.lupe = { auto: await t.js(() => window.DarmApp.lupeZustand()) };
+        await uhrNach(136); await t.bild('lupe-auto-stuhlgang'); t.erg.lupe.autoGang = await t.js(() => window.DarmApp.lupeZustand());
+        for (const [ph, w, uhr] of [['ruhe', 'ruhe', 400], ['stuhldrang', 'drang', 404.5], ['stuhlgang', 'gang', 403.5]]) {
+          await t.klick('#lpChips button[data-w="' + w + '"]'); await t.js((u) => window.DarmApp.uhr(u), uhr); await t.weiter(800); await t.bild('lupe-' + ph);
+        }
+        await t.klick('#bLupeX'); await t.weiter(300);
+        for (const id of ['durchfall', 'verstopfung', 'colitis', 'macrogol']) {
+          await t.js((id) => window.DarmApp.szenario(id), id); await t.weiter(2500); await uhrNach(100);
+          await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-' + id); t.erg.lupe[id] = await t.js(() => window.DarmApp.lupeZustand()); await t.klick('#bLupeX'); await t.weiter(300);
+        }
+        await t.js(() => window.DarmApp.szenario(null)); await t.weiter(1500);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1332,6 +1346,8 @@ const MODELLE = {
         await t.klick('#bSchema'); await t.weiter(2500); await t.bild('schema-gefaesse'); await t.klick('#bSchemaX'); await t.weiter(300);
         await szenarienBilder(t, 'DarmApp', ['durchfall', 'crohn']);   /* C2a */
         await t.js(() => window.DarmApp.szenario(null)); await t.weiter(2500);
+        /* C2b: Lupe Analkanal (neues Bild am Ende; Panel oben, Werkzeugleiste bleibt frei) */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
