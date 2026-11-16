@@ -1,26 +1,22 @@
-# Übergabe: C2 Darm und Zotte (Stand 15. November 2026)
+# Übergabe: C2b Darm und Zotte (Stand 16. November 2026)
 
 ## Stand
 
-- C1 Magen (#52) und „Aufnahme ins Blut“ (#54) gemergt. Offen in PR C nur noch **C2 Darm und Zotte**.
-- Texte bisher: `docs/freigaben/darm-b-texte.md`, `darm-aufnahme-texte.md`, Vorbild Magen `magen-c1-texte.md`.
-- Letzter voller Vergleichslauf: #54; PRs mit Auswahl seitdem 0 (`PLAN.md`).
-- Später: bei der Leber prüfen, ob alle Medikamente die richtige Wirkung zeigen (`PLAN.md`).
+- C2a (Krankheitsbilder und Medikamente für Darm und Zotte) als PR nach `main` offen bzw. gemergt; voller Vergleichslauf in C2a, PRs mit Auswahl seitdem 0.
+- Texte C2a: `docs/freigaben/darm-c2-texte.md` (6 Krankheitsbilder, 5 Medikamente). Daten `daten.darm` in `core/szenarien.js` mit `hinweis = { darm, zotte }`, `modell`-Wirkgrößen (durchfall, verstopfung, zoeliakie, divertikel, crohn, colitis, bremse, weich, daempf; Zotte zusätzlich `trink`).
+- Wahl bleibt beim Zoomen Darm ↔ Zotte erhalten (`Kern.Szenarien.wahl.darm`, gesetzt in `beimWechsel`, übernommen bei `umg.von`). Leber/Läppchen machen das nicht.
+- Darm: Abschnitt 7c (`krankBauen`, Shader an Haut und Schleimhaut). Bei Wahl eines Krankheitsbilds schaltet sich die Durchsicht ein (außer Divertikulitis). Das hat der Executor ergänzt; Jörn hat es nicht ausdrücklich bestätigt.
+- Zotte: Abschnitt 6b (`krankLage`, `krankAnwenden`, `krankTeilchen`), Zöliakie-Abflachung über `pumpe()`/`flachA`, Beschriftungsanker verformt (Ruhelage in `VIS`).
+- Offen an Jörn angeboten: Fistel bei Crohn deutlicher (länger oder anders gelegt).
 
-## Mit Jörn entschieden (für C2)
+## C2b (mit Jörn abgestimmt, Texte noch nicht entworfen)
 
-- Daten Darm+Zotte gemeinsam `daten.darm` in `core/szenarien.js` mit `hinweis = { darm, zotte }`. 3D-Wirkung weich überblendet wie Leber/Magen. Export, AR wie Leber/Läppchen (Darm und Zotte haben noch kein Export/AR).
-- Krankheitsbilder: Durchfall (Darm: Wasser in den Dünndarm, schneller, flüssig; Zotte: Wasser aus den Krypten hinaus); Verstopfung (Stuhl dunkel, dicht, langsam, Dickdarm gebläht, Haustren/Tänien gehen mit); Zöliakie (Zotte flach, Krypten tiefer; Leerdarm blasser, glatter); Divertikulitis (mehrere Ausstülpungen am Sigma, eine entzündet).
-- Medikamente: Trinklösung (Zotte holt Wasser zurück, Durchfall bleibt), Loperamid (Wellen langsamer), Macrogol (Stuhl weich, Dickdarm schlanker), je bei ihrem Krankheitsbild.
-- Lupe Analkanal: Chips Ruhe | Stuhldrang | Stuhlgang; am Ende der Verdauung läuft sie von selbst bis zur Entleerung (im 3D geht der Stuhl seit #54 am After hinaus, Phase P−18…P−4 in `lauf`).
-- Lupe Zotte: Schema der Saumzelle, folgt den Stoff-Schaltern; Zöliakie, Durchfall, Trinklösung sichtbar.
-
-## Aus #54 nutzbar
-
-- `darm.js` Abschnitt 6: `lauf` mit Übertritt in Gefäße (`o.g`, `o.gf`), `DarmApp.uhr(t)`, `stroemung().imGefaess`; Durchsicht-Glas `DURCH_GEF`, `GEF_RF`/`GEF_OP`. Hilfekarte „Aufnahme“ hat schon das Merke Zöliakie.
-- `tools/vergleich.js`: Darm-Bilder enden mit `info-lymphe` (desktop) und `schema-gefaesse` (handy); neue Bilder dahinter.
+- Lupe Analkanal: Chips Ruhe | Stuhldrang | Stuhlgang; läuft am Ende der Verdauung von selbst bis zur Entleerung (Stuhl am After seit #54, Phase P−18…P−4 in `lauf`).
+- Lupe Zotte: Schema der Saumzelle, folgt den Stoff-Schaltern; zeigt Zöliakie, Durchfall, Trinklösung.
+- Export und AR für Darm und Zotte wie Leber/Läppchen (`cfg.bake`, `cfg.klon`, `cfg.ohneMorph` in `core/export.js`); Exporte mit Krankheitsbild prüfen.
 
 ## Nächster Schritt
 
-1. Jörn Fragen mit Optionen stellen (Empfehlung zuerst): Grundsätzliches (Aufteilung in mehrere PRs? z. B. Krankheitsbilder/Medikamente, dann Lupen, dann Export/AR), dann Einzelheiten und alle Texte wörtlich zur Freigabe nach `docs/freigaben/darm-c2-texte.md`.
-2. Umsetzung durch den Executor. Vorbilder: Magen 7c–7f (`magen.js`), `core/szenarien.js` (`daten.leber`), Läppchen 6b, 8b–8d, Nephron-Lupe (Abschnitt 11), Export/AR-Haken `cfg.bake`, `cfg.klon`, `cfg.ohneMorph` in `core/export.js`.
+1. Jörn Fragen mit Optionen stellen (Empfehlung zuerst), dann alle Texte der Lupen wörtlich zur Freigabe nach `docs/freigaben/darm-c2b-texte.md`.
+2. Umsetzung durch den Executor. Vorbilder: Magen-Lupe (Drüse, Belegzelle, `magen.js`), Läppchen 8b–8d, Nephron-Lupe (Abschnitt 11), Niere 5c.
+3. `tools/vergleich.js`: neue Bilder hinter `sz-aus` (Darm/Zotte desktop), Exporte wie bei Leber.
