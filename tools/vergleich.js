@@ -126,7 +126,7 @@
    „← Körper“; Endzustand in erg.uebergaengeDarm) und uebergaenge-darm-handy („fahrt-darm“, „darm“).
    Modell zotte (index.html#darm/zotte): desktop (Übersicht, Seitentext, zotte-innen, oberflaeche, krypten, durchsicht, ohne-beschriftung, info; dann die Strömung: stroemung, zweimal pause (müssen gleich sein), nach-dem-essen (12 s), durchsicht-stroemung, nur-fett – Werte von ZotteApp.stroemung() in erg.stroemung –, Schema nüchtern und nach dem Essen, Hilfekarten, Üben, Wege verfolgen mit wege-start, wege-zwei, wege-leuchtet, wege-alle-fertig und erg.wege), handy (dazu schema, hilfekarte, wege-start), datei, abbau; Atlas-Kontexte uebergaenge-zotte (Darm, Knopf „Zotte“ mit
    Kamerafahrt „fahrt-zotte“, Zotte, Zurück-Knopf „← Darm“, Browser-Zurück mit Rückfahrt „rueckfahrt-darm“; dann den Leerdarm antippen, „Dünndarmzotte hier ansehen“ „fahrt-zotte-punkt“, Zurück-Knopf des Atlas;
-   Endzustand in erg.uebergaengeZotte) und uebergaenge-zotte-handy („fahrt-zotte“, „zotte“).
+   Endzustand in erg.uebergaengeZotte) und uebergaenge-zotte-handy („fahrt-zotte“, „zotte“). C2b Lupe Saumzelle (nach „sz-aus“, Pause, Uhr 100 s per ZotteApp.stand): „lupe-gesund“, „lupe-fett“ (nur Fett an), „lupe-zoeliakie“, „lupe-durchfall“, „lupe-trinkloesung“, „lupe-crohn“ (Zustand in erg.lupe); handy endet mit „lupe“.
 
    Modell laeppchen (index.html#leber/laeppchen): ein Leberläppchen mit Zentralvene, Zellbalken, Sinusoiden, Gallenkanälchen, Kupffer-Zellen, Ästen an den Ecken, Sammelvene und den Nachbarläppchen als
    Glas. Kontexte desktop (Übersicht, Seitentext, die Ausschnitte #cam1 bis #cam3 „periportalfeld“, „zentralvene“, „sinusoid“, Durchsicht, ohne Beschriftung, Info; dann die Strömung: „stroemung“ nach
@@ -1402,6 +1402,20 @@ const MODELLE = {
         await t.klick('#cam3'); await szenarienBilder(t, 'ZotteApp', ['zoeliakie'], 'sz-krypten-');
         await t.klick('#cam1'); await szenarienBilder(t, 'ZotteApp', ['trinkloesung', 'crohn', 'budesonidCrohn', 'verstopfung']);
         await t.js(() => window.ZotteApp.szenario(null)); await t.weiter(2500); await t.bild('sz-aus');
+        /* C2b Lupe Saumzelle (neue Bilder am Ende; Pause, Uhr fest auf 100 s, nüchtern): „lupe-gesund“ (alle Stoffe), „lupe-fett“ (nur Fett an; die Stoffe-Schalter danach wieder an), dann je Krankheitsbild
+           (erst wählen, dann öffnen: die Wahl schließt die Lupe) „lupe-zoeliakie“, „lupe-durchfall“, „lupe-trinkloesung“, „lupe-crohn“; Zustand in erg.lupe */
+        const uhr = () => t.js(() => window.ZotteApp.stand(0, 0, 100));
+        await uhr(); await t.weiter(300);
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-gesund'); t.erg.lupe = { gesund: await t.js(() => window.ZotteApp.lupeZustand()) };
+        for (const id of ['#bZucker', '#bAmino', '#bWasser']) await t.klick(id);
+        await t.weiter(600); await t.bild('lupe-fett'); t.erg.lupe.fett = await t.js(() => window.ZotteApp.lupeZustand());
+        for (const id of ['#bZucker', '#bAmino', '#bWasser']) await t.klick(id);
+        await t.klick('#bLupeX'); await t.weiter(300);
+        for (const id of ['zoeliakie', 'durchfall', 'trinkloesung', 'crohn']) {
+          await t.js((id) => window.ZotteApp.szenario(id), id); await t.weiter(2500); await uhr();
+          await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe-' + id); t.erg.lupe[id] = await t.js(() => window.ZotteApp.lupeZustand()); await t.klick('#bLupeX'); await t.weiter(300);
+        }
+        await t.js(() => window.ZotteApp.szenario(null)); await t.weiter(1500);
       } },
       handy: { opt: HANDY, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');
@@ -1413,6 +1427,8 @@ const MODELLE = {
         await t.klick('#bWege'); await t.weiter(300);
         await t.klick('#cam0'); await szenarienBilder(t, 'ZotteApp', ['zoeliakie']);   /* C2a */
         await t.js(() => window.ZotteApp.szenario(null)); await t.weiter(2500);
+        /* C2b: Lupe Saumzelle (neues Bild am Ende; Panel oben, Text unter dem Bild, Werkzeugleiste bleibt frei) */
+        await t.klick('#bLupe'); await t.weiter(1500); await t.bild('lupe');
       } },
       datei: { opt: DESKTOP, lokal: true, async ablauf(t) {
         await t.weiter(1500); await t.bild('uebersicht');

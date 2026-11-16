@@ -69,6 +69,7 @@ var MARKUP = `<div id="title">
     <button id="cam3" class="gh" title="Die Vertiefungen zwischen den Zotten, in denen neue Zellen entstehen">Krypten</button>
     <span class="sep"></span>
     <button id="bSchema" class="gh" title="Wie die Oberfläche vergrößert wird und welchen Weg die Stoffe nehmen">Schema</button>
+    <button id="bLupe" class="gh" title="Lupe: Nahansicht einer Saumzelle">Lupe</button>
   </div>
   <div class="trow">
     <span class="cap">Ansicht</span>
@@ -100,6 +101,14 @@ var MARKUP = `<div id="title">
   <div class="sch-head"><span class="kick">Schema &middot; Oberfläche und Wege</span><span class="sch-hint">Gleiche Stoffe wie im 3D-Modell.</span>
   <button class="gh hbtn" id="bSchemaX" aria-label="Schema schließen">&times;</button></div>
   <div id="schemaBox"></div>
+</div>
+
+<div class="panel" id="lupe" aria-live="polite">
+  <button class="gh hbtn" id="bLupeX" aria-label="Lupe schließen">&times;</button>
+  <div class="lp-kick">Lupe &middot; Nahansicht</div>
+  <h3 id="lpTitle">Saumzelle &ndash; so kommen die Stoffe ins Blut</h3>
+  <div class="lp-main"><div class="lp-bild"><canvas id="lpCv"></canvas><div class="lp-leg" id="lpLeg"></div><p class="lp-hint" id="lpHint"></p></div>
+  <div class="lp-text" id="lpText"></div></div>
 </div>
 
 <div class="panel" id="legend">
@@ -163,6 +172,24 @@ var WEGE = [
     stationen: [{ ids: ['arteriole'], an: 1 }, { ids: ['kapillarnetz'], an: 1 }, { ids: ['venole'], an: 1 }],
     abschluss: 'Geschafft: Im Kapillarnetz nimmt das Blut die Nährstoffe auf und bringt sie zur Pfortader.' }
 ];
+/* Lupe Saumzelle (Abschnitt 7b; Texte von Joern freigegeben, darm-c2b-texte.md Teil B). Text je Stoff (nur dieser Schalter an), je Krankheitsbild bzw. Medikament (Schluessel = Id in
+   Kern.Szenarien.daten.darm) und "gesund" (alle vier Schalter an oder mehrere, ohne Wahl); Legende als [Name, Farbe]; Natrium hat keinen Schalter */
+var LUPE_KICK = 'Lupe · Nahansicht', LUPE_TITEL = 'Saumzelle – so kommen die Stoffe ins Blut';
+var LUPE_HINWEIS = 'Die Stoffe folgen den Schaltern „Stoffe“ im Modell.';
+var LUPE_TEXT = {
+  gesund: 'Am Bürstensaum spalten Enzyme die letzten Bausteine ab. Zucker gelangt zusammen mit Natrium über den Zucker-Natrium-Träger (SGLT1) in die Zelle, Aminosäuren über eigene Träger. Beide gehen auf der anderen Seite ins Blut und mit der Pfortader zur Leber. Fett kommt in Mizellen mit Galle, wird in der Zelle zu Chylomikronen verpackt und geht ins Lymphgefäß. Die Natrium-Kalium-Pumpe schafft das Natrium ins Blut; Wasser folgt dem Natrium und dem Zucker.',
+  zucker: 'Zucker wandert mit Natrium über den Zucker-Natrium-Träger (SGLT1) in die Zelle und von dort ins Blut.',
+  amino: 'Aminosäuren und kleine Bruchstücke gelangen über eigene Träger in die Zelle und ins Blut.',
+  fett: 'Die Galle hält das Fett in feinen Mizellen. Die Zelle baut es zu Chylomikronen um – zu groß für die Kapillaren, darum gehen sie ins Lymphgefäß.',
+  wasser: 'Wasser folgt dem Natrium und den aufgenommenen Stoffen durch die Zelle und zwischen den Zellen ins Blut.',
+  zoeliakie: 'Gluten aus Weizen, Roggen und Gerste löst eine Entzündung aus. Abwehrzellen dringen ein, der Bürstensaum geht zugrunde, die Zellen werden flach. Es fehlen Enzyme und Träger – Zucker, Eiweiß, Fett, Eisen und Vitamine werden schlecht aufgenommen.',
+  durchfall: 'In den Krypten öffnen Erregergifte die Chloridkanäle der Kryptenzellen. Chlorid und Natrium strömen in den Darm, Wasser folgt – viel mehr, als die Saumzellen zurückholen können.',
+  trinkloesung: 'Die Kryptenzellen geben weiter Wasser ab. Doch der Zucker-Natrium-Träger (SGLT1) arbeitet auch beim Durchfall: Zucker und Natrium aus der Trinklösung gehen gemeinsam in die Saumzelle und ziehen Wasser mit ins Blut.',
+  crohn: 'Zwischen den Zellen sitzen viele Abwehrzellen. Der Bürstensaum ist lückig, es werden weniger Stoffe aufgenommen.',
+  budesonidCrohn: 'Weniger Abwehrzellen, der Bürstensaum erholt sich, die Aufnahme bessert sich.'
+};
+var LUPE_KRANK = ['zoeliakie', 'durchfall', 'trinkloesung', 'crohn', 'budesonidCrohn'];   /* Wahl, die die Lupe veraendert (Reihenfolge = Rangfolge); alle anderen: Text und Zeichnung wie gesund */
+var LUPE_LEGENDE = [['Kohlenhydrate (Zucker)', '#E6C94A'], ['Eiweiß (Aminosäuren)', '#F09A3E'], ['Fett', '#F2F2EE'], ['Wasser', '#8FD0F0'], ['Natrium (Na⁺)', '#CC5BD8']];
 var organ = { renderer: {}, aufbauen: aufbauen };
 
 /* =====================================================================
@@ -670,11 +697,11 @@ function abstandFuer(ext, r, fov, h) {
 }
 /* Werkzeugleiste vor dem Aufbau (noch nicht im DOM): Schätzung ihrer Ränder nach gemessener Höhe (WERKZEUG_H, vier Zeilen; kommen Zeilen oder Knöpfe dazu, ist sie neu zu messen);
    aufbauen misst sie selbst, die Werte stimmen überein. Die Leiste folgt dem Handy-Layout bis einschließlich 1000 px (CSS), bereichFuer schaltet erst darunter um. */
-var WERKZEUG_H = { desktop: 150, handy: 126 };   /* gemessen bei 1280 x 800 und 390 x 844 (vier Zeilen) */
+var WERKZEUG_H = { desktop: 150, handy: 126, umbruch: 379 };   /* Hoehe der Leiste (Pixel), gemessen bei 1280 x 800 und 390 x 844 (vier Zeilen); unter der Breite umbruch bricht die erste Reihe (Ausschnitt, mit Schema und Lupe) um (+30; zweizeilig ist erlaubt, Joern). 379 gemessen mit dem Knopf Lupe (sechs Knoepfe in der Reihe Ausschnitt; ohne ihn bricht sie erst unter etwa 345 px) */
 function werkzeugRand(w, h) {
   if (w <= 1000) {
     var u = h - 6 - Math.floor(0.34 * h * 64) / 64;   /* Unterkante: über der Leiste (34vh), die der Browser auf 1/64 px abrundet */
-    return { oben: u - WERKZEUG_H.handy, unten: u };
+    return { oben: u - (WERKZEUG_H.handy + (w < WERKZEUG_H.umbruch ? 30 : 0)), unten: u };
   }
   return { oben: 18, unten: 18 + WERKZEUG_H.desktop };
 }
@@ -796,6 +823,7 @@ function setSelected(id) {
     dl.appendChild(dt); dl.appendChild(dd);
   });
   box.classList.add('show');
+  lupeClose();                                           /* die Infokarte steht an der Stelle der Lupe */
   kartenLage();
 }
 
@@ -825,12 +853,13 @@ var SZ = Kern.Szenarien({
       if (wege) wegeEnd();
       setSelected(null); closeCard();
       schemaWeicht();
+      lupeClose();                                     /* die Szenariokarte steht an der Stelle der Lupe */
       if (window.innerWidth <= 1000) szWeichen();      /* Handy: die Karte deckt die Zotte, sie beginnt eingeklappt (Titelzeile) */
     }
     kartenLage();
   },
   beimEinklappen: function () {
-    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
+    if (SZ.offen) { if (quiz) quizEnd(); if (wege) wegeEnd(); lupeClose(); setSelected(null); closeCard(); }   /* wieder aufgeklappt: die anderen Karten weichen */
     kartenLage();
   }
 });
@@ -843,7 +872,7 @@ function szWeichen() {
 /* Die Szenariokarte steht an der Stelle der Info- und Erklaerkarte: solange eine von ihnen offen ist, ist sie weg */
 function kartenLage() {
   if (!SZ || !SZ.el) return;
-  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show'));
+  SZ.el.classList.toggle('weg', $('scard').classList.contains('show') || $('info').classList.contains('show') || $('lupe').classList.contains('show'));
   lv++;
 }
 /* Wirkgroessen nach den Anteilen setzen, dann die Wirkung in 3D (Abschnitt 6b) */
@@ -1026,6 +1055,7 @@ function ansicht(theta, phi, dist, target) {
    ===================================================================== */
 function showCard(kick, title, lead, after, istQuiz) {
   schemaWeicht();                                        /* das Schema weicht der Hilfekarte und dem Ueben */
+  lupeClose();                                           /* ebenso die Lupe */
   $('sKick').textContent = kick; $('sTitle').textContent = title;
   $('sLead').textContent = lead;
   var A = $('sAfter'); A.innerHTML = '';
@@ -1924,7 +1954,7 @@ function setSchema(on) {
   if (on && !ST) return;                                  /* die Teilchen entstehen am Ende des Aufbaus */
   schemaOn = on;
   $('bSchema').classList.toggle('on', on);
-  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
+  if (on) { if (quiz) quizEnd(); if (wege) wegeEnd(); closeCard(); lupeClose(); SCH.build($('schemaBox')); SCH.update(); }   /* Hilfekarte und Ueben weichen dem Schema */
   $('schema').classList.toggle('show', on);
   document.body.classList.toggle('schema', on);
   canvas.style.visibility = on ? 'hidden' : '';
@@ -1934,6 +1964,289 @@ function setSchema(on) {
 function schemaWeicht() { if (schemaOn) setSchema(false); }
 $('bSchema').onclick = function () { setSchema(!schemaOn); };
 $('bSchemaX').onclick = function () { setSchema(false); };
+
+/* =====================================================================
+   7b. Lupe: Nahansicht einer Saumzelle (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; kein three.js; Texte von Joern freigegeben, darm-c2b-texte.md Teil B)
+   Schnitt durch eine Saumzelle (Canvas 400 x 260): oben das Darminnere mit dem Buerstensaum (Mikrovilli), in der oberen Membran der Zucker-Natrium-Traeger (SGLT1) und der Aminosaeure-Traeger,
+   in der Zelle der Kern, an der unteren Membran die Natrium-Kalium-Pumpe, darunter links die Blutkapillare und rechts das Lymphgefaess. Die Teilchen sind die Stoffe des Modells (Farben wie
+   KINDS, Natrium violett): Zucker und Natrium gehen gemeinsam durch SGLT1, das Natrium weiter zur Pumpe, der Zucker ins Blut; Aminosaeuren ueber ihren Traeger ins Blut; Fett als Mizellen am
+   Buerstensaum, in der Zelle zu Chylomikronen verpackt, ins Lymphgefaess; Wasser zwischen den Zellen und mit Natrium und Zucker durch die Zelle ins Blut. Die Teilchen folgen den vier
+   Stoff-Schaltern des Modells (kindOn; Natrium folgt dem Zucker, beim Durchfall dem Wasser); Tempo und Pause gelten mit (clock). Text: Krankheitsbild bzw. Medikament (LUPE_KRANK, Anteil > 0,5
+   wie im Darm), sonst der Stoff, wenn genau ein Schalter an ist, sonst "gesund". Zeichnung weich ueberblendet aus den Anteilen SZ.anteil: Zoeliakie (Gluten, Abwehrzellen, kurzer lueckiger
+   Buerstensaum, flachere Zelle, weniger Aufnahme), Durchfall und Trinkloesung (links eine Kryptenzelle mit Chloridkanal und Erregergift, Wasser und Natrium stroemen ins Darminnere; Trinkloesung:
+   mehr Zucker, Natrium und Wasser gehen ueber SGLT1 zurueck ins Blut), Crohn (Abwehrzellen, lueckiger Saum, weniger Aufnahme), Budesonid (wenige Abwehrzellen, Saum fast normal); alle anderen
+   Wahlen: Zeichnung und Text wie gesund. Teilchen und Bewegung nur aus clock und Index (kein Zufall). Sie zeichnet nur, solange sie offen ist (lupeTick in der Renderschleife); Schema, Infokarte,
+   Erklaer- und Szenariokarte schliessen sie bzw. weichen ihr.
+   ===================================================================== */
+var LUPE = { open: false, ctx: null, dpr: 1, W: 400, H: 260, key: '' };
+var LP_C = { zucker: LUPE_LEGENDE[0][1], amino: LUPE_LEGENDE[1][1], fett: LUPE_LEGENDE[2][1], wasser: LUPE_LEGENDE[3][1], na: LUPE_LEGENDE[4][1] };
+var LP_X0 = 140, LP_X1 = 324, LP_YB = 188;      /* Saumzelle: linker und rechter Rand, untere Membran */
+var LP_VX = 148, LP_VD = 14, LP_VN = 13;        /* Mikrovilli: erster x, Abstand, Zahl */
+var LP_SGLT = 183, LP_AMINO = 267, LP_PUMPE = 206;   /* Lage der Traeger in der oberen Membran (in Luecken zwischen den Mikrovilli) und der Pumpe an der unteren */
+function lpFrac(x) { return x - Math.floor(x); }
+function lpHash(n, k) { var q = Math.sin(n * 127.1 + k * 311.7) * 43758.5453; return q - Math.floor(q); }
+function lpKlemm(v) { return Math.max(0, Math.min(1, v)); }
+function lpMisch(a, b, t) {   /* Mischfarbe zweier Hexwerte (wieder ein Hexwert) */
+  t = lpKlemm(t);
+  var r = (a >> 16) & 255, g = (a >> 8) & 255, bl = a & 255;
+  return (Math.round(r + (((b >> 16) & 255) - r) * t) << 16) | (Math.round(g + (((b >> 8) & 255) - g) * t) << 8) | Math.round(bl + ((b & 255) - bl) * t);
+}
+function lpRgb(h) { return 'rgb(' + ((h >> 16) & 255) + ',' + ((h >> 8) & 255) + ',' + (h & 255) + ')'; }
+function lpLabel(c, text, x, y, rechts) {   /* Beschriftung; liefert die Breite */
+  c.font = '9.5px system-ui, sans-serif'; c.textBaseline = 'alphabetic'; c.textAlign = rechts ? 'right' : 'left';
+  var w = c.measureText(text).width, x0 = rechts ? x - w : x;
+  c.fillStyle = 'rgba(12,26,32,0.82)'; c.fillRect(x0 - 3, y - 9, w + 6, 12);
+  c.fillStyle = '#E7EFF0'; c.fillText(text, x, y);
+  return w;
+}
+function lpLeiter(c, x1, y1, x2, y2) {
+  c.lineCap = 'round'; c.strokeStyle = 'rgba(12,26,32,0.7)'; c.lineWidth = 2.4;   /* dunkler Saum: die Linie bleibt auch auf hellem Grund lesbar */
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+  c.strokeStyle = 'rgba(231,239,240,0.8)'; c.lineWidth = 0.9;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+  c.fillStyle = 'rgba(231,239,240,0.9)'; c.beginPath(); c.arc(x2, y2, 1.6, 0, 6.2832); c.fill();
+}
+function lpBeschrift(c, text, x, y, rechts, zx, zy) {   /* Beschriftung mit Fuehrungslinie zum Ziel (zx, zy) */
+  var w = lpLabel(c, text, x, y, rechts);
+  lpLeiter(c, rechts ? x - w - 4 : x + w + 4, y - 3, zx, zy);
+}
+function lpBeschriftV(c, text, x, y, rechts, zx, zy) {   /* Beschriftung ueber dem Ziel: die Fuehrungslinie faellt senkrecht von der Beschriftung (zx liegt unter dem Text) */
+  lpLabel(c, text, x, y, rechts);
+  lpLeiter(c, zx, y + 3, zx, zy);
+}
+function lpRR(c, x, y, w, h, r) {   /* Rechteck mit runden Ecken (Pfad) */
+  c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r); c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r); c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r); c.closePath();
+}
+function lpPunkt(c, x, y, alpha, farbe, r) {
+  if (alpha <= 0.01) return;
+  c.globalAlpha = Math.min(1, alpha); c.fillStyle = farbe;
+  c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+  c.globalAlpha = 1;
+}
+function lpEntlang(pts, u) {   /* Punkt auf dem Linienzug pts (Liste von [x, y]) bei Anteil u 0..1 der Laenge */
+  var n = pts.length, L = [0], i, s = 0, d, t;
+  for (i = 1; i < n; i++) { s += Math.sqrt((pts[i][0] - pts[i - 1][0]) * (pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1]) * (pts[i][1] - pts[i - 1][1])); L.push(s); }
+  d = lpKlemm(u) * s;
+  for (i = 1; i < n - 1 && L[i] < d; i++);
+  t = L[i] > L[i - 1] ? (d - L[i - 1]) / (L[i] - L[i - 1]) : 0;
+  return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
+}
+function lpBlende(u, a, b) { return sstep(0, a, u) * (1 - sstep(1 - b, 1, u)); }   /* ein- und ausblenden am Anfang und Ende des Weges */
+/* Schalter der Stoffe (aus dem Modell) und Wirkung der Wahl: Gewichte (weich ueberblendet aus den Anteilen) */
+function lupeStoffe() {
+  var o = [];
+  ['zucker', 'amino', 'fett', 'wasser'].forEach(function (id) { if (kindOn[KI[id]]) o.push(id); });
+  return o;
+}
+function lupeKrank() { var q = null, n; for (n = 0; n < LUPE_KRANK.length && !q; n++) if (SZ.anteil[LUPE_KRANK[n]] > 0.5) q = LUPE_KRANK[n]; return q; }
+function lupeTextId() { var k = lupeKrank(), s; if (k) return k; s = lupeStoffe(); return s.length === 1 ? s[0] : 'gesund'; }
+function lupeWirkung() {
+  var a = SZ.anteil, g = function (id) { return a[id] || 0; };
+  var zoe = g('zoeliakie'), df = g('durchfall'), tr = g('trinkloesung'), cr = g('crohn'), bu = g('budesonidCrohn');
+  return { zoe: zoe, df: df, tr: tr, kz: Math.min(1, df + tr), cw: cr + 0.25 * bu,
+    D: Math.max(0.88 * zoe, 0.5 * cr, 0.09 * bu),                       /* Schaden am Buerstensaum: Luecken und Kuerzung */
+    A: Math.max(0.15, 1 - 0.78 * zoe - 0.45 * cr - 0.1 * bu),           /* Anteil der Aufnahme */
+    az: 4 * zoe + 9 * cr + 2 * bu, gl: 8 * zoe };                       /* Zahl der Abwehrzellen und der Glutenteilchen */
+}
+function lpN(n, i) { return lpKlemm(n - i); }   /* Sichtbarkeit des Teilchens i bei n Teilchen (n gebrochen: weiches Ein- und Ausblenden) */
+var LP_AZ = [[139, 128], [326, 148], [139, 172], [326, 116], [312, 178], [154, 112], [160, 176], [310, 108], [326, 172]];   /* Lagen der Abwehrzellen: zwischen den Zellen und am Rand der Zelle */
+function lpMikrovillus(c, k, yT, W, Lv) {
+  var kt = (k === 0 || k === 6) ? 1.0 : lpHash(k, 3.7) * 0.9, hs = 1 - sstep(kt - 0.2, kt, W.D), h = Lv * hs;
+  if (h < 1) return h;
+  var x = LP_VX + LP_VD * k;
+  c.fillStyle = lpRgb(lpMisch(0xF0D8C4, 0xD08F84, 0.4 * W.cw)); lpRR(c, x - 3, yT - h, 6, h + 2, 2.6); c.fill();
+  return h;
+}
+function lupeBild(c) {
+  var W = lupeWirkung(), on = {}, i, k, yT = 94 + 24 * W.zoe + 7 * W.cw, Lv = 24 * (1 - 0.6 * W.D), yB = LP_YB, hv0 = Lv, ym = (yT + yB) / 2, A = W.A, tt = clock;
+  lupeStoffe().forEach(function (id) { on[id] = true; });
+  var naAuf = !!on.zucker, naAus = !!on.wasser;   /* Natrium folgt dem Zucker (Aufnahme) bzw. dem Wasser (Strom ins Darminnere) */
+  c.clearRect(0, 0, LUPE.W, LUPE.H);
+  c.fillStyle = '#10222A'; c.fillRect(0, 0, LUPE.W, LUPE.H);
+  c.fillStyle = '#15303A'; c.fillRect(0, 0, LUPE.W, yT);                                  /* Darminneres */
+  if (W.kz > 0.01) { c.globalAlpha = W.kz; c.fillRect(0, 0, LP_X0 - 2, 112); c.globalAlpha = 1; }   /* links reicht es bis zur Kryptenzelle */
+  /* Gefaesse unter der Zelle: Blutkapillare links, Lymphgefaess rechts */
+  c.lineWidth = 1.5;
+  lpRR(c, 118, 212, 120, 38, 19); c.fillStyle = '#5A1F2A'; c.fill(); c.strokeStyle = '#E0707A'; c.stroke();
+  [[146, 232], [176, 226], [212, 234]].forEach(function (p) { c.fillStyle = '#C8372D'; c.beginPath(); c.ellipse(p[0], p[1], 6, 3.4, 0.3, 0, 6.2832); c.fill(); });
+  lpRR(c, 250, 212, 76, 38, 17); c.fillStyle = '#48431F'; c.fill(); c.strokeStyle = '#F3E39A'; c.stroke();
+  /* Nachbarzellen (angedeutet) und die Saumzelle */
+  c.fillStyle = 'rgba(150,112,96,0.55)'; lpRR(c, 122, yT + 2, 15, yB - yT - 2, 5); c.fill(); lpRR(c, 327, yT + 2, 15, yB - yT - 2, 5); c.fill();
+  var zf = lpMisch(lpMisch(0xB98C78, 0xC9A58F, 0.4 * W.zoe), 0xC4685E, 0.55 * lpKlemm(W.cw));
+  lpRR(c, LP_X0, yT, LP_X1 - LP_X0, yB - yT, 8); c.fillStyle = lpRgb(zf); c.fill(); c.strokeStyle = '#F4DFD0'; c.lineWidth = 1.6; c.stroke();
+  c.beginPath(); c.ellipse(232, ym + 8, 23, Math.min(14, (yB - yT) * 0.2), 0, 0, 6.2832); c.fillStyle = '#7B5C86'; c.fill(); c.strokeStyle = '#4D3659'; c.lineWidth = 1.2; c.stroke();
+  /* Buerstensaum */
+  for (k = 0; k < LP_VN; k++) lpMikrovillus(c, k, yT, W, Lv);
+  /* Traeger und Pumpe */
+  [[LP_SGLT, yT, LP_C.zucker, LP_C.na], [LP_AMINO, yT, LP_C.amino, null]].forEach(function (q) {
+    c.fillStyle = '#D9E4E8'; lpRR(c, q[0] - 6, q[1] - 5, 12, 10, 2.5); c.fill(); c.strokeStyle = '#37505A'; c.lineWidth = 1; c.stroke();
+    lpPunkt(c, q[0] - (q[3] ? 2.4 : 0), q[1] - 1, 1, q[2], 1.9); if (q[3]) lpPunkt(c, q[0] + 2.4, q[1] - 1, 1, q[3], 1.9);
+  });
+  c.fillStyle = '#D9E4E8'; lpRR(c, LP_PUMPE - 8, yB - 5, 16, 10, 2.5); c.fill(); c.strokeStyle = '#37505A'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = LP_C.na; c.beginPath(); c.moveTo(LP_PUMPE - 3, yB - 2); c.lineTo(LP_PUMPE + 3, yB - 2); c.lineTo(LP_PUMPE, yB + 3); c.closePath(); c.fill();
+  /* Kryptenzelle links (Durchfall, Trinkloesung): Chloridkanal in ihrer oberen Membran */
+  if (W.kz > 0.01) {
+    c.globalAlpha = W.kz;
+    lpRR(c, 8, 114, 92, 44, 9); c.fillStyle = '#A6808E'; c.fill(); c.strokeStyle = '#E8CFD6'; c.lineWidth = 1.5; c.stroke();
+    c.beginPath(); c.ellipse(46, 142, 15, 7, 0, 0, 6.2832); c.fillStyle = '#7B5C86'; c.fill(); c.strokeStyle = '#4D3659'; c.lineWidth = 1.1; c.stroke();
+    c.fillStyle = '#D9E4E8'; c.strokeStyle = '#37505A'; c.lineWidth = 1;
+    lpRR(c, 55, 109, 5, 10, 1.5); c.fill(); c.stroke(); lpRR(c, 66, 109, 5, 10, 1.5); c.fill(); c.stroke();   /* der Kanal: zwei Haelften mit Oeffnung */
+    c.globalAlpha = 1;
+  }
+  /* Teilchen: Zucker und Natrium (SGLT1), Aminosaeuren, Wasser */
+  var nZ = (8 + 7 * W.tr) * A, nW = (9 - 4 * W.df + 11 * W.tr) * A, nA = 7 * A, nF = 5 * A;
+  var inneres = function (i, x) { return x + (lpHash(i, 4) - 0.5) * 12; };
+  for (i = 0; i < 16; i++) {
+    var vz = lpN(nZ, i), u = lpFrac(tt / 8 + i * 0.618034), sx = LP_SGLT + (lpHash(i, 1) - 0.5) * 90, sy = 30 + lpHash(i, 2) * 22;
+    if (vz <= 0) continue;
+    if (on.zucker) {
+      var pz = lpEntlang([[sx, sy], [LP_SGLT, yT - 3], [LP_SGLT, yT + 14], [inneres(i, 174), ym - 4], [inneres(i, 168), yB - 10], [168, yB], [inneres(i, 160), 226]], u), bl = lpBlende(u, 0.06, 0.06) * vz;
+      lpPunkt(c, pz[0], pz[1], bl, LP_C.zucker, 2.7);
+    }
+    if (naAuf) {   /* Natrium geht mit dem Zucker durch SGLT1, dann zur Pumpe und ins Blut */
+      var un = lpFrac(u + 0.025), pn = lpEntlang([[sx + 5, sy - 3], [LP_SGLT, yT - 3], [LP_SGLT, yT + 14], [192, ym - 2], [201, yB - 12], [LP_PUMPE, yB], [LP_PUMPE + (lpHash(i, 5) - 0.5) * 10, 226]], un);
+      lpPunkt(c, pn[0], pn[1], lpBlende(un, 0.06, 0.06) * vz, LP_C.na, 2.3);
+    }
+  }
+  for (i = 0; i < 8; i++) {
+    var va = lpN(nA, i), ua = lpFrac(tt / 8.5 + i * 0.618034 + 0.31);
+    if (!on.amino || va <= 0) continue;
+    var pa = lpEntlang([[LP_AMINO + (lpHash(i, 6) - 0.5) * 70, 30 + lpHash(i, 7) * 22], [LP_AMINO, yT - 3], [LP_AMINO, yT + 14], [276, ym + 2], [264, yB - 10], [232, yB], [224 + (lpHash(i, 8) - 0.5) * 8, 228]], ua);
+    lpPunkt(c, pa[0], pa[1], lpBlende(ua, 0.06, 0.06) * va, LP_C.amino, 2.7);
+  }
+  for (i = 0; i < 21; i++) {
+    var vw = lpN(nW, i), uw = lpFrac(tt / 8 + i * 0.618034 + 0.12), pw;
+    if (!on.wasser || vw <= 0) continue;
+    if (i % 2 === 0) pw = lpEntlang([[120 + lpHash(i, 9) * 14, 30 + lpHash(i, 10) * 26], [138.5, yT - 6], [138.5, yB], [141, 202], [150 + lpHash(i, 11) * 30, 226]], uw);   /* zwischen den Zellen */
+    else pw = lpEntlang([[LP_SGLT + (lpHash(i, 12) - 0.5) * 60, 30 + lpHash(i, 13) * 24], [LP_SGLT + 4, yT - 3], [LP_SGLT + 8, yT + 18], [186, ym + 8], [196, yB], [196 + lpHash(i, 14) * 20, 228]], uw);   /* mit Natrium und Zucker durch die Zelle */
+    lpPunkt(c, pw[0], pw[1], lpBlende(uw, 0.06, 0.06) * vw, LP_C.wasser, 2.2);
+  }
+  /* Fett: Mizellen am Buerstensaum (schweben), in der Zelle zu Chylomikronen verpackt, ins Lymphgefaess */
+  for (i = 0; i < 6; i++) {
+    var vf = lpN(nF, i), uf = lpFrac(tt / 12 + i * 0.618034 + 0.21), hx = 152 + lpHash(i, 15) * 24 + 2.5 * Math.sin(tt * 0.9 + i * 2.1), hy = 32 + lpHash(i, 16) * 20 + 2 * Math.cos(tt * 0.7 + i * 1.7);
+    if (!on.fett || vf <= 0) continue;
+    if (uf < 0.35) {
+      c.globalAlpha = sstep(0, 0.06, uf) * vf; c.strokeStyle = LP_C.wasser; c.lineWidth = 0.8; c.beginPath(); c.arc(hx, hy, 4.6, 0, 6.2832); c.stroke(); c.globalAlpha = 1;
+      lpPunkt(c, hx, hy, sstep(0, 0.06, uf) * vf, LP_C.fett, 2.3);
+    } else {
+      var p = (uf - 0.35) / 0.65, pf = lpEntlang([[hx, hy], [156, yT - 3], [164, yT + 12], [215, yT + 14], [292, yT + 26], [298, ym + 20], [298, yB], [296, 214], [286, 229], [314, 229]], p);   /* zuletzt im Lymphgefaess */
+      lpPunkt(c, pf[0], pf[1], (1 - sstep(0.94, 1, p)) * vf, LP_C.fett, 2.3 + 2.4 * sstep(0.08, 0.35, p));
+    }
+  }
+  if (on.fett) { lpPunkt(c, 294 + 1.5 * Math.sin(tt * 0.5), 230 + Math.cos(tt * 0.6), lpKlemm(nF), LP_C.fett, 4.7); lpPunkt(c, 313 + 1.5 * Math.sin(tt * 0.4 + 2), 228 + Math.cos(tt * 0.5 + 1), lpKlemm(nF - 1), LP_C.fett, 4.7); }   /* im Lymphgefaess liegen schon Chylomikronen (Ziel der Beschriftung) */
+  /* Kryptenzelle: Erregergift am Chloridkanal, Wasser und Natrium stroemen ins Darminnere (deutlich mehr Wasser hinaus als hinein) */
+  if (W.kz > 0.01) {
+    var nO = 24 * W.df + 14 * W.tr, nNO = 7 * W.df + 4 * W.tr;
+    [[88, 102], [100, 94], [78, 91]].forEach(function (g, j) {   /* Erregergift: stachelige dunkelrote Kugeln */
+      var gx = g[0] + 1.6 * Math.sin(tt * 1.1 + j * 2.3), gy = g[1] + 1.4 * Math.cos(tt * 0.9 + j * 1.9), q;
+      c.globalAlpha = W.kz; c.strokeStyle = '#B8323C'; c.lineWidth = 1.2;
+      for (q = 0; q < 8; q++) { c.beginPath(); c.moveTo(gx + 2.6 * Math.cos(q * 0.7854), gy + 2.6 * Math.sin(q * 0.7854)); c.lineTo(gx + 5 * Math.cos(q * 0.7854), gy + 5 * Math.sin(q * 0.7854)); c.stroke(); }
+      c.fillStyle = '#8E1F2A'; c.beginPath(); c.arc(gx, gy, 3, 0, 6.2832); c.fill(); c.globalAlpha = 1;
+    });
+    var aus = [[62, 112], [90, 98], [118, 80], [150, 64], [230, 60], [330, 58]];
+    for (i = 0; i < 24; i++) {
+      var vo = lpN(nO, i), uo = lpFrac(tt / 6.5 + i * 0.618034), po;
+      if (!on.wasser || vo <= 0) continue;
+      po = lpEntlang(aus, uo); lpPunkt(c, po[0] + 0.1, po[1] + (lpHash(i, 18) - 0.5) * 8 * sstep(0.2, 0.6, uo), lpBlende(uo, 0.05, 0.1) * vo, LP_C.wasser, 2.2);
+    }
+    for (i = 0; i < 7; i++) {
+      var vn = lpN(nNO, i), un2 = lpFrac(tt / 6.5 + i * 0.618034 + 0.4), pq;
+      if (!naAus || vn <= 0) continue;
+      pq = lpEntlang(aus, un2); lpPunkt(c, pq[0], pq[1] + (lpHash(i, 19) - 0.5) * 6 * sstep(0.2, 0.6, un2), lpBlende(un2, 0.05, 0.1) * vn, LP_C.na, 2.3);
+    }
+  }
+  /* Zoeliakie: Gluten im Darminneren (kleine eckige Brocken) */
+  if (W.gl > 0.05) {
+    for (i = 0; i < 8; i++) {
+      var vg = lpN(W.gl, i), gx2 = i === 0 ? 300 : 166 + 150 * lpHash(i, 20), gy2 = i === 0 ? 40 : 28 + 28 * lpHash(i, 21), q2, rr, ang;
+      if (vg <= 0.01) continue;
+      gx2 += 3 * Math.sin(tt * 0.8 + i * 1.7); gy2 += 2.4 * Math.cos(tt * 0.6 + i * 2.3);
+      c.globalAlpha = vg; c.beginPath();
+      for (q2 = 0; q2 < 6; q2++) { ang = q2 * 1.0472 + i; rr = 3.4 + 1.6 * lpHash(i * 6 + q2, 22); c[q2 ? 'lineTo' : 'moveTo'](gx2 + rr * Math.cos(ang), gy2 + rr * Math.sin(ang)); }
+      c.closePath(); c.fillStyle = '#C9A66B'; c.fill(); c.strokeStyle = '#7A5F33'; c.lineWidth = 1; c.stroke(); c.globalAlpha = 1;
+    }
+  }
+  /* Abwehrzellen (Zoeliakie, Crohn): lilafarben wie im 3D-Modell */
+  for (i = 0; i < LP_AZ.length; i++) {
+    var vb = lpN(W.az, i);
+    if (vb <= 0.01) continue;
+    var bx = LP_AZ[i][0] + 1.2 * Math.sin(tt * 0.7 + i * 2.1), by = LP_AZ[i][1] + 1.2 * Math.cos(tt * 0.6 + i * 1.3);
+    c.globalAlpha = vb; c.beginPath(); c.arc(bx, by, 5.4, 0, 6.2832); c.fillStyle = '#C9B6E8'; c.fill(); c.strokeStyle = '#8E78C8'; c.lineWidth = 1; c.stroke();
+    c.beginPath(); c.arc(bx + 0.8, by + 0.4, 2.4, 0, 6.2832); c.fillStyle = '#6A52A8'; c.fill(); c.globalAlpha = 1;
+  }
+  /* Beschriftung: links, rechts und oben in Spalten, die Fuehrungslinien fuehren zu den Strukturen; lange Texte stehen dort, wo Platz ist */
+  lpBeschriftV(c, 'Zucker-Natrium-Träger (SGLT1)', 225, 12, true, LP_SGLT, yT - 6);
+  lpBeschriftV(c, 'Aminosäure-Träger', 240, 12, false, LP_AMINO, yT - 6);
+  lpBeschrift(c, 'Darminneres', 396, 12, true, 330, 34);
+  if (on.fett) lpBeschrift(c, 'Mizelle (Fett mit Galle)', 4, 36, false, 156, 42);
+  if (W.zoe <= 0.5) lpBeschrift(c, 'Bürstensaum (Mikrovilli)', 4, 60, false, LP_VX, yT - hv0 / 2);   /* bei Zoeliakie steht dafuer "zerstoerter Buerstensaum" */
+  lpBeschrift(c, 'Saumzelle', 396, 104, true, 296, 104);
+  if (on.wasser) lpBeschrift(c, 'Wasser', 4, 190, false, 138.5, 160);
+  lpBeschrift(c, 'Natrium-Kalium-Pumpe', 4, 210, false, LP_PUMPE - 3, yB + 3);
+  lpBeschrift(c, 'Blutkapillare', 4, 236, false, 122, 232);
+  if (on.fett) lpBeschrift(c, 'Chylomikron', 396, 196, true, 308, 226);
+  lpBeschrift(c, 'Lymphgefäß', 396, 232, true, 324, 231);
+  if (W.kz > 0.5) {
+    lpBeschrift(c, 'Erregergift', 4, 84, false, 85, 100);
+    lpBeschrift(c, 'Chloridkanal', 4, 100, false, 60, 113);
+    lpBeschrift(c, 'Kryptenzelle', 4, 168, false, 46, 157);
+  }
+  if (W.zoe > 0.5 || W.cw > 0.5) lpBeschrift(c, 'Abwehrzellen', 4, 128, false, 134, 128);
+  if (W.zoe > 0.5) {
+    lpBeschrift(c, 'zerstörter Bürstensaum', 4, 60, false, LP_VX, yT - 4);
+    lpBeschrift(c, 'Gluten', 396, 52, true, 302, 42);
+  }
+}
+function lupeDraw() {
+  var c = LUPE.ctx; if (!c) return;
+  c.setTransform(LUPE.dpr, 0, 0, LUPE.dpr, 0, 0);
+  lupeBild(c);
+}
+function lupeText() {   /* Text nach Wahl und Schaltern; Schluessel merken, damit lupeTick nur bei Wechsel neu setzt; Legende: ausgeschaltete Stoffe gedaempft */
+  var id = lupeTextId(), s = lupeStoffe();
+  LUPE.key = id + '|' + s.join(',');
+  $('lpTitle').textContent = LUPE_TITEL;
+  $('lpText').textContent = LUPE_TEXT[id];
+  $('lpHint').textContent = LUPE_HINWEIS;
+  Array.prototype.forEach.call($('lpLeg').children, function (e, j) {
+    var an = j < 4 ? s.indexOf(['zucker', 'amino', 'fett', 'wasser'][j]) >= 0 : (s.indexOf('zucker') >= 0 || (s.indexOf('wasser') >= 0 && (lupeKrank() === 'durchfall' || lupeKrank() === 'trinkloesung')));   /* Natrium folgt dem Zucker, beim Durchfall und der Trinkloesung auch dem Wasser */
+    e.classList.toggle('aus', !an);
+  });
+}
+function lupeOeffnen() {
+  if (abgebaut) return;
+  if (schemaOn) setSchema(false);
+  if (quiz) quizEnd();
+  if (wege) wegeEnd();
+  closeCard(); setSelected(null);
+  szWeichen();
+  lupeText();
+  LUPE.open = true; $('lupe').classList.add('show'); $('bLupe').classList.add('on');
+  kartenLage();
+  lupeDraw();
+}
+function lupeClose() {
+  if (!LUPE || !LUPE.open) return;
+  LUPE.open = false; $('lupe').classList.remove('show'); $('bLupe').classList.remove('on');
+  kartenLage();
+}
+(function lupeBauen() {
+  LUPE.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var cv = $('lpCv'); cv.width = LUPE.W * LUPE.dpr; cv.height = LUPE.H * LUPE.dpr;
+  try { LUPE.ctx = cv.getContext('2d'); } catch (e) { LUPE.ctx = null; }
+  LUPE_LEGENDE.forEach(function (q) {
+    var s = document.createElement('span'), p = document.createElement('i'); p.style.background = q[1]; s.appendChild(p); s.appendChild(document.createTextNode(q[0]));
+    $('lpLeg').appendChild(s);
+  });
+  $('bLupeX').addEventListener('click', lupeClose);
+  $('bLupe').addEventListener('click', function () { if (LUPE.open) lupeClose(); else lupeOeffnen(); });
+})();
+function lupeTick() {   /* nur solange offen: Text bei Wechsel der Wahl oder der Schalter nachziehen und neu zeichnen */
+  if (!LUPE.open) return;
+  if (LUPE.key !== lupeTextId() + '|' + lupeStoffe().join(',')) lupeText();
+  lupeDraw();
+}
 
 /* =====================================================================
    8. Renderschleife, Aufbau, Abbau
@@ -1947,6 +2260,8 @@ var App = window.ZotteApp = { ready: false, aufbauMs: 0, waehle: setSelected, ge
   tippe: function (id) { if (wege) wegeAntwort(id, [id]); else if (quiz) quizAntwort(id, [id]); },
   wege: function () { return wege && { weg: wege.nr + 1, station: wege.st, n: wege.n, ok: wege.ok, fehl: wege.fehl, liste: wege.liste.slice(), fertig: wege.fertig, leucht: wege.leucht.slice(), ausschnitt: aktiv }; },
   quiz: function () { return quiz && { ziel: quiz.target, n: quiz.n, ok: quiz.ok }; },
+  lupe: function (an) { if (an) lupeOeffnen(); else lupeClose(); return App.lupeZustand(); },
+  lupeZustand: function () { var k = lupeKrank(); return { offen: LUPE.open, krank: k, stoffe: lupeStoffe(), text: lupeTextId() }; },
   stoffe: function (id, an) { if (id in KI && KINDS[KI[id]].btn) stoffSetzen(KI[id], !!an); },
   /* fuer die Pruefung: Werte der Stroemung (Zahl der sichtbaren Teilchen je Art und Abschnitt, Uebergang, Uhr, Verkuerzung der Zotte) */
   stroemung: function () {
@@ -2010,7 +2325,7 @@ function loop(now) {
   var neuBereit = false;
   if (bereitMerker && !App.ready) { bereitMerker = false; neuBereit = true; clock = 0; root.visible = true; App.aufbauMs = Math.round(performance.now() - t0); App.ready = true; }   /* die Uhr beginnt in diesem Bild bei 0 */
   if (SZ.schritt(dt)) szenarioWirkung();                  /* Krankheitsbilder weich ueberblenden */
-  if (ST) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); }
+  if (ST) { if (App.ready && !neuBereit) stroemungSchritt(dt); stroemungBild(); if (schemaOn) SCH.update(); lupeTick(); }
   if (orbit.anim) orbit.anim = Kern.fahrtSchritt(view, orbit.anim, now);
   Kern.kamera(camera, view);
   if (schemaOn) return;                                   /* Schema offen: das Bild der Zotte ist ausgeblendet und wird nicht gezeichnet */
@@ -2023,7 +2338,7 @@ organ.bild = loop; organ.groesse = groesse;
 /* Organ vollstaendig wegraeumen (Rahmen-Objekte bleiben) */
 organ.abbauen = function () {
   abgebaut = true;
-  schemaWeicht(); SCH.abbauen(); SZ.abbauen();
+  schemaWeicht(); lupeClose(); SCH.abbauen(); SZ.abbauen();
   clearTimeout(quizT); clearTimeout(wegeT);
   document.body.classList.remove('ueben');
   clearTimeout(Kern.toast._t);

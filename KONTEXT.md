@@ -226,21 +226,22 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 ## organe/verdauung/verdauung-form.js (1409 Zeilen) – Verdauung - Form: Speiseroehre, Magen, Duenndarm (mit Zwoelffingerdarm) und
 - 755: Darm: Zwoelffingerdarm bis After (Koerper-Koordinaten, cm)
 
-## organe/verdauung/zotte.css (126 Zeilen)
+## organe/verdauung/zotte.css (148 Zeilen)
 
-## organe/verdauung/zotte.js (2061 Zeilen) – Dünndarmzotte - Saumzellen, Kapillaren und Lymphgefäß
+## organe/verdauung/zotte.js (2376 Zeilen) – Dünndarmzotte - Saumzellen, Kapillaren und Lymphgefäß
 - 18: Inhalte (Daten, getrennt vom Code): Texte von Joern freigegeben (darm-b-texte.md, Teil 2)
-- 168: Form (feste Größen, Modelleinheit 0,1 mm): reine Funktionen, die Geometrie als Daten liefern (organ.form). …
-- 533: Strömung: Wege der Teilchen (nur Daten und Formeln, kein three.js, kein Zufall) und Zottenpumpe
-- 698: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie)
-- 744: 2. Zustand, Bedienung
-- 966: 3. Kamera: Ausschnitte, freier Bildbereich
-- 1024: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
-- 1232: 4. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
-- 1420: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
-- 1634: 6b. Krankheitsbilder und Medikamente in der Zotte. Wirkgroessen SZW (Summe der weich ueberblendeten Anteile…
-- 1745: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
-- 1938: 8. Renderschleife, Aufbau, Abbau
+- 195: Form (feste Größen, Modelleinheit 0,1 mm): reine Funktionen, die Geometrie als Daten liefern (organ.form). …
+- 560: Strömung: Wege der Teilchen (nur Daten und Formeln, kein three.js, kein Zufall) und Zottenpumpe
+- 725: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie)
+- 771: 2. Zustand, Bedienung
+- 995: 3. Kamera: Ausschnitte, freier Bildbereich
+- 1053: Erklaerkarte (Hilfekarten, Ueben): Kicker, Titel, Text, Abschnitt "Merke"; unten links wie die Infokarte (H…
+- 1262: 4. Beschriftung mit Fuehrungslinien in Spalten - wird nur neu gelegt, wenn sich die Ansicht aendert
+- 1450: 6. Stroemung: Zucker (gelb), Aminosaeuren (orange), Fett (weiss), Wasser (hellblau) und Blut (rot zu violet…
+- 1664: 6b. Krankheitsbilder und Medikamente in der Zotte. Wirkgroessen SZW (Summe der weich ueberblendeten Anteile…
+- 1775: 7. Schema - Oberflaeche und Wege der Stoffe (Knopf "Schema", wie beim Darm)
+- 1968: 7b. Lupe: Nahansicht einer Saumzelle (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; ke…
+- 2251: 8. Renderschleife, Aufbau, Abbau
 
 ## tools/betroffen.js (209 Zeilen) – Betroffene Prüfläufe: welche Modelle tools/vergleich.js prüfen muss
 
@@ -273,11 +274,11 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## tools/symbole.js (42 Zeilen) – App-Symbole des Anatomie-Atlas
 
-## tools/vergleich.js (2222 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
+## tools/vergleich.js (2238 Zeilen) – Vergleichsaufnahmen für den Anatomie-Atlas (index.html) mit Körper, Herz, Niere und Nephron
 - 170: 1. Im Browser (vor allen Skripten der Seite)
 - 364: 2. Abläufe je Modell
-- 1860: 3. Aufnehmen
-- 2044: 4. Vergleichen
-- 2206: 5. Aufruf
+- 1876: 3. Aufnehmen
+- 2060: 4. Vergleichen
+- 2222: 5. Aufruf
 
 ## tools/version.js (198 Zeilen) – Versionsnummer des Service Workers (sw.js)
