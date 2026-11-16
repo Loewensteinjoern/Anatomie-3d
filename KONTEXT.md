@@ -189,7 +189,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 
 ## organe/verdauung/darm.css (146 Zeilen)
 
-## organe/verdauung/darm.js (2907 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
+## organe/verdauung/darm.js (2908 Zeilen) – Darm - Duenndarm, Dickdarm und Mastdarm
 - 24: Inhalte (Daten, getrennt vom Code)
 - 307: 1. Strukturen, Materialien (jede Struktur hat ihr eigenes Material: beim Hervorheben leuchtet nur sie; die …
 - 371: 2. Geometrie: Aussenhaut als Schlauch um die Mittellinie, Schichten und Kappen der vier Bereiche, Gekroese,…
@@ -202,7 +202,7 @@ Was die Dateien enthalten und warum: `docs/dateien.md` (nur bei Bedarf, per `gre
 - 2138: 7b. Kamerafahrt zur Duenndarmzotte (Knopf "Zotte", Infokarte "Duenndarmzotte hier ansehen" bei Leerdarm und…
 - 2321: 7c. Krankheitsbilder und Medikamente in 3D. Wirkgroessen SZW = Summe der (weich ueberblendeten) Anteile * W…
 - 2520: 7d. Lupe: Nahansicht des Analkanals (Knopf "Lupe" in der Zeile "Ausschnitt", Panel #lupe, Canvas #lpCv; kei…
-- 2780: 8. Renderschleife, Aufbau, Abbau
+- 2781: 8. Renderschleife, Aufbau, Abbau
 
 ## organe/verdauung/magen.css (152 Zeilen)
 

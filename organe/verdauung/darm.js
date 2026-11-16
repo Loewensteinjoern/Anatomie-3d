@@ -2548,8 +2548,11 @@ function lpLabel(c, text, x, y, rechts) {   /* Beschriftung; liefert die Breite 
   return w;
 }
 function lpLeiter(c, x1, y1, x2, y2) {
-  c.strokeStyle = 'rgba(231,239,240,0.55)'; c.lineWidth = 0.8;
+  c.lineCap = 'round'; c.strokeStyle = 'rgba(12,26,32,0.7)'; c.lineWidth = 2.4;   /* dunkler Saum: die Linie bleibt auch auf hellem Stuhl lesbar */
   c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+  c.strokeStyle = 'rgba(231,239,240,0.8)'; c.lineWidth = 0.9;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+  c.fillStyle = 'rgba(231,239,240,0.9)'; c.beginPath(); c.arc(x2, y2, 1.6, 0, 6.2832); c.fill();
 }
 function lpBeschrift(c, text, x, y, rechts, zx, zy) {   /* Beschriftung mit Fuehrungslinie zum Ziel (zx, zy) */
   var w = lpLabel(c, text, x, y, rechts);
@@ -2720,10 +2723,8 @@ function lupeBild(c) {
   lpBeschrift(c, 'äußerer Schließmuskel (willkürlich)', 4, 196, false, cx - bw[98] - 18, 190);
   lpBeschrift(c, 'After', 396, 246, true, cx + bw[122] + 3, 244);
   var stuhlDa = Z.fill > 0.08 || (Z.ph === 'gang' && Z.yB > Z.yT && Z.yT < 250), sm = Z.ph === 'gang' ? (Math.max(Z.yT, 20) + Math.min(Z.yB, 240)) / 2 : (yF + 134) / 2;   /* sm: Mitte des Stuhls */
-  if (stuhlDa) lpBeschrift(c, 'Stuhl', 4, 100, false, cx - 22, Math.max(40, Math.min(240, sm)));
-  if (W.d > 0.5 && stuhlDa) lpBeschrift(c, 'flüssiger Stuhl', 396, 124, true, cx + 30, 116);
-  if (W.v > 0.5 && stuhlDa) lpBeschrift(c, 'harter Stuhl', 396, 124, true, cx + 30, 116);
-  if (W.c > 0.5) { lpBeschrift(c, 'entzündete Schleimhaut', 396, 96, true, cx + bw[30] + 5, 60); lpBeschrift(c, 'Blut', 396, 114, true, cx + bw[42] - 4, 84); }
+  if (stuhlDa) lpBeschrift(c, W.d > 0.5 ? 'flüssiger Stuhl' : W.v > 0.5 ? 'harter Stuhl' : 'Stuhl', 4, 100, false, cx - 22, Math.max(40, Math.min(240, sm)));   /* bei Krankheit statt "Stuhl" */
+  if (W.c > 0.5) { lpBeschrift(c, 'entzündete Schleimhaut', 396, 128, true, cx + bw[56] + 4, 112); lpBeschrift(c, 'Blut', 396, 144, true, cx + bw[66] - 1, 132); }   /* unter dem Trichter, damit der lange Text nicht auf der Wand liegt */
 }
 function lupeDraw() {
   var c = LUPE.ctx; if (!c) return;
