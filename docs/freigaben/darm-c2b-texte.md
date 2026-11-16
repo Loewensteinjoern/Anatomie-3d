@@ -1,4 +1,4 @@
-# Texte C2b Darm und Zotte: Lupen, Export, AR (Entwurf, noch nicht freigegeben)
+# Texte C2b Darm und Zotte: Lupen, Export, AR (von Jörn freigegeben, 16. November 2026)
 
 Abgestimmt mit Jörn (16. November 2026): Lupe Analkanal einfach (Ampulle, Dehnungsfühler, innerer und äußerer Schließmuskel), folgt dem Stuhl im Modell, Chips halten eine Phase fest; Krankheitsbilder und Medikamente mit Mastdarm zeigen sich in der Lupe. Lupe Saumzelle über den Knopf „Lupe“ in der Zotte, Transporter deutsch mit Kürzel, beim Durchfall zusätzlich eine Kryptenzelle. Export und AR wie bei der Leber (sichtbarer Zustand mit Krankheitsbild, ohne Teilchen).
 
